@@ -79,6 +79,9 @@ type StatusBatch struct {
 	PageInfo *LaForgePageInfo `json:"pageInfo"`
 }
 
+type Subscription struct {
+}
+
 type UIConfig struct {
 	HTTPSEnabled   bool      `json:"HttpsEnabled"`
 	AllowedOrigins []*string `json:"AllowedOrigins"`

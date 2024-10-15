@@ -382,8 +382,7 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 		for _, entHost := range entHosts {
 			_, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, pNetwork, entHost, networkPlan)
 			if err != nil {
-				logrus.Errorf("Failed to create provisioned hosts")
-				logger.Log.Errorf("Failed to create provisioned hosts")
+				logger.Log.Errorf("Failed to create provisioned host: %v", err)
 				return nil, err
 			}
 		}

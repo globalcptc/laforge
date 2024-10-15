@@ -450,7 +450,7 @@ func (builder OpenstackBuilder) DeployHost(ctx context.Context, entProvisionedHo
 
 	var userData string
 	if strings.HasPrefix(entHost.OS, "w2k") || strings.HasPrefix(entHost.OS, "win") {
-		userData = fmt.Sprintf(`<script>
+		userData = fmt.Sprintf(`<script>	
 powershell -Command mkdir $env:PROGRAMDATA\Laforge -Force
 powershell -Command do{	$test = Test-Connection 1.1.1.1 -Quiet; Start-Sleep -s 5}until($test)
 powershell -Command [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest %s -OutFile $env:PROGRAMDATA\Laforge\laforge.exe
@@ -462,7 +462,7 @@ powershell -Command logoff
 		userData = fmt.Sprintf(`#!/bin/bash
 while [ ! -f "/laforge.bin" ]
 do
-curl -sL -o /laforge.bin %s
+wget -O /laforge.bin %s
 sleep 10
 done
 chmod +x /laforge.bin

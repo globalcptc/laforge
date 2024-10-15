@@ -9,17 +9,18 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /
-ADD https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz /zig-linux-x86_64-0.11.0.tar.xz
-RUN tar -xvf /zig-linux-x86_64-0.11.0.tar.xz
-ENV PATH="/zig-linux-x86_64-0.11.0:${PATH}"
+ADD https://ziglang.org/builds/zig-linux-x86_64-0.14.0-dev.1860+2e2927735.tar.xz /zig.tar.xz
+RUN mkdir /zig
+RUN tar -xvf /zig.tar.xz -C /zig --strip-components=1
+ENV PATH="/zig:${PATH}"
 
 # ADD https://github.com/mattnite/gyro/releases/download/0.5.0/gyro-0.5.0-linux-x86_64.tar.gz /gyro-0.5.0-linux-x86_64.tar.gz
 # RUN tar -xvf /gyro-0.5.0-linux-x86_64.tar.gz
 # ENV PATH="/gyro-0.5.0-linux-x86_64/bin:${PATH}"
 
-RUN mkdir /app 
+RUN mkdir /app
 ADD . /app/
-WORKDIR /app 
+WORKDIR /app
 
 ENV PATH="/app/docker_files:${PATH}"
 

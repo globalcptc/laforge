@@ -17,15 +17,16 @@ import (
 func BuildAgent(logger *logging.Logger, agentID string, serverAddress string, binarypath string, isWindows bool) error {
 	command := ""
 	if isWindows {
-		command = "CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=\"zcc\" go build -ldflags=\" -X 'main.clientID=" + agentID + "' -X 'main.address=" + serverAddress + "'\" -o " + binarypath + " github.com/gen0cide/laforge/grpc/agent"
+		command = "CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=\"zcc\" go build -tags debug -ldflags=\" -X 'main.clientID=" + agentID + "' -X 'main.address=" + serverAddress + "'\" -o " + binarypath + " github.com/gen0cide/laforge/grpc/agent"
 	} else {
-		command = "CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags=\" -X 'main.clientID=" + agentID + "' -X 'main.address=" + serverAddress + "'\" -o " + binarypath + " github.com/gen0cide/laforge/grpc/agent"
+		command = "CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags debug -ldflags=\" -X 'main.clientID=" + agentID + "' -X 'main.address=" + serverAddress + "'\" -o " + binarypath + " github.com/gen0cide/laforge/grpc/agent"
 	}
+	logger.Log.Debugf("Executing command to build agent: %s", command)
 	cmd := exec.Command("bash", "-c", command)
 	stdoutStderr, err := cmd.CombinedOutput()
 	cmd.Run()
 	if err != nil {
-		logrus.Errorf("Agent for %s failed to create: %v", agentID, err)
+		logger.Log.Errorf("Agent for %s failed to create: %v", agentID, stdoutStderr)
 		return err
 	}
 	logger.Log.Debugf("Created %s, Output %s\n", binarypath, stdoutStderr)

@@ -233,6 +233,7 @@ func StartBuild(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, builder *builder.Builder, ctx context.Context, entPlan *ent.Plan, wg *sync.WaitGroup) {
 	logger.Log.WithFields(logrus.Fields{
 		"plan": entPlan.ID,
+		"type": entPlan.Type,
 	}).Debugf("BUILDER | BUILD ROUTINE START")
 	defer wg.Done()
 	ctxClosing := context.Background()
@@ -340,6 +341,9 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 	switch entPlan.Type {
 	case plan.TypeProvisionNetwork:
 		entProNetwork, err := entPlan.QueryProvisionedNetwork().Only(ctx)
+		logger.Log.WithFields(logrus.Fields{
+			"id": entProNetwork.ID,
+		}).Infof("BUILDER | Provisioning network.")
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Provisioned Network. Err: %v", err)
 			return
@@ -362,6 +366,9 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		}
 	case plan.TypeProvisionHost:
 		entProHost, err := entPlan.QueryProvisionedHost().Only(ctx)
+		logger.Log.WithFields(logrus.Fields{
+			"id": entProHost.ID,
+		}).Infof("BUILDER | Provisioning host.")
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Provisioned Host. Err: %v", err)
 			return
@@ -369,12 +376,12 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		if parentNodeFailed {
 			hostStatus, err := entProHost.QueryStatus().Only(ctxClosing)
 			if err != nil {
-				logger.Log.Errorf("Error while getting Provisioned Network status: %v", err)
+				logger.Log.Errorf("Error while getting Provisioned Host status: %v", err)
 				return
 			}
 			_, saveErr := hostStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctxClosing)
 			if saveErr != nil {
-				logger.Log.Errorf("Error while setting Provisioned Network status to FAILED: %v", saveErr)
+				logger.Log.Errorf("Error while setting Provisioned Host status to FAILED: %v", saveErr)
 				return
 			}
 			rdb.Publish(ctxClosing, "updatedStatus", hostStatus.ID.String())
@@ -384,6 +391,9 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		}
 	case plan.TypeExecuteStep:
 		entProvisioningStep, err := entPlan.QueryProvisioningStep().Only(ctx)
+		logger.Log.WithFields(logrus.Fields{
+			"id": entProvisioningStep.ID,
+		}).Infof("BUILDER | Executing build step")
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
 			return
@@ -406,6 +416,9 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		}
 	case plan.TypeStartTeam:
 		entTeam, err := entPlan.QueryTeam().Only(ctx)
+		logger.Log.WithFields(logrus.Fields{
+			"id": entTeam.ID,
+		}).Infof("BUILDER | Provisioning team.")
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Ent Tean. Err: %v", err)
 			return
@@ -413,7 +426,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		if parentNodeFailed {
 			teamStatus, err := entTeam.QueryStatus().Only(ctxClosing)
 			if err != nil {
-				logger.Log.Errorf("Failed to Query Provisioning Step Status. Err: %v", err)
+				logger.Log.Errorf("Failed to Query Provisioning Team Step Status. Err: %v", err)
 				return
 			}
 			_, err = teamStatus.Update().SetFailed(true).SetState(status.StateFAILED).Save(ctxClosing)
@@ -428,8 +441,8 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		}
 	case plan.TypeStartBuild:
 		entBuild, err := entPlan.QueryBuild().Only(ctx)
-		if err != nil {
-			logger.Log.Errorf("Failed to Query Provisioning Step. Err: %v", err)
+                 if err != nil {
+			logger.Log.Errorf("Failed to Query Build Start Step. Err: %v", err)
 			return
 		}
 		entStatus, err := entBuild.QueryStatus().Only(ctx)
@@ -441,6 +454,9 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 	case plan.TypeStartScheduledStep:
 		entProvisioningScheduledStep, err := entPlan.QueryProvisioningScheduledStep().Only(ctx)
+		logger.Log.WithFields(logrus.Fields{
+			"id": entProvisioningScheduledStep.ID,
+		}).Infof("BUILDER | Provisioning team.")
 		if err != nil {
 			logger.Log.Errorf("Failed to Query Provisioning Scheduled Step. Err: %v", err)
 			return
@@ -451,6 +467,9 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 			planErr = startScheduledStep(client, laforgeConfig, logger, ctx, entProvisioningScheduledStep)
 		}
 	default:
+		logger.Log.WithFields(logrus.Fields{
+			"id": entPlan.ID,
+		}).Warnf("BUILDER | Unknown provisioning step type.")
 		break
 	}
 
@@ -459,7 +478,6 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 		logger.Log.WithFields(logrus.Fields{
 			"type":    entPlan.Type,
-			"builder": (*builder).ID(),
 		}).Errorf("error while executing plan: %v", planErr)
 	} else {
 
@@ -498,7 +516,7 @@ func buildHost(client *ent.Client, logger *logging.Logger, builder *builder.Buil
 				"subnetIp":  entProHost.SubnetIP,
 				"entProNet": entProNet.Name,
 				"entTeam":   entTeam.TeamNumber,
-			}).Debugf("BUILDER | BUILD ROUTINE START")
+			}).Debugf("BUILDER | BUILD HOST START")
 		}
 	}
 	logger.Log.Infof("deploying %s", entProHost.SubnetIP)
@@ -629,7 +647,7 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 		return err
 	}
 	if stepAwaitingInProgress {
-		logger.Log.Debug("team %s is in progress", entTeam.ID)
+		logger.Log.Debugf("team %s is in progress", entTeam.ID)
 		return nil
 	}
 
@@ -660,7 +678,7 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 			return saveErr
 		}
 		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
-		logger.Log.Debug("host %s is failed", teamStatus.ID)
+		logger.Log.Debugf("host %s failed", teamStatus.ID)
 		return nil
 	}
 
@@ -683,7 +701,7 @@ func checkTeamStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 			return saveErr
 		}
 		rdb.Publish(ctx, "updatedStatus", teamStatus.ID.String())
-		logger.Log.Debug("host %s is failed", teamStatus.ID)
+		logger.Log.Debugf("host %s failed", teamStatus.ID)
 		return nil
 	}
 	return nil
@@ -706,7 +724,7 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 		return err
 	}
 	if stepAwaitingInProgress {
-		logger.Log.Debug("network %s is in progress", entProNetwork.ID)
+		logger.Log.Debugf("network %s is in progress", entProNetwork.ID)
 		return nil
 	}
 
@@ -742,7 +760,7 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 			return saveErr
 		}
 		rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
-		logger.Log.Debug("host %s is failed", networkStatus.ID)
+		logger.Log.Debugf("host %s failed", networkStatus.ID)
 		checkTeamStatus(client, logger, ctx, entTeam)
 		return nil
 	}
@@ -766,7 +784,7 @@ func checkNetworkStatus(client *ent.Client, logger *logging.Logger, ctx context.
 			return saveErr
 		}
 		rdb.Publish(ctx, "updatedStatus", networkStatus.ID.String())
-		logger.Log.Debug("host %s is Completed", networkStatus.ID)
+		logger.Log.Debugf("host %s completed", networkStatus.ID)
 		checkTeamStatus(client, logger, ctx, entTeam)
 		return nil
 	}
@@ -803,7 +821,7 @@ func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 			return saveErr
 		}
 		rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
-		logger.Log.Debug("host %s is failed", entProHost.ID)
+		logger.Log.Debugf("host %s failed", entProHost.ID)
 		checkNetworkStatus(client, logger, ctx, entProNetwork)
 		return nil
 	}
@@ -827,7 +845,7 @@ func checkHostStatus(client *ent.Client, logger *logging.Logger, ctx context.Con
 			return saveErr
 		}
 		rdb.Publish(ctx, "updatedStatus", hostStatus.ID.String())
-		logger.Log.Debug("host %s is completed", entProHost.ID)
+		logger.Log.Debugf("host %s completed", entProHost.ID)
 		checkNetworkStatus(client, logger, ctx, entProNetwork)
 		return nil
 	}
