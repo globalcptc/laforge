@@ -1,8 +1,8 @@
 fragment StatusFields on Status {
   id
   state
-  started_at
-  ended_at
+  startedAt
+  endedAt
   failed
   completed
   error
@@ -27,12 +27,12 @@ fragment AgentStatusFields on AgentStatus {
 
 fragment PlanFields on Plan {
   id
-  step_number
+  stepNumber
   type
-  PlanToStatus {
+  Status {
     ...StatusFields
   }
-  PlanToPlanDiffs {
+  PlanDiffs {
     ...PlanDiffFields
   }
 }
@@ -40,8 +40,8 @@ fragment PlanFields on Plan {
 fragment PlanDiffFields on PlanDiff {
   id
   revision
-  new_state
-  # PlanDiffToPlan {
+  newState
+  # Plan {
   #   ...PlanFields
   # }
 }
@@ -49,30 +49,30 @@ fragment PlanDiffFields on PlanDiff {
 fragment BuildCommitFields on BuildCommit {
   id
   revision
-  BuildCommitToBuild {
+  Build {
     id
     revision
-    BuildToRepoCommit {
+    RepoCommit {
       id
       hash
       author
-      RepoCommitToRepository {
+      Repository {
         id
-        repo_url
+        repoUrl
       }
     }
-    buildToStatus {
+    Status {
       id
       state
     }
-    buildToEnvironment {
+    Environment {
       id
     }
   }
-  BuildCommitToServerTask {
+  ServerTasks {
     id
-    start_time
-    end_time
+    startTime
+    endTime
   }
   state
   type
@@ -83,8 +83,8 @@ fragment AuthUserFields on AuthUser {
   username
   role
   provider
-  first_name
-  last_name
+  firstName
+  lastName
   email
   phone
   company
@@ -99,7 +99,7 @@ fragment AgentTaskFields on AgentTask {
   args
   number
   output
-  error_message
+  errorMessage
 }
 
 fragment PageInfoFields on LaForgePageInfo {
@@ -109,8 +109,8 @@ fragment PageInfoFields on LaForgePageInfo {
 
 fragment UserListFields on AuthUser {
   id
-  first_name
-  last_name
+  firstName
+  lastName
   username
   provider
   role

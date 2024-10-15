@@ -17,15 +17,16 @@ import (
 func BuildAgent(logger *logging.Logger, agentID string, serverAddress string, binarypath string, isWindows bool) error {
 	command := ""
 	if isWindows {
-		command = "CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=\"zcc\" go build -ldflags=\" -X 'main.clientID=" + agentID + "' -X 'main.address=" + serverAddress + "'\" -o " + binarypath + " github.com/gen0cide/laforge/grpc/agent"
+		command = "CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=\"zcc\" go build -tags debug -ldflags=\" -X 'main.clientID=" + agentID + "' -X 'main.address=" + serverAddress + "'\" -o " + binarypath + " github.com/gen0cide/laforge/grpc/agent"
 	} else {
-		command = "CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags=\" -X 'main.clientID=" + agentID + "' -X 'main.address=" + serverAddress + "'\" -o " + binarypath + " github.com/gen0cide/laforge/grpc/agent"
+		command = "CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags debug -ldflags=\" -X 'main.clientID=" + agentID + "' -X 'main.address=" + serverAddress + "'\" -o " + binarypath + " github.com/gen0cide/laforge/grpc/agent"
 	}
+	logger.Log.Debugf("Executing command to build agent: %s", command)
 	cmd := exec.Command("bash", "-c", command)
 	stdoutStderr, err := cmd.CombinedOutput()
 	cmd.Run()
 	if err != nil {
-		logrus.Errorf("Agent for %s failed to create: %v", agentID, err)
+		logger.Log.Errorf("Agent for %s failed to create: %v", agentID, stdoutStderr)
 		return err
 	}
 	logger.Log.Debugf("Created %s, Output %s\n", binarypath, stdoutStderr)
@@ -56,7 +57,7 @@ func main() {
 	}
 
 	for _, ph := range phs {
-		host, err := ph.QueryProvisionedHostToHost().Only(ctx)
+		host, err := ph.QueryHost().Only(ctx)
 		if err != nil {
 			logrus.Errorf("Failed to Query Host: %v", err)
 		}
@@ -73,18 +74,18 @@ func main() {
 			}
 		}
 
-		pn, err := ph.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+		pn, err := ph.QueryProvisionedNetwork().Only(ctx)
 		if err != nil {
 			logrus.Errorf("Failed to Query Provisioned Network: %v", err)
 		}
 		networkName := pn.Name
 
-		team, err := pn.QueryProvisionedNetworkToTeam().Only(ctx)
+		team, err := pn.QueryTeam().Only(ctx)
 		if err != nil {
 			logrus.Errorf("Failed to Query Team: %v", err)
 		}
 		teamName := team.TeamNumber
-		env, err := team.QueryTeamToBuild().QueryBuildToEnvironment().Only(ctx)
+		env, err := team.QueryBuild().QueryEnvironment().Only(ctx)
 		if err != nil {
 			logrus.Errorf("Failed to Query Enviroment: %v", err)
 		}

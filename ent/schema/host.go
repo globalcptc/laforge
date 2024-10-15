@@ -44,6 +44,8 @@ func (Host) Fields() []ent.Field {
 			StructTag(`hcl:"user_groups,optional"`),
 		field.JSON("provision_steps", []string{}).Optional().
 			StructTag(`hcl:"provision_steps,optional"`),
+		field.JSON("scheduled_steps", []string{}).Optional().
+			StructTag(`hcl:"scheduled_steps,optional"`),
 		field.JSON("tags", map[string]string{}).
 			StructTag(`hcl:"tags,optional"`),
 	}
@@ -52,23 +54,23 @@ func (Host) Fields() []ent.Field {
 // Edges of the Host.
 func (Host) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("HostToDisk", Disk.Type).
+		edge.To("Disk", Disk.Type).
 			StructTag(`hcl:"disk,block"`).
 			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("HostToUser", User.Type).
+		edge.To("Users", User.Type).
 			StructTag(`hcl:"maintainer,block"`),
-		edge.From("HostToEnvironment", Environment.Type).
-			Ref("EnvironmentToHost").
+		edge.From("Environment", Environment.Type).
+			Ref("Hosts").
 			Unique(),
-		edge.From("HostToIncludedNetwork", IncludedNetwork.Type).
-			Ref("IncludedNetworkToHost"),
-		edge.From("DependOnHostToHostDependency", HostDependency.Type).
-			Ref("HostDependencyToDependOnHost").
+		edge.From("IncludedNetworks", IncludedNetwork.Type).
+			Ref("Hosts"),
+		edge.From("DependOnHostDependencies", HostDependency.Type).
+			Ref("DependOnHost").
 			StructTag(`hcl:"depends_on,block"`),
-		edge.From("DependByHostToHostDependency", HostDependency.Type).
-			Ref("HostDependencyToDependByHost"),
+		edge.From("RequiredByHostDependencies", HostDependency.Type).
+			Ref("RequiredBy"),
 	}
 }

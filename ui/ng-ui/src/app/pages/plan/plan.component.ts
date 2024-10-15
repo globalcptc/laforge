@@ -106,7 +106,7 @@ export class PlanComponent implements OnInit, OnDestroy {
               // duration: 3000,
               panelClass: ['bg-success', 'text-white']
             });
-            this.router.navigate(['build', this.buildCommit.value.BuildCommitToBuild.id]);
+            this.router.navigate(['build', this.buildCommit.value.Build.id]);
           }
         },
         (err) => {

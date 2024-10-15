@@ -52,8 +52,8 @@ id
   ngOnInit(): void {
     this.user.next(this.auth.currentUserValue);
     this.username.setValue(this.auth.currentUserValue.username);
-    this.firstName.setValue(this.auth.currentUserValue.first_name);
-    this.lastName.setValue(this.auth.currentUserValue.last_name);
+    this.firstName.setValue(this.auth.currentUserValue.firstName);
+    this.lastName.setValue(this.auth.currentUserValue.lastName);
     this.email.setValue(this.auth.currentUserValue.email);
     this.phone.setValue(this.auth.currentUserValue.phone);
     this.company.setValue(this.auth.currentUserValue.company);

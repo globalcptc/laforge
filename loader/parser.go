@@ -25,6 +25,7 @@ import (
 	"github.com/gen0cide/laforge/ent/identity"
 	"github.com/gen0cide/laforge/ent/includednetwork"
 	"github.com/gen0cide/laforge/ent/network"
+	"github.com/gen0cide/laforge/ent/scheduledstep"
 	"github.com/gen0cide/laforge/ent/script"
 	"github.com/gen0cide/laforge/loader/include"
 	"github.com/gen0cide/laforge/logging"
@@ -50,33 +51,35 @@ type fileGlobResolver struct {
 
 // DefinedConfigs is the stuct to hold in all the loading for hcl
 type DefinedConfigs struct {
-	Filename            string
-	BaseDir             string                       `hcl:"base_dir,optional" json:"base_dir,omitempty"`
-	IncludePaths        []*Include                   `hcl:"include,block" json:"include_paths,omitempty"`
-	DefinedCompetitions []*ent.Competition           `hcl:"competition,block" json:"competitions,omitempty"`
-	DefinedHosts        []*ent.Host                  `hcl:"host,block" json:"hosts,omitempty"`
-	DefinedNetworks     []*ent.Network               `hcl:"network,block" json:"networks,omitempty"`
-	DefinedScripts      []*ent.Script                `hcl:"script,block" json:"scripts,omitempty"`
-	DefinedCommands     []*ent.Command               `hcl:"command,block" json:"defined_commands,omitempty"`
-	DefinedDNSRecords   []*ent.DNSRecord             `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
-	DefinedEnvironments []*ent.Environment           `hcl:"environment,block" json:"environments,omitempty"`
-	DefinedFileDownload []*ent.FileDownload          `hcl:"file_download,block" json:"file_download,omitempty"`
-	DefinedFileDelete   []*ent.FileDelete            `hcl:"file_delete,block" json:"file_delete,omitempty"`
-	DefinedFileExtract  []*ent.FileExtract           `hcl:"file_extract,block" json:"file_extract,omitempty"`
-	DefinedIdentities   []*ent.Identity              `hcl:"identity,block" json:"identities,omitempty"`
-	DefinedAnsible      []*ent.Ansible               `hcl:"ansible,block" json:"ansible,omitempty"`
-	Competitions        map[string]*ent.Competition  `json:"-"`
-	Hosts               map[string]*ent.Host         `json:"-"`
-	Networks            map[string]*ent.Network      `json:"-"`
-	Scripts             map[string]*ent.Script       `json:"-"`
-	Commands            map[string]*ent.Command      `json:"-"`
-	DNSRecords          map[string]*ent.DNSRecord    `json:"-"`
-	Environments        map[string]*ent.Environment  `json:"-"`
-	FileDownload        map[string]*ent.FileDownload `json:"-"`
-	FileDelete          map[string]*ent.FileDelete   `json:"-"`
-	FileExtract         map[string]*ent.FileExtract  `json:"-"`
-	Identities          map[string]*ent.Identity     `json:"-"`
-	Ansible             map[string]*ent.Ansible      `json:"-"`
+	Filename              string
+	BaseDir               string                        `hcl:"base_dir,optional" json:"base_dir,omitempty"`
+	IncludePaths          []*Include                    `hcl:"include,block" json:"include_paths,omitempty"`
+	DefinedCompetitions   []*ent.Competition            `hcl:"competition,block" json:"competitions,omitempty"`
+	DefinedHosts          []*ent.Host                   `hcl:"host,block" json:"hosts,omitempty"`
+	DefinedNetworks       []*ent.Network                `hcl:"network,block" json:"networks,omitempty"`
+	DefinedScripts        []*ent.Script                 `hcl:"script,block" json:"scripts,omitempty"`
+	DefinedCommands       []*ent.Command                `hcl:"command,block" json:"defined_commands,omitempty"`
+	DefinedDNSRecords     []*ent.DNSRecord              `hcl:"dns_record,block" json:"defined_dns_records,omitempty"`
+	DefinedEnvironments   []*ent.Environment            `hcl:"environment,block" json:"environments,omitempty"`
+	DefinedFileDownload   []*ent.FileDownload           `hcl:"file_download,block" json:"file_download,omitempty"`
+	DefinedFileDelete     []*ent.FileDelete             `hcl:"file_delete,block" json:"file_delete,omitempty"`
+	DefinedFileExtract    []*ent.FileExtract            `hcl:"file_extract,block" json:"file_extract,omitempty"`
+	DefinedIdentities     []*ent.Identity               `hcl:"identity,block" json:"identities,omitempty"`
+	DefinedAnsible        []*ent.Ansible                `hcl:"ansible,block" json:"ansible,omitempty"`
+	DefinedScheduledSteps []*ent.ScheduledStep          `hcl:"scheduled,block" json:"scheduled,omitempty"`
+	Competitions          map[string]*ent.Competition   `json:"-"`
+	Hosts                 map[string]*ent.Host          `json:"-"`
+	Networks              map[string]*ent.Network       `json:"-"`
+	Scripts               map[string]*ent.Script        `json:"-"`
+	Commands              map[string]*ent.Command       `json:"-"`
+	DNSRecords            map[string]*ent.DNSRecord     `json:"-"`
+	Environments          map[string]*ent.Environment   `json:"-"`
+	FileDownload          map[string]*ent.FileDownload  `json:"-"`
+	FileDelete            map[string]*ent.FileDelete    `json:"-"`
+	FileExtract           map[string]*ent.FileExtract   `json:"-"`
+	Identities            map[string]*ent.Identity      `json:"-"`
+	Ansible               map[string]*ent.Ansible       `json:"-"`
+	ScheduledSteps        map[string]*ent.ScheduledStep `json:"-"`
 }
 
 // Loader defines the Laforge configuration loader object
@@ -93,6 +96,7 @@ type Loader struct {
 
 // FileGlobResolver is a modified FileResolver in the HCLv2 include extension that accounts for globbed
 // includes:
+//
 //	include {
 //		path = "./foo/*.laforge"
 //	}
@@ -246,26 +250,27 @@ func NewLoader() *Loader {
 
 func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 	combinedConfigs := &DefinedConfigs{
-		Filename:     l.SourceFile,
-		Competitions: map[string]*ent.Competition{},
-		Hosts:        map[string]*ent.Host{},
-		Networks:     map[string]*ent.Network{},
-		Scripts:      map[string]*ent.Script{},
-		Commands:     map[string]*ent.Command{},
-		DNSRecords:   map[string]*ent.DNSRecord{},
-		Environments: map[string]*ent.Environment{},
-		FileDownload: map[string]*ent.FileDownload{},
-		FileDelete:   map[string]*ent.FileDelete{},
-		FileExtract:  map[string]*ent.FileExtract{},
-		Identities:   map[string]*ent.Identity{},
-		Ansible:      map[string]*ent.Ansible{},
+		Filename:       l.SourceFile,
+		Competitions:   map[string]*ent.Competition{},
+		Hosts:          map[string]*ent.Host{},
+		Networks:       map[string]*ent.Network{},
+		Scripts:        map[string]*ent.Script{},
+		Commands:       map[string]*ent.Command{},
+		DNSRecords:     map[string]*ent.DNSRecord{},
+		Environments:   map[string]*ent.Environment{},
+		FileDownload:   map[string]*ent.FileDownload{},
+		FileDelete:     map[string]*ent.FileDelete{},
+		FileExtract:    map[string]*ent.FileExtract{},
+		Identities:     map[string]*ent.Identity{},
+		Ansible:        map[string]*ent.Ansible{},
+		ScheduledSteps: map[string]*ent.ScheduledStep{},
 	}
 	for _, filename := range filenames {
 		element := l.ConfigMap[filename]
 		for _, x := range element.DefinedCompetitions {
-			obj, found := combinedConfigs.Competitions[x.HclID]
+			obj, found := combinedConfigs.Competitions[x.HCLID]
 			if !found {
-				combinedConfigs.Competitions[x.HclID] = x
+				combinedConfigs.Competitions[x.HCLID] = x
 				continue
 			}
 			if x.RootPassword != "" {
@@ -277,22 +282,22 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 			if x.Tags != nil {
 				obj.Tags = x.Tags
 			}
-			if x.HCLCompetitionToDNS != nil {
-				obj.HCLCompetitionToDNS = x.HCLCompetitionToDNS
+			if x.HCLDNS != nil {
+				obj.HCLDNS = x.HCLDNS
 			}
-			combinedConfigs.Competitions[x.HclID] = obj
+			combinedConfigs.Competitions[x.HCLID] = obj
 		}
 		for _, x := range element.DefinedHosts {
-			_, found := combinedConfigs.Hosts[x.HclID]
+			_, found := combinedConfigs.Hosts[x.HCLID]
 			if !found {
-				combinedConfigs.Hosts[x.HclID] = x
+				combinedConfigs.Hosts[x.HCLID] = x
 				continue
 			}
 		}
 		for _, x := range element.DefinedNetworks {
-			_, found := combinedConfigs.Networks[x.HclID]
+			_, found := combinedConfigs.Networks[x.HCLID]
 			if !found {
-				combinedConfigs.Networks[x.HclID] = x
+				combinedConfigs.Networks[x.HCLID] = x
 				continue
 			}
 		}
@@ -302,53 +307,53 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 				absPath := path.Join(dir, x.Source)
 				x.AbsPath = absPath
 			}
-			_, found := combinedConfigs.Scripts[x.HclID]
+			_, found := combinedConfigs.Scripts[x.HCLID]
 			if !found {
-				combinedConfigs.Scripts[x.HclID] = x
+				combinedConfigs.Scripts[x.HCLID] = x
 				continue
 			}
 		}
 		for _, x := range element.DefinedCommands {
-			_, found := combinedConfigs.Commands[x.HclID]
+			_, found := combinedConfigs.Commands[x.HCLID]
 			if !found {
-				combinedConfigs.Commands[x.HclID] = x
+				combinedConfigs.Commands[x.HCLID] = x
 				continue
 			}
 		}
 		for _, x := range element.DefinedDNSRecords {
-			_, found := combinedConfigs.DNSRecords[x.HclID]
+			_, found := combinedConfigs.DNSRecords[x.HCLID]
 			if !found {
-				combinedConfigs.DNSRecords[x.HclID] = x
+				combinedConfigs.DNSRecords[x.HCLID] = x
 				continue
 			}
 		}
 		for _, x := range element.DefinedEnvironments {
-			_, found := combinedConfigs.Environments[x.HclID]
+			_, found := combinedConfigs.Environments[x.HCLID]
 			if !found {
-				combinedConfigs.Environments[x.HclID] = x
+				combinedConfigs.Environments[x.HCLID] = x
 				continue
 			}
 		}
 		for _, x := range element.DefinedFileDownload {
-			_, found := combinedConfigs.FileDownload[x.HclID]
+			_, found := combinedConfigs.FileDownload[x.HCLID]
 			dir := path.Dir(element.Filename)
 			absPath := path.Join(dir, x.Source)
 			x.AbsPath = absPath
 			if !found {
-				combinedConfigs.FileDownload[x.HclID] = x
+				combinedConfigs.FileDownload[x.HCLID] = x
 				continue
 			}
 		}
 		for _, x := range element.DefinedFileDelete {
-			element.FileDelete[x.HclID] = x
+			element.FileDelete[x.HCLID] = x
 		}
 		for _, x := range element.DefinedFileExtract {
-			element.FileExtract[x.HclID] = x
+			element.FileExtract[x.HCLID] = x
 		}
 		for _, x := range element.DefinedIdentities {
-			_, found := combinedConfigs.Identities[x.HclID]
+			_, found := combinedConfigs.Identities[x.HCLID]
 			if !found {
-				combinedConfigs.Identities[x.HclID] = x
+				combinedConfigs.Identities[x.HCLID] = x
 				continue
 			}
 		}
@@ -356,9 +361,16 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 			dir := path.Dir(element.Filename)
 			absPath := path.Join(dir, x.Source)
 			x.AbsPath = absPath
-			_, found := combinedConfigs.Ansible[x.HclID]
+			_, found := combinedConfigs.Ansible[x.HCLID]
 			if !found {
-				combinedConfigs.Ansible[x.HclID] = x
+				combinedConfigs.Ansible[x.HCLID] = x
+				continue
+			}
+		}
+		for _, x := range element.DefinedScheduledSteps {
+			_, found := combinedConfigs.ScheduledSteps[x.HCLID]
+			if !found {
+				combinedConfigs.ScheduledSteps[x.HCLID] = x
 				continue
 			}
 		}
@@ -414,95 +426,101 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 	}
 	returnedEnvironment := []*ent.Environment{}
 	for _, cEnviroment := range configEnvs {
-		log.Log.Debugf("Creating ENV: %v", cEnviroment.HclID)
+		log.Log.Debugf("Creating ENV: %v", cEnviroment.HCLID)
 
 		environmentHosts := []string{}
-		for _, cIncludedNetwork := range cEnviroment.HCLEnvironmentToIncludedNetwork {
-			environmentHosts = append(environmentHosts, cIncludedNetwork.Hosts...)
+		for _, cIncludedNetwork := range cEnviroment.HCLIncludedNetworks {
+			environmentHosts = append(environmentHosts, cIncludedNetwork.IncludedHosts...)
 		}
-		returnedCompetitions, returnedDNS, err := createCompetitions(txClient, ctx, log, loadedConfig.Competitions, cEnviroment.HclID)
+		returnedCompetitions, returnedDNS, err := createCompetitions(txClient, ctx, log, loadedConfig.Competitions, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in competition into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in competition into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
-		returnedScripts, returnedFindings, err := createScripts(txClient, ctx, log, loadedConfig.Scripts, cEnviroment.HclID)
+		returnedScripts, returnedFindings, err := createScripts(txClient, ctx, log, loadedConfig.Scripts, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in findings into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in findings into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
-		returnedCommands, err := createCommands(txClient, ctx, log, loadedConfig.Commands, cEnviroment.HclID)
+		returnedCommands, err := createCommands(txClient, ctx, log, loadedConfig.Commands, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in commands into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in commands into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
-		returnedDNSRecords, err := createDNSRecords(txClient, ctx, log, loadedConfig.DNSRecords, cEnviroment.HclID)
+		returnedDNSRecords, err := createDNSRecords(txClient, ctx, log, loadedConfig.DNSRecords, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in dns_records into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in dns_records into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
-		returnedFileDownloads, err := createFileDownload(txClient, ctx, log, loadedConfig.FileDownload, cEnviroment.HclID)
+		returnedFileDownloads, err := createFileDownload(txClient, ctx, log, loadedConfig.FileDownload, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in file_downloads into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in file_downloads into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
-		returnedFileDeletes, err := createFileDelete(txClient, ctx, log, loadedConfig.FileDelete, cEnviroment.HclID)
+		returnedFileDeletes, err := createFileDelete(txClient, ctx, log, loadedConfig.FileDelete, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in file_delets into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in file_delets into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
-		returnedFileExtracts, err := createFileExtract(txClient, ctx, log, loadedConfig.FileExtract, cEnviroment.HclID)
+		returnedFileExtracts, err := createFileExtract(txClient, ctx, log, loadedConfig.FileExtract, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in file_extracts into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in file_extracts into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
-		returnedIdentities, err := createIdentities(txClient, ctx, log, loadedConfig.Identities, cEnviroment.HclID)
+		returnedIdentities, err := createIdentities(txClient, ctx, log, loadedConfig.Identities, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in identities into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in identities into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
-		returnedNetworks, err := createNetworks(txClient, ctx, log, loadedConfig.Networks, cEnviroment.HCLEnvironmentToIncludedNetwork, cEnviroment.HclID)
+		returnedNetworks, err := createNetworks(txClient, ctx, log, loadedConfig.Networks, cEnviroment.HCLIncludedNetworks, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in competition into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in competition into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
 		returnedNetworkIDs := getNetworkIDs(returnedNetworks)
-		returnedAnsible, err := createAnsible(txClient, ctx, log, loadedConfig.Ansible, cEnviroment.HclID)
+		returnedAnsible, err := createAnsible(txClient, ctx, log, loadedConfig.Ansible, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in Ansible into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in Ansible into env: %v, Err: %v", cEnviroment.HCLID, err)
+			return nil, err
+		}
+		returnedScheduledSteps, err := createScheduledStep(txClient, ctx, log, loadedConfig.ScheduledSteps, cEnviroment.HCLID)
+		if err != nil {
+			err = rollback(txClient, err)
+			log.Log.Errorf("Error loading in Scheduled Step into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
 		// returnedHostDependencies is empty if ran once but ok when ran multiple times
-		returnedHosts, returnedHostDependencies, err := createHosts(txClient, ctx, log, loadedConfig.Hosts, cEnviroment.HclID, environmentHosts)
+		returnedHosts, returnedHostDependencies, err := createHosts(txClient, ctx, log, loadedConfig.Hosts, cEnviroment.HCLID, environmentHosts)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in Hosts into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in Hosts into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
 		returnedHostIDs := getHostIDs(returnedHosts)
-		returnedIncludedNetworks, err := createIncludedNetwork(txClient, ctx, log, cEnviroment.HCLEnvironmentToIncludedNetwork, cEnviroment.HclID, returnedHostIDs, returnedNetworkIDs)
+		returnedIncludedNetworks, err := createIncludedNetwork(txClient, ctx, log, cEnviroment.HCLIncludedNetworks, cEnviroment.HCLID, returnedHostIDs, returnedNetworkIDs)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Error loading in included_networks into env: %v, Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Error loading in included_networks into env: %v, Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
 		entEnvironment, err := txClient.Environment.
 			Query().
-			Where(environment.HclIDEQ(cEnviroment.HclID)).
+			Where(environment.HCLIDEQ(cEnviroment.HCLID)).
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
 				newEnvironment, err := txClient.Environment.Create().
-					SetHclID(cEnviroment.HclID).
+					SetHCLID(cEnviroment.HCLID).
 					SetAdminCidrs(cEnviroment.AdminCidrs).
 					SetBuilder(cEnviroment.Builder).
 					SetCompetitionID(cEnviroment.CompetitionID).
@@ -513,31 +531,32 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 					SetRevision(cEnviroment.Revision).
 					SetTags(cEnviroment.Tags).
 					SetTeamCount(cEnviroment.TeamCount).
-					AddEnvironmentToCompetition(returnedCompetitions...).
-					AddEnvironmentToScript(returnedScripts...).
-					AddEnvironmentToFinding(returnedFindings...).
-					AddEnvironmentToCommand(returnedCommands...).
-					AddEnvironmentToDNSRecord(returnedDNSRecords...).
-					AddEnvironmentToFileDownload(returnedFileDownloads...).
-					AddEnvironmentToFileDelete(returnedFileDeletes...).
-					AddEnvironmentToFileExtract(returnedFileExtracts...).
-					AddEnvironmentToIdentity(returnedIdentities...).
-					AddEnvironmentToNetwork(returnedNetworks...).
-					AddEnvironmentToHost(returnedHosts...).
-					AddEnvironmentToHostDependency(returnedHostDependencies...).
-					AddEnvironmentToIncludedNetwork(returnedIncludedNetworks...).
-					AddEnvironmentToDNS(returnedDNS...).
-					AddEnvironmentToAnsible(returnedAnsible...).
+					AddCompetitions(returnedCompetitions...).
+					AddScripts(returnedScripts...).
+					AddFindings(returnedFindings...).
+					AddCommands(returnedCommands...).
+					AddDNSRecords(returnedDNSRecords...).
+					AddFileDownloads(returnedFileDownloads...).
+					AddFileDeletes(returnedFileDeletes...).
+					AddFileExtracts(returnedFileExtracts...).
+					AddIdentities(returnedIdentities...).
+					AddNetworks(returnedNetworks...).
+					AddHosts(returnedHosts...).
+					AddHostDependencies(returnedHostDependencies...).
+					AddIncludedNetworks(returnedIncludedNetworks...).
+					AddDNS(returnedDNS...).
+					AddAnsibles(returnedAnsible...).
+					AddScheduledSteps(returnedScheduledSteps...).
 					Save(ctx)
 				if err != nil {
 					err = rollback(txClient, err)
-					log.Log.Errorf("Failed to Create Environment %v. Err: %v", cEnviroment.HclID, err)
+					log.Log.Errorf("Failed to Create Environment %v. Err: %v", cEnviroment.HCLID, err)
 					return nil, err
 				}
-				_, err = validateHostDependencies(txClient, ctx, log, returnedHostDependencies, cEnviroment.HclID)
+				_, err = validateHostDependencies(txClient, ctx, log, returnedHostDependencies, cEnviroment.HCLID)
 				if err != nil {
 					err = rollback(txClient, err)
-					log.Log.Errorf("Failed to Validate Host Dependencies in Environment %v. Err: %v", cEnviroment.HclID, err)
+					log.Log.Errorf("Failed to Validate Host Dependencies in Environment %v. Err: %v", cEnviroment.HCLID, err)
 					return nil, err
 				}
 				returnedEnvironment = append(returnedEnvironment, newEnvironment)
@@ -545,7 +564,7 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			}
 		}
 		entEnvironment, err = entEnvironment.Update().
-			SetHclID(cEnviroment.HclID).
+			SetHCLID(cEnviroment.HCLID).
 			SetAdminCidrs(cEnviroment.AdminCidrs).
 			SetBuilder(cEnviroment.Builder).
 			SetCompetitionID(cEnviroment.CompetitionID).
@@ -556,53 +575,54 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 			SetRevision(entEnvironment.Revision + 1).
 			SetTags(cEnviroment.Tags).
 			SetTeamCount(cEnviroment.TeamCount).
-			ClearEnvironmentToCompetition().
-			ClearEnvironmentToScript().
-			ClearEnvironmentToFinding().
-			ClearEnvironmentToCommand().
-			ClearEnvironmentToDNSRecord().
-			ClearEnvironmentToFileDownload().
-			ClearEnvironmentToFileDelete().
-			ClearEnvironmentToFileExtract().
-			ClearEnvironmentToIdentity().
-			ClearEnvironmentToNetwork().
-			ClearEnvironmentToHostDependency().
-			ClearEnvironmentToIncludedNetwork().
-			ClearEnvironmentToDNS().
-			ClearEnvironmentToHost().
-			ClearEnvironmentToAnsible().
+			ClearCompetitions().
+			ClearScripts().
+			ClearFindings().
+			ClearCommands().
+			ClearDNSRecords().
+			ClearFileDownloads().
+			ClearFileDeletes().
+			ClearFileExtracts().
+			ClearIdentities().
+			ClearNetworks().
+			ClearHostDependencies().
+			ClearIncludedNetworks().
+			ClearDNS().
+			ClearHosts().
+			ClearAnsibles().
+			ClearScheduledSteps().
 			Save(ctx)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Failed to Update Environment %v. Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Failed to Update Environment %v. Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
 		entEnvironment, err = entEnvironment.Update().
-			AddEnvironmentToCompetition(returnedCompetitions...).
-			AddEnvironmentToScript(returnedScripts...).
-			AddEnvironmentToFinding(returnedFindings...).
-			AddEnvironmentToCommand(returnedCommands...).
-			AddEnvironmentToDNSRecord(returnedDNSRecords...).
-			AddEnvironmentToFileDownload(returnedFileDownloads...).
-			AddEnvironmentToFileDelete(returnedFileDeletes...).
-			AddEnvironmentToFileExtract(returnedFileExtracts...).
-			AddEnvironmentToIdentity(returnedIdentities...).
-			AddEnvironmentToNetwork(returnedNetworks...).
-			AddEnvironmentToHost(returnedHosts...).
-			AddEnvironmentToHostDependency(returnedHostDependencies...).
-			AddEnvironmentToIncludedNetwork(returnedIncludedNetworks...).
-			AddEnvironmentToDNS(returnedDNS...).
-			AddEnvironmentToAnsible(returnedAnsible...).
+			AddCompetitions(returnedCompetitions...).
+			AddScripts(returnedScripts...).
+			AddFindings(returnedFindings...).
+			AddCommands(returnedCommands...).
+			AddDNSRecords(returnedDNSRecords...).
+			AddFileDownloads(returnedFileDownloads...).
+			AddFileDeletes(returnedFileDeletes...).
+			AddFileExtracts(returnedFileExtracts...).
+			AddIdentities(returnedIdentities...).
+			AddNetworks(returnedNetworks...).
+			AddHosts(returnedHosts...).
+			AddHostDependencies(returnedHostDependencies...).
+			AddIncludedNetworks(returnedIncludedNetworks...).
+			AddDNS(returnedDNS...).
+			AddAnsibles(returnedAnsible...).
 			Save(ctx)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Failed to Update Environment %v with it's edges. Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Failed to Update Environment %v with it's edges. Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
-		_, err = validateHostDependencies(txClient, ctx, log, returnedHostDependencies, cEnviroment.HclID)
+		_, err = validateHostDependencies(txClient, ctx, log, returnedHostDependencies, cEnviroment.HCLID)
 		if err != nil {
 			err = rollback(txClient, err)
-			log.Log.Errorf("Failed to Validate Host Dependencies in Environment %v. Err: %v", cEnviroment.HclID, err)
+			log.Log.Errorf("Failed to Validate Host Dependencies in Environment %v. Err: %v", cEnviroment.HCLID, err)
 			return nil, err
 		}
 		returnedEnvironment = append(returnedEnvironment, entEnvironment)
@@ -617,13 +637,13 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 	return returnedEnvironment, nil
 }
 
-func createCompetitions(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configCompetitions map[string]*ent.Competition, envHclID string) ([]*ent.Competition, []*ent.DNS, error) {
+func createCompetitions(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configCompetitions map[string]*ent.Competition, envHCLID string) ([]*ent.Competition, []*ent.DNS, error) {
 	bulk := []*ent.CompetitionCreate{}
 	returnedCompetitions := []*ent.Competition{}
 	returnedAllDNS := []*ent.DNS{}
 	for _, cCompetition := range configCompetitions {
-		log.Log.Debugf("Creating Competition: %v for Env: %v", cCompetition.HclID, envHclID)
-		returnedDNS, err := createDNS(txClient, ctx, log, cCompetition.HCLCompetitionToDNS, envHclID)
+		log.Log.Debugf("Creating Competition: %v for Env: %v", cCompetition.HCLID, envHCLID)
+		returnedDNS, err := createDNS(txClient, ctx, log, cCompetition.HCLDNS, envHCLID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -631,8 +651,8 @@ func createCompetitions(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 			Query().
 			Where(
 				competition.And(
-					competition.HclIDEQ(cCompetition.HclID),
-					competition.HasCompetitionToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					competition.HCLIDEQ(cCompetition.HCLID),
+					competition.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
@@ -640,28 +660,28 @@ func createCompetitions(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := txClient.Competition.Create().
 					SetConfig(cCompetition.Config).
-					SetHclID(cCompetition.HclID).
+					SetHCLID(cCompetition.HCLID).
 					SetRootPassword(cCompetition.RootPassword).
 					SetTags(cCompetition.Tags).
-					AddCompetitionToDNS(returnedDNS...)
+					AddDNS(returnedDNS...)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
 		}
 		entCompetition, err = entCompetition.Update().
 			SetConfig(cCompetition.Config).
-			SetHclID(cCompetition.HclID).
+			SetHCLID(cCompetition.HCLID).
 			SetRootPassword(cCompetition.RootPassword).
 			SetTags(cCompetition.Tags).
-			ClearCompetitionToDNS().
+			ClearDNS().
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update Competition %v. Err: %v", cCompetition.HclID, err)
+			log.Log.Errorf("Failed to Update Competition %v. Err: %v", cCompetition.HCLID, err)
 			return nil, nil, err
 		}
-		_, err = entCompetition.Update().AddCompetitionToDNS(returnedDNS...).Save(ctx)
+		_, err = entCompetition.Update().AddDNS(returnedDNS...).Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update Competition %v with DNS. Err: %v", cCompetition.HclID, err)
+			log.Log.Errorf("Failed to Update Competition %v with DNS. Err: %v", cCompetition.HCLID, err)
 			return nil, nil, err
 		}
 		returnedAllDNS = append(returnedAllDNS, returnedDNS...)
@@ -694,18 +714,18 @@ func removeDuplicateValues(stringSlice []string) []string {
 	return list
 }
 
-func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configHosts map[string]*ent.Host, envHclID string, environmentHosts []string) ([]*ent.Host, []*ent.HostDependency, error) {
+func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configHosts map[string]*ent.Host, envHCLID string, environmentHosts []string) ([]*ent.Host, []*ent.HostDependency, error) {
 	returnedHosts := []*ent.Host{}
 	returnedAllHostDependencies := []*ent.HostDependency{}
 	environmentHosts = removeDuplicateValues(environmentHosts)
 	for _, cHostID := range environmentHosts {
-		log.Log.Debugf("Creating Host: %v for Env: %v", cHostID, envHclID)
+		log.Log.Debugf("Creating Host: %v for Env: %v", cHostID, envHCLID)
 		cHost, ok := configHosts[cHostID]
 		if !ok {
-			log.Log.Errorf("Host %v was not defined in the Enviroment %v", cHostID, envHclID)
-			return nil, nil, fmt.Errorf("err: Host %v was not defined in the Enviroment %v", cHostID, envHclID)
+			log.Log.Errorf("Host %v was not defined in the Enviroment %v", cHostID, envHCLID)
+			return nil, nil, fmt.Errorf("err: Host %v was not defined in the Enviroment %v", cHostID, envHCLID)
 		}
-		returnedDisk, err := createDisk(txClient, ctx, log, cHost.HCLHostToDisk, cHost.HclID, envHclID)
+		returnedDisk, err := createDisk(txClient, ctx, log, cHost.HCLDisk, cHost.HCLID, envHCLID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -713,8 +733,8 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 			Query().
 			Where(
 				host.And(
-					host.HclIDEQ(cHost.HclID),
-					host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					host.HCLIDEQ(cHost.HCLID),
+					host.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
@@ -725,20 +745,21 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 					SetDescription(cHost.Description).
 					SetExposedTCPPorts(cHost.ExposedTCPPorts).
 					SetExposedUDPPorts(cHost.ExposedUDPPorts).
-					SetHclID(cHost.HclID).
+					SetHCLID(cHost.HCLID).
 					SetHostname(cHost.Hostname).
 					SetInstanceSize(cHost.InstanceSize).
 					SetLastOctet(cHost.LastOctet).
 					SetOS(cHost.OS).
 					SetOverridePassword(cHost.OverridePassword).
 					SetProvisionSteps(cHost.ProvisionSteps).
+					SetScheduledSteps(cHost.ScheduledSteps).
 					SetTags(cHost.Tags).
 					SetUserGroups(cHost.UserGroups).
 					SetVars(cHost.Vars).
-					SetHostToDisk(returnedDisk).
+					SetDisk(returnedDisk).
 					Save(ctx)
 				if err != nil {
-					log.Log.Errorf("Failed to Create Host %v. Err: %v", cHost.HclID, err)
+					log.Log.Errorf("Failed to Create Host %v. Err: %v", cHost.HCLID, err)
 					return nil, nil, err
 				}
 			} else {
@@ -750,31 +771,32 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 				SetDescription(cHost.Description).
 				SetExposedTCPPorts(cHost.ExposedTCPPorts).
 				SetExposedUDPPorts(cHost.ExposedUDPPorts).
-				SetHclID(cHost.HclID).
+				SetHCLID(cHost.HCLID).
 				SetHostname(cHost.Hostname).
 				SetInstanceSize(cHost.InstanceSize).
 				SetLastOctet(cHost.LastOctet).
 				SetOS(cHost.OS).
 				SetOverridePassword(cHost.OverridePassword).
 				SetProvisionSteps(cHost.ProvisionSteps).
+				SetScheduledSteps(cHost.ScheduledSteps).
 				SetTags(cHost.Tags).
 				SetUserGroups(cHost.UserGroups).
 				SetVars(cHost.Vars).
-				ClearHostToDisk().
+				ClearDisk().
 				Save(ctx)
 			if err != nil {
-				log.Log.Errorf("Failed to Update Host %v. Err: %v", cHost.HclID, err)
+				log.Log.Errorf("Failed to Update Host %v. Err: %v", cHost.HCLID, err)
 				return nil, nil, err
 			}
-			_, err = entHost.Update().SetHostToDisk(returnedDisk).Save(ctx)
+			_, err = entHost.Update().SetDisk(returnedDisk).Save(ctx)
 			if err != nil {
-				log.Log.Errorf("Failed to Update Disk to Host %v. Err: %v", cHost.HclID, err)
+				log.Log.Errorf("Failed to Update Disk to Host %v. Err: %v", cHost.HCLID, err)
 				return nil, nil, err
 			}
 		}
 
 		returnedHosts = append(returnedHosts, entHost)
-		returnedHostDependencies, err := createHostDependencies(txClient, ctx, log, cHost.HCLDependOnHostToHostDependency, envHclID, entHost)
+		returnedHostDependencies, err := createHostDependencies(txClient, ctx, log, cHost.HCLDependOnHostDependencies, envHCLID, entHost)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -783,14 +805,14 @@ func createHosts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, con
 	return returnedHosts, returnedAllHostDependencies, nil
 }
 
-func createNetworks(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configNetworks map[string]*ent.Network, configIncludedNetworks []*ent.IncludedNetwork, envHclID string) ([]*ent.Network, error) {
+func createNetworks(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configNetworks map[string]*ent.Network, configIncludedNetworks []*ent.IncludedNetwork, envHCLID string) ([]*ent.Network, error) {
 	bulk := []*ent.NetworkCreate{}
 	returnedNetworks := []*ent.Network{}
 	for _, cNetwork := range configNetworks {
-		log.Log.Debugf("Creating Network: %v for Env: %v", cNetwork.HclID, envHclID)
+		log.Log.Debugf("Creating Network: %v for Env: %v", cNetwork.HCLID, envHCLID)
 		included := false
 		for _, cIncludedNetwork := range configIncludedNetworks {
-			if cIncludedNetwork.Name == cNetwork.HclID {
+			if cIncludedNetwork.Name == cNetwork.HCLID {
 				included = true
 				break
 			}
@@ -802,8 +824,8 @@ func createNetworks(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 			Query().
 			Where(
 				network.And(
-					network.HclIDEQ(cNetwork.HclID),
-					network.HasNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					network.HCLIDEQ(cNetwork.HCLID),
+					network.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
@@ -811,7 +833,7 @@ func createNetworks(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := txClient.Network.Create().
 					SetCidr(cNetwork.Cidr).
-					SetHclID(cNetwork.HclID).
+					SetHCLID(cNetwork.HCLID).
 					SetName(cNetwork.Name).
 					SetTags(cNetwork.Tags).
 					SetVars(cNetwork.Vars).
@@ -822,14 +844,14 @@ func createNetworks(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 		}
 		entNetwork, err = entNetwork.Update().
 			SetCidr(cNetwork.Cidr).
-			SetHclID(cNetwork.HclID).
+			SetHCLID(cNetwork.HCLID).
 			SetName(cNetwork.Name).
 			SetTags(cNetwork.Tags).
 			SetVars(cNetwork.Vars).
 			SetVdiVisible(cNetwork.VdiVisible).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update Network %v. Err: %v", cNetwork.HclID, err)
+			log.Log.Errorf("Failed to Update Network %v. Err: %v", cNetwork.HCLID, err)
 			return nil, err
 		}
 		returnedNetworks = append(returnedNetworks, entNetwork)
@@ -845,13 +867,13 @@ func createNetworks(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 	return returnedNetworks, nil
 }
 
-func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configScript map[string]*ent.Script, envHclID string) ([]*ent.Script, []*ent.Finding, error) {
+func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configScript map[string]*ent.Script, envHCLID string) ([]*ent.Script, []*ent.Finding, error) {
 	bulk := []*ent.ScriptCreate{}
 	returnedScripts := []*ent.Script{}
 	returnedAllFindings := []*ent.Finding{}
 	for _, cScript := range configScript {
-		log.Log.Debugf("Creating Script: %v for Env: %v", cScript.HclID, envHclID)
-		returnedFindings, err := createFindings(txClient, ctx, log, cScript.HCLScriptToFinding, envHclID, cScript.HclID)
+		log.Log.Debugf("Creating Script: %v for Env: %v", cScript.HCLID, envHCLID)
+		returnedFindings, err := createFindings(txClient, ctx, log, cScript.HCLFindings, envHCLID, cScript.HCLID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -859,15 +881,15 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 			Query().
 			Where(
 				script.And(
-					script.HclIDEQ(cScript.HclID),
-					script.HasScriptToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					script.HCLIDEQ(cScript.HCLID),
+					script.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := txClient.Script.Create().
-					SetHclID(cScript.HclID).
+					SetHCLID(cScript.HCLID).
 					SetName(cScript.Name).
 					SetLanguage(cScript.Language).
 					SetDescription(cScript.Description).
@@ -881,13 +903,13 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 					SetVars(cScript.Vars).
 					SetTags(cScript.Tags).
 					SetAbsPath(cScript.AbsPath).
-					AddScriptToFinding(returnedFindings...)
+					AddFindings(returnedFindings...)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
 		}
 		entScript, err = entScript.Update().
-			SetHclID(cScript.HclID).
+			SetHCLID(cScript.HCLID).
 			SetName(cScript.Name).
 			SetLanguage(cScript.Language).
 			SetDescription(cScript.Description).
@@ -901,15 +923,15 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 			SetVars(cScript.Vars).
 			SetTags(cScript.Tags).
 			SetAbsPath(cScript.AbsPath).
-			ClearScriptToFinding().
+			ClearFindings().
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update Script %v. Err: %v", cScript.HclID, err)
+			log.Log.Errorf("Failed to Update Script %v. Err: %v", cScript.HCLID, err)
 			return nil, nil, err
 		}
-		_, err = entScript.Update().AddScriptToFinding(returnedFindings...).Save(ctx)
+		_, err = entScript.Update().AddFindings(returnedFindings...).Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update Script %v with it's Findings. Err: %v", cScript.HclID, err)
+			log.Log.Errorf("Failed to Update Script %v with it's Findings. Err: %v", cScript.HCLID, err)
 			return nil, nil, err
 		}
 		returnedAllFindings = append(returnedAllFindings, returnedFindings...)
@@ -926,17 +948,17 @@ func createScripts(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 	return returnedScripts, returnedAllFindings, nil
 }
 
-func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configAnsible map[string]*ent.Ansible, envHclID string) ([]*ent.Ansible, error) {
+func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configAnsible map[string]*ent.Ansible, envHCLID string) ([]*ent.Ansible, error) {
 	bulk := []*ent.AnsibleCreate{}
 	returnedAnsible := []*ent.Ansible{}
 	for _, cAnsible := range configAnsible {
-		log.Log.Debugf("Creating Ansible: %v for Env: %v", cAnsible.HclID, envHclID)
+		log.Log.Debugf("Creating Ansible: %v for Env: %v", cAnsible.HCLID, envHCLID)
 		entAnsible, err := txClient.Ansible.
 			Query().
 			Where(
 				ansible.And(
-					ansible.HclIDEQ(cAnsible.HclID),
-					ansible.HasAnsibleFromEnvironmentWith(environment.HclIDEQ(envHclID)),
+					ansible.HCLIDEQ(cAnsible.HCLID),
+					ansible.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
@@ -944,7 +966,7 @@ func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := txClient.Ansible.Create().
 					SetName(cAnsible.Name).
-					SetHclID(cAnsible.HclID).
+					SetHCLID(cAnsible.HCLID).
 					SetDescription(cAnsible.Description).
 					SetSource(cAnsible.Source).
 					SetPlaybookName(cAnsible.PlaybookName).
@@ -958,7 +980,7 @@ func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 		}
 		entAnsible, err = entAnsible.Update().
 			SetName(cAnsible.Name).
-			SetHclID(cAnsible.HclID).
+			SetHCLID(cAnsible.HCLID).
 			SetDescription(cAnsible.Description).
 			SetSource(cAnsible.Source).
 			SetPlaybookName(cAnsible.PlaybookName).
@@ -968,7 +990,7 @@ func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 			SetAbsPath(cAnsible.AbsPath).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update Ansible %v. Err: %v", cAnsible.HclID, err)
+			log.Log.Errorf("Failed to Update Ansible %v. Err: %v", cAnsible.HCLID, err)
 			return nil, err
 		}
 		returnedAnsible = append(returnedAnsible, entAnsible)
@@ -984,17 +1006,71 @@ func createAnsible(txClient *ent.Tx, ctx context.Context, log *logging.Logger, c
 	return returnedAnsible, nil
 }
 
-func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configCommands map[string]*ent.Command, envHclID string) ([]*ent.Command, error) {
+func createScheduledStep(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configScheduledSteps map[string]*ent.ScheduledStep, envHCLID string) ([]*ent.ScheduledStep, error) {
+	bulk := []*ent.ScheduledStepCreate{}
+	returnedScheduledSteps := []*ent.ScheduledStep{}
+	for _, cScheduledStep := range configScheduledSteps {
+		log.Log.Debugf("Creating Scheduled Step: %v for Env: %v", cScheduledStep.HCLID, envHCLID)
+		entScheduledStep, err := txClient.ScheduledStep.
+			Query().
+			Where(
+				scheduledstep.And(
+					scheduledstep.HCLIDEQ(cScheduledStep.HCLID),
+					scheduledstep.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
+				),
+			).
+			Only(ctx)
+		if err != nil {
+			if err == err.(*ent.NotFoundError) {
+				createdQuery := txClient.ScheduledStep.Create().
+					SetName(cScheduledStep.Name).
+					SetHCLID(cScheduledStep.HCLID).
+					SetDescription(cScheduledStep.Description).
+					SetStep(cScheduledStep.Step).
+					SetType(cScheduledStep.Type).
+					SetSchedule(cScheduledStep.Schedule).
+					SetRunAt(cScheduledStep.RunAt)
+				bulk = append(bulk, createdQuery)
+				continue
+			}
+		}
+		entScheduledStep, err = entScheduledStep.Update().
+			SetName(cScheduledStep.Name).
+			SetHCLID(cScheduledStep.HCLID).
+			SetDescription(cScheduledStep.Description).
+			SetStep(cScheduledStep.Step).
+			SetType(cScheduledStep.Type).
+			SetSchedule(cScheduledStep.Schedule).
+			SetRunAt(cScheduledStep.RunAt).
+			Save(ctx)
+		if err != nil {
+			log.Log.Errorf("Failed to Update Scheduled Step %v. Err: %v", cScheduledStep.HCLID, err)
+			return nil, err
+		}
+		returnedScheduledSteps = append(returnedScheduledSteps, entScheduledStep)
+	}
+	if len(bulk) > 0 {
+		dbAnsible, err := txClient.ScheduledStep.CreateBulk(bulk...).Save(ctx)
+		if err != nil {
+			log.Log.Errorf("Failed to create bulk Scheduled Step. Err: %v", err)
+			return nil, err
+		}
+		returnedScheduledSteps = append(returnedScheduledSteps, dbAnsible...)
+	}
+	return returnedScheduledSteps, nil
+}
+
+func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configCommands map[string]*ent.Command, envHCLID string) ([]*ent.Command, error) {
 	bulk := []*ent.CommandCreate{}
 	returnedCommands := []*ent.Command{}
 	for _, cCommand := range configCommands {
-		log.Log.Debugf("Creating Command: %v for Env: %v", cCommand.HclID, envHclID)
+		log.Log.Debugf("Creating Command: %v for Env: %v", cCommand.HCLID, envHCLID)
 		entCommand, err := txClient.Command.
 			Query().
 			Where(
 				command.And(
-					command.HclIDEQ(cCommand.HclID),
-					command.HasCommandToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					command.HCLIDEQ(cCommand.HCLID),
+					command.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
@@ -1005,7 +1081,7 @@ func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 					SetCooldown(cCommand.Cooldown).
 					SetDescription(cCommand.Description).
 					SetDisabled(cCommand.Disabled).
-					SetHclID(cCommand.HclID).
+					SetHCLID(cCommand.HCLID).
 					SetIgnoreErrors(cCommand.IgnoreErrors).
 					SetName(cCommand.Name).
 					SetProgram(cCommand.Program).
@@ -1021,7 +1097,7 @@ func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 			SetCooldown(cCommand.Cooldown).
 			SetDescription(cCommand.Description).
 			SetDisabled(cCommand.Disabled).
-			SetHclID(cCommand.HclID).
+			SetHCLID(cCommand.HCLID).
 			SetIgnoreErrors(cCommand.IgnoreErrors).
 			SetName(cCommand.Name).
 			SetProgram(cCommand.Program).
@@ -1030,7 +1106,7 @@ func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 			SetVars(cCommand.Vars).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update Command %v. Err: %v", cCommand.HclID, err)
+			log.Log.Errorf("Failed to Update Command %v. Err: %v", cCommand.HCLID, err)
 			return nil, err
 		}
 		returnedCommands = append(returnedCommands, entCommand)
@@ -1046,18 +1122,18 @@ func createCommands(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 	return returnedCommands, nil
 }
 
-func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configDNSRecords map[string]*ent.DNSRecord, envHclID string) ([]*ent.DNSRecord, error) {
+func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configDNSRecords map[string]*ent.DNSRecord, envHCLID string) ([]*ent.DNSRecord, error) {
 	bulk := []*ent.DNSRecordCreate{}
 	returnedDNSRecords := []*ent.DNSRecord{}
 	for _, cDNSRecord := range configDNSRecords {
-		log.Log.Debugf("Creating DNSRecord: %v for Env: %v", cDNSRecord.HclID, envHclID)
+		log.Log.Debugf("Creating DNSRecord: %v for Env: %v", cDNSRecord.HCLID, envHCLID)
 
 		entDNSRecord, err := txClient.DNSRecord.
 			Query().
 			Where(
 				dnsrecord.And(
-					dnsrecord.HclIDEQ(cDNSRecord.HclID),
-					dnsrecord.HasDNSRecordToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					dnsrecord.HCLIDEQ(cDNSRecord.HCLID),
+					dnsrecord.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
@@ -1065,7 +1141,7 @@ func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := txClient.DNSRecord.Create().
 					SetDisabled(cDNSRecord.Disabled).
-					SetHclID(cDNSRecord.HclID).
+					SetHCLID(cDNSRecord.HCLID).
 					SetName(cDNSRecord.Name).
 					SetTags(cDNSRecord.Tags).
 					SetType(cDNSRecord.Type).
@@ -1078,7 +1154,7 @@ func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 		}
 		entDNSRecord, err = entDNSRecord.Update().
 			SetDisabled(cDNSRecord.Disabled).
-			SetHclID(cDNSRecord.HclID).
+			SetHCLID(cDNSRecord.HCLID).
 			SetName(cDNSRecord.Name).
 			SetTags(cDNSRecord.Tags).
 			SetType(cDNSRecord.Type).
@@ -1087,7 +1163,7 @@ func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 			SetZone(cDNSRecord.Zone).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update DNS Record %v. Err: %v", cDNSRecord.HclID, err)
+			log.Log.Errorf("Failed to Update DNS Record %v. Err: %v", cDNSRecord.HCLID, err)
 			return nil, err
 		}
 		returnedDNSRecords = append(returnedDNSRecords, entDNSRecord)
@@ -1103,25 +1179,25 @@ func createDNSRecords(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 	return returnedDNSRecords, nil
 }
 
-func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFileDownloads map[string]*ent.FileDownload, envHclID string) ([]*ent.FileDownload, error) {
+func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFileDownloads map[string]*ent.FileDownload, envHCLID string) ([]*ent.FileDownload, error) {
 	bulk := []*ent.FileDownloadCreate{}
 	returnedFileDownloads := []*ent.FileDownload{}
 	for _, cFileDownload := range configFileDownloads {
-		log.Log.Debugf("Creating FileDownload: %v for Env: %v", cFileDownload.HclID, envHclID)
+		log.Log.Debugf("Creating FileDownload: %v for Env: %v", cFileDownload.HCLID, envHCLID)
 
 		entFileDownload, err := txClient.FileDownload.
 			Query().
 			Where(
 				filedownload.And(
-					filedownload.HclIDEQ(cFileDownload.HclID),
-					filedownload.HasFileDownloadToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					filedownload.HCLIDEQ(cFileDownload.HCLID),
+					filedownload.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := txClient.FileDownload.Create().
-					SetHclID(cFileDownload.HclID).
+					SetHCLID(cFileDownload.HCLID).
 					SetSourceType(cFileDownload.SourceType).
 					SetSource(cFileDownload.Source).
 					SetDestination(cFileDownload.Destination).
@@ -1137,7 +1213,7 @@ func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 			}
 		}
 		entFileDownload, err = entFileDownload.Update().
-			SetHclID(cFileDownload.HclID).
+			SetHCLID(cFileDownload.HCLID).
 			SetSourceType(cFileDownload.SourceType).
 			SetSource(cFileDownload.Source).
 			SetDestination(cFileDownload.Destination).
@@ -1150,7 +1226,7 @@ func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 			SetIsTxt(cFileDownload.IsTxt).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update File Download %v. Err: %v", cFileDownload.HclID, err)
+			log.Log.Errorf("Failed to Update File Download %v. Err: %v", cFileDownload.HCLID, err)
 			return nil, err
 		}
 		returnedFileDownloads = append(returnedFileDownloads, entFileDownload)
@@ -1166,25 +1242,25 @@ func createFileDownload(txClient *ent.Tx, ctx context.Context, log *logging.Logg
 	return returnedFileDownloads, nil
 }
 
-func createFileDelete(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFileDeletes map[string]*ent.FileDelete, envHclID string) ([]*ent.FileDelete, error) {
+func createFileDelete(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFileDeletes map[string]*ent.FileDelete, envHCLID string) ([]*ent.FileDelete, error) {
 	bulk := []*ent.FileDeleteCreate{}
 	returnedFileDeletes := []*ent.FileDelete{}
 	for _, cFileDelete := range configFileDeletes {
-		log.Log.Debugf("Creating FileDelete: %v for Env: %v", cFileDelete.HclID, envHclID)
+		log.Log.Debugf("Creating FileDelete: %v for Env: %v", cFileDelete.HCLID, envHCLID)
 
 		entFileDelete, err := txClient.FileDelete.
 			Query().
 			Where(
 				filedelete.And(
-					filedelete.HclIDEQ(cFileDelete.HclID),
-					filedelete.HasFileDeleteToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					filedelete.HCLIDEQ(cFileDelete.HCLID),
+					filedelete.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
 		if err != nil {
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := txClient.FileDelete.Create().
-					SetHclID(cFileDelete.HclID).
+					SetHCLID(cFileDelete.HCLID).
 					SetPath(cFileDelete.Path).
 					SetTags(cFileDelete.Tags)
 				bulk = append(bulk, createdQuery)
@@ -1192,12 +1268,12 @@ func createFileDelete(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 			}
 		}
 		entFileDelete, err = entFileDelete.Update().
-			SetHclID(cFileDelete.HclID).
+			SetHCLID(cFileDelete.HCLID).
 			SetPath(cFileDelete.Path).
 			SetTags(cFileDelete.Tags).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update File Delete %v. Err: %v", cFileDelete.HclID, err)
+			log.Log.Errorf("Failed to Update File Delete %v. Err: %v", cFileDelete.HCLID, err)
 			return nil, err
 		}
 		returnedFileDeletes = append(returnedFileDeletes, entFileDelete)
@@ -1213,18 +1289,18 @@ func createFileDelete(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 	return returnedFileDeletes, nil
 }
 
-func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFileExtracts map[string]*ent.FileExtract, envHclID string) ([]*ent.FileExtract, error) {
+func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFileExtracts map[string]*ent.FileExtract, envHCLID string) ([]*ent.FileExtract, error) {
 	bulk := []*ent.FileExtractCreate{}
 	returnedFileExtracts := []*ent.FileExtract{}
 	for _, cFileExtract := range configFileExtracts {
-		log.Log.Debugf("Creating FileExtract: %v for Env: %v", cFileExtract.HclID, envHclID)
+		log.Log.Debugf("Creating FileExtract: %v for Env: %v", cFileExtract.HCLID, envHCLID)
 
 		entFileExtract, err := txClient.FileExtract.
 			Query().
 			Where(
 				fileextract.And(
-					fileextract.HclIDEQ(cFileExtract.HclID),
-					fileextract.HasFileExtractToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					fileextract.HCLIDEQ(cFileExtract.HCLID),
+					fileextract.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
@@ -1232,7 +1308,7 @@ func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := txClient.FileExtract.Create().
 					SetDestination(cFileExtract.Destination).
-					SetHclID(cFileExtract.HclID).
+					SetHCLID(cFileExtract.HCLID).
 					SetSource(cFileExtract.Source).
 					SetTags(cFileExtract.Tags).
 					SetType(cFileExtract.Type)
@@ -1242,13 +1318,13 @@ func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 		}
 		entFileExtract, err = entFileExtract.Update().
 			SetDestination(cFileExtract.Destination).
-			SetHclID(cFileExtract.HclID).
+			SetHCLID(cFileExtract.HCLID).
 			SetSource(cFileExtract.Source).
 			SetTags(cFileExtract.Tags).
 			SetType(cFileExtract.Type).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update File Extract %v. Err: %v", cFileExtract.HclID, err)
+			log.Log.Errorf("Failed to Update File Extract %v. Err: %v", cFileExtract.HCLID, err)
 			return nil, err
 		}
 		returnedFileExtracts = append(returnedFileExtracts, entFileExtract)
@@ -1264,18 +1340,18 @@ func createFileExtract(txClient *ent.Tx, ctx context.Context, log *logging.Logge
 	return returnedFileExtracts, nil
 }
 
-func createIdentities(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configIdentities map[string]*ent.Identity, envHclID string) ([]*ent.Identity, error) {
+func createIdentities(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configIdentities map[string]*ent.Identity, envHCLID string) ([]*ent.Identity, error) {
 	bulk := []*ent.IdentityCreate{}
 	returnedIdentities := []*ent.Identity{}
 	for _, cIdentity := range configIdentities {
-		log.Log.Debugf("Creating Identity: %v for Env: %v", cIdentity.HclID, envHclID)
+		log.Log.Debugf("Creating Identity: %v for Env: %v", cIdentity.HCLID, envHCLID)
 
 		entIdentity, err := txClient.Identity.
 			Query().
 			Where(
 				identity.And(
-					identity.HclIDEQ(cIdentity.HclID),
-					identity.HasIdentityToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					identity.HCLIDEQ(cIdentity.HCLID),
+					identity.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
@@ -1286,7 +1362,7 @@ func createIdentities(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 					SetDescription(cIdentity.Description).
 					SetEmail(cIdentity.Email).
 					SetFirstName(cIdentity.FirstName).
-					SetHclID(cIdentity.HclID).
+					SetHCLID(cIdentity.HCLID).
 					SetLastName(cIdentity.LastName).
 					SetPassword(cIdentity.Password).
 					SetVars(cIdentity.Vars).
@@ -1300,14 +1376,14 @@ func createIdentities(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 			SetDescription(cIdentity.Description).
 			SetEmail(cIdentity.Email).
 			SetFirstName(cIdentity.FirstName).
-			SetHclID(cIdentity.HclID).
+			SetHCLID(cIdentity.HCLID).
 			SetLastName(cIdentity.LastName).
 			SetPassword(cIdentity.Password).
 			SetVars(cIdentity.Vars).
 			SetTags(cIdentity.Tags).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update Identity %v. Err: %v", cIdentity.HclID, err)
+			log.Log.Errorf("Failed to Update Identity %v. Err: %v", cIdentity.HCLID, err)
 			return nil, err
 		}
 		returnedIdentities = append(returnedIdentities, entIdentity)
@@ -1323,19 +1399,19 @@ func createIdentities(txClient *ent.Tx, ctx context.Context, log *logging.Logger
 	return returnedIdentities, nil
 }
 
-func createFindings(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFindings []*ent.Finding, envHclID string, entScriptID string) ([]*ent.Finding, error) {
+func createFindings(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configFindings []*ent.Finding, envHCLID string, entScriptID string) ([]*ent.Finding, error) {
 	bulk := []*ent.FindingCreate{}
 	returnedFindings := []*ent.Finding{}
 	for _, cFinding := range configFindings {
-		log.Log.Debugf("Creating Finding: %v for Env: %v", cFinding.Name, envHclID)
+		log.Log.Debugf("Creating Finding: %v for Env: %v", cFinding.Name, envHCLID)
 
 		entFinding, err := txClient.Finding.
 			Query().
 			Where(
 				finding.And(
 					finding.Name(cFinding.Name),
-					finding.HasFindingToEnvironmentWith(environment.HclIDEQ(envHclID)),
-					finding.HasFindingToScriptWith(script.HclID(entScriptID)),
+					finding.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
+					finding.HasScriptWith(script.HCLID(entScriptID)),
 				),
 			).
 			Only(ctx)
@@ -1359,7 +1435,7 @@ func createFindings(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 			SetTags(cFinding.Tags).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update Finding %v for Script %v in Enviroment %v. Err: %v", cFinding.Name, entScriptID, envHclID, err)
+			log.Log.Errorf("Failed to Update Finding %v for Script %v in Enviroment %v. Err: %v", cFinding.Name, entScriptID, envHCLID, err)
 			return nil, err
 		}
 		returnedFindings = append(returnedFindings, entFinding)
@@ -1375,20 +1451,20 @@ func createFindings(txClient *ent.Tx, ctx context.Context, log *logging.Logger, 
 	return returnedFindings, nil
 }
 
-func createHostDependencies(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configHostDependencies []*ent.HostDependency, envHclID string, dependByHost *ent.Host) ([]*ent.HostDependency, error) {
+func createHostDependencies(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configHostDependencies []*ent.HostDependency, envHCLID string, dependByHost *ent.Host) ([]*ent.HostDependency, error) {
 	bulk := []*ent.HostDependencyCreate{}
 	returnedHostDependencies := []*ent.HostDependency{}
 	for _, cHostDependency := range configHostDependencies {
-		log.Log.Debugf("Creating HostDependency for host %v to host %v in network %v for Env: %v", dependByHost.HclID, cHostDependency.HostID, cHostDependency.NetworkID, envHclID)
+		log.Log.Debugf("Creating HostDependency for host %v to host %v in network %v for Env: %v", dependByHost.HCLID, cHostDependency.HostID, cHostDependency.NetworkID, envHCLID)
 
 		entHostDependency, err := txClient.HostDependency.
 			Query().
 			Where(
 				hostdependency.And(
-					hostdependency.HasHostDependencyToDependByHostWith(host.HclIDEQ(dependByHost.HclID)),
+					hostdependency.HasRequiredByWith(host.HCLIDEQ(dependByHost.HCLID)),
 					hostdependency.HostIDEQ(cHostDependency.HostID),
 					hostdependency.NetworkIDEQ(cHostDependency.NetworkID),
-					hostdependency.HasHostDependencyToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					hostdependency.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
@@ -1397,25 +1473,25 @@ func createHostDependencies(txClient *ent.Tx, ctx context.Context, log *logging.
 				createdQuery := txClient.HostDependency.Create().
 					SetHostID(cHostDependency.HostID).
 					SetNetworkID(cHostDependency.NetworkID).
-					SetHostDependencyToDependByHost(dependByHost)
+					SetRequiredBy(dependByHost)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
 		}
 		entHostDependency, err = entHostDependency.Update().
-			ClearHostDependencyToDependByHost().
-			ClearHostDependencyToDependOnHost().
-			ClearHostDependencyToNetwork().
+			ClearRequiredBy().
+			ClearDependOnHost().
+			ClearDependOnNetwork().
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Clear Host Dependency by %v on Host %v Err: %v", dependByHost.HclID, cHostDependency.HostID, err)
+			log.Log.Errorf("Failed to Clear Host Dependency by %v on Host %v Err: %v", dependByHost.HCLID, cHostDependency.HostID, err)
 			return nil, err
 		}
 		entHostDependency, err = entHostDependency.Update().
-			SetHostDependencyToDependByHost(dependByHost).
+			SetRequiredBy(dependByHost).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update Host Dependency by %v on Host %v Err: %v", dependByHost.HclID, cHostDependency.HostID, err)
+			log.Log.Errorf("Failed to Update Host Dependency by %v on Host %v Err: %v", dependByHost.HCLID, cHostDependency.HostID, err)
 			return nil, err
 		}
 		returnedHostDependencies = append(returnedHostDependencies, entHostDependency)
@@ -1431,17 +1507,17 @@ func createHostDependencies(txClient *ent.Tx, ctx context.Context, log *logging.
 	return returnedHostDependencies, nil
 }
 
-func createDNS(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configDNS []*ent.DNS, envHclID string) ([]*ent.DNS, error) {
+func createDNS(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configDNS []*ent.DNS, envHCLID string) ([]*ent.DNS, error) {
 	bulk := []*ent.DNSCreate{}
 	returnedDNS := []*ent.DNS{}
 	for _, cDNS := range configDNS {
-		log.Log.Debugf("Creating DNS: %v for Env: %v", cDNS.HclID, envHclID)
+		log.Log.Debugf("Creating DNS: %v for Env: %v", cDNS.HCLID, envHCLID)
 		entDNS, err := txClient.DNS.
 			Query().
 			Where(
 				dns.And(
-					dns.HclIDEQ(cDNS.HclID),
-					dns.HasDNSToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					dns.HCLIDEQ(cDNS.HCLID),
+					dns.HasEnvironmentsWith(environment.HCLIDEQ(envHCLID)),
 				),
 			).
 			Only(ctx)
@@ -1450,7 +1526,7 @@ func createDNS(txClient *ent.Tx, ctx context.Context, log *logging.Logger, confi
 				createdQuery := txClient.DNS.Create().
 					SetConfig(cDNS.Config).
 					SetDNSServers(cDNS.DNSServers).
-					SetHclID(cDNS.HclID).
+					SetHCLID(cDNS.HCLID).
 					SetNtpServers(cDNS.NtpServers).
 					SetRootDomain(cDNS.RootDomain).
 					SetType(cDNS.Type)
@@ -1461,13 +1537,13 @@ func createDNS(txClient *ent.Tx, ctx context.Context, log *logging.Logger, confi
 		entDNS, err = entDNS.Update().
 			SetConfig(cDNS.Config).
 			SetDNSServers(cDNS.DNSServers).
-			SetHclID(cDNS.HclID).
+			SetHCLID(cDNS.HCLID).
 			SetNtpServers(cDNS.NtpServers).
 			SetRootDomain(cDNS.RootDomain).
 			SetType(cDNS.Type).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to Update DNS %v. Err: %v", cDNS.HclID, err)
+			log.Log.Errorf("Failed to Update DNS %v. Err: %v", cDNS.HCLID, err)
 			return nil, err
 		}
 		returnedDNS = append(returnedDNS, entDNS)
@@ -1483,15 +1559,15 @@ func createDNS(txClient *ent.Tx, ctx context.Context, log *logging.Logger, confi
 	return returnedDNS, nil
 }
 
-func createDisk(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configDisk *ent.Disk, hostHclID string, envHclID string) (*ent.Disk, error) {
+func createDisk(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configDisk *ent.Disk, hostHCLID string, envHCLID string) (*ent.Disk, error) {
 	entDisk, err := txClient.Disk.
 		Query().
 		Where(
 			disk.And(
-				disk.HasDiskToHostWith(
+				disk.HasHostWith(
 					host.And(
-						host.HclIDEQ(hostHclID),
-						host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
+						host.HCLIDEQ(hostHCLID),
+						host.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 					),
 				),
 			),
@@ -1503,7 +1579,7 @@ func createDisk(txClient *ent.Tx, ctx context.Context, log *logging.Logger, conf
 				SetSize(configDisk.Size).
 				Save(ctx)
 			if err != nil {
-				log.Log.Errorf("Failed to create Disk for Host %v. Err: %v", hostHclID, err)
+				log.Log.Errorf("Failed to create Disk for Host %v. Err: %v", hostHCLID, err)
 				return nil, err
 			}
 		}
@@ -1512,44 +1588,44 @@ func createDisk(txClient *ent.Tx, ctx context.Context, log *logging.Logger, conf
 		SetSize(configDisk.Size).
 		Save(ctx)
 	if err != nil {
-		log.Log.Errorf("Failed to update Disk Size for Host %v. Err: %v", hostHclID, err)
+		log.Log.Errorf("Failed to update Disk Size for Host %v. Err: %v", hostHCLID, err)
 		return nil, err
 	}
 	return entDisk, nil
 }
 
-func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configIncludedNetworks []*ent.IncludedNetwork, envHclID string, returnedHostIDs, returnedNetworkIDS []uuid.UUID) ([]*ent.IncludedNetwork, error) {
+func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.Logger, configIncludedNetworks []*ent.IncludedNetwork, envHCLID string, returnedHostIDs, returnedNetworkIDS []uuid.UUID) ([]*ent.IncludedNetwork, error) {
 	bulk := []*ent.IncludedNetworkCreate{}
 	returnedIncludedNetworks := []*ent.IncludedNetwork{}
 	for _, cIncludedNetwork := range configIncludedNetworks {
 		entNetwork, err := txClient.Network.Query().Where(
 			network.And(
-				network.HclIDEQ(cIncludedNetwork.Name),
+				network.HCLIDEQ(cIncludedNetwork.Name),
 				network.IDIn(returnedNetworkIDS...),
 				// network.Or(
-				// 	network.Not(network.HasNetworkToEnvironment()),
-				// 	network.HasNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
+				// 	network.Not(network.HasEnvironment()),
+				// 	network.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 				// ),
 			),
 		).Only(ctx)
 		if err != nil {
-			log.Log.Errorf("Unable to Query %v network in %v enviroment. Err: %v", cIncludedNetwork.Name, envHclID, err)
+			log.Log.Errorf("Unable to Query %v network in %v enviroment. Err: %v", cIncludedNetwork.Name, envHCLID, err)
 			return nil, err
 		}
 		entHosts := []*ent.Host{}
-		for _, cHostHclID := range cIncludedNetwork.Hosts {
+		for _, cHostHCLID := range cIncludedNetwork.IncludedHosts {
 			entHost, err := txClient.Host.Query().Where(
 				host.And(
-					host.HclIDEQ(cHostHclID),
+					host.HCLIDEQ(cHostHCLID),
 					host.IDIn(returnedHostIDs...),
 					// host.Or(
-					// 	host.Not(host.HasHostToEnvironment()),
-					// 	host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					// 	host.Not(host.HasEnvironment()),
+					// 	host.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 					// ),
 				),
 			).Only(ctx)
 			if err != nil {
-				log.Log.Errorf("Unable to Query %v host in %v enviroment. Err: %v", cHostHclID, envHclID, err)
+				log.Log.Errorf("Unable to Query %v host in %v enviroment. Err: %v", cHostHCLID, envHCLID, err)
 				return nil, err
 			}
 			entHosts = append(entHosts, entHost)
@@ -1558,7 +1634,7 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 			Query().
 			Where(
 				includednetwork.And(
-					includednetwork.HasIncludedNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
+					includednetwork.HasEnvironmentsWith(environment.HCLIDEQ(envHCLID)),
 					includednetwork.NameEQ(cIncludedNetwork.Name),
 				),
 			).
@@ -1567,26 +1643,26 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 			if err == err.(*ent.NotFoundError) {
 				createdQuery := txClient.IncludedNetwork.Create().
 					SetName(cIncludedNetwork.Name).
-					SetHosts(cIncludedNetwork.Hosts).
-					SetIncludedNetworkToNetwork(entNetwork).
-					AddIncludedNetworkToHost(entHosts...)
+					SetIncludedHosts(cIncludedNetwork.IncludedHosts).
+					SetNetwork(entNetwork).
+					AddHosts(entHosts...)
 				bulk = append(bulk, createdQuery)
 				continue
 			}
 		}
 		entIncludedNetwork, err = entIncludedNetwork.Update().
 			SetName(cIncludedNetwork.Name).
-			SetHosts(cIncludedNetwork.Hosts).
-			ClearIncludedNetworkToHost().
-			ClearIncludedNetworkToNetwork().
+			SetIncludedHosts(cIncludedNetwork.IncludedHosts).
+			ClearHosts().
+			ClearNetwork().
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to update the Included Network %v with Hosts %v. Err: %v", cIncludedNetwork.Name, cIncludedNetwork.Hosts, err)
 			return nil, err
 		}
 		entIncludedNetwork, err = entIncludedNetwork.Update().
-			AddIncludedNetworkToHost(entHosts...).
-			SetIncludedNetworkToNetwork(entNetwork).
+			AddHosts(entHosts...).
+			SetNetwork(entNetwork).
 			Save(ctx)
 		if err != nil {
 			log.Log.Errorf("Failed to update the Included Network %v Edges with Hosts %v. Err: %v", cIncludedNetwork.Name, cIncludedNetwork.Hosts, err)
@@ -1605,64 +1681,64 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 	return returnedIncludedNetworks, nil
 }
 
-func validateHostDependencies(txClient *ent.Tx, ctx context.Context, log *logging.Logger, uncheckedHostDependencies []*ent.HostDependency, envHclID string) ([]*ent.HostDependency, error) {
+func validateHostDependencies(txClient *ent.Tx, ctx context.Context, log *logging.Logger, uncheckedHostDependencies []*ent.HostDependency, envHCLID string) ([]*ent.HostDependency, error) {
 	checkedHostDependencies := []*ent.HostDependency{}
 	for _, uncheckedHostDependency := range uncheckedHostDependencies {
 		entNetwork, err := txClient.Network.Query().Where(
 			network.And(
-				network.HclIDEQ(uncheckedHostDependency.NetworkID),
-				network.HasNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
+				network.HCLIDEQ(uncheckedHostDependency.NetworkID),
+				network.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
 			),
 		).Only(ctx)
 		if err != nil {
-			log.Log.Errorf("Unable to Query %v network in %v enviroment. Err: %v", uncheckedHostDependency.NetworkID, envHclID, err)
+			log.Log.Errorf("Unable to Query %v network in %v enviroment. Err: %v", uncheckedHostDependency.NetworkID, envHCLID, err)
 			return nil, err
 		}
 		entHost, err := txClient.Host.Query().Where(
 			host.And(
-				host.HasHostToEnvironmentWith(environment.HclIDEQ(envHclID)),
-				host.HclIDEQ(uncheckedHostDependency.HostID),
+				host.HasEnvironmentWith(environment.HCLIDEQ(envHCLID)),
+				host.HCLIDEQ(uncheckedHostDependency.HostID),
 			),
 		).Only(ctx)
 		if err != nil {
-			log.Log.Errorf("Unable to Query %v host in %v enviroment. Err: %v", uncheckedHostDependency.HostID, envHclID, err)
+			log.Log.Errorf("Unable to Query %v host in %v enviroment. Err: %v", uncheckedHostDependency.HostID, envHCLID, err)
 			return nil, err
 		}
 		_, err = txClient.IncludedNetwork.Query().Where(
 			includednetwork.And(
-				includednetwork.HasIncludedNetworkToEnvironmentWith(environment.HclIDEQ(envHclID)),
-				includednetwork.HasIncludedNetworkToHostWith(host.HclIDEQ(uncheckedHostDependency.HostID)),
-				includednetwork.HasIncludedNetworkToNetworkWith(network.HclIDEQ(uncheckedHostDependency.NetworkID)),
+				includednetwork.HasEnvironmentsWith(environment.HCLIDEQ(envHCLID)),
+				includednetwork.HasHostsWith(host.HCLIDEQ(uncheckedHostDependency.HostID)),
+				includednetwork.HasNetworkWith(network.HCLIDEQ(uncheckedHostDependency.NetworkID)),
 			),
 		).Only(ctx)
 		if err != nil {
-			log.Log.Errorf("Unable to Verify %v host in %v network while loading %v enviroment. Err: %v", uncheckedHostDependency.HostID, uncheckedHostDependency.NetworkID, envHclID, err)
+			log.Log.Errorf("Unable to Verify %v host in %v network while loading %v enviroment. Err: %v", uncheckedHostDependency.HostID, uncheckedHostDependency.NetworkID, envHCLID, err)
 			return nil, err
 		}
 		uncheckedHostDependency, err := uncheckedHostDependency.Update().
-			ClearHostDependencyToDependOnHost().
-			ClearHostDependencyToNetwork().
+			ClearDependOnHost().
+			ClearDependOnNetwork().
 			Save(ctx)
 		if err != nil {
-			dependedByHost, queryErr := uncheckedHostDependency.QueryHostDependencyToDependByHost().Only(ctx)
+			dependedByHost, queryErr := uncheckedHostDependency.QueryRequiredBy().Only(ctx)
 			if queryErr != nil {
 				log.Log.Errorf("Unable to find the host depended by %v Err: %v", uncheckedHostDependency.HostID, queryErr)
 				return nil, queryErr
 			}
-			log.Log.Errorf("Failed to clear the Host dependency of %v which relies on %v host in %v network. Err: %v", dependedByHost.HclID, uncheckedHostDependency.HostID, uncheckedHostDependency.NetworkID, err)
+			log.Log.Errorf("Failed to clear the Host dependency of %v which relies on %v host in %v network. Err: %v", dependedByHost.HCLID, uncheckedHostDependency.HostID, uncheckedHostDependency.NetworkID, err)
 			return nil, err
 		}
 		entHostDependency, err := uncheckedHostDependency.Update().
-			SetHostDependencyToDependOnHost(entHost).
-			SetHostDependencyToNetwork(entNetwork).
+			SetDependOnHost(entHost).
+			SetDependOnNetwork(entNetwork).
 			Save(ctx)
 		if err != nil {
-			dependedByHost, queryErr := uncheckedHostDependency.QueryHostDependencyToDependByHost().Only(ctx)
+			dependedByHost, queryErr := uncheckedHostDependency.QueryRequiredBy().Only(ctx)
 			if queryErr != nil {
 				log.Log.Errorf("Unable to find the host depended by %v Err: %v", uncheckedHostDependency.HostID, queryErr)
 				return nil, queryErr
 			}
-			log.Log.Errorf("Failed to update the Host dependency of %v which relies on %v host in %v network. Err: %v", dependedByHost.HclID, uncheckedHostDependency.HostID, uncheckedHostDependency.NetworkID, err)
+			log.Log.Errorf("Failed to update the Host dependency of %v which relies on %v host in %v network. Err: %v", dependedByHost.HCLID, uncheckedHostDependency.HostID, uncheckedHostDependency.NetworkID, err)
 			return nil, err
 		}
 		checkedHostDependencies = append(checkedHostDependencies, entHostDependency)

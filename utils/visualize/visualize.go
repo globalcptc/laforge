@@ -71,8 +71,8 @@ func main() {
 	// }
 	// var wgconfs []wgconf
 	// for _, wg_task := range wg_tasks {
-	// 	task_team := wg_task.QueryAgentTaskToProvisionedHost().QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().OnlyX(ctx)
-	// 	task_build := task_team.QueryTeamToBuild().OnlyX(ctx)
+	// 	task_team := wg_task.QueryProvisionedHost().QueryProvisionedNetwork().QueryTeam().OnlyX(ctx)
+	// 	task_build := task_team.QueryBuild().OnlyX(ctx)
 	// 	task_environment := task_build.QueryBuildToEnvironment().OnlyX(ctx)
 	// 	tmp := wgconf{
 	// 		EnvironmentName: task_environment.Name,
@@ -90,7 +90,7 @@ func main() {
 
 	// for _, teamer := range teams {
 	// 	ph, err := client.ProvisionedHost.Query().Where(provisionedhost.And(
-	// 		provisionedhost.HasProvisionedHostToProvisionedNetworkWith(provisionednetwork.HasProvisionedNetworkToTeamWith(team.IDEQ(teamer.ID))),
+	// 		provisionedhost.HasProvisionedNetworkWith(provisionednetwork.HasTeamWith(team.IDEQ(teamer.ID))),
 	// 		provisionedhost.AddonTypeEQ(provisionedhost.AddonTypeDNS),
 	// 	)).All(ctx)
 	// 	if err != nil {
@@ -100,7 +100,7 @@ func main() {
 	// 	fmt.Println(ph)
 	// }
 
-	// build, err := env.QueryEnvironmentToBuild().Order(ent.Desc(build.FieldRevision)).First(ctx)
+	// build, err := env.QueryBuilds().Order(ent.Desc(build.FieldRevision)).First(ctx)
 	// if err != nil {
 	// 	log.Fatalf("error w/ build: %v", err)
 	// }
@@ -131,32 +131,32 @@ func Traverse(ctx context.Context, planPath string, entPlan *ent.Plan, wg *sync.
 
 	switch entPlan.Type {
 	case plan.TypeStartBuild:
-		entPlan.QueryPlanToBuild()
-		entBuild, err := entPlan.QueryPlanToBuild().Only(ctx)
+		entPlan.QueryBuild()
+		entBuild, err := entPlan.QueryBuild().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/%s", entBuild.ID)
 	case plan.TypeStartTeam:
-		team, err := entPlan.QueryPlanToTeam().Only(ctx)
+		team, err := entPlan.QueryTeam().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/Team%d", team.TeamNumber)
 	case plan.TypeProvisionNetwork:
-		pnet, err := entPlan.QueryPlanToProvisionedNetwork().Only(ctx)
+		pnet, err := entPlan.QueryProvisionedNetwork().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/%s", pnet.Name)
 	case plan.TypeProvisionHost:
-		phost, err := entPlan.QueryPlanToProvisionedHost().Only(ctx)
+		phost, err := entPlan.QueryProvisionedHost().Only(ctx)
 		if err != nil {
 			return
 		}
 		planPath += fmt.Sprintf("/%s", phost.SubnetIP)
 	case plan.TypeExecuteStep:
-		step, err := entPlan.QueryPlanToProvisioningStep().Only(ctx)
+		step, err := entPlan.QueryProvisioningStep().Only(ctx)
 		if err != nil {
 			return
 		}
@@ -166,7 +166,7 @@ func Traverse(ctx context.Context, planPath string, entPlan *ent.Plan, wg *sync.
 	}
 	// fmt.Println(planPath)
 
-	nextPlans, err := entPlan.QueryNextPlan().All(ctx)
+	nextPlans, err := entPlan.QueryNextPlans().All(ctx)
 	if err != nil {
 		return
 	}

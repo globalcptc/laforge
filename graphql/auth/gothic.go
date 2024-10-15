@@ -139,7 +139,7 @@ func GothicCallbackHandler(client *ent.Client, laforgeConfig *utils.ServerConfig
 			return
 		}
 
-		_, err = client.Token.Create().SetTokenToAuthUser(entAuthUser).SetExpireAt(expiresAt).SetToken(tokenString).Save(ctx)
+		_, err = client.Token.Create().SetAuthUser(entAuthUser).SetExpireAt(expiresAt).SetToken(tokenString).Save(ctx)
 		if err != nil {
 			if secure_cookie {
 				ctx.SetCookie("auth-cookie", "", 0, "/", laforgeConfig.Graphql.Hostname, true, true)

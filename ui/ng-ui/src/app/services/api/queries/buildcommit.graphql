@@ -10,67 +10,85 @@ query GetBuildCommit($buildCommitUUID: String!) {
     revision
     state
     type
-    BuildCommitToBuild {
+    Build {
       id
       revision
-      BuildToRepoCommit {
+      RepoCommit {
         id
         hash
         author
-        RepoCommitToRepository {
+        Repository {
           id
-          repo_url
+          repoUrl
         }
       }
-      buildToEnvironment {
+      Environment {
         id
         name
       }
-      buildToTeam {
+      Teams {
         id
-        TeamToPlan {
+        Plan {
           id
-          PlanToStatus {
+          Status {
             id
             state
           }
         }
-        team_number
-        TeamToProvisionedNetwork {
+        teamNumber
+        ProvisionedNetworks {
           id
-          ProvisionedNetworkToPlan {
+          Plan {
             id
-            PlanToStatus {
+            Status {
               id
               state
             }
           }
           name
           cidr
-          ProvisionedNetworkToNetwork {
+          Network {
             id
-            vdi_visible
+            vdiVisible
           }
-          ProvisionedNetworkToProvisionedHost {
+          ProvisionedHosts {
             id
-            ProvisionedHostToPlan {
+            Plan {
               id
-              PlanToStatus {
+              Status {
                 id
                 state
               }
             }
-            subnet_ip
-            ProvisionedHostToHost {
+            subnetIp
+            Host {
               id
               hostname
             }
-            ProvisionedHostToProvisioningStep {
+            ProvisioningSteps {
               id
-              step_number
-              ProvisioningStepToPlan {
+              stepNumber
+              Plan {
                 id
-                PlanToStatus {
+                Status {
+                  id
+                  state
+                }
+              }
+            }
+            ProvisioningScheduledSteps {
+              id
+              type
+              runTime
+              ScheduledStep {
+                id
+                name
+                type
+                step
+              }
+              Plan {
+                id
+                Status {
                   id
                   state
                 }
@@ -80,10 +98,10 @@ query GetBuildCommit($buildCommitUUID: String!) {
         }
       }
     }
-    BuildCommitToPlanDiffs {
+    PlanDiffs {
       id
-      new_state
-      PlanDiffToPlan {
+      newState
+      Plan {
         id
       }
     }

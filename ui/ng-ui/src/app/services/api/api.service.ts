@@ -52,7 +52,8 @@ import {
   LaForgeCancelBuildGQL,
   LaForgeCancelBuildCommitMutation,
   LaForgeNukeBackendGQL,
-  LaForgeNukeBackendMutation
+  LaForgeNukeBackendMutation,
+  LaForgeGetProvisionedHostGQL
 } from '@graphql';
 
 @Injectable({
@@ -88,7 +89,8 @@ export class ApiService {
     private getServerTasksGQL: LaForgeGetServerTasksGQL,
     private getPlanStatusCounts: LaForgeGetPlanStatusCountsGQL,
     private cancelBuildGQL: LaForgeCancelBuildGQL,
-    private nukeBackendGQL: LaForgeNukeBackendGQL
+    private nukeBackendGQL: LaForgeNukeBackendGQL,
+    private getProvisionedHostGQL: LaForgeGetProvisionedHostGQL
   ) {}
 
   /**
@@ -188,7 +190,7 @@ export class ApiService {
   /**
    * Lists all statuses under an build from the API once, without exposing a subscription or observable
    */
-  public async listBuildStatuses(buildUUID: string): Promise<LaForgeGetBuildStatusesQuery['build']['buildToPlan'][0]['PlanToStatus'][]> {
+  public async listBuildStatuses(buildUUID: string): Promise<LaForgeGetBuildStatusesQuery['build']['Plans'][0]['Status'][]> {
     return new Promise((resolve, reject) => {
       this.listBuildStatusesGQL
         .fetch({
@@ -351,7 +353,7 @@ export class ApiService {
     });
   }
 
-  public async pullBuildCommits(buildId: string): Promise<LaForgeGetBuildCommitsQuery['build']['BuildToBuildCommits']> {
+  public async pullBuildCommits(buildId: string): Promise<LaForgeGetBuildCommitsQuery['build']['BuildCommits']> {
     return new Promise((resolve, reject) => {
       this.getBuildCommitsGQL
         .fetch({
@@ -364,7 +366,7 @@ export class ApiService {
           } else if (errors) {
             return reject(errors);
           }
-          resolve(data.build.BuildToBuildCommits);
+          resolve(data.build.BuildCommits);
         }, reject);
     });
   }

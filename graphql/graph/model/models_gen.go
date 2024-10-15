@@ -10,9 +10,34 @@ import (
 	"github.com/gen0cide/laforge/ent"
 )
 
+type AgentConfig struct {
+	GrpcServerURI  string `json:"GrpcServerUri"`
+	APIDownloadURL string `json:"ApiDownloadUrl"`
+}
+
 type AgentStatusBatch struct {
 	AgentStatuses []*ent.AgentStatus `json:"agentStatuses"`
 	PageInfo      *LaForgePageInfo   `json:"pageInfo"`
+}
+
+type AuthConfig struct {
+	GithubID      string `json:"GithubId"`
+	CookieTimeout int    `json:"CookieTimeout"`
+}
+
+type BuilderConfig struct {
+	Builder    string `json:"Builder"`
+	ConfigFile string `json:"ConfigFile"`
+}
+
+type DatabaseConfig struct {
+	PostgresURI string `json:"PostgresUri"`
+	AdminUser   string `json:"AdminUser"`
+}
+
+type GraphqlConfig struct {
+	Hostname       string `json:"Hostname"`
+	RedisServerURI string `json:"RedisServerUri"`
 }
 
 type LaForgePageInfo struct {
@@ -36,9 +61,30 @@ type PlanCounts struct {
 	Cancelled        int `json:"cancelled"`
 }
 
+type ServerConfig struct {
+	ConfigFile string                 `json:"ConfigFile"`
+	Debug      *bool                  `json:"Debug,omitempty"`
+	LogFolder  string                 `json:"LogFolder"`
+	GinMode    string                 `json:"GinMode"`
+	Builders   map[string]interface{} `json:"Builders"`
+	Database   *DatabaseConfig        `json:"Database,omitempty"`
+	Auth       *AuthConfig            `json:"Auth,omitempty"`
+	UI         *UIConfig              `json:"UI,omitempty"`
+	Agent      *AgentConfig           `json:"Agent,omitempty"`
+	Graphql    *GraphqlConfig         `json:"Graphql,omitempty"`
+}
+
 type StatusBatch struct {
 	Statuses []*ent.Status    `json:"statuses"`
 	PageInfo *LaForgePageInfo `json:"pageInfo"`
+}
+
+type Subscription struct {
+}
+
+type UIConfig struct {
+	HTTPSEnabled   bool      `json:"HttpsEnabled"`
+	AllowedOrigins []*string `json:"AllowedOrigins"`
 }
 
 type ConfigMap struct {
@@ -164,6 +210,45 @@ func (e *AgentTaskState) UnmarshalGQL(v interface{}) error {
 }
 
 func (e AgentTaskState) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type AnsibleMethod string
+
+const (
+	AnsibleMethodLocal AnsibleMethod = "LOCAL"
+)
+
+var AllAnsibleMethod = []AnsibleMethod{
+	AnsibleMethodLocal,
+}
+
+func (e AnsibleMethod) IsValid() bool {
+	switch e {
+	case AnsibleMethodLocal:
+		return true
+	}
+	return false
+}
+
+func (e AnsibleMethod) String() string {
+	return string(e)
+}
+
+func (e *AnsibleMethod) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AnsibleMethod(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AnsibleMethod", str)
+	}
+	return nil
+}
+
+func (e AnsibleMethod) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
@@ -561,6 +646,98 @@ func (e ProvisionStatusFor) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
+type ProvisionedHostAddonType string
+
+const (
+	ProvisionedHostAddonTypeDNS ProvisionedHostAddonType = "DNS"
+)
+
+var AllProvisionedHostAddonType = []ProvisionedHostAddonType{
+	ProvisionedHostAddonTypeDNS,
+}
+
+func (e ProvisionedHostAddonType) IsValid() bool {
+	switch e {
+	case ProvisionedHostAddonTypeDNS:
+		return true
+	}
+	return false
+}
+
+func (e ProvisionedHostAddonType) String() string {
+	return string(e)
+}
+
+func (e *ProvisionedHostAddonType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ProvisionedHostAddonType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ProvisionedHostAddonType", str)
+	}
+	return nil
+}
+
+func (e ProvisionedHostAddonType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type ProvisioningScheduledStepType string
+
+const (
+	ProvisioningScheduledStepTypeAnsible      ProvisioningScheduledStepType = "Ansible"
+	ProvisioningScheduledStepTypeScript       ProvisioningScheduledStepType = "Script"
+	ProvisioningScheduledStepTypeCommand      ProvisioningScheduledStepType = "Command"
+	ProvisioningScheduledStepTypeDNSRecord    ProvisioningScheduledStepType = "DNSRecord"
+	ProvisioningScheduledStepTypeFileDelete   ProvisioningScheduledStepType = "FileDelete"
+	ProvisioningScheduledStepTypeFileDownload ProvisioningScheduledStepType = "FileDownload"
+	ProvisioningScheduledStepTypeFileExtract  ProvisioningScheduledStepType = "FileExtract"
+	ProvisioningScheduledStepTypeUndefined    ProvisioningScheduledStepType = "Undefined"
+)
+
+var AllProvisioningScheduledStepType = []ProvisioningScheduledStepType{
+	ProvisioningScheduledStepTypeAnsible,
+	ProvisioningScheduledStepTypeScript,
+	ProvisioningScheduledStepTypeCommand,
+	ProvisioningScheduledStepTypeDNSRecord,
+	ProvisioningScheduledStepTypeFileDelete,
+	ProvisioningScheduledStepTypeFileDownload,
+	ProvisioningScheduledStepTypeFileExtract,
+	ProvisioningScheduledStepTypeUndefined,
+}
+
+func (e ProvisioningScheduledStepType) IsValid() bool {
+	switch e {
+	case ProvisioningScheduledStepTypeAnsible, ProvisioningScheduledStepTypeScript, ProvisioningScheduledStepTypeCommand, ProvisioningScheduledStepTypeDNSRecord, ProvisioningScheduledStepTypeFileDelete, ProvisioningScheduledStepTypeFileDownload, ProvisioningScheduledStepTypeFileExtract, ProvisioningScheduledStepTypeUndefined:
+		return true
+	}
+	return false
+}
+
+func (e ProvisioningScheduledStepType) String() string {
+	return string(e)
+}
+
+func (e *ProvisioningScheduledStepType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ProvisioningScheduledStepType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ProvisioningScheduledStepType", str)
+	}
+	return nil
+}
+
+func (e ProvisioningScheduledStepType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
 type ProvisioningStepType string
 
 const (
@@ -654,6 +831,47 @@ func (e *RoleLevel) UnmarshalGQL(v interface{}) error {
 }
 
 func (e RoleLevel) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type ScheduledStepType string
+
+const (
+	ScheduledStepTypeCron    ScheduledStepType = "CRON"
+	ScheduledStepTypeRunonce ScheduledStepType = "RUNONCE"
+)
+
+var AllScheduledStepType = []ScheduledStepType{
+	ScheduledStepTypeCron,
+	ScheduledStepTypeRunonce,
+}
+
+func (e ScheduledStepType) IsValid() bool {
+	switch e {
+	case ScheduledStepTypeCron, ScheduledStepTypeRunonce:
+		return true
+	}
+	return false
+}
+
+func (e ScheduledStepType) String() string {
+	return string(e)
+}
+
+func (e *ScheduledStepType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ScheduledStepType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ScheduledStepType", str)
+	}
+	return nil
+}
+
+func (e ScheduledStepType) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 

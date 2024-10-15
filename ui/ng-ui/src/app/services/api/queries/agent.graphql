@@ -1,5 +1,5 @@
-query GetAgentTasks($proStepId: String!) {
-  getAgentTasks(proStepUUID: $proStepId) {
+query GetAgentTasks($proStepId: String, $proSchedStepId: String) {
+  getAgentTasks(proStepUUID: $proStepId, proSchedStepUUID: $proSchedStepId) {
     ...AgentTaskFields
   }
 }

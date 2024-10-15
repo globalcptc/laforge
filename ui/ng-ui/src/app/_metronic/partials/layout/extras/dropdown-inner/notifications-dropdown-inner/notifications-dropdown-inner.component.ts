@@ -33,7 +33,7 @@ export class NotificationsDropdownInnerComponent implements OnInit {
     return 'active show';
   }
 
-  getMessageSentiment(status: LaForgeGetCurrentUserTasksQuery['getCurrentUserTasks'][0]['ServerTaskToStatus']): string {
+  getMessageSentiment(status: LaForgeGetCurrentUserTasksQuery['getCurrentUserTasks'][0]['Status']): string {
     switch (status.state) {
       case LaForgeProvisionStatus.Complete:
         return 'has completed';
@@ -49,37 +49,36 @@ export class NotificationsDropdownInnerComponent implements OnInit {
   getMessageSubject(task: LaForgeGetCurrentUserTasksQuery['getCurrentUserTasks'][0]): string {
     switch (task.type) {
       case LaForgeServerTaskType.Createbuild:
-        if (task.ServerTaskToBuild) return `Create build '${task.ServerTaskToEnvironment?.name} v${task.ServerTaskToBuild?.revision}'`;
-        else return `Creating build of '${task.ServerTaskToEnvironment?.name}'`;
+        if (task.Build) return `Create build '${task.Environment?.name} v${task.Build?.revision}'`;
+        else return `Creating build of '${task.Environment?.name}'`;
       case LaForgeServerTaskType.Deletebuild:
-        return `Deleting build '${task.ServerTaskToEnvironment?.name} v${task.ServerTaskToBuild?.revision}'`;
+        return `Deleting build '${task.Environment?.name} v${task.Build?.revision}'`;
       case LaForgeServerTaskType.Loadenv:
-        if (task.ServerTaskToEnvironment) return `Load environment '${task.ServerTaskToEnvironment?.name}'`;
+        if (task.Environment) return `Load environment '${task.Environment?.name}'`;
         else return `Loading environment`;
       case LaForgeServerTaskType.Rebuild:
-        return `Rebuilding of '${task.ServerTaskToEnvironment?.name} v${task.ServerTaskToBuild?.revision}'`;
+        return `Rebuilding of '${task.Environment?.name} v${task.Build?.revision}'`;
       case LaForgeServerTaskType.Renderfiles:
-        if (task.ServerTaskToBuild && task.ServerTaskToEnvironment)
-          return `Render files for '${task.ServerTaskToEnvironment?.name} v${task.ServerTaskToBuild?.revision}'`;
-        else if (task.ServerTaskToEnvironment) return `Render files for '${task.ServerTaskToEnvironment?.name}'`;
+        if (task.Build && task.Environment) return `Render files for '${task.Environment?.name} v${task.Build?.revision}'`;
+        else if (task.Environment) return `Render files for '${task.Environment?.name}'`;
         else return `Rendering files`;
       case LaForgeServerTaskType.Executebuild:
-        return `Execute build '${task.ServerTaskToEnvironment?.name} v${task.ServerTaskToBuild?.revision}'`;
+        return `Execute build '${task.Environment?.name} v${task.Build?.revision}'`;
       default:
         return 'Unknown task';
     }
   }
 
   getMessage(task: LaForgeGetCurrentUserTasksQuery['getCurrentUserTasks'][0]): string {
-    return `${this.getMessageSubject(task)} ${this.getMessageSentiment(task.ServerTaskToStatus)}.`;
+    return `${this.getMessageSubject(task)} ${this.getMessageSentiment(task.Status)}.`;
   }
 
   getIconClass(task: LaForgeGetCurrentUserTasksQuery['getCurrentUserTasks'][0]): string {
     // fa-hammer text-success
-    return `fa-${this.getIcon(task.type)} text-${this.getColor(task.ServerTaskToStatus)}`;
+    return `fa-${this.getIcon(task.type)} text-${this.getColor(task.Status)}`;
   }
 
-  getColor(status: LaForgeGetCurrentUserTasksQuery['getCurrentUserTasks'][0]['ServerTaskToStatus']): string {
+  getColor(status: LaForgeGetCurrentUserTasksQuery['getCurrentUserTasks'][0]['Status']): string {
     // fa-hammer text-success
     switch (status.state) {
       case LaForgeProvisionStatus.Complete:

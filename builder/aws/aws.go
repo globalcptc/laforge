@@ -20,8 +20,8 @@ const (
 	ID          = "aws"
 	Name        = "AWS"
 	Description = "Builder that interfaces with AWS"
-	Author      = "Nicholas Graca <github.com/njg7716>"
-	Version     = "1.0"
+	Author      = "Lucas Morris, Nicholas Graca"
+	Version     = "1.1"
 )
 
 type AWSBuilder struct {
@@ -97,7 +97,6 @@ func (builder AWSBuilder) generatePublicSubnetName(entEnvironment *ent.Environme
 }
 
 func (builder AWSBuilder) getAMI(ctx context.Context, name, vt, rdt, arch, owner string) (string, error) {
-
 	// Describe the host with info from above and get ready to deploy
 	input := ec2.DescribeImagesInput{
 		DryRun:          aws.Bool(false),
@@ -116,13 +115,13 @@ func (builder AWSBuilder) getAMI(ctx context.Context, name, vt, rdt, arch, owner
 	if err != nil {
 		return "", err
 	}
+
 	if len(output.Images) > 0 {
 		image := output.Images[0]
 		return *image.ImageId, nil
 	} else {
 		return "", fmt.Errorf("no images found")
 	}
-
 }
 
 func waitForObject(getFunc func() (bool, error)) error {
@@ -142,39 +141,39 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
 	// Get information about host from ENT
-	entHost, err := provisionedHost.QueryProvisionedHostToHost().Only(ctx)
+	entHost, err := provisionedHost.QueryHost().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query host from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
 
-	entBuild, err := provisionedHost.QueryProvisionedHostToPlan().QueryPlanToBuild().Only(ctx)
+	entBuild, err := provisionedHost.QueryPlan().QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
-	entCompetition, err := entBuild.QueryBuildToCompetition().Only(ctx)
+	entCompetition, err := entBuild.QueryCompetition().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query competition from build \"%v\": %v", entBuild.ID, err)
 	}
-	entTeam, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := provisionedHost.QueryProvisionedNetwork().QueryTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query team from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
-	agentFile, err := provisionedHost.QueryProvisionedHostToGinFileMiddleware().First(ctx)
+	agentFile, err := provisionedHost.QueryGinFileMiddleware().First(ctx)
 	if err != nil {
 		return fmt.Errorf("error while querying gin file middleware from provisioned host: %v", err)
 	}
 
-	entProNetwork, err := provisionedHost.QueryProvisionedHostToProvisionedNetwork().Only(ctx)
+	entProNetwork, err := provisionedHost.QueryProvisionedNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query provisioned network from provisioned host \"%v\": %v", entHost.Hostname, err)
 	}
 
-	entNetwork, err := entProNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	entNetwork, err := entProNetwork.QueryNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query network from provisioned network \"%v\": %v", entProNetwork.Name, err)
 	}
 
-	entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	entEnvironment, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query environment from competition \"%v\": %v", entCompetition.ID, err)
 	}
@@ -215,9 +214,8 @@ func (builder AWSBuilder) DeployHost(ctx context.Context, provisionedHost *ent.P
 		amiConfig.Owner,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to identify AMI %s: %v", entHost.OS, err)
+		return fmt.Errorf("failed to identify AMI %s: ERR: %v AMI: %v", entHost.OS, err, amiConfig)
 	}
-
 
 	vmName := builder.generateVmName(entEnvironment, entTeam, entHost, entBuild, entProNetwork)
 	vpcID, ok := entTeam.Vars["VpcId"]
@@ -379,28 +377,29 @@ powershell -Command logoff
 		builder.Logger.Log.Debugf("Deployed Host: %s with Public IP: %s", provisionedHost.ID, publicIP)
 	}
 
+	input_cidr := entProNetwork.Cidr
+	if entNetwork.VdiVisible {
+		vpcCidr, ok := entEnvironment.Config["vpc_cidr"]
+		if !ok {
+			return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entEnvironment.Name)
+		}
+		input_cidr = vpcCidr
+	}
+	if strings.HasSuffix(entProNetwork.Name, "vdi") {
+		vdiWhitelist, ok := entEnvironment.Config["vdi_whitelist"]
+		if !ok {
+			return fmt.Errorf("couldn't find vdi_whitelist in environment \"%v\"", entEnvironment.Name)
+		}
+		input_cidr = vdiWhitelist
+	}
+	if entNetwork.Vars["public_net"] == "true" {
+		input_cidr = "0.0.0.0/0"
+	}
+
 	//Expose TCP ports both Egress and Ingress
 	for _, ports := range entHost.ExposedTCPPorts {
 		fromPort := 0
 		toPort := 0
-		input_cidr := entProNetwork.Cidr
-		if entNetwork.VdiVisible {
-			vpcCidr, ok := entEnvironment.Config["vpc_cidr"]
-			if !ok {
-				return fmt.Errorf("couldn't find vpc_cidr in environment \"%v\"", entEnvironment.Name)
-			}
-			input_cidr = vpcCidr
-		}
-		if strings.HasSuffix(entProNetwork.Name, "vdi") {
-			vdiWhitelist, ok := entEnvironment.Config["vdi_whitelist"]
-			if !ok {
-				return fmt.Errorf("couldn't find vdi_whitelist in environment \"%v\"", entEnvironment.Name)
-			}
-			input_cidr = vdiWhitelist
-		}
-		if entNetwork.Vars["public_net"] == "true" {
-			input_cidr = "0.0.0.0/0"
-		}
 		portList := strings.Split(ports, "-")
 		if len(portList) == 2 {
 			fromPort, err = strconv.Atoi(portList[0])
@@ -445,17 +444,6 @@ powershell -Command logoff
 	for _, ports := range entHost.ExposedUDPPorts {
 		fromPort := 0
 		toPort := 0
-		input_cidr := entProNetwork.Cidr
-		if entProNetwork.Name == "vdi" {
-			vdiWhitelist, ok := entEnvironment.Config["vdi_whitelist"]
-			if !ok {
-				return fmt.Errorf("couldn't find vdi_whitelist in environment \"%v\"", entEnvironment.Name)
-			}
-			input_cidr = vdiWhitelist
-		}
-		if entNetwork.Vars["public_net"] == "true" {
-			input_cidr = "0.0.0.0/0"
-		}
 		portList := strings.Split(ports, "-")
 		if len(portList) == 2 {
 			fromPort, err = strconv.Atoi(portList[0])
@@ -496,6 +484,26 @@ powershell -Command logoff
 		}
 	}
 	builder.Logger.Log.Debugf("Deployed Host: %s with Exposed UDP Ports: %s", provisionedHost.ID, entHost.ExposedUDPPorts)
+	ingressinput := &ec2.AuthorizeSecurityGroupIngressInput{
+		GroupId: aws.String(sgID),
+		IpPermissions: []types.IpPermission{
+			{
+				FromPort:   aws.Int32(-1),
+				IpProtocol: aws.String("icmp"),
+				IpRanges: []types.IpRange{
+					{
+						CidrIp: aws.String(input_cidr),
+					},
+				},
+				ToPort: aws.Int32(-1),
+			},
+		},
+	}
+	_, err = builder.Client.AuthorizeSecurityGroupIngress(ctx, ingressinput)
+	if err != nil {
+		return fmt.Errorf("error creating ingress rule %v", err)
+	}
+	builder.Logger.Log.Debugf("Deployed Host: %s with Exposed IMCP.", provisionedHost.ID)
 	return
 
 }
@@ -506,22 +514,22 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	defer ctxClosing.Done()
 
 	// Get information about Network from ENT
-	entTeam, err := provisionedNetwork.QueryProvisionedNetworkToTeam().Only(ctx)
+	entTeam, err := provisionedNetwork.QueryTeam().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
 
-	entBuild, err := entTeam.QueryTeamToBuild().Only(ctx)
+	entBuild, err := entTeam.QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
 
-	entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	entEnvironment, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query environment from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
 
-	entNetwork, err := provisionedNetwork.QueryProvisionedNetworkToNetwork().Only(ctx)
+	entNetwork, err := provisionedNetwork.QueryNetwork().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query network from team \"%d\": %v", entTeam.TeamNumber, err)
 	}
@@ -614,16 +622,16 @@ func (builder AWSBuilder) DeployNetwork(ctx context.Context, provisionedNetwork 
 	return
 }
 
-//DeployTeam Deploys VPC for a team
+// DeployTeam Deploys VPC for a team
 func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	ctxClosing := context.Background()
 	defer ctxClosing.Done()
 
-	entBuild, err := entTeam.QueryTeamToBuild().Only(ctx)
+	entBuild, err := entTeam.QueryBuild().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query build from team \"%v\": %v", entTeam.TeamNumber, err)
 	}
-	entEnvironment, err := entBuild.QueryBuildToEnvironment().Only(ctx)
+	entEnvironment, err := entBuild.QueryEnvironment().Only(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query environment from build \"%v\": %v", entTeam.TeamNumber, err)
 	}
@@ -860,7 +868,7 @@ func (builder AWSBuilder) DeployTeam(ctx context.Context, entTeam *ent.Team) (er
 	return nil
 }
 
-//TeardownHost Terminates a host and its security group
+// TeardownHost Terminates a host and its security group
 func (builder AWSBuilder) TeardownHost(ctx context.Context, provisionedHost *ent.ProvisionedHost) (err error) {
 	err = builder.TeardownWorkerPool.Acquire(ctx, int64(1))
 	if err != nil {
@@ -1009,7 +1017,7 @@ func (builder AWSBuilder) TeardownNetwork(ctx context.Context, provisionedNetwor
 	return nil
 }
 
-//TeardownTeam Terminates VPC
+// TeardownTeam Terminates VPC
 func (builder AWSBuilder) TeardownTeam(ctx context.Context, entTeam *ent.Team) (err error) {
 	// ###################
 	// Wait on open thread

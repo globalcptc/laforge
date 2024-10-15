@@ -31,7 +31,11 @@ const (
 	TaskFailed    = "FAILED"
 	TaskRunning   = "INPROGRESS"
 	TaskSucceeded = "COMPLETE"
+	LogError 	  = "ERROR"
+	LogWarning    = "WARNING"
+	LogInfo       = "INFO"
 )
+
 
 var (
 	logger  service.Logger
@@ -180,10 +184,10 @@ func RequestTask(c pb.LaforgeClient) {
 	r, err := c.GetTask(ctx, request)
 
 	if r.GetCommand() == pb.TaskReply_DEFAULT {
-		logger.Error("Recived empty task")
+		logf(logger, LogError, "Received Empty Task %v", err)
 		return
 	} else if r.Id == previousTask {
-		logger.Error("Recived duplicate Task")
+		logf(logger, LogError, "Received Duplicate Task %s %v", r.Id, err)
 		return
 	}
 
@@ -194,7 +198,7 @@ func RequestTask(c pb.LaforgeClient) {
 	c.InformTaskStatus(ctx, taskRequest)
 
 	if err != nil {
-		logger.Errorf("Error: %v", err)
+		logf(logger, LogError, "Error Occured in Task Receipt: %v", err)
 	} else {
 		switch r.GetCommand() {
 		case pb.TaskReply_ANSIBLE:
@@ -202,6 +206,7 @@ func RequestTask(c pb.LaforgeClient) {
 			playbookPath := taskArgs[0]
 			connectionMethod := taskArgs[1]
 			inventoryList := taskArgs[2]
+			logf(logger, LogInfo, "Recevied Task (Ansible) - playbook: %s, method: %s, inv: %s", playbookPath, connectionMethod, inventoryList)
 			taskoutput, taskerr := ExecuteAnsible(playbookPath, connectionMethod, inventoryList)
 			taskoutput = strings.ReplaceAll(taskoutput, "\n", "🔥")
 			RequestTaskStatusRequest(taskoutput, taskerr, r.Id, c)
@@ -209,27 +214,32 @@ func RequestTask(c pb.LaforgeClient) {
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			command := taskArgs[0]
 			args := taskArgs[1:]
+			logf(logger, LogInfo, "Recevied Task (Execute) - Cmd: %s args: %v", command, args)
 			taskoutput, taskerr := ExecuteCommand(command, args...)
 			taskoutput = strings.ReplaceAll(taskoutput, "\n", "🔥")
-			// logger.Infof("Command Output: %s", output)
 			RequestTaskStatusRequest(taskoutput, taskerr, r.Id, c)
 		case pb.TaskReply_DOWNLOAD:
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			filepath := taskArgs[0]
 			url := taskArgs[1]
 			is_txt := taskArgs[2]
+			logf(logger, LogInfo, "Recevied Task (Download) - From: %s To: %s", url, filepath)
 			taskerr := DownloadFile(filepath, url, is_txt)
 			RequestTaskStatusRequest("", taskerr, r.Id, c)
 		case pb.TaskReply_EXTRACT:
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			filepath := taskArgs[0]
 			folder := taskArgs[1]
+			logf(logger, LogInfo, "Recevied Task (Extract) - Path: %s To: %s", filepath, folder)
 			taskerr := ExtractArchive(filepath, folder)
 			RequestTaskStatusRequest("", taskerr, r.Id, c)
 		case pb.TaskReply_DELETE:
-			taskerr := DeleteObject(r.GetArgs())
+			args := r.GetArgs()
+			logf(logger, LogInfo, "Recevied Task (Delete) - Path: %s", args)
+			taskerr := DeleteObject(args)
 			RequestTaskStatusRequest("", taskerr, r.Id, c)
 		case pb.TaskReply_REBOOT:
+			logf(logger, LogInfo, "Recevied Task (Reboot)")
 			// taskRequest := &pb.TaskStatusRequest{TaskId: r.Id, Status: TaskSucceeded}
 			// c.InformTaskStatus(ctx, taskRequest)
 			// Reboot after telling server task succeeded
@@ -239,30 +249,35 @@ func RequestTask(c pb.LaforgeClient) {
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			username := taskArgs[0]
 			password := taskArgs[1]
+			logf(logger, LogInfo, "Recevied Task (Create User) - user: %s, pass: %s", username, password)
 			taskerr := CreateUser(username, password)
 			RequestTaskStatusRequest("", taskerr, r.Id, c)
 		case pb.TaskReply_ADDTOGROUP:
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			group := taskArgs[0]
 			username := taskArgs[1]
+			logf(logger, LogInfo, "Recevied Task (Add Group) - user: %s, group: %s", username, group)
 			taskerr := AddUserGroup(group, username)
 			RequestTaskStatusRequest("", taskerr, r.Id, c)
 		case pb.TaskReply_CREATEUSERPASS:
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			username := taskArgs[0]
 			password := taskArgs[1]
+			logf(logger, LogInfo, "Recevied Task (Set Password) - user: %s, pass: %s", username, password)
 			taskerr := ChangeUserPassword(username, password)
 			RequestTaskStatusRequest("", taskerr, r.Id, c)
 		case pb.TaskReply_VALIDATE:
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			filepath := taskArgs[0]
 			md5hash := taskArgs[1]
+			logf(logger, LogInfo, "Recevied Task (Validate Hash) - file: %s, hash: %s", filepath, md5hash)
 			taskerr := ValidateMD5Hash(filepath, md5hash)
 			RequestTaskStatusRequest("", taskerr, r.Id, c)
 		case pb.TaskReply_CHANGEPERMS:
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			path := taskArgs[0]
 			permsString := taskArgs[1]
+			logf(logger, LogInfo, "Recevied Task (Change File Perms) - path: %s, perms: %s", path, permsString)
 			perms, taskerr := strconv.Atoi(permsString)
 			if taskerr == nil {
 				taskerr = ChangePermissions(path, perms)
@@ -271,11 +286,12 @@ func RequestTask(c pb.LaforgeClient) {
 		case pb.TaskReply_APPENDFILE:
 			taskArgs := strings.Split(r.GetArgs(), "💔")
 			path := taskArgs[0]
+			logf(logger, LogInfo, "Recevied Task (Append To File) - path: %s", path)
 			content := strings.ReplaceAll(taskArgs[1], "🔥", "\n")
 			taskerr := AppendFile(path, content)
 			RequestTaskStatusRequest("", taskerr, r.Id, c)
 		default:
-			logger.Infof("Response Message: %v", r)
+			logf(logger, LogWarning, "Default Task Received: %v", r)
 			RequestTaskStatusRequest("", nil, r.Id, c)
 		}
 
@@ -288,7 +304,7 @@ func RequestTaskStatusRequest(taskoutput string, taskerr error, taskID string, c
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	if taskerr != nil {
-		logger.Errorf("Error: %v", taskerr)
+		logf(logger, LogError, "Error occured trying to request task status: %v", taskerr)
 		taskRequest := &pb.TaskStatusRequest{TaskId: taskID, Status: TaskFailed, ErrorMessage: taskerr.Error(), Output: taskoutput}
 		c.InformTaskStatus(ctx, taskRequest)
 	} else {
@@ -326,9 +342,10 @@ func SendHeartBeat(c pb.LaforgeClient, taskChannel chan *pb.HeartbeatReply) {
 	(*request).Timestamp = timestamppb.Now()
 	r, err := c.GetHeartBeat(ctx, request)
 	if err != nil {
-		logger.Errorf("Error: %v", err)
+		logf(logger, LogError, "Error occured trying to send heartbeat: %v", err)
 	} else {
 		taskChannel <- r
+		logf(logger, LogInfo, "Got a heartbeat from server, task queue length: %d", len(taskChannel))
 	}
 
 }
@@ -336,8 +353,7 @@ func SendHeartBeat(c pb.LaforgeClient, taskChannel chan *pb.HeartbeatReply) {
 // StartTaskRunner Gets a Heartbeat reply from the task channel, and if there are avalible tasks it will request them
 func StartTaskRunner(c pb.LaforgeClient, taskChannel chan *pb.HeartbeatReply, doneChannel chan bool) {
 	r := <-taskChannel
-	// logger.Infof("Response Message: %s", r.GetStatus())
-	// logger.Infof("Avalible Tasks: %s", r.GetAvalibleTasks())
+	logf(logger, LogInfo, "Starting Task Execution.  Remaining tasks in channel: %d.  Available Tasks: %s, Response: %s", len(taskChannel), r.GetStatus(), r.GetAvalibleTasks())
 
 	if r.GetAvalibleTasks() {
 		RequestTask(c)
@@ -353,7 +369,7 @@ func genSendHeartBeat(p *program, c pb.LaforgeClient, taskChannel chan *pb.Heart
 	stop := make(chan bool, 1)
 
 	go func() {
-		defer logger.Info("ticker stopped")
+		defer log(logger, LogInfo, "Heartbeat Ticker Function Stopped")
 		for {
 			select {
 			case <-ticker.C:
@@ -384,7 +400,7 @@ func genStartTaskRunner(p *program, c pb.LaforgeClient, taskChannel chan *pb.Hea
 	stop := make(chan bool, 1)
 
 	go func() {
-		defer logger.Info("ticker stopped")
+		defer log(logger, LogInfo, "Task Runner function stopped")
 		taskIsDone := make(chan bool, 1)
 		// Kick off first task grab
 		taskIsDone <- true
@@ -395,7 +411,7 @@ func genStartTaskRunner(p *program, c pb.LaforgeClient, taskChannel chan *pb.Hea
 				case <-taskIsDone:
 					go StartTaskRunner(c, taskChannel, taskIsDone)
 				default:
-					logger.Info("Task in progress")
+					log (logger, LogInfo, "Task current in progress, waiting until completion.")
 				}
 			case <-p.exit:
 				stop <- true
@@ -409,7 +425,7 @@ func genStartTaskRunner(p *program, c pb.LaforgeClient, taskChannel chan *pb.Hea
 
 // run Function that is called when the program starts and run all the Go Routines
 func (p *program) run() error {
-	logger.Infof("I'm running %v.", service.Platform())
+	logf(logger, LogInfo, "LaForge Service Starting.  Platform: %v", service.Platform())
 	// var wg sync.WaitGroup
 
 	// TLS Cert for verifying GRPC Server
@@ -426,7 +442,7 @@ func (p *program) run() error {
 	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(creds))
 
 	if err != nil {
-		logger.Errorf("did not connect: %v", err)
+		logf(logger, LogError, "Could not connect to LaForge Server: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewLaforgeClient(conn)
@@ -446,7 +462,7 @@ func (p *program) run() error {
 // Stop Called when the Agent is closed
 func (p *program) Stop(s service.Service) error {
 	// Any work in Stop should be quick, usually a few seconds at most.
-	logger.Error("I'm Stopping!")
+	log(logger, LogWarning, "LaForge Service Stopping")
 	close(p.exit)
 	return nil
 }
@@ -463,6 +479,7 @@ func main() {
 
 	options := make(service.KeyValue)
 	options["Restart"] = "always"
+	options["OnFailure"] = "restart"
 	// options["SuccessExitStatus"] = "1 2 8 SIGKILL"
 	svcConfig := &service.Config{
 		Name:         "laforge-agent",
@@ -495,13 +512,12 @@ func main() {
 	if len(*svcFlag) != 0 {
 		err := service.Control(s, *svcFlag)
 		if err != nil {
-			logger.Infof("Valid actions: %q\n", service.ControlAction)
-			logger.Error(err)
+			logf(logger, LogError, "Service used invalid actions: %q %v", service.ControlAction, err)
 		}
 		return
 	}
 	err = s.Run()
 	if err != nil {
-		logger.Error(err)
+		logf(logger, LogError, "Service unable to successfully start: %v", err)
 	}
 }

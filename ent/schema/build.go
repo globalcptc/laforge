@@ -29,36 +29,37 @@ func (Build) Fields() []ent.Field {
 // Edges of the Build.
 func (Build) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("BuildToStatus", Status.Type).
+		edge.To("Status", Status.Type).
 			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("BuildToEnvironment", Environment.Type).
+		edge.To("Environment", Environment.Type).
 			Unique().
 			Required(),
-		edge.To("BuildToCompetition", Competition.Type).
+		edge.To("Competition", Competition.Type).
 			Unique().
 			Required(),
-		edge.To("BuildToLatestBuildCommit", BuildCommit.Type).
+		edge.To("LatestBuildCommit", BuildCommit.Type).
 			Unique().
 			Annotations(entsql.Annotation{
 				OnDelete: entsql.Cascade,
 			}),
-		edge.To("BuildToRepoCommit", RepoCommit.Type).Unique(),
-		edge.From("BuildToProvisionedNetwork", ProvisionedNetwork.Type).
-			Ref("ProvisionedNetworkToBuild"),
-		edge.From("BuildToTeam", Team.Type).
-			Ref("TeamToBuild"),
-		edge.From("BuildToPlan", Plan.Type).
-			Ref("PlanToBuild"),
-		edge.From("BuildToBuildCommits", BuildCommit.Type).
-			Ref("BuildCommitToBuild"),
-		edge.From("BuildToAdhocPlans", AdhocPlan.Type).
-			Ref("AdhocPlanToBuild"),
-		edge.From("BuildToAgentStatuses", AgentStatus.Type).
-			Ref("AgentStatusToBuild"),
-		edge.From("BuildToServerTasks", ServerTask.Type).
-			Ref("ServerTaskToBuild"),
+		edge.To("RepoCommit", RepoCommit.Type).
+			Unique(),
+		edge.From("ProvisionedNetworks", ProvisionedNetwork.Type).
+			Ref("Build"),
+		edge.From("Teams", Team.Type).
+			Ref("Build"),
+		edge.From("Plans", Plan.Type).
+			Ref("Build"),
+		edge.From("BuildCommits", BuildCommit.Type).
+			Ref("Build"),
+		edge.From("AdhocPlans", AdhocPlan.Type).
+			Ref("Build"),
+		edge.From("AgentStatuses", AgentStatus.Type).
+			Ref("Build"),
+		edge.From("ServerTasks", ServerTask.Type).
+			Ref("Build"),
 	}
 }

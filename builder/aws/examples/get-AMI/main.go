@@ -8,10 +8,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/davecgh/go-spew/spew"
 )
 
 var Region string = "us-east-1"
-var name string = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20211129"
+var name string = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"
 var vt string = "hvm"
 var rdt string = "ebs"
 var arch string = "x86_64"
@@ -21,6 +22,7 @@ func main() {
 	ctx := context.Background()
 	// https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithSharedCredentialsFiles([]string{"../../../../configs/config"}),
 		config.WithRegion(Region))
 	if err != nil {
 		println(err.Error())
@@ -41,7 +43,11 @@ func main() {
 		IncludeDeprecated: aws.Bool(false),
 		Owners:            []string{owner},
 	}
+
+	spew.Dump(input)
 	output, err := client.DescribeImages(ctx, &input)
+	spew.Dump(output)
+	spew.Dump(err)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return

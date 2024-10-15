@@ -29,9 +29,9 @@
         </ng-container>
       </div>
       <div class="host-preview" (click)="style !== 'compact' && mode !== 'plan' && viewDetails()">
-        <span class="host-hostname">{{ provisionedHost ? provisionedHost.ProvisionedHostToHost.hostname : '' }}</span>
+        <span class="host-hostname">{{ provisionedHost ? provisionedHost.Host.hostname : '' }}</span>
         <span class="host-ip" *ngIf="style !== 'compact'">
-          <em>| {{ provisionedHost ? provisionedHost.subnet_ip : '' }}</em>
+          <em>| {{ provisionedHost ? provisionedHost.subnetIp : '' }}</em>
         </span>
       </div>
       <div class="toggle-collapse" *ngIf="style !== 'compact' && shouldCollapse()">
@@ -40,7 +40,7 @@
     </div>
     <div class="steps" *ngIf="expandOverride || (!shouldCollapse() && style === 'expanded')">
       <app-step
-        *ngFor="let step of provisionedHost.ProvisionedHostToProvisioningStep | sortBy: 'asc':'step_number'; let i = index"
+        *ngFor="let step of provisionedHost.ProvisioningSteps | sortBy: 'asc':'stepNumber'; let i = index"
         [stepNumber]="i + 1"
         [provisioningStep]="step"
         [planDiffs]="planDiffs"
@@ -48,6 +48,15 @@
         [style]="'expanded'"
         [mode]="mode"
       ></app-step>
+      <!-- <app-step
+        *ngFor="let scheduledStep of provisionedHost.ProvisioningScheduledSteps | sortBy: 'asc':'stepNumber'; let i = index"
+        [stepNumber]="provisionedHost.ProvisioningSteps.length + i + 1"
+        [provisioningScheduledStep]="scheduledStep"
+        [planDiffs]="planDiffs"
+        [showDetail]="false"
+        [style]="'expanded'"
+        [mode]="mode"
+      ></app-step> -->
     </div>
   </div>
 </div>
