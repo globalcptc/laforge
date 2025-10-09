@@ -619,8 +619,9 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		logger.Log.Errorf("Unable to Resolve Absolute File Path. Err: %v", err)
 		return nil, err
 	}
+
 	if ShouldRenderFiles {
-		err = grpc.BuildAgent(logger, fmt.Sprint(entProvisionedHost.ID), laforgeConfig.Agent.GrpcServerUri, binaryName, isWindowsHost)
+		err = grpc.BuildAgent(logger, fmt.Sprint(entProvisionedHost.ID), laforgeConfig.Agent.GrpcServerUri, binaryName, isWindowsHost, laforgeConfig.AgentDebug)
 		if err != nil {
 			return nil, err
 		}

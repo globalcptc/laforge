@@ -184,7 +184,9 @@ func main() {
 		logrus.Errorf("failed to load LaForge config: %v", err)
 		return
 	}
-	logrus.Infof("\033[1;32mConfig File: \033[0m%s", laforgeConfig.ConfigFile)
+	logrus.Infof("Config File: %s", laforgeConfig.ConfigFile)
+	logrus.Infof("Debug: %t", laforgeConfig.Debug)
+	logrus.Infof("Agent Debug: %t", laforgeConfig.AgentDebug)
 
 	// Start logging all Logrus output to files
 	if laforgeConfig.GinMode == "release" {
