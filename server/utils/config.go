@@ -18,6 +18,7 @@ type ServerConfig struct {
 	Agent      AgentConfig              `json:"agent"`
 	Graphql    GraphqlConfig            `json:"graphql"`
 	Debug      bool                     `json:"debug"`
+	AgentDebug bool 							`json:"agent_debug"`
 	LogFolder  string                   `json:"log_folder"`
 	GinMode    string                   `json:"gin_mode"`
 }
