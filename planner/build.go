@@ -441,7 +441,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		}
 	case plan.TypeStartBuild:
 		entBuild, err := entPlan.QueryBuild().Only(ctx)
-                 if err != nil {
+		if err != nil {
 			logger.Log.Errorf("Failed to Query Build Start Step. Err: %v", err)
 			return
 		}
@@ -477,7 +477,7 @@ func buildRoutine(client *ent.Client, laforgeConfig *utils.ServerConfig, logger 
 		entStatus.Update().SetState(status.StateFAILED).SetFailed(true).Save(ctxClosing)
 		rdb.Publish(ctxClosing, "updatedStatus", entStatus.ID.String())
 		logger.Log.WithFields(logrus.Fields{
-			"type":    entPlan.Type,
+			"type": entPlan.Type,
 		}).Errorf("error while executing plan: %v", planErr)
 	} else {
 
@@ -890,7 +890,7 @@ func execStep(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *log
 				logger.Log.Errorf("failed rerendering Script: %v", err)
 				return err
 			}
-			logger.Log.Debug("sucessful rerendering for Script: %v", err)
+			logger.Log.Debug("successfully rerendered script")
 		}
 		entGinMiddleware, err := entStep.QueryGinFileMiddleware().Only(ctx)
 		if err != nil {

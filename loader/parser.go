@@ -381,7 +381,9 @@ func (l *Loader) merger(filenames []string) (*DefinedConfigs, error) {
 // LoadEnvironment Loads in enviroment at specified filepath
 func LoadEnvironment(ctx context.Context, client *ent.Client, log *logging.Logger, filePath string) ([]*ent.Environment, error) {
 	tloader := NewLoader()
-	tloader.ParseConfigFile(log, filePath)
+	if err := tloader.ParseConfigFile(log, filePath); err != nil {
+		return nil, err
+	}
 	loadedConfig, err := tloader.Bind(log)
 	if err != nil {
 		log.Log.Errorf("Unable to Load ENV Config: %v Err: %v", filePath, err)
@@ -632,6 +634,9 @@ func createEnviroments(ctx context.Context, client *ent.Client, log *logging.Log
 		err = rollback(txClient, err)
 		log.Log.Errorf("Failed Commit Environments. Err: %v", err)
 		return nil, err
+	}
+	for _, loadedEnvironment := range returnedEnvironment {
+		loadedEnvironment.Unwrap()
 	}
 	log.Log.Info("Sucessfully imported ENV")
 	return returnedEnvironment, nil
@@ -1657,7 +1662,7 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 			ClearNetwork().
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to update the Included Network %v with Hosts %v. Err: %v", cIncludedNetwork.Name, cIncludedNetwork.Hosts, err)
+			log.Log.Errorf("Failed to update the Included Network %v with Hosts %v. Err: %v", cIncludedNetwork.Name, cIncludedNetwork.IncludedHosts, err)
 			return nil, err
 		}
 		entIncludedNetwork, err = entIncludedNetwork.Update().
@@ -1665,7 +1670,7 @@ func createIncludedNetwork(txClient *ent.Tx, ctx context.Context, log *logging.L
 			SetNetwork(entNetwork).
 			Save(ctx)
 		if err != nil {
-			log.Log.Errorf("Failed to update the Included Network %v Edges with Hosts %v. Err: %v", cIncludedNetwork.Name, cIncludedNetwork.Hosts, err)
+			log.Log.Errorf("Failed to update the Included Network %v Edges with Hosts %v. Err: %v", cIncludedNetwork.Name, cIncludedNetwork.IncludedHosts, err)
 			return nil, err
 		}
 		returnedIncludedNetworks = append(returnedIncludedNetworks, entIncludedNetwork)

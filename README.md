@@ -6,6 +6,25 @@
 
 Laforge enables rapid development of infrastructure for the purpose of information security competitions. Using a simple and intuitive configuration language, Laforge manages a dependency graph and state management and allows for highly productive remote collaboration. The Laforge engine uses a custom loader to do multi-dimensional, non-destructive configuration overlay. A good analogy to this is Docker - when you build a Docker container, it builds it up layers at a time. It's this power that has inspired us to build Laforge. It's certainly a niche project, but we certainly have found an incredible use for it.
 
+## Run preflight checks locally
+
+Build the local test binary:
+
+```sh
+go build -o laforge-test ./cmd/laforge-test
+```
+
+Run it against the root environment file before pushing:
+
+```sh
+./laforge-test path/to/environment.laforge
+```
+
+The test loads and syntax-checks all includes in a temporary in-memory database,
+validates entity references and dependencies, and generates the complete team,
+network, host, and provisioning plan. It does not render agent artifacts, contact
+a configured builder, or modify the environment repository.
+Use `-json` for machine-readable output and `-verbose` for planner logs.
 
 ## Table of Contents
 

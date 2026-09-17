@@ -1,0 +1,32 @@
+{
+  "laforge_server_url": "https://laforge.example.com",
+  "max_build_workers": 8,
+  "max_teardown_workers": 8,
+  "base_url": "https://microcloud-01.example.com:8443",
+  "client_cert_path": "/etc/laforge/microcloud/client.crt",
+  "client_key_path": "/etc/laforge/microcloud/client.key",
+  "server_cert_path": "/etc/laforge/microcloud/server.crt",
+  "storage_pool": "remote",
+  "uplink_network": "UPLINK",
+  "instance_sizes": {
+    "nano": {
+      "cpu": "1",
+      "memory": "1GiB"
+    },
+    "small": {
+      "cpu": "2",
+      "memory": "4GiB"
+    },
+    "medium": {
+      "cpu": "4",
+      "memory": "8GiB"
+    },
+    "large": {
+      "cpu": "8",
+      "memory": "16GiB"
+    }
+  },
+  "images": {
+    "ubuntu22": "ubuntu22"
+  }
+}

@@ -200,7 +200,8 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 	for teamNumber := 1; teamNumber <= entEnvironment.TeamCount; teamNumber++ {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup, teamNumber int, logger *logging.Logger, entBuild *ent.Build, client *ent.Client) {
-			_, err := createTeam(client, laforgeConfig, logger, entBuild, teamNumber, wg)
+			defer wg.Done()
+			_, err := createTeam(client, laforgeConfig, logger, entBuild, teamNumber, ShouldRenderFiles)
 			if err != nil {
 				logrus.Errorf("error creating team: %v", err)
 				logger.Log.Errorf("error creating team: %v", err)
@@ -305,11 +306,10 @@ func CreateBuild(ctx context.Context, client *ent.Client, rdb *redis.Client, laf
 	return entBuild, nil
 }
 
-func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, entBuild *ent.Build, teamNumber int, wg *sync.WaitGroup) (*ent.Team, error) {
+func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, entBuild *ent.Build, teamNumber int, renderFiles bool) (*ent.Team, error) {
 	logger.Log.WithFields(logrus.Fields{
 		"teamNumber": teamNumber,
 	}).Debug("creating team")
-	defer wg.Done()
 
 	ctx := context.Background()
 	defer ctx.Done()
@@ -380,7 +380,7 @@ func createTeam(client *ent.Client, laforgeConfig *utils.ServerConfig, logger *l
 			return nil, err
 		}
 		for _, entHost := range entHosts {
-			_, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, pNetwork, entHost, networkPlan)
+			_, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, pNetwork, entHost, networkPlan, renderFiles)
 			if err != nil {
 				logger.Log.Errorf("Failed to create provisioned host: %v", err)
 				return nil, err
@@ -440,7 +440,7 @@ func createProvisionedNetworks(ctx context.Context, client *ent.Client, laforgeC
 	return entProvisionedNetwork, nil
 }
 
-func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, pNetwork *ent.ProvisionedNetwork, entHost *ent.Host, prevPlan *ent.Plan) (*ent.ProvisionedHost, error) {
+func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConfig *utils.ServerConfig, logger *logging.Logger, pNetwork *ent.ProvisionedNetwork, entHost *ent.Host, prevPlan *ent.Plan, renderFiles bool) (*ent.ProvisionedHost, error) {
 	logger.Log.WithFields(logrus.Fields{
 		"pNetwork":      pNetwork.ID,
 		"pNetwork.Name": pNetwork.Name,
@@ -533,7 +533,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 					logger.Log.Errorf("error while retrieving plan from provisioned network: %v", err)
 					return nil, err
 				}
-				entDependsOnHost, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, dependOnPnetwork, entHostDependency.Edges.DependOnHost, dependOnPnetworkPlan)
+				entDependsOnHost, err = createProvisionedHosts(ctx, client, laforgeConfig, logger, dependOnPnetwork, entHostDependency.Edges.DependOnHost, dependOnPnetworkPlan, renderFiles)
 				if err != nil {
 					logger.Log.Errorf("error creating depends on host: %v", err)
 					return nil, err
@@ -603,24 +603,22 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 		return nil, err
 	}
 
-	isWindowsHost := false
-	if strings.Contains(entHost.OS, "w2k") {
-		isWindowsHost = true
-	}
+	if renderFiles {
+		isWindowsHost := strings.Contains(entHost.OS, "w2k")
+		binaryPath := path.Join("builds", currentBuild.Edges.Environment.Name, fmt.Sprint(currentBuild.Revision), fmt.Sprint(currentTeam.TeamNumber), pNetwork.Name, entHost.Hostname)
+		if err := os.MkdirAll(binaryPath, 0755); err != nil {
+			return nil, fmt.Errorf("create agent build directory: %w", err)
+		}
+		binaryName := path.Join(binaryPath, "laforgeAgent")
+		if isWindowsHost {
+			binaryName += ".exe"
+		}
+		binaryName, err = filepath.Abs(binaryName)
+		if err != nil {
+			logger.Log.Errorf("Unable to Resolve Absolute File Path. Err: %v", err)
+			return nil, err
+		}
 
-	binaryPath := path.Join("builds", currentBuild.Edges.Environment.Name, fmt.Sprint(currentBuild.Revision), fmt.Sprint(currentTeam.TeamNumber), pNetwork.Name, entHost.Hostname)
-	os.MkdirAll(binaryPath, 0755)
-	binaryName := path.Join(binaryPath, "laforgeAgent")
-	if isWindowsHost {
-		binaryName = binaryName + ".exe"
-	}
-	binaryName, err = filepath.Abs(binaryName)
-	if err != nil {
-		logger.Log.Errorf("Unable to Resolve Absolute File Path. Err: %v", err)
-		return nil, err
-	}
-
-	if ShouldRenderFiles {
 		err = grpc.BuildAgent(logger, fmt.Sprint(entProvisionedHost.ID), laforgeConfig.Agent.GrpcServerUri, binaryName, isWindowsHost, laforgeConfig.AgentDebug)
 		if err != nil {
 			return nil, err

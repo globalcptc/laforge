@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/gen0cide/laforge/builder/aws"
 	"github.com/gen0cide/laforge/builder/generic"
+	"github.com/gen0cide/laforge/builder/microcloud"
 	lfopenstack "github.com/gen0cide/laforge/builder/openstack"
 	"github.com/gen0cide/laforge/builder/vspherensxt"
 	"github.com/gen0cide/laforge/builder/vspherensxt/nsxt"
@@ -61,6 +62,13 @@ func BuilderFromEnvironment(buildersMap map[string]utils.BuilderConfig, environm
 		genericBuilder, err = NewOpenstackBuilder(builderConfig.ConfigFile, environment, logger)
 		if err != nil {
 			logrus.Errorf("Failed to make openstack builder. Err: %v", err)
+			return
+		}
+		return
+	case "microcloud":
+		genericBuilder, err = NewMicroCloudBuilder(builderConfig.ConfigFile, environment, logger)
+		if err != nil {
+			logrus.Errorf("Failed to make MicroCloud builder. Err: %v", err)
 			return
 		}
 		return
@@ -216,4 +224,13 @@ func NewOpenstackBuilder(configFilePath string, env *ent.Environment, logger *lo
 		TeardownWorkerPool: teardownWorkerPool,
 	}
 	return
+}
+
+func NewMicroCloudBuilder(configFilePath string, env *ent.Environment, logger *logging.Logger) (*microcloud.MicroCloudBuilder, error) {
+	var builderConfig microcloud.BuilderConfig
+	if err := configs.LoadBuilderConfig(configFilePath, &builderConfig); err != nil {
+		return nil, err
+	}
+
+	return microcloud.New(builderConfig, logger)
 }

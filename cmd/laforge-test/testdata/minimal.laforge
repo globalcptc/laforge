@@ -1,0 +1,33 @@
+competition "test" {
+  root_password = "test"
+}
+
+network "management" {
+  name = "management"
+  cidr = "10.20.30.0/24"
+}
+
+host "server" {
+  hostname      = "server"
+  os            = "ubuntu"
+  last_octet    = 10
+  instance_size = "small"
+
+  disk {
+    size = 20
+  }
+}
+
+environment "test" {
+  competition_id        = "test"
+  name                  = "test"
+  description           = "Local preflight validation fixture"
+  builder               = "generic"
+  team_count            = 1
+  admin_ranges          = []
+  vdi_allowed_tcp_ports = []
+
+  included_network "management" {
+    included_hosts = ["server"]
+  }
+}

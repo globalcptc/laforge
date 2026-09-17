@@ -3,17 +3,17 @@ package planner
 import (
 	"github.com/gen0cide/laforge/server/utils"
 	"github.com/go-redis/redis/v8"
-	"github.com/sirupsen/logrus"
 )
 
 var (
-	rdb *redis.Client
+	rdb = redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
 )
 
 func init() {
 	laforgeConfig, err := utils.LoadServerConfig()
 	if err != nil {
-		logrus.Errorf("failed to load LaForge config: %s", err)
 		return
 	}
 
