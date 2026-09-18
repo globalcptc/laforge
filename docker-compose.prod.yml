@@ -7,37 +7,6 @@ x-logging: &default-logging
     max-file: "5"
 
 services:
-  proxy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    environment:
-      ACME_EMAIL: ${ACME_EMAIL}
-      GRPC_DOMAIN: ${GRPC_DOMAIN:-grpc.laforge.cp.tc}
-      LAFORGE_DOMAIN: ${LAFORGE_DOMAIN:-laforge.cp.tc}
-    ports:
-      - "80:80"
-      - "443:443"
-    networks:
-      - frontend
-    volumes:
-      - ./deploy/production/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-      - certbot-webroot:/var/www/certbot:ro
-    read_only: true
-    tmpfs:
-      - /tmp
-    cap_drop:
-      - ALL
-    cap_add:
-      - NET_BIND_SERVICE
-    security_opt:
-      - no-new-privileges:true
-    depends_on:
-      ui:
-        condition: service_healthy
-    logging: *default-logging
-
   ui:
     build:
       context: ./ui/ng-ui
@@ -46,8 +15,8 @@ services:
         - environment_prod
         - npmrc
     restart: unless-stopped
-    expose:
-      - "80"
+    ports:
+      - "${UI_PUBLISH:-127.0.0.1:8080}:80"
     networks:
       - frontend
       - backend
@@ -78,9 +47,7 @@ services:
       GRPC_DOMAIN: ${GRPC_DOMAIN:-grpc.laforge.cp.tc}
       PORT: :8080
     ports:
-      - "${GRPC_BIND_IP:-0.0.0.0}:50051:50051"
-    expose:
-      - "8080"
+      - "${GRPC_PUBLISH:-127.0.0.1:15051}:50051"
     networks:
       - backend
       - egress
@@ -91,7 +58,6 @@ services:
       - laforge-logs:/app/logs
       - laforge-repos:/app/repos
       - laforge-users:/app/users
-      - grpc-tls:/run/grpc-tls:ro
     secrets:
       - admin_password
       - github_client_secret
@@ -126,8 +92,6 @@ services:
       POSTGRES_DB: laforge
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_USER: laforger
-    expose:
-      - "5432"
     networks:
       - backend
     volumes:
@@ -151,8 +115,6 @@ services:
     entrypoint:
       - /bin/sh
       - /usr/local/bin/laforge-redis-entrypoint.sh
-    expose:
-      - "6379"
     networks:
       - backend
     volumes:
@@ -180,71 +142,6 @@ services:
       start_period: 10s
     logging: *default-logging
 
-  db-backup:
-    build:
-      context: ./deploy/production/postgres-backup
-    restart: unless-stopped
-    environment:
-      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-86400}
-      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
-      PGDATABASE: laforge
-      PGHOST: db
-      PGUSER: laforger
-    networks:
-      - backend
-    volumes:
-      - postgres-backups:/backups
-    secrets:
-      - postgres_password
-    read_only: true
-    tmpfs:
-      - /tmp
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "/usr/local/bin/backup-healthcheck"]
-      interval: 1h
-      timeout: 5s
-      retries: 3
-      start_period: 5m
-    logging: *default-logging
-
-  certbot:
-    image: certbot/certbot:latest
-    restart: unless-stopped
-    environment:
-      GRPC_DOMAIN: ${GRPC_DOMAIN:-grpc.laforge.cp.tc}
-    entrypoint: /bin/sh
-    command:
-      - -ec
-      - while :; do certbot renew --webroot -w /var/www/certbot --deploy-hook "sh /usr/local/bin/deploy-certificate" --quiet; sleep 12h; done
-    volumes:
-      - ./deploy/production/deploy-certificate.sh:/usr/local/bin/deploy-certificate:ro
-      - certbot-webroot:/var/www/certbot
-      - grpc-tls:/run/grpc-tls
-      - letsencrypt:/etc/letsencrypt
-    networks:
-      - frontend
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /var/lib/letsencrypt
-      - /var/log/letsencrypt
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - DAC_OVERRIDE
-      - FOWNER
-    security_opt:
-      - no-new-privileges:true
-    logging: *default-logging
-
 networks:
   frontend:
     driver: bridge
@@ -255,16 +152,10 @@ networks:
     driver: bridge
 
 volumes:
-  caddy-config:
-  caddy-data:
-  certbot-webroot:
-  grpc-tls:
   laforge-builds:
   laforge-logs:
   laforge-repos:
   laforge-users:
-  letsencrypt:
-  postgres-backups:
   postgres-data:
   redis-data:
 

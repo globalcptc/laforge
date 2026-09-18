@@ -14,14 +14,11 @@
 		-Server
 	}
 
-	reverse_proxy ui:80
+	reverse_proxy {$UI_UPSTREAM:127.0.0.1:8080}
 }
 
-http://{$GRPC_DOMAIN} {
-	handle /.well-known/acme-challenge/* {
-		root * /var/www/certbot
-		file_server
+{$GRPC_DOMAIN}:50051 {
+	reverse_proxy h2c://{$GRPC_UPSTREAM:127.0.0.1:15051} {
+		flush_interval -1
 	}
-
-	respond "Not Found" 404
 }

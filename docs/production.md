@@ -55,9 +55,10 @@ EOF
 sudo systemctl restart docker
 ```
 
-Enable Azure managed-disk snapshots or Azure Backup for that disk. The Compose
-backup service provides logical PostgreSQL dumps, but those dumps still need an
-off-host copy to protect against VM or disk loss.
+Enable Azure managed-disk snapshots or Azure Backup for the Docker data-root
+disk. That snapshot is the backup: Postgres, Redis, and LaForge state all live
+there. There is no in-compose dump sidecar; dumps on the same disk do not
+protect against disk loss.
 
 ## Configuration and secrets
 
@@ -77,7 +78,7 @@ chmod 644 conf.prod.json secrets/*
 
 Keep `secrets/` mode 700. The files themselves must be world-readable
 because Compose bind-mounts them into non-root containers (backend uid
-10001, `db-backup` as `postgres`). Directory mode 700 still keeps them
+10001). Directory mode 700 still keeps them
 off-limits to other host users.
 
 Edit `.env.production` and `conf.prod.json`. In particular:
@@ -125,34 +126,41 @@ outside source control.
 
 ## First start
 
-Load the deployment variables for the certificate bootstrap commands:
+Install Caddy on the VM (not in Compose). It terminates TLS for the UI on
+443 and for agents on 50051, then reverse-proxies to loopback ports published
+by the `ui` and `backend` containers.
 
 ```sh
-set -a
-. ./.env.production
-set +a
+sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+  | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+  | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt-get update
+sudo apt-get install -y caddy
 ```
 
-Start Caddy by itself. It obtains the UI certificate and serves the ACME
-webroot for the DNS-only gRPC hostname:
+Copy the Caddyfile and point systemd at `.env.production` so
+`{$LAFORGE_DOMAIN}`, `{$GRPC_DOMAIN}`, and the loopback upstreams expand:
 
 ```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml \
-  up -d --no-deps proxy
+sudo cp deploy/production/Caddyfile /etc/caddy/Caddyfile
+sudo mkdir -p /etc/systemd/system/caddy.service.d
+sudo cp deploy/production/caddy-systemd.conf \
+  /etc/systemd/system/caddy.service.d/laforge.conf
+sudo sed -i "s|/opt/laforge/.env.production|$(pwd)/.env.production|" \
+  /etc/systemd/system/caddy.service.d/laforge.conf
+sudo systemctl daemon-reload
+sudo systemctl enable --now caddy
+sudo systemctl reload caddy
 ```
 
-Issue the initial gRPC certificate:
+Leave `laforge.cp.tc` DNS-only until Caddy has issued the certificate, then
+set Cloudflare SSL/TLS to **Full (strict)**. `grpc.laforge.cp.tc` stays
+DNS-only; Cloudflare's proxy does not forward port 50051. Do not cache
+`/api/*` or `/auth/*`.
 
-```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml \
-  run --rm --entrypoint certbot certbot \
-  certonly --webroot -w /var/www/certbot \
-  --email "$ACME_EMAIL" --agree-tos --no-eff-email \
-  --deploy-hook "sh /usr/local/bin/deploy-certificate" \
-  -d "$GRPC_DOMAIN"
-```
-
-Start the complete stack:
+Start the application stack:
 
 ```sh
 docker compose --env-file .env.production -f docker-compose.prod.yml \
@@ -160,39 +168,17 @@ docker compose --env-file .env.production -f docker-compose.prod.yml \
 docker compose --env-file .env.production -f docker-compose.prod.yml ps
 ```
 
-Set Cloudflare SSL/TLS mode to **Full (strict)** after Caddy has issued the
-certificate. Do not enable Cloudflare caching for `/api/*` or `/auth/*`.
-
-Certbot checks for renewal every 12 hours. Its deploy hook copies the renewed
-certificate into a backend-readable volume without exposing Certbot's account
-state or private directories to the application. The backend reads that copy
-during each new TLS handshake, so renewal does not require rebuilding the
-backend or agents.
+Host Caddy should show listeners on `0.0.0.0:80`, `:443`, and `:50051`.
+Compose should only publish `127.0.0.1:8080->80` (`ui`) and
+`127.0.0.1:15051->50051` (`backend`). A `5432/tcp` entry on `db` with no
+`0.0.0.0:` or `127.0.0.1:` prefix is the Postgres image's `EXPOSE` metadata,
+not a host port.
 
 ## Backup and restore
 
-`db-backup` creates a compressed custom-format dump immediately at startup and
-then once per `BACKUP_INTERVAL`. Dumps and SHA-256 files are retained for
-`BACKUP_RETENTION_DAYS` in the `postgres-backups` volume.
-
-List backups:
-
-```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml \
-  exec db-backup ls -lh /backups
-```
-
-Restore a dump:
-
-```sh
-CONFIRM_RESTORE=laforge \
-  COMPOSE_FILE=docker-compose.prod.yml \
-  sh deploy/production/restore-postgres.sh laforge-YYYYMMDDTHHMMSSZ.dump
-```
-
-The restore script stops the backend and backup worker, restores with
-`--clean --if-exists`, and starts both services again. Test restores on a
-non-production VM before relying on the backup process.
+Snapshot the Docker data-root managed disk. That captures Postgres, Redis,
+and LaForge volumes together. Restore is a disk restore, not a logical
+`pg_restore`.
 
 ## Operations
 
@@ -214,5 +200,4 @@ docker compose --env-file .env.production -f docker-compose.prod.yml \
   up -d --build --remove-orphans
 ```
 
-Take a fresh PostgreSQL dump and managed-disk snapshot before application or
-database upgrades.
+Take a managed-disk snapshot before application or database upgrades.

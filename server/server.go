@@ -53,26 +53,31 @@ func grpcTLSConfig(config *utils.ServerConfig) (*tls.Config, error) {
 		return nil, fmt.Errorf("agent.grpc_tls_cert_path and agent.grpc_tls_key_path must be configured together")
 	}
 
-	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
-	if certPath != "" {
-		tlsConfig.GetCertificate = func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-			cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load gRPC TLS certificate: %w", err)
-			}
-			return &cert, nil
-		}
-		if _, err := tlsConfig.GetCertificate(nil); err != nil {
+	if certPath == "" {
+		cert, err := loadEmbeddedGRPCCertificate()
+		if err != nil {
 			return nil, err
 		}
-		return tlsConfig, nil
+		if cert == nil {
+			return nil, nil
+		}
+		return &tls.Config{
+			MinVersion:   tls.VersionTLS12,
+			Certificates: []tls.Certificate{*cert},
+		}, nil
 	}
 
-	cert, err := loadEmbeddedGRPCCertificate()
-	if err != nil {
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+	tlsConfig.GetCertificate = func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load gRPC TLS certificate: %w", err)
+		}
+		return &cert, nil
+	}
+	if _, err := tlsConfig.GetCertificate(nil); err != nil {
 		return nil, err
 	}
-	tlsConfig.Certificates = []tls.Certificate{*cert}
 	return tlsConfig, nil
 }
 
@@ -449,8 +454,13 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("failed to configure gRPC TLS: %v", err)
 	}
-	creds := credentials.NewTLS(tlsConfig)
-	s := grpc.NewServer(grpc.Creds(creds))
+	var s *grpc.Server
+	if tlsConfig != nil {
+		s = grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)))
+	} else {
+		logrus.Warn("gRPC listening without TLS (h2c); terminate TLS at the reverse proxy")
+		s = grpc.NewServer()
+	}
 
 	logrus.Infof("Starting Laforge Server on port " + server.Port)
 

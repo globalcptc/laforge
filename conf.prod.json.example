@@ -28,9 +28,7 @@
   "agent": {
     "grpc_server_uri": "${GRPC_DOMAIN}:50051",
     "api_download_url": "https://${LAFORGE_DOMAIN}/api/download/",
-    "grpc_use_system_roots": true,
-    "grpc_tls_cert_path": "/run/grpc-tls/fullchain.pem",
-    "grpc_tls_key_path": "/run/grpc-tls/privkey.pem"
+    "grpc_use_system_roots": true
   },
   "graphql": {
     "hostname": "${LAFORGE_DOMAIN}",
