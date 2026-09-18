@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -240,7 +241,7 @@ func main() {
 		if err != nil {
 			logrus.Errorf("couldn't create log file: %s", err)
 		} else {
-			logrus.SetOutput(logFile)
+			logrus.SetOutput(io.MultiWriter(os.Stderr, logFile))
 		}
 	}
 	if laforgeConfig.Debug {
