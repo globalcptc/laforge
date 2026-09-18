@@ -83,6 +83,28 @@ The UI uses Font Awesome Pro packages. Put the npm registry credentials in
 //npm.fontawesome.com/:_authToken=REPLACE_ME
 ```
 
+Create `secrets/environment.prod.ts` for the Angular production build:
+
+```typescript
+const websocketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+export const environment = {
+  production: true,
+  appVersion: 'v710demo1',
+  USERDATA_KEY: 'authf649fc9a5f55',
+  isMockEnabled: false,
+  apiUrl: 'api',
+  graphqlUrl: '/api/query',
+  wsUrl: `${websocketProtocol}//${window.location.host}/api/query`,
+  isMockApi: false,
+  authBaseUrl: '/auth'
+};
+```
+
+This file is deployment-specific and intentionally ignored by Git. It is passed
+to the UI image build as a BuildKit secret. Nothing in it is confidential—the
+compiled Angular application is downloaded by every browser.
+
 Secret files are mounted under `/run/secrets`; they are not copied into either
 application image. Keep `conf.prod.json`, `.env.production`, and `secrets/`
 outside source control.

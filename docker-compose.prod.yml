@@ -43,6 +43,7 @@ services:
       context: ./ui/ng-ui
       dockerfile: Dockerfile
       secrets:
+        - environment_prod
         - npmrc
     restart: unless-stopped
     expose:
@@ -264,6 +265,8 @@ volumes:
 secrets:
   admin_password:
     file: ${SECRETS_DIR:-./secrets}/admin_password
+  environment_prod:
+    file: ${UI_ENVIRONMENT_PATH:-./secrets/environment.prod.ts}
   github_client_secret:
     file: ${SECRETS_DIR:-./secrets}/github_client_secret
   npmrc:
