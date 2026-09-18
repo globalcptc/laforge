@@ -29,7 +29,6 @@ import (
 	"github.com/gen0cide/laforge/graphql/graph"
 	pb "github.com/gen0cide/laforge/grpc/proto"
 	"github.com/gen0cide/laforge/grpc/server"
-	"github.com/gen0cide/laforge/grpc/server/static"
 	"github.com/gen0cide/laforge/logging"
 	"github.com/gen0cide/laforge/scheduler"
 	"github.com/gen0cide/laforge/server/utils"
@@ -46,6 +45,36 @@ import (
 )
 
 const defaultPort = ":8080"
+
+func grpcTLSConfig(config *utils.ServerConfig) (*tls.Config, error) {
+	certPath := config.Agent.GrpcTLSCertPath
+	keyPath := config.Agent.GrpcTLSKeyPath
+	if (certPath == "") != (keyPath == "") {
+		return nil, fmt.Errorf("agent.grpc_tls_cert_path and agent.grpc_tls_key_path must be configured together")
+	}
+
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+	if certPath != "" {
+		tlsConfig.GetCertificate = func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+			cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load gRPC TLS certificate: %w", err)
+			}
+			return &cert, nil
+		}
+		if _, err := tlsConfig.GetCertificate(nil); err != nil {
+			return nil, err
+		}
+		return tlsConfig, nil
+	}
+
+	cert, err := loadEmbeddedGRPCCertificate()
+	if err != nil {
+		return nil, err
+	}
+	tlsConfig.Certificates = []tls.Certificate{*cert}
+	return tlsConfig, nil
+}
 
 // tempURLHandler Checks ENT to verify that the url results in a file
 func tempURLHandler(client *ent.Client) gin.HandlerFunc {
@@ -366,6 +395,19 @@ func main() {
 	auth.InitGoth(laforgeConfig)
 
 	router := gin.Default()
+	router.GET("/healthz", func(c *gin.Context) {
+		healthCtx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		defer cancel()
+		if _, err := client.AuthUser.Query().Exist(healthCtx); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unhealthy", "database": err.Error()})
+			return
+		}
+		if err := rdb.Ping(healthCtx).Err(); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unhealthy", "redis": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	// Add CORS middleware around every request
 	// See https://github.com/rs/cors for full option listing
@@ -403,25 +445,11 @@ func main() {
 	api.GET("/playground", playgroundHandler())
 	go router.Run(port)
 
-	// secure server
-	certPem, certerr := static.ReadFile(server.CertFile)
-	if certerr != nil {
-		fmt.Println("File reading error", certerr)
-		return
+	tlsConfig, err := grpcTLSConfig(laforgeConfig)
+	if err != nil {
+		logrus.Fatalf("failed to configure gRPC TLS: %v", err)
 	}
-	keyPem, keyerr := static.ReadFile(server.KeyFile)
-	if keyerr != nil {
-		fmt.Println("File reading error", keyerr)
-		return
-	}
-
-	cert, tlserr := tls.X509KeyPair(certPem, keyPem)
-	if tlserr != nil {
-		fmt.Println("File reading error", tlserr)
-		return
-	}
-
-	creds := credentials.NewServerTLSFromCert(&cert)
+	creds := credentials.NewTLS(tlsConfig)
 	s := grpc.NewServer(grpc.Creds(creds))
 
 	logrus.Infof("Starting Laforge Server on port " + server.Port)

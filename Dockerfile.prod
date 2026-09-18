@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1.7
+
+FROM golang:1.23.3-bookworm AS builder
+
+WORKDIR /src
+COPY . .
+
+RUN go mod download && \
+    go mod verify && \
+    go build -tags production -trimpath -ldflags="-s -w" -o /laforge-server ./server && \
+    rm -rf /src/grpc/server/static
+
+FROM golang:1.23.3-bookworm
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates curl git openssh-client; \
+    rm -rf /var/lib/apt/lists/*
+
+RUN groupadd --gid 10001 laforge && \
+    useradd --uid 10001 --gid laforge --create-home --shell /bin/bash laforge
+
+WORKDIR /app
+COPY --from=builder --chown=laforge:laforge /src/ .
+COPY --from=builder --chown=laforge:laforge /go/pkg/mod/ /home/laforge/go/pkg/mod/
+COPY --from=builder /laforge-server /usr/local/bin/laforge-server
+
+RUN mkdir -p /app/builds /app/logs /app/repos /app/users /home/laforge/.ssh && \
+    ssh-keyscan github.com > /home/laforge/.ssh/known_hosts && \
+    chown -R laforge:laforge /app /home/laforge
+
+ENV GOCACHE=/tmp/go-build \
+    GOMODCACHE=/home/laforge/go/pkg/mod \
+    HOME=/home/laforge \
+    PATH="/app/docker_files:${PATH}"
+
+USER 10001:10001
+
+EXPOSE 8080 50051
+
+CMD ["/usr/local/bin/laforge-server"]

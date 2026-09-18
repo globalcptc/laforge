@@ -1,0 +1,276 @@
+name: laforge
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 25m
+    max-file: "5"
+
+services:
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL}
+      GRPC_DOMAIN: ${GRPC_DOMAIN:-grpc.laforge.cp.tc}
+      LAFORGE_DOMAIN: ${LAFORGE_DOMAIN:-laforge.cp.tc}
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - frontend
+    volumes:
+      - ./deploy/production/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+      - certbot-webroot:/var/www/certbot:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      ui:
+        condition: service_healthy
+    logging: *default-logging
+
+  ui:
+    build:
+      context: ./ui/ng-ui
+      dockerfile: Dockerfile
+      secrets:
+        - npmrc
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - frontend
+      - backend
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      backend:
+        condition: service_healthy
+    logging: *default-logging
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    environment:
+      GRPC_DOMAIN: ${GRPC_DOMAIN:-grpc.laforge.cp.tc}
+      PORT: :8080
+    ports:
+      - "${GRPC_BIND_IP:-0.0.0.0}:50051:50051"
+    expose:
+      - "8080"
+    networks:
+      - backend
+      - egress
+    volumes:
+      - ${LAFORGE_CONFIG:-./conf.prod.json}:/app/conf.prod.json:ro
+      - ${LAFORGE_CONFIG_DIR:-./configs}:/app/configs:ro
+      - laforge-builds:/app/builds
+      - laforge-logs:/app/logs
+      - laforge-repos:/app/repos
+      - laforge-users:/app/users
+      - grpc-tls:/run/grpc-tls:ro
+    secrets:
+      - admin_password
+      - github_client_secret
+      - postgres_password
+      - redis_password
+      - session_secret
+    read_only: true
+    tmpfs:
+      - /tmp:size=2G,uid=10001,gid=10001,mode=1770
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 2048
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *default-logging
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: laforge
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_USER: laforger
+    expose:
+      - "5432"
+    networks:
+      - backend
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    secrets:
+      - postgres_password
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U laforger -d laforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -ec
+      - exec redis-server --appendonly yes --requirepass "$$(cat /run/secrets/redis_password)"
+    expose:
+      - "6379"
+    networks:
+      - backend
+    volumes:
+      - redis-data:/data
+    secrets:
+      - redis_password
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$(cat /run/secrets/redis_password)\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging: *default-logging
+
+  db-backup:
+    build:
+      context: ./deploy/production/postgres-backup
+    restart: unless-stopped
+    environment:
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      PGDATABASE: laforge
+      PGHOST: db
+      PGUSER: laforger
+    networks:
+      - backend
+    volumes:
+      - postgres-backups:/backups
+    secrets:
+      - postgres_password
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/backup-healthcheck"]
+      interval: 1h
+      timeout: 5s
+      retries: 3
+      start_period: 5m
+    logging: *default-logging
+
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    environment:
+      GRPC_DOMAIN: ${GRPC_DOMAIN:-grpc.laforge.cp.tc}
+    entrypoint: /bin/sh
+    command:
+      - -ec
+      - while :; do certbot renew --webroot -w /var/www/certbot --deploy-hook "sh /usr/local/bin/deploy-certificate" --quiet; sleep 12h; done
+    volumes:
+      - ./deploy/production/deploy-certificate.sh:/usr/local/bin/deploy-certificate:ro
+      - certbot-webroot:/var/www/certbot
+      - grpc-tls:/run/grpc-tls
+      - letsencrypt:/etc/letsencrypt
+    networks:
+      - frontend
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/lib/letsencrypt
+      - /var/log/letsencrypt
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+  egress:
+    driver: bridge
+
+volumes:
+  caddy-config:
+  caddy-data:
+  certbot-webroot:
+  grpc-tls:
+  laforge-builds:
+  laforge-logs:
+  laforge-repos:
+  laforge-users:
+  letsencrypt:
+  postgres-backups:
+  postgres-data:
+  redis-data:
+
+secrets:
+  admin_password:
+    file: ${SECRETS_DIR:-./secrets}/admin_password
+  github_client_secret:
+    file: ${SECRETS_DIR:-./secrets}/github_client_secret
+  npmrc:
+    file: ${NPMRC_PATH:-./secrets/npmrc}
+  postgres_password:
+    file: ${SECRETS_DIR:-./secrets}/postgres_password
+  redis_password:
+    file: ${SECRETS_DIR:-./secrets}/redis_password
+  session_secret:
+    file: ${SECRETS_DIR:-./secrets}/session_secret

@@ -1,0 +1,40 @@
+{
+  "debug": false,
+  "agent_debug": false,
+  "gin_mode": "release",
+  "log_folder": "/app/logs",
+  "builders": {
+    "microcloud": {
+      "builder": "microcloud",
+      "config": "/app/configs/microcloud.json"
+    }
+  },
+  "database": {
+    "postgres_uri": "postgresql://laforger@db:5432/laforge?sslmode=disable",
+    "postgres_password_file": "/run/secrets/postgres_password",
+    "admin_user": "laforger",
+    "admin_password_file": "/run/secrets/admin_password"
+  },
+  "auth": {
+    "github_id": "${GITHUB_CLIENT_ID}",
+    "github_secret_file": "/run/secrets/github_client_secret",
+    "session_secret_file": "/run/secrets/session_secret",
+    "cookie_timeout": 720
+  },
+  "ui": {
+    "https_enabled": true,
+    "allowed_origins": ["https://${LAFORGE_DOMAIN}"]
+  },
+  "agent": {
+    "grpc_server_uri": "${GRPC_DOMAIN}:50051",
+    "api_download_url": "https://${LAFORGE_DOMAIN}/api/download/",
+    "grpc_use_system_roots": true,
+    "grpc_tls_cert_path": "/run/grpc-tls/fullchain.pem",
+    "grpc_tls_key_path": "/run/grpc-tls/privkey.pem"
+  },
+  "graphql": {
+    "hostname": "${LAFORGE_DOMAIN}",
+    "redis_server_uri": "redis:6379",
+    "redis_password_file": "/run/secrets/redis_password"
+  }
+}

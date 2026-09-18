@@ -13,3 +13,12 @@
 session.cache
 *.env
 *.lfglog
+*.key
+*.pem
+*.cert
+*.crt
+
+conf.dev.json
+conf.prod.json
+configs/*.json
+secrets/

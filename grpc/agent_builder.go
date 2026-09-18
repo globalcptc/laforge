@@ -2,7 +2,9 @@ package grpc
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -14,25 +16,36 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func BuildAgent(logger *logging.Logger, agentID string, serverAddress string, binarypath string, isWindows bool, agentLogging bool) error {
-	command := ""
-	agentDebugString := ""
-	if agentLogging {
-		agentDebugString = " -tags debug "
+func BuildAgent(logger *logging.Logger, agentID string, serverAddress string, caCertPath string, useSystemRoots bool, binarypath string, isWindows bool, agentLogging bool) error {
+	goos := "linux"
+	if isWindows {
+		goos = "windows"
 	}
 
-	if isWindows {
-		command = "CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=\"zcc\" go build" + agentDebugString + " -ldflags=\" -X 'main.clientID=" + agentID + "' -X 'main.address=" + serverAddress + "'\" -o " + binarypath + " github.com/gen0cide/laforge/grpc/agent"
-	} else {
-		command = "CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build" + agentDebugString + " -ldflags=\" -X 'main.clientID=" + agentID + "' -X 'main.address=" + serverAddress + "'\" -o " + binarypath + " github.com/gen0cide/laforge/grpc/agent"
+	ldflags := fmt.Sprintf("-X main.clientID=%s -X main.address=%s", agentID, serverAddress)
+	if useSystemRoots {
+		ldflags += " -X main.useSystemRoots=true"
+	} else if caCertPath != "" {
+		caCert, err := os.ReadFile(caCertPath)
+		if err != nil {
+			return fmt.Errorf("failed to read agent gRPC CA certificate %q: %w", caCertPath, err)
+		}
+		ldflags += " -X main.caCertPEMBase64=" + base64.StdEncoding.EncodeToString(caCert)
 	}
-	logger.Log.Debugf("Executing command to build agent: %s", command)
-	cmd := exec.Command("bash", "-c", command)
+
+	args := []string{"build"}
+	if agentLogging {
+		args = append(args, "-tags", "debug")
+	}
+	args = append(args, "-ldflags", ldflags, "-o", binarypath, "github.com/gen0cide/laforge/grpc/agent")
+
+	logger.Log.Debugf("Building %s agent %s for %s", goos, agentID, serverAddress)
+	cmd := exec.Command("go", args...)
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS="+goos, "GOARCH=amd64")
 	stdoutStderr, err := cmd.CombinedOutput()
-	cmd.Run()
 	if err != nil {
-		logger.Log.Errorf("Agent for %s failed to create: %v", agentID, stdoutStderr)
-		return err
+		logger.Log.Errorf("Agent for %s failed to create: %s", agentID, stdoutStderr)
+		return fmt.Errorf("failed to build agent %s: %w", agentID, err)
 	}
 	logger.Log.Debugf("Created %s, Output %s\n", binarypath, stdoutStderr)
 	return nil
@@ -101,6 +114,6 @@ func main() {
 		}
 
 		binaryName := filepath.Join(envName, "team", fmt.Sprint(teamName), networkName, hostName)
-		BuildAgent(&logger, fmt.Sprint(ph.ID), laforgeConfig.Agent.GrpcServerUri, binaryName, false, laforgeConfig.AgentDebug)
+		BuildAgent(&logger, fmt.Sprint(ph.ID), laforgeConfig.Agent.GrpcServerUri, laforgeConfig.Agent.GrpcCACertPath, laforgeConfig.Agent.GrpcUseSystemRoots, binaryName, false, laforgeConfig.AgentDebug)
 	}
 }

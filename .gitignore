@@ -32,4 +32,5 @@ conf.dev.json
 
 # Docker dev and prod
 docker-compose.dev.yml
-docker-compose.prod.yml
+.env.production
+secrets/

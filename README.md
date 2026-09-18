@@ -26,6 +26,12 @@ network, host, and provisioning plan. It does not render agent artifacts, contac
 a configured builder, or modify the environment repository.
 Use `-json` for machine-readable output and `-verbose` for planner logs.
 
+## Production deployment
+
+See [docs/production.md](docs/production.md) for the hardened Docker Compose
+deployment, Azure and Cloudflare network layout, secrets, TLS, backups, and
+restore procedure.
+
 ## Table of Contents
 
 - [Features](#features)

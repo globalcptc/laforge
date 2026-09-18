@@ -1,0 +1,27 @@
+{
+	email {$ACME_EMAIL}
+	admin off
+}
+
+{$LAFORGE_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	reverse_proxy ui:80
+}
+
+http://{$GRPC_DOMAIN} {
+	handle /.well-known/acme-challenge/* {
+		root * /var/www/certbot
+		file_server
+	}
+
+	respond "Not Found" 404
+}

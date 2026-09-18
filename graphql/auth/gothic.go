@@ -26,6 +26,21 @@ func InitGoth(laforgeConfig *utils.ServerConfig) {
 	if laforgeConfig.UI.HttpsEnabled {
 		url_start = "https://"
 	}
+	sessionSecret := laforgeConfig.Auth.SessionSecret
+	if sessionSecret == "" {
+		sessionSecret = os.Getenv("SESSION_SECRET")
+	}
+	if sessionSecret != "" {
+		store := sessions.NewCookieStore([]byte(sessionSecret))
+		store.Options = &sessions.Options{
+			Path:     "/",
+			MaxAge:   laforgeConfig.Auth.CookieTimeout * 60,
+			HttpOnly: true,
+			Secure:   laforgeConfig.UI.HttpsEnabled,
+			SameSite: http.SameSiteLaxMode,
+		}
+		gothic.Store = store
+	}
 	goth.UseProviders(
 		github.New(laforgeConfig.Auth.GithubId, laforgeConfig.Auth.GithubSecret, url_start+laforgeConfig.Graphql.Hostname+"/auth/github/callback"),
 		// slack.New(os.Getenv("SLACK_KEY"), os.Getenv("SLACK_SECRET"), url_start+laforgeConfig.Graphql.Hostname+"/auth/slack/callback"),
@@ -38,10 +53,11 @@ func InitGoth(laforgeConfig *utils.ServerConfig) {
 	openidConnect, _ := openidConnect.New(os.Getenv("OPENID_CONNECT_KEY"), os.Getenv("OPENID_CONNECT_SECRET"), url_start+laforgeConfig.Graphql.Hostname+"/auth/openid-connect/callback", os.Getenv("OPENID_CONNECT_DISCOVERY_URL"))
 	if openidConnect != nil {
 		goth.UseProviders(openidConnect)
-		// FIX 3
-		// The standard Goth SessionStore is not big enough to hold all the data from the OpenID connect provider
-		store := sessions.NewFilesystemStore(os.TempDir(), []byte("openvpn-management"))
+		if sessionSecret == "" {
+			return
+		}
 
+		store := sessions.NewFilesystemStore(os.TempDir(), []byte(sessionSecret))
 		// set the maxLength of the cookies stored on the disk to a larger number to prevent issues with:
 		// securecookie: the value is too long
 		// when using OpenID Connect , since this can contain a large amount of extra information in the id_token
@@ -49,6 +65,13 @@ func InitGoth(laforgeConfig *utils.ServerConfig) {
 		// Note, when using the FilesystemStore only the session.ID is written to a browser cookie, so this is explicit for the storage on disk
 		// See: https://github.com/markbates/goth/issues/133
 		store.MaxLength(math.MaxInt64)
+		store.Options = &sessions.Options{
+			Path:     "/",
+			MaxAge:   laforgeConfig.Auth.CookieTimeout * 60,
+			HttpOnly: true,
+			Secure:   laforgeConfig.UI.HttpsEnabled,
+			SameSite: http.SameSiteLaxMode,
+		}
 
 		gothic.Store = store
 	}

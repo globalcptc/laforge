@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/md5"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"flag"
@@ -31,11 +32,10 @@ const (
 	TaskFailed    = "FAILED"
 	TaskRunning   = "INPROGRESS"
 	TaskSucceeded = "COMPLETE"
-	LogError 	  = "ERROR"
+	LogError      = "ERROR"
 	LogWarning    = "WARNING"
 	LogInfo       = "INFO"
 )
-
 
 var (
 	logger  service.Logger
@@ -45,10 +45,13 @@ var (
 	heartbeatSeconds = 10
 	clientID         = "1"
 	previousTask     = ""
+	caCertPEMBase64  = ""
+	useSystemRoots   = "false"
 )
 
 // Program structures.
-//  Define Start and Stop methods.
+//
+//	Define Start and Stop methods.
 type program struct {
 	exit chan struct{}
 }
@@ -411,7 +414,7 @@ func genStartTaskRunner(p *program, c pb.LaforgeClient, taskChannel chan *pb.Hea
 				case <-taskIsDone:
 					go StartTaskRunner(c, taskChannel, taskIsDone)
 				default:
-					log (logger, LogInfo, "Task current in progress, waiting until completion.")
+					log(logger, LogInfo, "Task current in progress, waiting until completion.")
 				}
 			case <-p.exit:
 				stop <- true
@@ -428,16 +431,25 @@ func (p *program) run() error {
 	logf(logger, LogInfo, "LaForge Service Starting.  Platform: %v", service.Platform())
 	// var wg sync.WaitGroup
 
-	// TLS Cert for verifying GRPC Server
-	certPem, certerr := static.ReadFile(certFile)
-	if certerr != nil {
-		fmt.Println("File reading error", certerr)
-		return nil
+	certPool, err := x509.SystemCertPool()
+	if err != nil || certPool == nil {
+		certPool = x509.NewCertPool()
+	}
+	if useSystemRoots != "true" {
+		var certPem []byte
+		if caCertPEMBase64 != "" {
+			certPem, err = base64.StdEncoding.DecodeString(caCertPEMBase64)
+		} else {
+			certPem, err = static.ReadFile(certFile)
+		}
+		if err != nil {
+			return fmt.Errorf("failed to load gRPC CA certificate: %w", err)
+		}
+		if !certPool.AppendCertsFromPEM(certPem) {
+			return errors.New("failed to parse gRPC CA certificate")
+		}
 	}
 
-	// Starts GRPC Connection with cert included in the binary
-	certPool := x509.NewCertPool()
-	certPool.AppendCertsFromPEM(certPem)
 	creds := credentials.NewClientTLSFromCert(certPool, "")
 	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(creds))
 
@@ -468,11 +480,12 @@ func (p *program) Stop(s service.Service) error {
 }
 
 // Service setup.
-//   Define service config.
-//   Create the service.
-//   Setup the logger.
-//   Handle service controls (optional).
-//   Run the service.
+//
+//	Define service config.
+//	Create the service.
+//	Setup the logger.
+//	Handle service controls (optional).
+//	Run the service.
 func main() {
 	svcFlag := flag.String("service", "", "Control the system service.")
 	flag.Parse()

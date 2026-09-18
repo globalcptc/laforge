@@ -619,7 +619,7 @@ func createProvisionedHosts(ctx context.Context, client *ent.Client, laforgeConf
 			return nil, err
 		}
 
-		err = grpc.BuildAgent(logger, fmt.Sprint(entProvisionedHost.ID), laforgeConfig.Agent.GrpcServerUri, binaryName, isWindowsHost, laforgeConfig.AgentDebug)
+		err = grpc.BuildAgent(logger, fmt.Sprint(entProvisionedHost.ID), laforgeConfig.Agent.GrpcServerUri, laforgeConfig.Agent.GrpcCACertPath, laforgeConfig.Agent.GrpcUseSystemRoots, binaryName, isWindowsHost, laforgeConfig.AgentDebug)
 		if err != nil {
 			return nil, err
 		}
