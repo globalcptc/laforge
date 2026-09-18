@@ -147,15 +147,16 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command:
+    user: "0:0"
+    entrypoint:
       - /bin/sh
-      - -ec
-      - exec redis-server --appendonly yes --requirepass "$$(cat /run/secrets/redis_password)"
+      - /usr/local/bin/laforge-redis-entrypoint.sh
     expose:
       - "6379"
     networks:
       - backend
     volumes:
+      - ./deploy/production/redis-entrypoint.sh:/usr/local/bin/laforge-redis-entrypoint.sh:ro
       - redis-data:/data
     secrets:
       - redis_password
@@ -164,6 +165,11 @@ services:
       - /tmp
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
     security_opt:
       - no-new-privileges:true
     healthcheck:

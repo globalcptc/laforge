@@ -30,6 +30,14 @@ Use a current Ubuntu LTS VM with at least 8 vCPUs, 32 GiB RAM, and a separate
 managed disk. Agent compilation and environment builds make CPU and temporary
 disk performance more important than they are for a conventional web service.
 
+Enable Redis background saves. Without this, Redis logs a warning and AOF
+rewrites can fail under memory pressure:
+
+```sh
+sudo sysctl -w vm.overcommit_memory=1
+echo 'vm.overcommit_memory = 1' | sudo tee /etc/sysctl.d/80-laforge-redis.conf
+```
+
 Mount the data disk and move Docker's data root onto it before starting LaForge:
 
 ```sh
@@ -63,8 +71,14 @@ openssl rand -base64 36 > secrets/postgres_password
 openssl rand -base64 36 > secrets/redis_password
 openssl rand -base64 48 > secrets/session_secret
 openssl rand -base64 24 > secrets/admin_password
-chmod 600 .env.production conf.prod.json secrets/*
+chmod 600 .env.production
+chmod 644 conf.prod.json secrets/*
 ```
+
+Keep `secrets/` mode 700. The files themselves must be world-readable
+because Compose bind-mounts them into non-root containers (backend uid
+10001, `db-backup` as `postgres`). Directory mode 700 still keeps them
+off-limits to other host users.
 
 Edit `.env.production` and `conf.prod.json`. In particular:
 
