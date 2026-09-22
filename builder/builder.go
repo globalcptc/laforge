@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/gen0cide/laforge/builder/aws"
 	"github.com/gen0cide/laforge/builder/generic"
+	"github.com/gen0cide/laforge/builder/incus"
 	"github.com/gen0cide/laforge/builder/microcloud"
 	lfopenstack "github.com/gen0cide/laforge/builder/openstack"
 	"github.com/gen0cide/laforge/builder/vspherensxt"
@@ -62,6 +63,13 @@ func BuilderFromEnvironment(buildersMap map[string]utils.BuilderConfig, environm
 		genericBuilder, err = NewOpenstackBuilder(builderConfig.ConfigFile, environment, logger)
 		if err != nil {
 			logrus.Errorf("Failed to make openstack builder. Err: %v", err)
+			return
+		}
+		return
+	case "incus":
+		genericBuilder, err = NewIncusBuilder(builderConfig.ConfigFile, environment, logger)
+		if err != nil {
+			logrus.Errorf("Failed to make Incus builder. Err: %v", err)
 			return
 		}
 		return
@@ -233,4 +241,13 @@ func NewMicroCloudBuilder(configFilePath string, env *ent.Environment, logger *l
 	}
 
 	return microcloud.New(builderConfig, logger)
+}
+
+func NewIncusBuilder(configFilePath string, env *ent.Environment, logger *logging.Logger) (*incus.IncusBuilder, error) {
+	var builderConfig incus.BuilderConfig
+	if err := configs.LoadBuilderConfig(configFilePath, &builderConfig); err != nil {
+		return nil, err
+	}
+
+	return incus.New(builderConfig, logger)
 }

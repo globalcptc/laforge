@@ -45,6 +45,8 @@ services:
     restart: unless-stopped
     environment:
       GRPC_DOMAIN: ${GRPC_DOMAIN:-grpc.laforge.cp.tc}
+      LAFORGE_DOMAIN: ${LAFORGE_DOMAIN:-laforge.cp.tc}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
       PORT: :8080
     ports:
       - "${GRPC_PUBLISH:-127.0.0.1:15051}:50051"

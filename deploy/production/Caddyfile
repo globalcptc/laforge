@@ -3,6 +3,10 @@
 	admin off
 }
 
+http://{$LAFORGE_DOMAIN} {
+	redir https://{host}{uri} permanent
+}
+
 {$LAFORGE_DOMAIN} {
 	encode zstd gzip
 

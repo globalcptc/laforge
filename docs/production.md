@@ -84,9 +84,13 @@ off-limits to other host users.
 Edit `.env.production` and `conf.prod.json`. In particular:
 
 - Set `ACME_EMAIL`, `LAFORGE_DOMAIN`, `GRPC_DOMAIN`, and `GITHUB_CLIENT_ID`.
+  `GITHUB_CLIENT_ID` is the GitHub **OAuth App client ID** from
+  https://github.com/settings/developers (not a GitHub username).
 - Put the GitHub OAuth client secret in `secrets/github_client_secret`.
-- Set the GitHub OAuth callback to
-  `https://laforge.cp.tc/auth/github/callback`.
+- Set the GitHub OAuth App homepage to `https://laforge.cp.tc` and the
+  authorization callback to `https://laforge.cp.tc/auth/github/callback`.
+  GitHub login does not create accounts; the GitHub username must already
+  exist as a LaForge user with provider `GITHUB`.
 - Add each production builder to `conf.prod.json` and place its configuration
   under `configs/`.
 

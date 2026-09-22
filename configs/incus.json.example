@@ -1,0 +1,48 @@
+{
+  "laforge_server_url": "https://laforge.example.com",
+  "max_build_workers": 4,
+  "max_teardown_workers": 4,
+  "gateway_image": "lf-gateway",
+  "dns_servers": ["1.1.1.1", "8.8.8.8"],
+  "hosts": [
+    {
+      "name": "incus-01",
+      "base_url": "https://incus-01.example.com:8443",
+      "client_cert_path": "/app/configs/incus/client.crt",
+      "client_key_path": "/app/configs/incus/client.key",
+      "server_cert_path": "/app/configs/incus/incus-01.crt",
+      "storage_pool": "default",
+      "transit_network": "incusbr0",
+      "ingress_listen_address": "203.0.113.10",
+      "ingress_port_base": 10000,
+      "ingress_port_stride": 100
+    }
+  ],
+  "instance_sizes": {
+    "nano": {
+      "cpu": "1",
+      "memory": "1GiB"
+    },
+    "small": {
+      "cpu": "2",
+      "memory": "4GiB"
+    },
+    "medium": {
+      "cpu": "4",
+      "memory": "8GiB"
+    },
+    "large": {
+      "cpu": "8",
+      "memory": "16GiB"
+    }
+  },
+  "images": {
+    "ubuntu22": "ubuntu22",
+    "w2k19": "windows-2019"
+  },
+  "image_config": {
+    "w2k19": {
+      "security.secureboot": "false"
+    }
+  }
+}

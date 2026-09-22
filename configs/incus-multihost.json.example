@@ -1,0 +1,46 @@
+{
+  "laforge_server_url": "https://laforge.example.com",
+  "max_build_workers": 8,
+  "max_teardown_workers": 8,
+  "gateway_image": "lf-gateway",
+  "dns_servers": ["1.1.1.1", "8.8.8.8"],
+  "hosts": [
+    {
+      "name": "incus-01",
+      "base_url": "https://incus-01.example.com:8443",
+      "client_cert_path": "/app/configs/incus/client.crt",
+      "client_key_path": "/app/configs/incus/client.key",
+      "server_cert_path": "/app/configs/incus/incus-01.crt",
+      "storage_pool": "default",
+      "transit_network": "incusbr0",
+      "ingress_listen_address": "203.0.113.10",
+      "ingress_port_base": 10000,
+      "ingress_port_stride": 100
+    },
+    {
+      "name": "incus-02",
+      "base_url": "https://incus-02.example.com:8443",
+      "client_cert_path": "/app/configs/incus/client.crt",
+      "client_key_path": "/app/configs/incus/client.key",
+      "server_cert_path": "/app/configs/incus/incus-02.crt",
+      "storage_pool": "default",
+      "transit_network": "incusbr0",
+      "ingress_listen_address": "203.0.113.20",
+      "ingress_port_base": 10000,
+      "ingress_port_stride": 100
+    }
+  ],
+  "instance_sizes": {
+    "small": {
+      "cpu": "2",
+      "memory": "4GiB"
+    },
+    "medium": {
+      "cpu": "4",
+      "memory": "8GiB"
+    }
+  },
+  "images": {
+    "ubuntu22": "ubuntu22"
+  }
+}

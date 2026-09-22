@@ -1,0 +1,69 @@
+// Example environment for the Incus builder.
+//
+// `builder` is the friendly name registered in conf.json under "builders"
+// (with "builder": "incus"). Teams are spread round-robin across the hosts
+// in the builder config; each team stays on one host.
+//
+// With ingress_port_base 10000 and ingress_port_stride 100, team 3's `vdi`
+// ports (tcp 22, tcp 3389) are published on the host's ingress_listen_address
+// at 10300 and 10301, so users connect to <host-ip>:10301 for RDP.
+
+competition "example" {
+  root_password = "change-me"
+}
+
+network "vdi" {
+  name = "vdi"
+  cidr = "10.10.1.0/24"
+}
+
+network "corp" {
+  name = "corp"
+  cidr = "10.10.2.0/24"
+}
+
+host "vdi" {
+  hostname           = "vdi"
+  os                 = "ubuntu22"
+  last_octet         = 10
+  instance_size      = "small"
+  exposed_tcp_ports  = ["22", "3389"]
+  exposed_udp_ports  = []
+
+  vars = {
+    public_ingress = "true"
+  }
+
+  disk {
+    size = 40
+  }
+}
+
+host "web" {
+  hostname      = "web"
+  os            = "ubuntu22"
+  last_octet    = 10
+  instance_size = "small"
+
+  disk {
+    size = 20
+  }
+}
+
+environment "example" {
+  competition_id        = "example"
+  name                  = "example"
+  description           = "Two networks per team on standalone Incus hosts"
+  builder               = "incus"
+  team_count            = 4
+  admin_ranges          = []
+  vdi_allowed_tcp_ports = []
+
+  included_network "vdi" {
+    included_hosts = ["vdi"]
+  }
+
+  included_network "corp" {
+    included_hosts = ["web"]
+  }
+}

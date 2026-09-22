@@ -8,7 +8,7 @@ If the friendly name specified in the laforge environment configuration does not
 
 The `builder` attribute in the `conf.json` entry does not match the `ID` attribute of a given builder, any environment referencing this entry will fail to build.
 
-Available builder slugs include `aws`, `generic`, `microcloud`,
+Available builder slugs include `aws`, `generic`, `incus`, `microcloud`,
 `openstack`, and `vsphere-nsxt`.
 
 ### Example files
