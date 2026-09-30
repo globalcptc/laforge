@@ -6,14 +6,15 @@ agent/target/
 # copy .env.example to .env and fill in real values; never commit .env.
 .env
 
-# Real self-signed dev mTLS certs (scripts/gen-dev-certs.sh) -- never
-# meant to be committed, regenerate locally any time. Covers a GitHub
-# App private key too, if you keep yours here (docker-compose needs it
-# somewhere bind-mountable -- see .env.example's GITHUB_APP_PRIVATE_KEY_PATH).
-.dev-certs/
+# Self-signed mTLS certs and the CA (scripts/gen-certs.sh) -- never meant
+# to be committed, regenerate any time. In production the CA key here is a
+# real signing secret; keep the directory but not its contents out of git.
+# Covers a GitHub App private key too, if you keep yours here (docker-compose
+# needs it somewhere bind-mountable -- see .env.example's GITHUB_APP_PRIVATE_KEY_PATH).
+.certs/
 
 # Any private key or cert, wherever it ends up -- a repo-wide safety net
-# on top of .dev-certs/ above, in case one is ever dropped somewhere
+# on top of .certs/ above, in case one is ever dropped somewhere
 # else (repo root, a new directory, ...). This project has no real
 # private key that's ever meant to be committed.
 *.pem

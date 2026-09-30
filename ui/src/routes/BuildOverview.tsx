@@ -2,7 +2,7 @@ import { useParams } from '@tanstack/react-router'
 import { useBuild, useDashboard, useUpcomingChanges } from '../api/hooks'
 import { ProvisioningProgress, StateByTeam, FailuresByCause, AgentActivity } from '../components/DashboardCharts'
 import { UpcomingChangesPanel } from '../components/UpcomingChangesPanel'
-import { Card, CardHeader, cn, Spinner } from '../ui'
+import { Card, cn, Spinner } from '../ui'
 
 // "Build → Overview: health band -- a row of stat tiles and a few
 // charts, all fed by server-side aggregates rather than counted in the

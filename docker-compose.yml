@@ -8,12 +8,12 @@
 #   cp .env.example .env        # then set at least GITHUB_APP_WEBHOOK_SECRET to any
 #                                # non-empty value -- laforge-api won't start without it.
 #                                # Real GitHub App values: see USAGE.md.
-#   ./scripts/gen-dev-certs.sh  # real self-signed mTLS certs for the gateway, dev only
+#   ./scripts/gen-certs.sh      # self-signed CA + gateway mTLS certs (see USAGE.md)
 #   docker compose up --build
 #
 # laforge-api:          http://localhost:8080
 # laforge-gateway (mTLS): localhost:8444
-# ui (Vite dev server): http://localhost:5173
+# ui (static build):    http://localhost:8081
 # Postgres (for `psql` from the host, if you want it): localhost:5433
 
 name: laforge
@@ -59,17 +59,17 @@ services:
       DATABASE_URL: host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable
       LISTEN_ADDR: ":8080"
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
-      UI_BASE_URL: ${UI_BASE_URL:-http://localhost:5173}
+      UI_BASE_URL: ${UI_BASE_URL:-http://localhost:8081}
       REPO_ROOT: /content
     volumes:
       - ./examples/lm-test:/content:ro
       # Mounted at the container's own working directory (unset in the
       # Dockerfile's api stage, so it defaults to "/") so a relative
-      # GITHUB_APP_PRIVATE_KEY_PATH in .env (e.g. ".dev-certs/x.pem",
+      # GITHUB_APP_PRIVATE_KEY_PATH in .env (e.g. ".certs/x.pem",
       # matching how it'd resolve for `go run` from the repo root too)
       # resolves the same way in both places, with no path translation
       # needed between the two.
-      - ./.dev-certs:/.dev-certs:ro
+      - ./.certs:/.certs:ro
     ports:
       - "8080:8080"
     depends_on:
@@ -90,7 +90,7 @@ services:
       # .env would make internal/checkout.FromEnv try to read a private
       # key file that doesn't exist inside this container at all, and
       # fail loudly at startup.
-      - ./.dev-certs:/.dev-certs:ro
+      - ./.certs:/.certs:ro
     command: ["-db-url", "host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable", "-repo", "/content"]
     depends_on:
       migrate:
@@ -105,7 +105,7 @@ services:
         required: false
     volumes:
       - ./examples/lm-test:/content:ro
-      - ./.dev-certs:/.dev-certs:ro
+      - ./.certs:/.certs:ro
       - ./.agent-base:/.agent-base:ro
     environment:
       # Agent auto-delivery (internal/agentdelivery): the addresses a
@@ -114,12 +114,12 @@ services:
       # that resolves to this host). Set these in your .env when
       # deploying to a real hoster; leave them empty (the default) to deploy
       # without agents, exactly as the fake-builder default does. When you set
-      # GATEWAY_PUBLIC_ADDR to a non-localhost name, re-run gen-dev-certs.sh
-      # with GATEWAY_EXTRA_SANS so the gateway cert matches it.
+      # GATEWAY_PUBLIC_ADDR to a non-localhost name, re-run gen-certs.sh with
+      # that address (its host, no port) so the gateway cert matches it.
       GATEWAY_PUBLIC_ADDR: "${GATEWAY_PUBLIC_ADDR:-}"
       API_PUBLIC_URL: "${API_PUBLIC_URL:-}"
-      GATEWAY_CA_CERT: /.dev-certs/ca.crt
-      GATEWAY_CA_KEY: /.dev-certs/ca.key
+      GATEWAY_CA_CERT: /.certs/ca.crt
+      GATEWAY_CA_KEY: /.certs/ca.key
       AGENT_BASE_DIR: /.agent-base
       # Deploy hosts in parallel instead of one at a time. Each worker is an
       # independent lease->execute loop; FOR UPDATE SKIP LOCKED keeps concurrent
@@ -148,7 +148,7 @@ services:
       GATEWAY_SERVER_CERT: /certs/server.crt
       GATEWAY_SERVER_KEY: /certs/server.key
     volumes:
-      - ./.dev-certs:/certs:ro
+      - ./.certs:/certs:ro
     ports:
       # Host-side only -- 8443 was already taken by an unrelated,
       # pre-existing Incus test container on this machine; the gateway
@@ -160,20 +160,20 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # Builds the UI to a static bundle and serves it (see ui/Dockerfile). The
+  # API URL is inlined at BUILD time, so it is a build arg from PUBLIC_BASE_URL
+  # -- change that and rebuild with `docker compose up -d --build ui`. For UI
+  # development with hot reload, run `npm run dev` in ./ui directly instead.
   ui:
-    image: node:22-alpine
-    working_dir: /app
-    volumes:
-      - ./ui:/app
-      - laforge-ui-node-modules:/app/node_modules
-    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
-    environment:
-      VITE_API_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+    build:
+      context: ./ui
+      args:
+        VITE_API_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+    restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "8081:80"
     depends_on:
       - api
 
 volumes:
   laforge-db:
-  laforge-ui-node-modules:

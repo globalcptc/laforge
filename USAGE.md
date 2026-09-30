@@ -1,13 +1,15 @@
 # Running LaForge
 
-This covers standing up LaForge locally, connecting it to GitHub, and installing the
-VS Code authoring extension. For what LaForge *is*, see [README.md](README.md); for how
-to write content, see [CONFIGURATION.md](CONFIGURATION.md).
+This covers standing up LaForge — on your own domain for real use, or locally to try it —
+connecting it to GitHub, and installing the VS Code authoring extension. For what LaForge
+*is*, see [README.md](README.md); for how to write content, see
+[CONFIGURATION.md](CONFIGURATION.md).
 
 - [Prerequisites](#prerequisites)
 - [Quick start with Docker Compose](#quick-start-with-docker-compose)
 - [The `.env` file](#the-env-file)
-- [Dev certificates](#dev-certificates)
+- [Addressing (the URLs, explained)](#addressing-the-urls-explained)
+- [Certificates](#certificates)
 - [The `laforge` CLI](#the-laforge-cli)
 - [Connecting GitHub (the GitHub App)](#connecting-github-the-github-app)
 - [The VS Code extension](#the-vs-code-extension)
@@ -21,7 +23,7 @@ to write content, see [CONFIGURATION.md](CONFIGURATION.md).
 - **Go 1.22+** — to build the `laforge` CLI and the `laforge-lsp` language server (used
   by the VS Code extension), and to run services directly.
 - **Node 18+ / npm** — only to build the VS Code extension.
-- **openssl** — for the dev certificate script.
+- **openssl** — for the certificate script (`scripts/gen-certs.sh`).
 
 You do **not** need a cloud account or any hoster to run LaForge locally: it ships with a
 `fake` builder that simulates deployments, so the whole system runs end to end from
@@ -34,9 +36,11 @@ Compose.
 From the repository root:
 
 ```bash
-cp .env.example .env          # then set at least GITHUB_APP_WEBHOOK_SECRET (any
-                              # non-empty value) — laforge-api won't start without it
-./scripts/gen-dev-certs.sh    # self-signed mTLS certs for the gateway (dev only)
+cp .env.example .env          # then set GITHUB_APP_WEBHOOK_SECRET (any non-empty
+                              # value) — laforge-api won't start without it — and
+                              # clear PUBLIC_BASE_URL / UI_BASE_URL for a local run
+                              # (they default to example.com; empty → localhost)
+./scripts/gen-certs.sh localhost   # self-signed CA + gateway mTLS cert (see Certificates below)
 docker compose up --build
 ```
 
@@ -44,14 +48,14 @@ That builds and starts every service. Once it's up:
 
 | Service | URL |
 | --- | --- |
-| Operator UI | http://localhost:5173 |
+| Operator UI | http://localhost:8081 |
 | API | http://localhost:8080 |
 | Gateway (mTLS, for agents) | localhost:8444 |
 | Postgres (for `psql` from the host) | localhost:5433 |
 
 Compose builds the Go services from the multi-stage `Dockerfile`, runs database
 migrations (the `migrate` service) automatically, and starts the API, orchestrator,
-runner, gateway, and UI. The `.dev-certs/` directory is mounted read-only into the
+runner, gateway, and UI. The `.certs/` directory is mounted read-only into the
 services that need it.
 
 To stop: `docker compose down` (add `-v` to also drop the database volume).
@@ -73,33 +77,123 @@ and addressing. The file is fully commented; the important groups:
 - **Admins** — `LAFORGE_ADMIN_LOGINS`: comma-separated GitHub logins with instance-wide
   admin (needed to approve a repository into LaForge). Empty means nobody can approve
   anything yet — a safe default.
-- **Addressing** — `PUBLIC_BASE_URL`, `UI_BASE_URL`, and mTLS cert paths
-  (`GATEWAY_CA_CERT`, `GATEWAY_SERVER_CERT`, `GATEWAY_SERVER_KEY`).
+- **Addressing** — the URLs and gateway address the deployment answers on. This is the
+  easiest thing to get wrong, so it has its own section: **[Addressing](#addressing-the-urls-explained)**.
+- **Certificates** — the mTLS cert paths (`GATEWAY_CA_CERT`, `GATEWAY_SERVER_CERT`,
+  `GATEWAY_SERVER_KEY`); see [Certificates](#certificates).
 
-Under Compose, the database URL and gateway CA paths are set by Compose itself; you only
-touch `.env` for the GitHub App values and admin logins.
+Under Compose, the database connection and gateway CA paths are set by Compose itself;
+you mainly touch `.env` for the GitHub App values, admin logins, and the addresses below.
 
 ---
 
-## Dev certificates
+## Addressing (the URLs, explained)
 
-The gateway authenticates agents with mutual TLS. `scripts/gen-dev-certs.sh` creates a
-self-signed CA and server certificate in `.dev-certs/` (gitignored) for local and Compose
-use:
+LaForge is reached at a few different addresses, and they trip people up because **the
+API appears twice** — once for browsers and once for the deployed hosts. Here is the
+whole picture. There are two audiences.
+
+**Operators' browsers** talk to the UI and the API:
+
+| Setting | What it is | Example |
+| --- | --- | --- |
+| `UI_BASE_URL` | the operator console, where you sign in | `https://laforge.example.com` |
+| `PUBLIC_BASE_URL` | the HTTP API, as browsers reach it | `https://api.laforge.example.com` |
+
+**Deployed hosts** (the VMs and containers LaForge creates on your hoster) talk to the
+gateway and the API:
+
+| Setting | What it is | Example |
+| --- | --- | --- |
+| `GATEWAY_PUBLIC_ADDR` | the agent gateway — mTLS, a raw `host:port`, **not** a URL | `gateway.example.com:8444` |
+| `API_PUBLIC_URL` | the **same API** as `PUBLIC_BASE_URL`, as deployed hosts reach it | `https://api.laforge.example.com` |
+
+The three things that clear up the confusion:
+
+1. **`PUBLIC_BASE_URL` and `API_PUBLIC_URL` are the same API.** There are two settings
+   only because browsers and deployed hosts may reach it over different network paths. If
+   your hosts reach the API at the same address your browser does, **set them equal.**
+2. **`GATEWAY_PUBLIC_ADDR` is a `host:port`, not a URL** — no `https://`. It's a separate
+   service from the API, on its own port, speaking mTLS. Its host must be a SAN on the
+   gateway certificate (see [Certificates](#certificates)).
+3. **The UI and API need not be separate hosts.** Behind one reverse proxy they can share
+   an origin, in which case `UI_BASE_URL` and `PUBLIC_BASE_URL` are the same URL.
+
+The agent addresses (`GATEWAY_PUBLIC_ADDR`, `API_PUBLIC_URL`) are only needed when you
+deploy to a real hoster with agents. Leave them empty to deploy **without** agents — the
+default, and what the `fake` builder uses.
+
+### A worked example
+
+One domain, `example.com`, everything behind a TLS-terminating reverse proxy, deploying
+to a real hoster. The complete addressing part of `.env`:
 
 ```bash
-./scripts/gen-dev-certs.sh
+# what operators' browsers reach
+UI_BASE_URL=https://laforge.example.com
+PUBLIC_BASE_URL=https://api.laforge.example.com
+
+# what deployed hosts reach (the same API, plus the mTLS gateway on its own port)
+API_PUBLIC_URL=https://api.laforge.example.com
+GATEWAY_PUBLIC_ADDR=gateway.example.com:8444
 ```
 
-If real agents on other machines will dial the gateway by a non-localhost address (a
-LAN IP or public hostname), add it as a SAN so the certificate matches:
+`PUBLIC_BASE_URL` must **exactly** match the Callback URL on your GitHub App
+(`<PUBLIC_BASE_URL>/auth/github/callback`) — see [Connecting GitHub](#connecting-github-the-github-app).
+
+### Cookies across domains
+
+Sign-in uses a session cookie. It works as-is whenever the UI and API share a registrable
+domain — the subdomain split above (`laforge.example.com` + `api.laforge.example.com`), or
+a single shared origin. **Only** if the UI and API sit on genuinely unrelated domains
+(say `laforge.example.com` and `laforge-api.example.net`) set
+`LAFORGE_CROSS_DOMAIN_COOKIES=true` and serve both over HTTPS; the cookie then uses
+`SameSite=None; Secure`, which browsers require to send it across sites.
+
+### Just trying it locally?
+
+For a local `docker compose` run, clear `UI_BASE_URL` and `PUBLIC_BASE_URL` (they fall
+back to `http://localhost:8081` and `http://localhost:8080`) and leave the agent
+addresses empty. The [quick start](#quick-start-with-docker-compose) table lists the
+local ports.
+
+---
+
+## Certificates
+
+The gateway authenticates agents with mutual TLS, and this is the same setup for
+development and production. `scripts/gen-certs.sh` creates a self-signed CA and a gateway
+server certificate in `.certs/` (gitignored). It asks for one thing — the address agents
+reach the gateway on — and issues the certificate for exactly that name:
 
 ```bash
-GATEWAY_EXTRA_SANS="DNS:gateway.example.com,IP:192.0.2.10" ./scripts/gen-dev-certs.sh
+./scripts/gen-certs.sh gateway.example.com   # or an IP, or "localhost" for a local trial
 ```
 
-These certs are for development only. A real deployment issues its own CA and per-team
-agent certificates through the agent factory — never reuse the dev certs.
+(Run it with no argument and it prompts.) It produces two things you set up by hand:
+
+- **`ca.crt` / `ca.key`** — the CA the gateway trusts, and the key the runner uses to
+  sign every host's agent certificate at deploy time.
+- **`server.crt` / `server.key`** — the gateway's own TLS certificate, signed by that CA.
+
+The address you give must be the host in `GATEWAY_PUBLIC_ADDR` (without the port), because
+agents pin the gateway by that name. The certificate carries that single name and nothing
+else — no `localhost` or wildcard defaults — so it can't be reused for any other host.
+
+You do **not** generate per-host agent certificates yourself: when agent delivery is
+configured, the runner mints one per host automatically and patches it into that host's
+agent binary. The CA is the only signing material you manage.
+
+### For production
+
+One thing changes beyond passing your real gateway address: **`ca.key` becomes a real
+secret.** In a local run only the gateway reads it; once you deploy with agents the
+**runner** also loads it to sign agent certificates, so it's a live signing key — back it
+up, restrict its permissions, and never commit it.
+
+Then wire the runner for agent delivery (see the [`.env`](#the-env-file) variables
+`GATEWAY_PUBLIC_ADDR`, `API_PUBLIC_URL`, `GATEWAY_CA_CERT`, `GATEWAY_CA_KEY`, and
+`AGENT_BASE_DIR`). If any of those are unset, the runner deploys **without** agents.
 
 ---
 
@@ -138,10 +232,10 @@ In the GitHub account or organization you want LaForge tied to:
 | Field | Value |
 | --- | --- |
 | GitHub App name | Anything unique, e.g. `yourorg-laforge` |
-| Homepage URL | Your LaForge UI's URL |
-| Callback URL | `<PUBLIC_BASE_URL>/auth/github/callback` (must exactly match `PUBLIC_BASE_URL`) |
+| Homepage URL | Your `UI_BASE_URL`, e.g. `https://laforge.example.com` |
+| Callback URL | `<PUBLIC_BASE_URL>/auth/github/callback` — e.g. `https://api.laforge.example.com/auth/github/callback` (must match `PUBLIC_BASE_URL` exactly) |
 | Webhook → Active | Checked |
-| Webhook URL | `<PUBLIC_BASE_URL>/webhook/github` |
+| Webhook URL | `<PUBLIC_BASE_URL>/webhook/github` — e.g. `https://api.laforge.example.com/webhook/github` |
 | Webhook secret | Generate one (`openssl rand -hex 32`) and keep it → `GITHUB_APP_WEBHOOK_SECRET` |
 | Request user authorization (OAuth) during installation | Checked — makes browser and CLI login work through this same App |
 | Enable Device Flow | Checked — required for `laforge login` |
@@ -165,7 +259,7 @@ From the App's settings page:
 - **Private key** (Generate a private key → downloads a `.pem`) → save it somewhere
   `laforge-api` can read and set `GITHUB_APP_PRIVATE_KEY_PATH` to that path. Treat it like
   any private key: never commit it, restrict its permissions. A convenient spot is
-  `.dev-certs/` (gitignored and already mounted into the api container).
+  `.certs/` (gitignored and already mounted into the api container).
 
 ### 3. Configure and restart
 
