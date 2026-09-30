@@ -409,7 +409,11 @@ export function useApproveInstalledRepository() {
     mutationFn: (req: { owner: string; repo: string; installation_id: string }) =>
       api.post<Repository>('/installations/repositories/approve', req),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['installations', 'unapproved'] })
+      // Broad key so BOTH the Installations page (['installations']) and the
+      // pending list (['installations','unapproved']) refetch -- invalidating
+      // the longer key alone never matches the shorter one, which is why the
+      // Approve button needed a manual reload to reflect.
+      qc.invalidateQueries({ queryKey: ['installations'] })
       qc.invalidateQueries({ queryKey: ['repositories'] })
     },
   })

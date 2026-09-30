@@ -164,24 +164,21 @@ func redeemToken(ctx context.Context, client *Client, token TrustToken, raw stri
 		_, err := client.post(ctx, "/1.0/auth/identities/tls", map[string]string{"trust_token": raw})
 		return err
 	}
-	info, err := client.get(ctx, "/1.0")
-	if err != nil {
-		return fmt.Errorf("reading server info: %w", err)
-	}
-	var server struct {
-		APIExtensions []string `json:"api_extensions"`
-	}
-	if err := json.Unmarshal(info, &server); err != nil {
-		return fmt.Errorf("decoding server info: %w", err)
-	}
-	field := "password"
-	for _, ext := range server.APIExtensions {
-		if ext == "explicit_trust_token" {
-			field = "trust_token"
+	// Send the token in the explicit "trust_token" field. We can't sniff the
+	// server's api_extensions to decide this: GET /1.0 from a not-yet-trusted
+	// client omits api_extensions entirely (it returns only {auth: untrusted}),
+	// so the old "look for explicit_trust_token" check always missed and fell
+	// back to the legacy "password" field -- which modern LXD/Incus reject with
+	// 403. A structured trust token (the base64-JSON shape ParseTrustToken
+	// accepts) only comes from a server that supports trust_token anyway; the
+	// pre-token "password" trust flow never produced these. Fall back to
+	// "password" only if trust_token is refused, for a genuinely old LXD.
+	if _, err := client.post(ctx, "/1.0/certificates", map[string]string{"type": "client", "trust_token": raw}); err != nil {
+		if _, pwErr := client.post(ctx, "/1.0/certificates", map[string]string{"type": "client", "password": raw}); pwErr != nil {
+			return err
 		}
 	}
-	_, err = client.post(ctx, "/1.0/certificates", map[string]string{"type": "client", field: raw})
-	return err
+	return nil
 }
 
 func normalizeAddress(a string) string {

@@ -242,7 +242,18 @@ In the GitHub account or organization you want LaForge tied to:
 | Where can this GitHub App be installed? | **Only on this account**, unless you want other orgs to install it |
 
 **Repository permissions:** Contents = Read-only, Commit statuses = Read and write,
-Metadata = Read-only (automatic). Nothing else — least privilege is the point.
+Metadata = Read-only (automatic).
+
+**Organization permissions:** Members = Read-only. This is what lets LaForge list
+everyone with repository access — without it, the installation token can only see org
+members whose membership is **public**, so anyone with access purely through a team (and
+private membership, the GitHub default) silently won't appear in a repository's access
+list. Nothing beyond these — least privilege is the point.
+
+> **Note:** adding or changing a permission after the App is installed doesn't take effect
+> until an org owner **approves** the new permission on the installation (GitHub emails
+> them / shows a "Review request" under the org's installed Apps). No re-install or
+> webhook re-run is needed — LaForge mints a fresh installation token per request.
 
 **Subscribe to events:** Push, Installation, Installation repositories. Then **Create
 GitHub App**.
