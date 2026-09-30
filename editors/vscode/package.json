@@ -1,0 +1,81 @@
+{
+  "name": "laforge",
+  "displayName": "LaForge",
+  "description": "LaForge language support: diagnostics, completion, hover, go to definition, live render preview, and the environment context browser -- a thin client over laforge-lsp.",
+  "version": "0.1.0",
+  "publisher": "globalcptc",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/globalcptc/laforge.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Programming Languages", "Linters"],
+  "activationEvents": [
+    "workspaceContains:**/*.yaml",
+    "workspaceContains:**/*.yml"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "LaForge",
+      "properties": {
+        "laforge.serverPath": {
+          "type": "string",
+          "default": "laforge-lsp",
+          "description": "Path to the laforge-lsp binary. Defaults to looking it up on PATH -- `go install ./cmd/laforge-lsp` puts it there."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "laforge.pickContext",
+        "title": "LaForge: Preview against example host (optional -- team 1 always)"
+      },
+      {
+        "command": "laforge.showContext",
+        "title": "LaForge: Show everything available (example host, team 1)"
+      },
+      {
+        "command": "laforge.toggleRenderPreview",
+        "title": "LaForge: Toggle live render preview"
+      },
+      {
+        "command": "laforge.showFieldSuggestions",
+        "title": "LaForge: Show available fields here"
+      },
+      {
+        "command": "laforge.toggleFieldReference",
+        "title": "LaForge: Show Field Reference"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "laforge.showFieldSuggestions",
+        "key": "ctrl+alt+space",
+        "mac": "cmd+alt+space",
+        "when": "editorTextFocus && editorLangId == yaml"
+      },
+      {
+        "command": "laforge.toggleFieldReference",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "editorTextFocus && editorLangId == yaml"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

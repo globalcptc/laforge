@@ -1,0 +1,28 @@
+{
+  // "Run and Debug -> Launch Extension (or F5)" (README.md's own
+  // instructions) needed this file to exist for that to mean anything --
+  // found missing entirely after a real report that the extension "isn't
+  // loading at all": every previous live check this session used a
+  // one-off `code --extensionDevelopmentPath=...` command run directly
+  // from a terminal, never this file, so there was genuinely no way to
+  // launch it from inside VS Code itself until now.
+  //
+  // Open THIS folder (editors/vscode), not the repo root, as your
+  // workspace for F5 to find this file at all -- VS Code only reads
+  // .vscode/launch.json from the current workspace folder's own root.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/../../examples/lm-test"
+      ],
+      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "preLaunchTask": "${defaultBuildTask}"
+    }
+  ]
+}

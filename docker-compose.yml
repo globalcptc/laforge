@@ -1,0 +1,179 @@
+# The reference deployment and the way to run the whole system locally
+# with no cloud account and no hoster -- "Everything runs locally from
+# Compose, with a fake builder" (the README.md Contributing
+# section) and "A Compose file that actually works is part of the
+# deliverable" (its Deployment section).
+#
+# Quick start (see the root README.md for the fuller version):
+#   cp .env.example .env        # then set at least GITHUB_APP_WEBHOOK_SECRET to any
+#                                # non-empty value -- laforge-api won't start without it.
+#                                # Real GitHub App values: see USAGE.md.
+#   ./scripts/gen-dev-certs.sh  # real self-signed mTLS certs for the gateway, dev only
+#   docker compose up --build
+#
+# laforge-api:          http://localhost:8080
+# laforge-gateway (mTLS): localhost:8444
+# ui (Vite dev server): http://localhost:5173
+# Postgres (for `psql` from the host, if you want it): localhost:5433
+
+name: laforge
+
+services:
+  db:
+    image: postgres:16-alpine
+    # Raise the connection ceiling well above Postgres's default 100 so a
+    # high-concurrency runner pool (RUNNER_CONCURRENCY) plus the api/orchestrator/
+    # gateway pools all fit. Bump this further to push runner concurrency higher.
+    command: ["postgres", "-c", "max_connections=500"]
+    environment:
+      POSTGRES_DB: laforge_dev
+      POSTGRES_USER: laforge
+      POSTGRES_PASSWORD: laforge
+    volumes:
+      - laforge-db:/var/lib/postgresql/data
+    ports:
+      - "5433:5432" # host-side only, so a native Postgres on the default 5432 is untouched
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U laforge -d laforge_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    build:
+      context: .
+      target: migrate
+    command: ["host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable", "up"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      target: api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable
+      LISTEN_ADDR: ":8080"
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      UI_BASE_URL: ${UI_BASE_URL:-http://localhost:5173}
+      REPO_ROOT: /content
+    volumes:
+      - ./examples/lm-test:/content:ro
+      # Mounted at the container's own working directory (unset in the
+      # Dockerfile's api stage, so it defaults to "/") so a relative
+      # GITHUB_APP_PRIVATE_KEY_PATH in .env (e.g. ".dev-certs/x.pem",
+      # matching how it'd resolve for `go run` from the repo root too)
+      # resolves the same way in both places, with no path translation
+      # needed between the two.
+      - ./.dev-certs:/.dev-certs:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  orchestrator:
+    build:
+      context: .
+      target: orchestrator
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./examples/lm-test:/content:ro
+      # Same GITHUB_APP_PRIVATE_KEY_PATH resolution as api's own volume
+      # (see its comment above) -- without this, a real GITHUB_APP_ID in
+      # .env would make internal/checkout.FromEnv try to read a private
+      # key file that doesn't exist inside this container at all, and
+      # fail loudly at startup.
+      - ./.dev-certs:/.dev-certs:ro
+    command: ["-db-url", "host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable", "-repo", "/content"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  runner:
+    build:
+      context: .
+      target: runner
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./examples/lm-test:/content:ro
+      - ./.dev-certs:/.dev-certs:ro
+      - ./.agent-base:/.agent-base:ro
+    environment:
+      # Agent auto-delivery (internal/agentdelivery): the addresses a
+      # DEPLOYED HOST reaches back on -- NOT localhost, but an address real
+      # instances on your hoster can route to (a LAN IP or a public hostname
+      # that resolves to this host). Set these in your .env when
+      # deploying to a real hoster; leave them empty (the default) to deploy
+      # without agents, exactly as the fake-builder default does. When you set
+      # GATEWAY_PUBLIC_ADDR to a non-localhost name, re-run gen-dev-certs.sh
+      # with GATEWAY_EXTRA_SANS so the gateway cert matches it.
+      GATEWAY_PUBLIC_ADDR: "${GATEWAY_PUBLIC_ADDR:-}"
+      API_PUBLIC_URL: "${API_PUBLIC_URL:-}"
+      GATEWAY_CA_CERT: /.dev-certs/ca.crt
+      GATEWAY_CA_KEY: /.dev-certs/ca.key
+      AGENT_BASE_DIR: /.agent-base
+      # Deploy hosts in parallel instead of one at a time. Each worker is an
+      # independent lease->execute loop; FOR UPDATE SKIP LOCKED keeps concurrent
+      # leasing safe, and a worker only holds a DB connection briefly (the
+      # multi-minute deploy is an HTTP call to the hoster). Bound in practice by
+      # the hoster's own concurrent-create capacity and Postgres max_connections
+      # (raised on the db service). Tune freely. See cmd/laforge-runner.
+      RUNNER_CONCURRENCY: "50"
+    # The default builder is still the fake one (internal/builder/fake);
+    # a build with a real configured_build resolves its own real
+    # builder_config by name (ResolveBuilderFromDB) and deploys to that
+    # hoster instead.
+    command: ["-db-url", "host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable", "-repo", "/content", "-id", "compose-runner-1"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  gateway:
+    build:
+      context: .
+      target: gateway
+    environment:
+      DATABASE_URL: "host=db port=5432 user=laforge_gateway password=laforge_gateway_dev_only_do_not_use_in_prod dbname=laforge_dev sslmode=disable"
+      LISTEN_ADDR: ":8443"
+      GATEWAY_CA_CERT: /certs/ca.crt
+      GATEWAY_SERVER_CERT: /certs/server.crt
+      GATEWAY_SERVER_KEY: /certs/server.key
+    volumes:
+      - ./.dev-certs:/certs:ro
+    ports:
+      # Host-side only -- 8443 was already taken by an unrelated,
+      # pre-existing Incus test container on this machine; the gateway
+      # itself still listens on :8443 inside its own container either
+      # way (LISTEN_ADDR above), so this is purely which host port
+      # reaches it from outside Docker.
+      - "8444:8443"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  ui:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./ui:/app
+      - laforge-ui-node-modules:/app/node_modules
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
+    environment:
+      VITE_API_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  laforge-db:
+  laforge-ui-node-modules:

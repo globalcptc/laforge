@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://laforge.dev/schema/host.json",
+  "$comment": "Every field a host has lives inside the `host:` object itself, `name` included -- 'these are properties of a host object, it makes no sense for it to be anything otherwise' (a real objection to an earlier flat draft, where `host: <name>` put the name on the header line and every other field as a top-level sibling). os/size/disk are required only when there is no `extends` -- an extending host inherits them from its base (the loader deep-merges the base in; a missing inherited field is then caught at load time). This schema rule stops a standalone host from omitting them by mistake.",
+  "type": "object",
+  "required": [
+    "host"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "host": {
+      "type": "object",
+      "description": "A host: a full VM the builder deploys. See `container:` for the same idea deployed as a container instead. Lives in `hosts/`, reused across environments by name -- it never mentions a network or an address itself, only an environment's topology attaches it to one.",
+      "required": [
+        "name"
+      ],
+      "if": {
+        "not": {
+          "required": [
+            "extends"
+          ]
+        }
+      },
+      "then": {
+        "required": [
+          "os",
+          "size",
+          "disk"
+        ]
+      },
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique name for this host, referenced from an environment's topology and from other objects' `depends_on`. Not a hostname -- the environment's `as` field on each copy sets the actual hostname."
+        },
+        "os": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Abstract OS name (e.g. \"ubuntu22\", \"windows-server-2022\", \"kali\"). Each builder config maps this to a concrete image for its hoster, so the same host works on any hoster."
+        },
+        "size": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Abstract size name (e.g. \"small\", \"medium\", \"large\"). Each builder config maps this to concrete CPU/memory for its hoster."
+        },
+        "disk": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Disk size in GB."
+        },
+        "ports": {
+          "$ref": "common.json#/$defs/portsBlock",
+          "description": "TCP/UDP ports this host listens on.",
+          "example": "ports: { tcp: [\"8080\"] }"
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "Other hosts, containers, or networks that must be up before this host builds -- e.g. a workstation waiting on its domain controller. Names the object, not one specific copy: every copy of that object within the same team is waited on. This host's own network is always waited on implicitly.",
+          "example": "depends_on: [domain-controller, prod]   # a host, and a network",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "steps": {
+          "$ref": "common.json#/$defs/stepsList",
+          "description": "The ordered steps this host runs after it's provisioned. Each one is exactly one of the action kinds below, plus an optional `validate` block. For anything recurring or time-based, use `schedule:` instead -- steps run once, in order; they were never meant to hold recurring work.",
+          "example": "steps:\n  - script: base\n  - write_file: { path: /etc/motd, content: \"Property of Allports\" }\n  - service: { name: nginx, action: restart }"
+        },
+        "schedule": {
+          "$ref": "common.json#/$defs/scheduleList",
+          "description": "Recurring or anchor-relative triggers for this host, independent of `steps:`'s own order -- each entry fires on its own clock, per its `when:`.",
+          "example": "schedule:\n  - when: Every 30 minutes\n    script: reboot\n  - when: 30 minutes before access closes\n    run: systemctl restart nginx"
+        },
+        "vars": {
+          "$ref": "common.json#/$defs/varsMap",
+          "description": "Key/value data available to this host's own scripts, on top of whatever cascades down from its environment and network.",
+          "example": "vars:\n  company: Allports\n  authoritative_dns_ip: 10.0.1.6"
+        },
+        "tags": {
+          "$ref": "common.json#/$defs/tagsMap",
+          "description": "Labels for searching, grouping, and ad-hoc targeting.",
+          "example": "tags:\n  role: db\n  scope: in"
+        },
+        "findings": {
+          "$ref": "common.json#/$defs/findingsList",
+          "description": "Findings that belong to this host specifically.",
+          "example": "findings:\n  - severity: 4\n    difficulty: 2\n    description: SQL injection in the login form"
+        },
+        "people": {
+          "$ref": "common.json#/$defs/peopleList",
+          "description": "People (from a `people/*.csv`) this host concerns.",
+          "example": "people: [jdoe]"
+        },
+        "extends": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of another host this one extends. The base is deep-merged in: scalar fields (os/size/disk) the child sets win, otherwise they're inherited; vars/tags merge key-by-key (child wins a clash); steps, people and ports are the base's followed by the child's. `os`/`size`/`disk` become optional here since they're inherited."
+        }
+      }
+    }
+  }
+}

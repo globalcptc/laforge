@@ -1,0 +1,6 @@
+script:
+  name: create-linux-users
+  description: Creates a local Linux account for every row in the employees people source
+  language: bash
+  source: create-linux-users.sh
+  timeout: 120

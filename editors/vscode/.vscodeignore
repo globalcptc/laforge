@@ -1,0 +1,13 @@
+# Files excluded from the packaged .vsix. The extension ships only its
+# compiled output (out/) and its runtime dependencies; the TypeScript source,
+# build config, and dev tooling are not needed by an installed extension.
+.vscode/**
+.vscode-test/**
+src/**
+**/tsconfig.json
+**/*.ts
+**/*.map
+.gitignore
+.vscodeignore
+node_modules/.bin/**
+**/.DS_Store

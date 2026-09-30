@@ -1,0 +1,6 @@
+script:
+  name: harden-dc
+  description: Enables LDAP channel binding enforcement
+  language: powershell
+  source: harden-dc.ps1
+  timeout: 120

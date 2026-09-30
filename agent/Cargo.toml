@@ -1,0 +1,39 @@
+[package]
+name = "laforge-agent"
+version = "0.1.0"
+edition = "2021"
+
+# Deliberately small: rustls (ring backend) for real, unmodified TLS --
+# "TLS is scrutinised, well implemented in Rust by rustls... the goal was
+# never to hide that the agent talks to something, only to make working
+# out what it says expensive." serde/serde_json for the protocol's JSON
+# payloads. No async runtime (no tokio) -- one blocking connection per
+# agent needs nothing else, and every dependency here is weighed against
+# the plan's "small binary" goal for the real thing.
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-pemfile = "2"
+ring = "0.17"
+# For the file_contains validator's `regex:` form (the `text:` form is a plain
+# substring). Standard, well-audited Rust regex.
+regex = { version = "1", default-features = false, features = ["std", "perf", "unicode"] }
+# `download` step: a real HTTP(S) GET of an arbitrary URL (files.cp.tc or the
+# open internet) to a file on the host. ureq is blocking, pure-Rust, and reuses
+# the rustls (ring) backend already linked, so it cross-compiles to static musl
+# with no C/OpenSSL dependency; webpki-roots gives it public-CA verification.
+ureq = { version = "2", default-features = false, features = ["tls"] }
+# `extract` step: unpack zip / tar / tar.gz(.tgz) archives already on the host.
+# All pure-Rust backends (miniz_oxide for deflate, no zlib/bzip2 C deps) so the
+# musl build stays self-contained.
+tar = "0.4"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

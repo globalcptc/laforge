@@ -1,0 +1,6 @@
+script:
+  name: scoreboard-seed
+  description: Seeds the scoreboard database with team records
+  language: bash
+  source: scoreboard-seed.sh
+  timeout: 60

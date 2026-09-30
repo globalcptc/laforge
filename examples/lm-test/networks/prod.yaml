@@ -1,0 +1,10 @@
+network:
+  name: prod
+  cidr: 10.0.1.0/24
+  visible_from: [vdi]
+  tags: { scope: in }
+  vars: { authoritative_dns_ip: 10.0.1.6 }
+  findings:
+    - severity: 3
+      difficulty: 2
+      description: Flat network, no segmentation between servers

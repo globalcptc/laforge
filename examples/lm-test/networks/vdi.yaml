@@ -1,0 +1,5 @@
+network:
+  name: vdi
+  cidr: 10.0.254.0/24
+  visible_from: [vpn]     # competitors enter via vpn to reach their vdi boxes
+  tags: { scope: out }

@@ -1,0 +1,60 @@
+# A canonical example environment,
+# with domain-controller and workstation added to the topology so the
+# depends_on example in hosts/workstation.yaml actually resolves. See
+# loader/checks.go's depends_on check.
+environment:
+  name: lm-test
+  schema: 1
+  description: Builder test environment
+  teams: 5
+  root_password: P@ssword123
+  start: 2026-10-01T09:00:00Z
+  stop: 2026-10-03T17:00:00Z
+  dns:
+    type: bind
+    root_domain: allports.local
+    dns_servers: [8.8.8.8, 8.8.4.4]
+    ntp_servers: [129.6.15.28]
+    records:
+      - { name: intranet, type: CNAME, target: web01 }
+      - { name: mail, type: MX, target: mail01, priority: 10 }
+  access:
+    - { open: 2026-10-01T09:00:00Z, close: 2026-10-01T18:00:00Z }
+    - { open: 2026-10-02T09:00:00Z, close: 2026-10-02T17:00:00Z }
+  vars: { company: Allports }
+  tags: { event: test }
+
+  networks:
+    prod:
+      database:
+        - as: db01
+          last_octet: 11
+      webserver:
+        - as: web01
+          last_octet: 12
+      scoreboard:
+        - as: scoreboard
+          last_octet: 50
+      domain-controller:
+        - as: dc01
+          last_octet: 20
+      workstation:
+        - as: ws01
+          last_octet: 21
+    dev:
+      database:
+        - as: devdb
+          last_octet: 5
+    vdi:
+      kali:
+        - as: kali01
+          last_octet: 201
+        - as: kali02
+          last_octet: 202
+    vpn:
+      wireguard:
+        - as: wireguard
+          last_octet: 5
+          public:
+            tcp: ["51820"]
+            udp: ["51820"]

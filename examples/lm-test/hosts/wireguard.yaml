@@ -1,0 +1,8 @@
+host:
+  name: wireguard
+  os: ubuntu22
+  size: small
+  disk: 50
+  ports: { tcp: ["51820", "23226"], udp: ["51820"] }
+  steps:
+    - script: install-wireguard-server

@@ -1,0 +1,15 @@
+script:
+  name: vuln-sqli
+  description: Web login with an injectable username field
+  language: bash
+  source: vuln-sqli.sh
+  timeout: 300
+  ignore_errors: true          # planting the vuln is best-effort; don't fail the build over it
+  tags: { category: web }
+  people:
+    - file: employees
+      filter: [jdoe]
+  findings:
+    - severity: 4
+      difficulty: 2
+      description: SQL injection in the login form

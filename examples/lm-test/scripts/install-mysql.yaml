@@ -1,0 +1,6 @@
+script:
+  name: install-mysql
+  description: Installs MySQL server
+  language: bash
+  source: install-mysql.sh
+  timeout: 300

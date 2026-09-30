@@ -1,0 +1,376 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://laforge.dev/schema/common.json",
+  "$defs": {
+    "tagsMap": {
+      "type": "object",
+      "description": "Key/value labels for searching, grouping, and ad-hoc targeting (e.g. `role: db`). Cascade down the hierarchy -- environment, then network, then host/container -- with the more specific value winning on a key collision. Purely descriptive: changing a tag updates the database and never rebuilds anything.",
+      "additionalProperties": { "type": "string" }
+    },
+    "varsMap": {
+      "type": "object",
+      "description": "Key/value data available to this object's scripts and to everything beneath it in the cascade (environment, then network, then host/container). Referenced in a script as `{{ .vars.<key> }}`. Changing a var a script uses rebuilds every host running that script.",
+      "additionalProperties": { "type": "string" }
+    },
+    "findingItem": {
+      "type": "object",
+      "description": "One scored vulnerability or weakness, attached directly to the object that has it (environment, network, host, container, or script). A finding on a script travels with the script to every host or container that runs it. No separate file and no ID -- exported later as one row per finding.",
+      "required": ["severity", "difficulty", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "severity": { "type": "integer", "minimum": 1, "maximum": 5, "description": "How bad the finding is if exploited: 1 (minor) through 5 (critical)." },
+        "difficulty": { "type": "integer", "minimum": 1, "maximum": 5, "description": "How hard the finding is to find and exploit: 1 (trivial) through 5 (very difficult)." },
+        "description": { "type": "string", "minLength": 1, "description": "Plain-language explanation of the finding, e.g. \"SQL injection in the login form\"." }
+      }
+    },
+    "findingsList": {
+      "type": "array",
+      "description": "The findings attached to this object.",
+      "items": { "$ref": "#/$defs/findingItem" }
+    },
+    "peopleList": {
+      "type": "array",
+      "description": "People (from `people/*.csv` files) this object concerns -- who a script's account-creation targets, for instance. Each entry names a whole CSV file; add `filter:` to narrow it to specific usernames. The resolved set is available to the object's scripts as `{{ .people }}`.",
+      "items": {
+        "type": "object",
+        "required": ["file"],
+        "additionalProperties": false,
+        "properties": {
+          "file": { "type": "string", "minLength": 1, "description": "A `people/*.csv` file, by name without the extension (e.g. `employees` for people/employees.csv). Unfiltered, every row in that file is included.", "example": "file: employees" },
+          "filter": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "Usernames from that file to include instead of everyone -- each must be a `username` value in that CSV.", "example": "filter: [awhite, jdoe]" }
+        }
+      }
+    },
+    "portsBlock": {
+      "type": "object",
+      "description": "The ports this host or container listens on.",
+      "additionalProperties": false,
+      "properties": {
+        "tcp": { "type": "array", "description": "TCP ports, as strings -- a single port (\"80\") or a range (\"1-65535\").", "example": "tcp: [\"8080\"]", "items": { "type": "string", "minLength": 1 } },
+        "udp": { "type": "array", "description": "UDP ports, in the same format as tcp.", "example": "udp: [\"51820\"]", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+
+    "validatorItem": {
+      "$comment": "Exactly one key, enforced by minProperties/maxProperties rather than a verbose oneOf — every known key's shape is checked when present, additionalProperties:false rejects anything else.",
+      "type": "object",
+      "description": "One read-only check, run after the step (or every step of the script) it's attached to. A failed check fails its step, unless the step sets `ignore_errors`.",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "file_exists": { "type": "string", "minLength": 1, "description": "A path that must exist on the host after the step runs." },
+        "file_absent": { "type": "string", "minLength": 1, "description": "A path that must NOT exist on the host after the step runs." },
+        "file_hash": {
+          "type": "object",
+          "description": "A file whose contents must match an exact sha256 hash.",
+          "required": ["path", "sha256"],
+          "additionalProperties": false,
+          "properties": {
+            "path": { "type": "string", "minLength": 1, "description": "The file to hash." },
+            "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$", "description": "The expected hash, as 64 hex characters." }
+          }
+        },
+        "file_contains": {
+          "type": "object",
+          "description": "A file that must contain specific text or match a regular expression.",
+          "required": ["path"],
+          "additionalProperties": false,
+          "properties": {
+            "path": { "type": "string", "minLength": 1, "description": "The file to check." },
+            "text": { "type": "string", "description": "Exact substring the file must contain. Use this or `regex`, not both." },
+            "regex": { "type": "string", "description": "Regular expression the file's contents must match. Use this or `text`, not both." }
+          },
+          "oneOf": [{ "required": ["text"] }, { "required": ["regex"] }]
+        },
+        "user_exists": { "type": "string", "minLength": 1, "description": "A username that must exist on the host." },
+        "group_exists": { "type": "string", "minLength": 1, "description": "A group that must exist on the host." },
+        "user_in_group": {
+          "type": "object",
+          "description": "A user that must belong to a group.",
+          "required": ["username", "group"],
+          "additionalProperties": false,
+          "properties": {
+            "username": { "type": "string", "minLength": 1, "description": "The user to check." },
+            "group": { "type": "string", "minLength": 1, "description": "The group the user must belong to." }
+          }
+        },
+        "service_running": { "type": "string", "minLength": 1, "description": "A service name that must be running (systemd on Linux, Windows Services on Windows)." },
+        "port_listening": {
+          "type": "object",
+          "description": "A port that must be listening.",
+          "required": ["port"],
+          "additionalProperties": false,
+          "properties": {
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535, "description": "The port number that must be listening." },
+            "protocol": { "enum": ["tcp", "udp"], "description": "tcp or udp. Defaults to tcp if omitted." }
+          }
+        },
+        "process_running": { "type": "string", "minLength": 1, "description": "A process name that must be running." },
+        "registry": {
+          "$comment": "Windows-only. Enforcing that here would need the host's os, which this schema doesn't have access to — the loader checks it cross-file, same as depends_on targets.",
+          "type": "object",
+          "description": "A Windows registry value that must match exactly. Fails validation at commit time if attached to a non-Windows host.",
+          "required": ["key", "value", "expected"],
+          "additionalProperties": false,
+          "properties": {
+            "key": { "type": "string", "minLength": 1, "description": "The registry key path." },
+            "value": { "type": "string", "minLength": 1, "description": "The value name within the key." },
+            "expected": { "type": "string", "description": "The data the value must hold." }
+          }
+        }
+      }
+    },
+    "validateList": {
+      "type": "array",
+      "description": "Checks that run, in order, after this step (or after every step of this script definition). Every check runs even if an earlier one fails, so one run reports every problem rather than only the first.",
+      "items": { "$ref": "#/$defs/validatorItem" }
+    },
+
+    "stepItem": {
+      "$comment": "Exactly one action key required via oneOf-on-required: if two action keys are both present, two branches each independently satisfy their own `required`, so oneOf correctly fails with 'more than one matched'. validate is always allowed alongside whichever action key is present.",
+      "type": "object",
+      "description": "One step a host or container runs, in order. Exactly one action key (script, run, download, ...) plus an optional `validate` block checking the result.",
+      "additionalProperties": false,
+      "properties": {
+        "script": { "type": "string", "minLength": 1, "description": "Runs a script definition (`scripts/<name>.yaml`) by name -- downloads its rendered source and executes it. The most common step kind.", "example": "script: base" },
+        "run": { "type": "string", "minLength": 1, "description": "An inline one-line shell/PowerShell command, for something too small to deserve its own script file.", "example": "run: systemctl restart nginx" },
+        "download": {
+          "type": "object", "description": "Downloads a file from a URL (the LaForge file server at files.cp.tc, or anywhere on the internet) onto the host. The agent fetches it directly -- it is not proxied through LaForge.", "example": "download: { from: https://files.cp.tc/site.tar.gz, to: /tmp/site.tar.gz }", "required": ["from", "to"], "additionalProperties": false,
+          "properties": { "from": { "type": "string", "description": "Source URL (http/https), e.g. https://files.cp.tc/site.tar.gz.", "example": "from: https://files.cp.tc/site.tar.gz" }, "to": { "type": "string", "description": "Destination path on the host.", "example": "to: /tmp/site.tar.gz" } }
+        },
+        "upload": {
+          "type": "object", "description": "Sends a file from the host back to LaForge (logs, generated credentials, evidence).", "example": "upload: { from: /var/log/setup.log }", "required": ["from"], "additionalProperties": false,
+          "properties": { "from": { "type": "string", "description": "Path on the host to upload.", "example": "from: /var/log/setup.log" } }
+        },
+        "write_file": {
+          "type": "object", "description": "Writes a file with the given content, replacing anything already there.", "example": "write_file: { path: /etc/motd, content: \"Property of Allports\" }", "required": ["path", "content"], "additionalProperties": false,
+          "properties": { "path": { "type": "string", "description": "Destination path on the host.", "example": "path: /etc/motd" }, "content": { "type": "string", "description": "The file's full contents. Templated the same as a script.", "example": "content: \"Property of Allports\"" }, "mode": { "type": "string", "description": "Optional file permissions (chmod-style on Linux, ACL-mapped on Windows).", "example": "mode: \"0644\"" } }
+        },
+        "append_file": {
+          "type": "object", "description": "Appends content to the end of a file, creating it if it doesn't exist.", "example": "append_file: { path: /etc/hosts, content: \"10.0.1.11 db\" }", "required": ["path", "content"], "additionalProperties": false,
+          "properties": { "path": { "type": "string", "description": "File to append to.", "example": "path: /etc/hosts" }, "content": { "type": "string", "description": "Text to append.", "example": "content: \"10.0.1.11 db\"" } }
+        },
+        "extract": {
+          "type": "object", "description": "Extracts an archive (zip/tar/tgz) into a destination folder.", "example": "extract: { src: /tmp/site.tar.gz, dest: /var/www }", "required": ["src", "dest"], "additionalProperties": false,
+          "properties": { "src": { "type": "string", "description": "Archive path on the host.", "example": "src: /tmp/site.tar.gz" }, "dest": { "type": "string", "description": "Folder to extract into.", "example": "dest: /var/www" } }
+        },
+        "delete": {
+          "type": "object", "description": "Deletes a file or directory on the host.", "example": "delete: { path: /tmp/site.tar.gz }", "required": ["path"], "additionalProperties": false,
+          "properties": { "path": { "type": "string", "description": "Path to delete.", "example": "path: /tmp/site.tar.gz" } }
+        },
+        "change_perms": {
+          "type": "object", "description": "Changes a file or directory's permissions and/or owner.", "example": "change_perms: { path: /var/www, mode: \"0755\", owner: www-data, group: www-data }", "required": ["path", "mode"], "additionalProperties": false,
+          "properties": {
+            "path": { "type": "string", "description": "Path to change.", "example": "path: /var/www" }, "mode": { "type": "string", "description": "chmod-style mode on Linux (e.g. \"0755\"), mapped onto read/write/execute on Windows.", "example": "mode: \"0755\"" },
+            "owner": { "type": "string", "description": "Optional new owner.", "example": "owner: www-data" }, "group": { "type": "string", "description": "Optional new group.", "example": "group: www-data" }
+          }
+        },
+        "create_user": {
+          "type": "object", "description": "Creates a user on the host.", "example": "create_user: { name: dbadmin, password: \"{{ vars.db_pw }}\", groups: [sudo] }", "required": ["name", "password"], "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "description": "Username to create.", "example": "name: dbadmin" }, "password": { "type": "string", "description": "Initial password.", "example": "password: \"{{ vars.db_pw }}\"" },
+            "groups": { "type": "array", "description": "Groups to add the new user to.", "example": "groups: [sudo]", "items": { "type": "string" } }
+          }
+        },
+        "set_password": {
+          "type": "object", "description": "Rotates an existing user's password -- separate from create_user so a later step can change it.", "example": "set_password: { name: Administrator, password: \"{{ vars.admin_pw }}\" }", "required": ["name", "password"], "additionalProperties": false,
+          "properties": { "name": { "type": "string", "description": "User whose password changes.", "example": "name: Administrator" }, "password": { "type": "string", "description": "New password.", "example": "password: \"{{ vars.admin_pw }}\"" } }
+        },
+        "add_to_group": {
+          "type": "object", "description": "Adds an existing user to a group.", "example": "add_to_group: { user: www-data, group: docker }", "required": ["user", "group"], "additionalProperties": false,
+          "properties": { "user": { "type": "string", "description": "User to add.", "example": "user: www-data" }, "group": { "type": "string", "description": "Group to add them to.", "example": "group: docker" } }
+        },
+        "service": {
+          "type": "object", "description": "Starts, stops, or otherwise manages a systemd (Linux) or Windows service.", "example": "service: { name: nginx, action: restart }", "required": ["name", "action"], "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "description": "Service name.", "example": "name: nginx" },
+            "action": { "enum": ["start", "stop", "restart", "enable", "disable"], "description": "What to do to the service.", "example": "action: restart" }
+          }
+        },
+        "reboot": {
+          "type": "object", "description": "Reboots the host. The agent reports success before rebooting, then re-registers once it's back.", "example": "reboot: {}", "additionalProperties": false,
+          "properties": { "delay": { "type": "string", "description": "Optional delay before rebooting.", "example": "delay: \"30s\"" } }
+        },
+        "validate": { "$ref": "#/$defs/validateList", "description": "Checks to run after this step.", "example": "validate:\n  - service_running: nginx\n  - port_listening: { port: 80 }" }
+      },
+      "oneOf": [
+        { "required": ["script"] }, { "required": ["run"] }, { "required": ["download"] },
+        { "required": ["upload"] }, { "required": ["write_file"] }, { "required": ["append_file"] },
+        { "required": ["extract"] }, { "required": ["delete"] }, { "required": ["change_perms"] },
+        { "required": ["create_user"] }, { "required": ["set_password"] }, { "required": ["add_to_group"] },
+        { "required": ["service"] }, { "required": ["reboot"] }
+      ]
+    },
+    "stepsList": {
+      "type": "array",
+      "description": "The ordered list of steps this host or container runs, one at a time, top to bottom.",
+      "items": { "$ref": "#/$defs/stepItem" }
+    },
+
+    "scheduleItem": {
+      "$comment": "The same discriminated-action shape as stepItem (see its own $comment), plus a required `when:`, minus `schedule` itself -- scheduling a schedule makes no sense. The 14 action definitions are intentionally duplicated from stepItem rather than shared via $ref: this project's schema reader (internal/lsp/schemadoc.go) doesn't resolve $ref for description/example, so a $ref'd action here would show up with neither in completion or the field reference panel -- the same reason ports/tags/etc. already duplicate their own example text between host.schema.json and container.schema.json rather than centralizing it.",
+      "type": "object",
+      "description": "One entry in a host or container's `schedule:` array -- fires independently of the ordered `steps:` list, on its own clock, per `when:`. Exactly one action key plus an optional `validate` block, same as a step.",
+      "additionalProperties": false,
+      "required": ["when"],
+      "properties": {
+        "when": {
+          "type": "string", "minLength": 1,
+          "description": "A natural-language time expression -- when this entry fires. Three shapes: \"every [N] <minute|hour|day>(s) [before|after <time or anchor>]\" (recurring interval), \"every day at <time>[, <time>...]\" (recurring, fixed times), or \"[N <unit>] before|after <anchor>\" (anchor is one of: competition start, competition end, access opens, access closes -- the first two fire once, the access ones fire once per access window, e.g. every night on a multi-day event). Validated by internal/schedule.Parse -- an expression outside this grammar fails validation at commit time, naming the file.",
+          "example": "when: Every 30 minutes"
+        },
+        "script": { "type": "string", "minLength": 1, "description": "Runs a script definition (`scripts/<name>.yaml`) by name -- downloads its rendered source and executes it. The most common step kind.", "example": "script: base" },
+        "run": { "type": "string", "minLength": 1, "description": "An inline one-line shell/PowerShell command, for something too small to deserve its own script file.", "example": "run: systemctl restart nginx" },
+        "download": {
+          "type": "object", "description": "Downloads a file from a URL (the LaForge file server at files.cp.tc, or anywhere on the internet) onto the host. The agent fetches it directly -- it is not proxied through LaForge.", "example": "download: { from: https://files.cp.tc/site.tar.gz, to: /tmp/site.tar.gz }", "required": ["from", "to"], "additionalProperties": false,
+          "properties": { "from": { "type": "string", "description": "Source URL (http/https), e.g. https://files.cp.tc/site.tar.gz.", "example": "from: https://files.cp.tc/site.tar.gz" }, "to": { "type": "string", "description": "Destination path on the host.", "example": "to: /tmp/site.tar.gz" } }
+        },
+        "upload": {
+          "type": "object", "description": "Sends a file from the host back to LaForge (logs, generated credentials, evidence).", "example": "upload: { from: /var/log/setup.log }", "required": ["from"], "additionalProperties": false,
+          "properties": { "from": { "type": "string", "description": "Path on the host to upload.", "example": "from: /var/log/setup.log" } }
+        },
+        "write_file": {
+          "type": "object", "description": "Writes a file with the given content, replacing anything already there.", "example": "write_file: { path: /etc/motd, content: \"Property of Allports\" }", "required": ["path", "content"], "additionalProperties": false,
+          "properties": { "path": { "type": "string", "description": "Destination path on the host.", "example": "path: /etc/motd" }, "content": { "type": "string", "description": "The file's full contents. Templated the same as a script.", "example": "content: \"Property of Allports\"" }, "mode": { "type": "string", "description": "Optional file permissions (chmod-style on Linux, ACL-mapped on Windows).", "example": "mode: \"0644\"" } }
+        },
+        "append_file": {
+          "type": "object", "description": "Appends content to the end of a file, creating it if it doesn't exist.", "example": "append_file: { path: /etc/hosts, content: \"10.0.1.11 db\" }", "required": ["path", "content"], "additionalProperties": false,
+          "properties": { "path": { "type": "string", "description": "File to append to.", "example": "path: /etc/hosts" }, "content": { "type": "string", "description": "Text to append.", "example": "content: \"10.0.1.11 db\"" } }
+        },
+        "extract": {
+          "type": "object", "description": "Extracts an archive (zip/tar/tgz) into a destination folder.", "example": "extract: { src: /tmp/site.tar.gz, dest: /var/www }", "required": ["src", "dest"], "additionalProperties": false,
+          "properties": { "src": { "type": "string", "description": "Archive path on the host.", "example": "src: /tmp/site.tar.gz" }, "dest": { "type": "string", "description": "Folder to extract into.", "example": "dest: /var/www" } }
+        },
+        "delete": {
+          "type": "object", "description": "Deletes a file or directory on the host.", "example": "delete: { path: /tmp/site.tar.gz }", "required": ["path"], "additionalProperties": false,
+          "properties": { "path": { "type": "string", "description": "Path to delete.", "example": "path: /tmp/site.tar.gz" } }
+        },
+        "change_perms": {
+          "type": "object", "description": "Changes a file or directory's permissions and/or owner.", "example": "change_perms: { path: /var/www, mode: \"0755\", owner: www-data, group: www-data }", "required": ["path", "mode"], "additionalProperties": false,
+          "properties": {
+            "path": { "type": "string", "description": "Path to change.", "example": "path: /var/www" }, "mode": { "type": "string", "description": "chmod-style mode on Linux (e.g. \"0755\"), mapped onto read/write/execute on Windows.", "example": "mode: \"0755\"" },
+            "owner": { "type": "string", "description": "Optional new owner.", "example": "owner: www-data" }, "group": { "type": "string", "description": "Optional new group.", "example": "group: www-data" }
+          }
+        },
+        "create_user": {
+          "type": "object", "description": "Creates a user on the host.", "example": "create_user: { name: dbadmin, password: \"{{ vars.db_pw }}\", groups: [sudo] }", "required": ["name", "password"], "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "description": "Username to create.", "example": "name: dbadmin" }, "password": { "type": "string", "description": "Initial password.", "example": "password: \"{{ vars.db_pw }}\"" },
+            "groups": { "type": "array", "description": "Groups to add the new user to.", "example": "groups: [sudo]", "items": { "type": "string" } }
+          }
+        },
+        "set_password": {
+          "type": "object", "description": "Rotates an existing user's password -- separate from create_user so a later step can change it.", "example": "set_password: { name: Administrator, password: \"{{ vars.admin_pw }}\" }", "required": ["name", "password"], "additionalProperties": false,
+          "properties": { "name": { "type": "string", "description": "User whose password changes.", "example": "name: Administrator" }, "password": { "type": "string", "description": "New password.", "example": "password: \"{{ vars.admin_pw }}\"" } }
+        },
+        "add_to_group": {
+          "type": "object", "description": "Adds an existing user to a group.", "example": "add_to_group: { user: www-data, group: docker }", "required": ["user", "group"], "additionalProperties": false,
+          "properties": { "user": { "type": "string", "description": "User to add.", "example": "user: www-data" }, "group": { "type": "string", "description": "Group to add them to.", "example": "group: docker" } }
+        },
+        "service": {
+          "type": "object", "description": "Starts, stops, or otherwise manages a systemd (Linux) or Windows service.", "example": "service: { name: nginx, action: restart }", "required": ["name", "action"], "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "description": "Service name.", "example": "name: nginx" },
+            "action": { "enum": ["start", "stop", "restart", "enable", "disable"], "description": "What to do to the service.", "example": "action: restart" }
+          }
+        },
+        "reboot": {
+          "type": "object", "description": "Reboots the host. The agent reports success before rebooting, then re-registers once it's back.", "example": "reboot: {}", "additionalProperties": false,
+          "properties": { "delay": { "type": "string", "description": "Optional delay before rebooting.", "example": "delay: \"30s\"" } }
+        },
+        "validate": { "$ref": "#/$defs/validateList", "description": "Checks to run after this entry fires.", "example": "validate:\n  - service_running: nginx\n  - port_listening: { port: 80 }" }
+      },
+      "oneOf": [
+        { "required": ["script"] }, { "required": ["run"] }, { "required": ["download"] },
+        { "required": ["upload"] }, { "required": ["write_file"] }, { "required": ["append_file"] },
+        { "required": ["extract"] }, { "required": ["delete"] }, { "required": ["change_perms"] },
+        { "required": ["create_user"] }, { "required": ["set_password"] }, { "required": ["add_to_group"] },
+        { "required": ["service"] }, { "required": ["reboot"] }
+      ]
+    },
+    "scheduleList": {
+      "type": "array",
+      "description": "Recurring or anchor-relative triggers, independent of `steps:`'s own order -- see each entry's own `when:`.",
+      "items": { "$ref": "#/$defs/scheduleItem" }
+    },
+
+    "publicBlock": {
+      "description": "Ports to make reachable from outside the competition network. Every port listed here must also appear in this object's own `ports` block. Omit, or set to `false`, to keep this copy private.",
+      "oneOf": [
+        { "type": "boolean", "const": false },
+        { "$ref": "#/$defs/portsBlock" }
+      ]
+    },
+    "copyItem": {
+      "type": "object",
+      "description": "One placement of a host or container onto a network, for every team.",
+      "required": ["as", "last_octet"],
+      "additionalProperties": false,
+      "properties": {
+        "as": { "type": "string", "minLength": 1, "description": "The hostname this copy gets. Also what depends_on and generated DNS records resolve it by." },
+        "last_octet": { "type": "integer", "minimum": 0, "maximum": 255, "description": "The last octet of this copy's address on the network's CIDR (0-255)." },
+        "public": { "$ref": "#/$defs/publicBlock" }
+      }
+    },
+    "copiesList": {
+      "type": "array",
+      "description": "One or more copies of the same host/container on this network -- list it more than once to place several copies.",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/copyItem" }
+    },
+    "objectMapOfCopies": {
+      "$comment": "host-or-container name -> its copies in this network",
+      "type": "object",
+      "description": "Maps each host or container name placed on this network to its list of copies.",
+      "additionalProperties": { "$ref": "#/$defs/copiesList" }
+    },
+    "networksTopology": {
+      "$comment": "network name -> object map",
+      "type": "object",
+      "description": "Maps each network name to the hosts and containers placed on it.",
+      "additionalProperties": { "$ref": "#/$defs/objectMapOfCopies" }
+    },
+
+    "dnsRecord": {
+      "type": "object",
+      "description": "A custom DNS record, on top of the automatic A record every host/container already gets from its hostname and address.",
+      "required": ["name", "type", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "description": "Record name." },
+        "type": { "enum": ["A", "CNAME", "MX", "TXT"], "description": "DNS record type." },
+        "target": { "type": "string", "minLength": 1, "description": "What the record points to." },
+        "priority": { "type": "integer", "description": "Priority, used for MX records." }
+      }
+    },
+    "dnsBlock": {
+      "type": "object",
+      "description": "DNS settings for the environment. A records for every host/container are generated automatically; this adds anything else.",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "description": "DNS backend, e.g. \"bind\"." },
+        "root_domain": { "type": "string", "description": "Root domain every generated hostname is placed under." },
+        "dns_servers": { "type": "array", "description": "Resolvers handed to hosts.", "items": { "type": "string" } },
+        "ntp_servers": { "type": "array", "description": "NTP servers handed to hosts.", "items": { "type": "string" } },
+        "records": { "type": "array", "description": "Custom records added on top of the automatic ones.", "items": { "$ref": "#/$defs/dnsRecord" } }
+      }
+    },
+
+    "accessWindow": {
+      "type": "object",
+      "description": "A scheduled window during which student access is open.",
+      "required": ["open", "close"],
+      "additionalProperties": false,
+      "properties": {
+        "open": { "type": "string", "format": "date-time", "description": "When access opens." },
+        "close": { "type": "string", "format": "date-time", "description": "When access closes." }
+      }
+    },
+    "accessList": {
+      "type": "array",
+      "description": "The planned open/close schedule for student access, e.g. closing overnight on a multi-day event. Per-team overrides during a live event happen from the UI/API, not here.",
+      "items": { "$ref": "#/$defs/accessWindow" }
+    }
+  }
+}

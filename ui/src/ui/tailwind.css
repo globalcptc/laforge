@@ -1,0 +1,590 @@
+/*
+ * @cptc/ui — Tailwind v4 entry. Import AFTER tailwindcss in your app's CSS:
+ *
+ *   @import 'tailwindcss';
+ *   @import '@cptc/ui/tailwind.css';
+ *
+ * Brings the CPTC tokens (light + dark), base styles, component classes and the sign-in keyframes,
+ * and tells Tailwind to scan this package's compiled components for the utilities they use.
+ *
+ * Palette: red #e9050c / violet #301956 / blue #004ae7 on ink + paper. Blue is every interactive
+ * affordance, violet marks brand-owned actions and identity, red is destructive only.
+ * Brand book: the "CPTC" design system artifact.
+ */
+
+@source './';
+
+@theme {
+  /*
+   * Three CPTC colors carry the whole UI: blue is every interactive affordance, violet marks
+   * brand-owned actions and identity, red is destructive only. Neutrals are tinted toward the blue
+   * so greys never read warm against it.
+   */
+  --color-surface: #f8fafc;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f1f5f9;
+  --color-surface-hover: #f1f5f9;
+  --color-surface-accent: #e9efff;
+
+  --color-border: #e2e8f0;
+  --color-border-strong: #aec1e4;
+
+  /* Ink is violet-biased rather than neutral black, so body text belongs to the palette. */
+  --color-fg: #120a21;
+  --color-fg-muted: #475569;
+  --color-fg-subtle: #64748b;
+  --color-fg-inverted: #ffffff;
+
+  /* CPTC blue — primary actions, links, selection, focus. */
+  --color-accent: #004ae7;
+  --color-accent-hover: #003ab4;
+  --color-accent-soft: #e9efff;
+  --color-accent-fg: #002f8f;
+
+  /* CPTC violet — edit and other brand-owned actions. */
+  --color-brand: #301956;
+  --color-brand-hover: #241240;
+  --color-brand-soft: #f3eef8;
+  --color-brand-fg: #301956;
+
+  --color-success: #1f9254;
+  --color-success-soft: #e8f6ee;
+  --color-warning: #b06f00;
+  --color-warning-soft: #fdf3e2;
+  /* CPTC red — reserved for destructive actions and hard failures. */
+  --color-danger: #e9050c;
+  --color-danger-soft: #fdebec;
+  --color-info: #004ae7;
+  --color-info-soft: #e9efff;
+  /* Orange — a third failure hue, distinct from danger-red and warning-amber,
+     so a failed build step (build_failed) reads apart from an infra deploy
+     failure (danger) and a failed validator (warning). */
+  --color-orange: #c2410c;
+  --color-orange-soft: #fff1e6;
+
+  /* Extra status hues for the deployed-object lifecycle (StatusBadge). Each is
+     a saturated base for the badge text over a pale -soft background, matching
+     the success/warning/danger/orange pattern above. ink = black (pending),
+     indigo = dark blue (creating), sky = light blue (awaiting agent),
+     purple = running steps, pink = destroying. Redefined for dark mode below. */
+  --color-ink: #1f2937;
+  --color-ink-soft: #e5e7eb;
+  --color-indigo: #3730a3;
+  --color-indigo-soft: #e0e7ff;
+  --color-sky: #0369a1;
+  --color-sky-soft: #e0f2fe;
+  --color-purple: #7c3aed;
+  --color-purple-soft: #f3e8ff;
+  --color-pink: #be185d;
+  --color-pink-soft: #fce7f3;
+
+  /* CPTC logo ink, used deliberately as the "Build Now" button fill, with a
+     fixed dark ink for its text. Both are fixed (never redefined for dark
+     mode): it's a light coral chip that reads the same in either theme, so
+     it must not pick up the theme's flipping brand/fg colours. */
+  --color-cptc-coral: #fd9493;
+  --color-cptc-coral-fg: #301956;
+
+  --radius-token-sm: 0.375rem;
+  --radius-token: 0.5rem;
+  --radius-token-lg: 0.75rem;
+
+  --shadow-raised: 0 1px 2px rgb(18 10 33 / 0.06), 0 12px 32px -16px rgb(0 74 231 / 0.22);
+  --shadow-panel: 0 2px 4px rgb(18 10 33 / 0.08), 0 24px 48px -20px rgb(0 74 231 / 0.3);
+  --shadow-overlay: 0 12px 40px -8px rgb(18 10 33 / 0.24);
+
+  --spacing-navbar: 3.25rem;
+  --spacing-sidebar: 16rem;
+  --spacing-sidebar-collapsed: 3.5rem;
+  --spacing-inspector: 22rem;
+
+  /* Next: next/font sets --font-inter / --font-jetbrains. Vite: load Inter any way you like. */
+  --font-sans:
+    var(--font-inter, 'Inter Variable'), 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-mono:
+    var(--font-jetbrains, 'JetBrains Mono Variable'), 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --brand-gradient: linear-gradient(135deg, #e9050c, #301956 52%, #004ae7);
+}
+
+/*
+ * Dark mode — opt in with `class="dark"` or `data-theme="dark"` on <html>.
+ *
+ * Grounds are the sign-in scene's near-black violet (#0b0618) rather than slate, so dark mode
+ * reads as the same world as the login page. The three CPTC colors keep their jobs but lighten
+ * to stay legible: blue still acts, violet (now lavender) still owns, red still destroys. Fills
+ * are light enough that button text flips to the ink ground (--color-fg-inverted) at 6.6:1+.
+ * Unlayered on purpose, so it beats the @theme values Tailwind emits into @layer theme.
+ */
+@custom-variant dark (&:where(.dark, .dark *, [data-theme='dark'], [data-theme='dark'] *));
+
+.dark,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-surface: #0b0618;
+  --color-surface-raised: #17102a;
+  --color-surface-sunken: #07030f;
+  --color-surface-hover: #221a38;
+  --color-surface-accent: #16234f;
+
+  --color-border: #2e2547;
+  --color-border-strong: #5a5f8f;
+
+  --color-fg: #f1edf8;
+  --color-fg-muted: #b6afc8;
+  --color-fg-subtle: #9189a8;
+  --color-fg-inverted: #0b0618;
+
+  --color-accent: #6d97ff;
+  --color-accent-hover: #8fb0ff;
+  --color-accent-soft: #16234f;
+  --color-accent-fg: #b3c8ff;
+
+  --color-brand: #a88be3;
+  --color-brand-hover: #bda6ec;
+  --color-brand-soft: #251a3f;
+  --color-brand-fg: #d2c2f2;
+
+  --color-success: #4fcb8d;
+  --color-success-soft: #0f2a1f;
+  --color-warning: #f2b04a;
+  --color-warning-soft: #2e2211;
+  --color-danger: #ff5c63;
+  --color-danger-soft: #3a1119;
+  --color-info: #6d97ff;
+  --color-info-soft: #16234f;
+  --color-orange: #fb923c;
+  --color-orange-soft: #3a1f0d;
+
+  /* Dark-mode pairs for the extra status hues (see the light @theme block):
+     light saturated text over a deep -soft fill. */
+  --color-ink: #cbd5e1;
+  --color-ink-soft: #1e293b;
+  --color-indigo: #a5b4fc;
+  --color-indigo-soft: #1e1b4b;
+  --color-sky: #7dd3fc;
+  --color-sky-soft: #0c2a3f;
+  --color-purple: #c4b5fd;
+  --color-purple-soft: #2e1065;
+  --color-pink: #f9a8d4;
+  --color-pink-soft: #3a0f24;
+
+  /* Shadows can't lift on black: they deepen instead, and the border does the separating. */
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -16px rgb(0 0 0 / 0.7);
+  --shadow-panel: 0 2px 4px rgb(0 0 0 / 0.5), 0 24px 48px -20px rgb(0 0 0 / 0.8);
+  --shadow-overlay: 0 12px 40px -8px rgb(0 0 0 / 0.7);
+}
+
+/* Scrims are tinted with --color-fg in light mode; in dark that would be a light veil. */
+:is(.dark, [data-theme='dark']) dialog::backdrop,
+:is(.dark, [data-theme='dark']) .bg-fg\/20,
+:is(.dark, [data-theme='dark']) .app-scrim {
+  background-color: rgb(0 0 0 / 0.6);
+}
+
+:is(.dark, [data-theme='dark']) ::selection {
+  background-color: rgb(109 151 255 / 0.3);
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+    background-color: var(--color-surface);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * Layout 2 owns the scrollbars: the shell is fixed and each region scrolls itself, which is what
+   * gives the builder canvas and the run timeline a real bounded height with no calc() plumbing.
+   */
+  html.layout-fixed,
+  html.layout-fixed body {
+    overflow: hidden;
+  }
+
+  * {
+    border-color: var(--color-border);
+  }
+
+  html::before {
+    content: '';
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 50;
+    height: 3px;
+    background: var(--brand-gradient);
+    pointer-events: none;
+  }
+
+  ::selection {
+    /* Blue, not red: a red wash over selected text reads like an error. */
+    background-color: #004ae726;
+    color: var(--color-fg);
+  }
+
+  /*
+   * Native <dialog> is display:none when closed. Any reset that sets `dialog { display: block }`
+   * would leave a closed dialog in the hit-testing tree and swallow clicks across the page.
+   */
+  dialog:not([open]) {
+    display: none;
+  }
+}
+
+@layer components {
+  /* --- Shell ---------------------------------------------------------------------------------- */
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  .app-navbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    height: var(--spacing-navbar);
+    flex: 0 0 auto;
+    padding-inline: 0.75rem;
+    background-color: var(--color-surface-raised);
+    border-bottom: 1px solid var(--color-border);
+    /*
+     * The template tints the navbar's leading block to match its dark sidebar. Here both are the
+     * same light surface, so the seam is a hairline and a very subtle elevation instead.
+     */
+    box-shadow: var(--shadow-raised);
+    z-index: 30;
+  }
+
+  .app-body {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .app-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: var(--spacing-sidebar);
+    flex: 0 0 auto;
+    background-color: var(--color-surface-raised);
+    border-right: 1px solid var(--color-border);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transition: width 150ms ease;
+  }
+
+  .app-sidebar[data-collapsed='true'] {
+    width: var(--spacing-sidebar-collapsed);
+  }
+
+  .app-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /*
+   * Small screens: fixed panes fight mobile browser chrome, so the shell falls back to natural
+   * document scrolling and the sidebar becomes an overlay. The sidebar is deliberately not in
+   * this release list — below 1024px it is a fixed drawer and must keep its own scroll.
+   */
+  .layout-static .app-shell,
+  .layout-static .app-content {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  /* Open drawer: freeze the page behind it so the scrim and content don't scroll away. */
+  html.nav-drawer-open,
+  html.nav-drawer-open body {
+    overflow: hidden;
+  }
+
+  @media (max-width: 1023px) {
+    .app-sidebar {
+      position: fixed;
+      inset-block: var(--spacing-navbar) 0;
+      inset-inline-start: 0;
+      z-index: 40;
+      /* Never swallow the whole screen on small phones; the scrim owns the rest. */
+      width: min(var(--spacing-sidebar), 80vw);
+      box-shadow: var(--shadow-overlay);
+      transform: translateX(-100%);
+      transition: transform 200ms ease;
+      overflow-y: auto;
+    }
+
+    .app-sidebar[data-open='true'] {
+      transform: translateX(0);
+    }
+
+    /* Tap anywhere outside the drawer to close it. */
+    .app-scrim {
+      position: fixed;
+      inset-block: var(--spacing-navbar) 0;
+      inset-inline: 0;
+      z-index: 35;
+      background-color: rgb(18 10 33 / 0.4);
+      border: 0;
+      padding: 0;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+    }
+  }
+
+  .page-header {
+    /* Transparent, per layout 2: the page title sits on the grey content background. */
+    background-color: transparent;
+    padding: 1.25rem 1.5rem 0.75rem;
+  }
+
+  .page-body {
+    padding: 0.5rem 1.5rem 2rem;
+  }
+
+  /* --- Navigation ----------------------------------------------------------------------------- */
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    margin-inline: 0.5rem;
+    border-radius: var(--radius-token);
+    color: var(--color-fg-muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .nav-link:hover {
+    background-color: var(--color-surface-hover);
+    color: var(--color-fg);
+  }
+
+  .nav-link[data-active='true'] {
+    background-color: var(--color-accent-soft);
+    color: var(--color-accent-fg);
+  }
+
+  .nav-section {
+    padding: 1rem 1.25rem 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-fg-subtle);
+  }
+
+  /* --- Surfaces ------------------------------------------------------------------------------- */
+
+  .card {
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-token-lg);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* Wraps rather than letting the action buttons run over the title in a narrow column. */
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding: 0.875rem 1.125rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .card-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+
+  /* --- Data table ----------------------------------------------------------------------------- */
+
+  .data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+  }
+
+  .data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--color-surface-sunken);
+    padding: 0.5rem 0.875rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-fg-muted);
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+  }
+
+  .data-table tbody td {
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+  }
+
+  .data-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .data-table tbody tr[data-stripe='even'] td {
+    background-color: var(--color-surface-sunken);
+  }
+
+  .data-table tbody tr:hover td {
+    background-color: var(--color-surface-hover);
+  }
+
+  .data-table tbody tr[data-selected='true'] td {
+    background-color: var(--color-surface-accent);
+  }
+
+  .data-table[data-density='compact'] tbody td {
+    padding: 0.375rem 0.75rem;
+  }
+
+  .data-table tbody tr[data-nested='true'] td {
+    background-color: color-mix(in srgb, var(--color-surface-sunken) 70%, var(--color-accent-soft));
+  }
+
+  /* --- Inspector ------------------------------------------------------------------------------ */
+
+  .inspector {
+    display: flex;
+    flex-direction: column;
+    width: var(--spacing-inspector);
+    flex: 0 0 auto;
+    background-color: var(--color-surface-raised);
+    border-left: 1px solid var(--color-border);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Animate width changes (e.g. the object-log panel's expand/collapse)
+       so the panel grows and shrinks smoothly rather than snapping. */
+    transition: width 200ms ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .inspector {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 1279px) {
+    .inspector {
+      position: fixed;
+      inset-block: var(--spacing-navbar) 0;
+      inset-inline-end: 0;
+      z-index: 40;
+      box-shadow: var(--shadow-overlay);
+    }
+  }
+}
+
+/* CPTC auth backdrop (portal sign-in) — same motion language as registration */
+@keyframes cptc-wash-shift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(-8%, 6%, 0) scale(1.12);
+  }
+  66% {
+    transform: translate3d(7%, -8%, 0) scale(1.08);
+  }
+}
+@keyframes cptc-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate3d(14%, -16%, 0) scale(1.22);
+    opacity: 1;
+  }
+}
+@keyframes cptc-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate3d(-16%, 12%, 0) scale(1.28);
+    opacity: 1;
+  }
+}
+@keyframes cptc-drift-c {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate3d(12%, 14%, 0) scale(1.18);
+    opacity: 1;
+  }
+}
+@keyframes cptc-drift-d {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate3d(-14%, -12%, 0) scale(1.3);
+    opacity: 0.95;
+  }
+}
+@keyframes cptc-facet-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--rot, 0deg));
+    opacity: 0.22;
+  }
+  50% {
+    transform: translateY(-36px) rotate(calc(var(--rot, 0deg) + 12deg));
+    opacity: 0.4;
+  }
+}
+@keyframes cptc-grid-pan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 112px 112px;
+  }
+}
+
+.cptc-bg-anim [data-anim] {
+  will-change: transform, opacity, background-position;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cptc-bg-anim [data-anim] {
+    animation: none !important;
+  }
+}

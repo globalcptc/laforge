@@ -1,0 +1,7 @@
+script:
+  name: harden-web
+  language: bash
+  source: harden-web.sh
+  validate:
+    - file_contains: { path: /etc/nginx/nginx.conf, text: "server_tokens off" }
+    - file_absent: /var/www/html/index.nginx-debian.html

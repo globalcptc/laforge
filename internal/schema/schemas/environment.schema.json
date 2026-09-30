@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://laforge.dev/schema/environment.json",
+  "$comment": "See host.schema.json's own $comment for why every field lives inside the `environment:` object, name included. No container_fallback_policy -- explicitly dropped ('No policy knob in the environment file'). access is documented in the Operating a live build section, not the main Environment example, but is a real field. teams is required only when there is no `extends`.",
+  "type": "object",
+  "required": ["environment"],
+  "additionalProperties": false,
+  "properties": {
+    "environment": {
+      "type": "object",
+      "description": "An environment: one game or test -- the file a build starts from. Lives at the repo root, one per event, and never mentions a builder or an IP supply so it can be reused year to year on any hoster.",
+      "required": ["name"],
+      "if": { "not": { "required": ["extends"] } },
+      "then": { "required": ["teams"] },
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique name for this environment."
+        },
+        "schema": {
+          "type": "integer",
+          "description": "Schema/format version of this environment file."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of the game."
+        },
+        "teams": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of teams. Every team gets an identical copy of the topology below -- nothing is ever templated per team."
+        },
+        "root_password": {
+          "type": "string",
+          "description": "A password stored in the clear on purpose -- content credentials exist to be found during the competition, not to be real secrets."
+        },
+        "start": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the event starts."
+        },
+        "stop": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the event ends."
+        },
+        "dns": {
+          "$ref": "common.json#/$defs/dnsBlock",
+          "description": "DNS settings for the environment. A records for every host/container are generated automatically; this adds anything else.",
+          "example": "dns:\n  type: bind\n  root_domain: allports.local\n  dns_servers: [8.8.8.8, 8.8.4.4]\n  ntp_servers: [129.6.15.28]\n  records:\n    - { name: intranet, type: CNAME, target: web01 }\n    - { name: mail, type: MX, target: mail01, priority: 10 }"
+        },
+        "access": {
+          "$ref": "common.json#/$defs/accessList",
+          "description": "The planned student access schedule (e.g. closing overnight on a multi-day event). Per-team overrides during a live event happen from the UI/API, not here.",
+          "example": "access:\n  - { open: 2026-10-01T09:00:00Z, close: 2026-10-01T18:00:00Z }\n  - { open: 2026-10-02T09:00:00Z, close: 2026-10-02T17:00:00Z }"
+        },
+        "vars": {
+          "$ref": "common.json#/$defs/varsMap",
+          "description": "Key/value data cascaded down to every network, host, and container in this environment.",
+          "example": "vars:\n  company: Allports"
+        },
+        "tags": {
+          "$ref": "common.json#/$defs/tagsMap",
+          "description": "Labels for searching, grouping, and ad-hoc targeting.",
+          "example": "tags:\n  event: test"
+        },
+        "findings": {
+          "$ref": "common.json#/$defs/findingsList",
+          "description": "Findings that belong to the environment as a whole.",
+          "example": "findings:\n  - severity: 3\n    difficulty: 1\n    description: Root password is stored in the clear (intentional)"
+        },
+        "networks": {
+          "$ref": "common.json#/$defs/networksTopology",
+          "description": "The topology: for each network, which hosts/containers are placed on it, how many copies, and their addresses/public ports. The only place hosts, containers, and networks are connected to each other.",
+          "example": "networks:\n  prod:\n    database:\n      - as: db01\n        last_octet: 11\n    webserver:\n      - as: web01\n        last_octet: 12\n  vdi:\n    kali:\n      - as: kali01\n        last_octet: 201\n      - as: kali02\n        last_octet: 202\n  vpn:\n    wireguard:\n      - as: wireguard\n        last_octet: 5\n        public:\n          tcp: [\"51820\"]\n          udp: [\"51820\"]"
+        },
+        "extends": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of another environment this one extends. The base is deep-merged in: scalar fields (teams, start, stop, root_password) the child sets win, otherwise they're inherited; vars/tags merge key-by-key (child wins); access windows and findings are the base's followed by the child's; the networks topology is a union, where the child's placement of an object on a network replaces the base's for that object. `teams` becomes optional here since it's inherited."
+        }
+      }
+    }
+  }
+}

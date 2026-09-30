@@ -1,0 +1,56 @@
+# Rust build artifacts (agent/) -- large, fully reproducible from
+# Cargo.toml/Cargo.lock, never meant to be committed.
+agent/target/
+
+# Real config/secrets (internal/envfile, docker-compose.yml's env_file) --
+# copy .env.example to .env and fill in real values; never commit .env.
+.env
+
+# Real self-signed dev mTLS certs (scripts/gen-dev-certs.sh) -- never
+# meant to be committed, regenerate locally any time. Covers a GitHub
+# App private key too, if you keep yours here (docker-compose needs it
+# somewhere bind-mountable -- see .env.example's GITHUB_APP_PRIVATE_KEY_PATH).
+.dev-certs/
+
+# Any private key or cert, wherever it ends up -- a repo-wide safety net
+# on top of .dev-certs/ above, in case one is ever dropped somewhere
+# else (repo root, a new directory, ...). This project has no real
+# private key that's ever meant to be committed.
+*.pem
+*.key
+
+# Stray compiled binaries at the repo root -- `go build ./cmd/laforge-x`
+# (a single main package, no `-o`) writes its output here by default;
+# `go build ./...`/`go vet ./...` (the whole module) don't. Real build
+# output always belongs in /tmp or a proper -o path, never committed.
+/laforge
+/laforge-api
+/laforge-orchestrator
+/laforge-gateway
+/laforge-runner
+/laforge-migrate
+/laforge-lsp
+/laforge-agent-factory
+
+# macOS
+.DS_Store
+
+# Runtime working data the API server writes locally (cloned repos, build
+# outputs, logs, user data) -- never part of the repo, and can contain
+# fetched private content, so keep it out of a public checkout entirely.
+/server/
+
+# Prebuilt base agent binaries -- reproducible build artifacts cross-compiled
+# from agent/ (static musl + windows-gnu), staged here for the runner to patch
+# per host and delivered at deploy time. Not source; kept out of the repo.
+# Without them the system still runs; it just deploys hosts without an agent.
+/.agent-base/
+
+# Claude Code project/editor config -- local developer tooling, not product.
+/.claude/
+
+# Release build artifacts (Makefile / release workflow output).
+/dist/
+
+# LICENSE copied into the VS Code extension at package time (see Makefile vsix).
+editors/vscode/LICENSE

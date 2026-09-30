@@ -1,0 +1,22 @@
+# The plan's own hosts/database.yaml example has `create_user: { name:
+# dbadmin, groups: [sudo] }` with no password, but the Agent Commands table
+# and the Steps section's OTHER create_user example both say password is
+# required. Fixed here rather than reproducing a broken example -- flagged
+# back as a one-line doc inconsistency worth resolving upstream.
+host:
+  name: database
+  os: ubuntu22
+  size: medium
+  disk: 80
+  ports: { tcp: ["3306"] }
+  tags: { role: db }
+  vars: { db_admin_pw: "ChangeMe123!" }
+  findings:
+    - severity: 5
+      difficulty: 1
+      description: Database root password is the default
+  steps:
+    - script: base
+    - script: install-mysql
+    - create_user: { name: dbadmin, password: "{{ vars.db_admin_pw }}", groups: [sudo] }
+    - script: create-linux-users

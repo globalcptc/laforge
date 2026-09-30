@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://laforge.dev/schema/script.json",
+  "$comment": "See host.schema.json's own $comment for why every field lives inside the `script:` object, name included. No vars (scripts don't have them) and no extends (the Extends section explicitly lists environment/network/host/container only, not script). people IS included despite the Script section's prose field-list omitting it, because the canonical vuln-sqli.yaml example uses it and 'Referencing a person' says people works on any object -- flagged back to the team as a doc inconsistency worth a one-line fix.",
+  "type": "object",
+  "required": ["script"],
+  "additionalProperties": false,
+  "properties": {
+    "script": {
+      "type": "object",
+      "description": "A script: a template rendered per host per team before it runs, with the environment's vars, people data, and host/network facts all in scope. Its source file (.sh/.ps1/.bat) sits beside this definition. Its own tags, findings, and validate checks flow to every host or container that runs it.",
+      "required": ["name", "language", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique name for this script, referenced from a `script:` step by name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what this script does."
+        },
+        "language": {
+          "enum": ["bash", "powershell", "batch"],
+          "description": "Which interpreter runs the rendered source."
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path to the script's source file, alongside this definition (e.g. \"install-mysql.sh\")."
+        },
+        "timeout": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Seconds before the step running this script is killed as failed."
+        },
+        "args": {
+          "type": "array",
+          "description": "Extra arguments passed to the script when it runs.",
+          "example": "args: [\"--force\"]",
+          "items": { "type": "string" }
+        },
+        "ignore_errors": {
+          "type": "boolean",
+          "description": "If true, a non-zero exit from this script warns instead of failing the whole build."
+        },
+        "tags": {
+          "$ref": "common.json#/$defs/tagsMap",
+          "description": "Labels for searching, grouping, and ad-hoc targeting. Flow to every host/container running this script.",
+          "example": "tags:\n  category: web"
+        },
+        "findings": {
+          "$ref": "common.json#/$defs/findingsList",
+          "description": "Findings this script introduces. Travel with the script to every host or container that runs it.",
+          "example": "findings:\n  - severity: 4\n    difficulty: 2\n    description: SQL injection in the login form"
+        },
+        "people": {
+          "$ref": "common.json#/$defs/peopleList",
+          "description": "People this script concerns, e.g. accounts it creates.",
+          "example": "people: [jdoe]"
+        },
+        "validate": {
+          "$ref": "common.json#/$defs/validateList",
+          "description": "Checks run after every host/container's execution of this script, on top of any validate block on the step itself.",
+          "example": "validate:\n  - file_contains: { path: /etc/nginx/nginx.conf, text: \"server_tokens off\" }\n  - file_absent: /var/www/html/index.nginx-debian.html"
+        }
+      }
+    }
+  }
+}

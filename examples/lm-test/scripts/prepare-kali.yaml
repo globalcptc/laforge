@@ -1,0 +1,6 @@
+script:
+  name: prepare-kali
+  description: Update tooling and set the student login banner
+  language: bash
+  source: prepare-kali.sh
+  timeout: 600

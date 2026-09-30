@@ -1,0 +1,6 @@
+host:
+  name: m7-webserver
+  os: alpine
+  size: small
+  disk: 5
+  ports: { tcp: ["80"] }
