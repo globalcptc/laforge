@@ -69,6 +69,7 @@ type Build struct {
 	Status            string             `json:"status"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	AutoBuilt         bool               `json:"auto_built"`
+	ReconcileError    *string            `json:"reconcile_error"`
 }
 
 type BuilderConfig struct {

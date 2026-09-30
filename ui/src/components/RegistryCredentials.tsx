@@ -1,9 +1,15 @@
 import { useState } from 'react'
-import { KeyRound, Trash2, Plus } from 'lucide-react'
-import { useRegistryCredentials, useUpsertRegistryCredential, useDeleteRegistryCredential } from '../api/hooks'
+import { KeyRound, Trash2, Plus, FlaskConical, Boxes, Check, X, ChevronRight, ChevronDown } from 'lucide-react'
+import {
+  useRegistryCredentials,
+  useUpsertRegistryCredential,
+  useDeleteRegistryCredential,
+  useTestRegistryCredential,
+  useRegistryImages,
+} from '../api/hooks'
 import { ApiError } from '../api/client'
 import { EmptyState } from './EmptyState'
-import { Button, Card, CardHeader, Input, Label, Modal, Spinner, Table, TableScroller, Td, Th, useToast } from '../ui'
+import { Badge, Button, Card, CardHeader, Input, Label, Modal, Spinner, Table, TableScroller, Td, Th, useToast } from '../ui'
 import { useTimeFormat } from '../lib/time'
 
 // Private Docker registry credentials: a LaForge `container:` whose image ref
@@ -62,7 +68,20 @@ export function RegistryCredentials() {
 
 function CredentialRow({ host, username, added }: { host: string; username: string; added: string }) {
   const del = useDeleteRegistryCredential()
+  const test = useTestRegistryCredential()
   const toast = useToast()
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const [open, setOpen] = useState(false)
+
+  async function onTest() {
+    setResult(null)
+    try {
+      setResult(await test.mutateAsync(host))
+    } catch (e) {
+      setResult({ ok: false, message: e instanceof ApiError ? e.message : 'Test failed' })
+    }
+  }
+
   async function onDelete() {
     if (!confirm(`Delete credentials for "${host}"? Containers pulling private images from it will fail to log in.`)) return
     try {
@@ -72,17 +91,82 @@ function CredentialRow({ host, username, added }: { host: string; username: stri
       toast({ title: 'Delete failed', description: e instanceof ApiError ? e.message : 'error', tone: 'danger' })
     }
   }
+
   return (
-    <tr>
-      <Td className="font-mono text-fg">{host}</Td>
-      <Td className="text-fg-muted">{username}</Td>
-      <Td className="text-fg-muted">{added}</Td>
-      <Td className="text-right">
-        <Button variant="ghost" size="sm" onClick={onDelete} disabled={del.isPending} className="text-danger hover:bg-danger-soft hover:text-danger">
-          <Trash2 size={12} /> Delete
-        </Button>
-      </Td>
-    </tr>
+    <>
+      <tr>
+        <Td className="font-mono text-fg">{host}</Td>
+        <Td className="text-fg-muted">{username}</Td>
+        <Td className="text-fg-muted">{added}</Td>
+        <Td className="text-right whitespace-nowrap">
+          <div className="inline-flex items-center gap-2">
+            {result && (
+              <Badge tone={result.ok ? 'success' : 'danger'} title={result.message}>
+                {result.ok ? <Check size={11} /> : <X size={11} />}
+                {result.ok ? 'Authenticated' : 'Failed'}
+              </Badge>
+            )}
+            <Button variant="ghost" size="sm" onClick={onTest} disabled={test.isPending}>
+              {test.isPending ? <Spinner /> : <FlaskConical size={12} />} Test
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setOpen((v) => !v)}>
+              {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <Boxes size={12} /> Images
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onDelete} disabled={del.isPending} className="text-danger hover:bg-danger-soft hover:text-danger">
+              <Trash2 size={12} /> Delete
+            </Button>
+          </div>
+        </Td>
+      </tr>
+      {open && (
+        <tr>
+          <Td colSpan={4} className="bg-surface-sunken">
+            <RegistryImages host={host} />
+          </Td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+// RegistryImages lists what a registry actually holds -- repositories and their
+// tags -- so an author can confirm the image they pushed is there and named the
+// way their `container:` references it.
+function RegistryImages({ host }: { host: string }) {
+  const { data, isLoading, error } = useRegistryImages(host)
+  if (isLoading)
+    return (
+      <div className="flex items-center gap-2 p-2 text-sm text-fg-muted">
+        <Spinner /> Loading images…
+      </div>
+    )
+  if (error) return <div className="p-2 text-sm text-danger">{error instanceof ApiError ? error.message : 'Failed to load images'}</div>
+  if (!data) return null
+  if (!data.supported) return <div className="p-2 text-sm text-fg-muted">{data.message}</div>
+  if (data.images.length === 0) return <div className="p-2 text-sm text-fg-muted">No images found in this registry yet.</div>
+  return (
+    <div className="flex flex-col gap-2 p-2">
+      {data.truncated && <div className="text-xs text-fg-subtle">Showing the first {data.images.length} repositories.</div>}
+      <ul className="flex flex-col gap-1.5">
+        {data.images.map((img) => (
+          <li key={img.repository} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="font-mono text-sm text-fg">{img.repository}</span>
+            {img.error ? (
+              <span className="text-xs text-danger">{img.error}</span>
+            ) : img.tags.length === 0 ? (
+              <span className="text-xs text-fg-subtle">no tags</span>
+            ) : (
+              img.tags.map((t) => (
+                <Badge key={t} tone="info">
+                  {t}
+                </Badge>
+              ))
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

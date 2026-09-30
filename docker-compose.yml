@@ -106,7 +106,6 @@ services:
     volumes:
       - ./examples/lm-test:/content:ro
       - ./.certs:/.certs:ro
-      - ./.agent-base:/.agent-base:ro
     environment:
       # Agent auto-delivery (internal/agentdelivery): the addresses a
       # DEPLOYED HOST reaches back on -- NOT localhost, but an address real
@@ -120,7 +119,11 @@ services:
       API_PUBLIC_URL: "${API_PUBLIC_URL:-}"
       GATEWAY_CA_CERT: /.certs/ca.crt
       GATEWAY_CA_KEY: /.certs/ca.key
-      AGENT_BASE_DIR: /.agent-base
+      # The agent base binaries are baked into the runner image (Dockerfile's
+      # agent-build stage), not mounted from the host -- built on `up --build`,
+      # never committed. AGENT_BASE_DIR is already set to /agent-base in the
+      # image; restated here for visibility.
+      AGENT_BASE_DIR: /agent-base
       # Deploy hosts in parallel instead of one at a time. Each worker is an
       # independent lease->execute loop; FOR UPDATE SKIP LOCKED keeps concurrent
       # leasing safe, and a worker only holds a DB connection briefly (the

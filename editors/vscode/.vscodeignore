@@ -11,3 +11,4 @@ src/**
 .vscodeignore
 node_modules/.bin/**
 **/.DS_Store
+icon.svg

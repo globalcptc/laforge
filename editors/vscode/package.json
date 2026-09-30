@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "publisher": "globalcptc",
   "license": "SEE LICENSE IN LICENSE",
+  "icon": "icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/globalcptc/laforge.git"

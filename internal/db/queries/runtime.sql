@@ -9,6 +9,11 @@ SELECT * FROM build WHERE id = $1;
 -- name: SetBuildStatus :one
 UPDATE build SET status = $2 WHERE id = $1 RETURNING *;
 
+-- name: SetBuildReconcileError :exec
+-- The last reconcile outcome for a build: the error text when reconcile failed
+-- (e.g. build/builder incompatibility), or NULL to clear it after a success.
+UPDATE build SET reconcile_error = $2 WHERE id = $1;
+
 -- name: ApplyContentRevisionToBuild :one
 -- handleApplyUpcoming's own mechanism: reuses an existing build's own
 -- row for a new commit instead of creating a second one -- team/

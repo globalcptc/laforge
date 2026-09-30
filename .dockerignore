@@ -1,0 +1,12 @@
+# Keep the Docker build context lean: build artifacts and local-only dirs that
+# no build stage needs (the Go stages build from source; the agent-build stage
+# needs agent/ source but NOT its local target/).
+.git
+**/target
+ui/node_modules
+ui/dist
+dist
+.certs
+.dev-certs
+.agent-base
+**/.DS_Store

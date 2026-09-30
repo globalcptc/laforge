@@ -139,3 +139,43 @@ func (s *Server) handleGetBuilderConnection(w http.ResponseWriter, r *http.Reque
 		Discovery: *disc,
 	})
 }
+
+// handleListBuilderConfigImages re-discovers what a builder's hoster actually
+// holds -- the images (and pools/networks) you could map an os to -- keyed by
+// builder NAME, resolving its stored credential. Unlike handleGetBuilderConnection
+// (which takes a raw credential id), this is what `laforge images <b> --available`
+// and the config editor both want: "show me what this builder can see."
+func (s *Server) handleListBuilderConfigImages(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.requireInstanceAdmin(r.Context(), r); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	cfg, err := s.Queries.GetBuilderConfigByName(r.Context(), r.PathValue("name"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, errors.New("no such builder"))
+		return
+	}
+	if !cfg.IncusCredentialID.Valid {
+		writeError(w, http.StatusBadRequest, errors.New("this builder has no stored connection to discover from (env-credential builders like AWS/OpenStack don't keep one)"))
+		return
+	}
+	cred, err := s.Queries.GetBuilderCredential(r.Context(), cfg.IncusCredentialID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, errors.New("the builder's stored connection credential is missing"))
+		return
+	}
+	onb, err := builder.OnboarderFor(onboarderKindOrDefault(cfg.Kind))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	disc, err := onb.Rediscover(r.Context(), builder.Connection{
+		APIURL: cred.ApiUrl, ServerName: cred.ServerName, ServerFingerprint: cred.ServerFingerprint,
+		ServerCertPEM: []byte(cred.ServerCertPem), ClientCertPEM: []byte(cred.ClientCertPem), ClientKeyPEM: []byte(cred.ClientKeyPem),
+	})
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, disc)
+}

@@ -506,6 +506,36 @@ export function useDeleteRegistryCredential() {
   })
 }
 
+// Confirm a stored registry credential actually authenticates. A failed test
+// is a normal result (ok:false with a reason), not a thrown error.
+export function useTestRegistryCredential() {
+  return useMutation<{ ok: boolean; message: string }, unknown, string>({
+    mutationFn: (host: string) => api.post(`/registry-credentials/${encodeURIComponent(host)}/test`),
+  })
+}
+
+export interface RegistryImage {
+  repository: string
+  tags: string[]
+  error?: string
+}
+export interface RegistryImagesView {
+  supported: boolean
+  message?: string
+  truncated: boolean
+  images: RegistryImage[]
+}
+
+// Browse the images a registry holds (repositories + tags). `host` null keeps
+// it idle until the operator opens the browser for a specific registry.
+export function useRegistryImages(host: string | null) {
+  return useQuery<RegistryImagesView>({
+    queryKey: ['registry-images', host],
+    queryFn: () => api.get(`/registry-credentials/${encodeURIComponent(host as string)}/images`),
+    enabled: !!host,
+  })
+}
+
 export function useImageBuildLog(buildId: string | undefined) {
   return useQuery<ImageBuildLogResponse>({
     queryKey: ['image-build-log', buildId],

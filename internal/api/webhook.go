@@ -454,17 +454,29 @@ func (s *Server) reconcile(ctx context.Context, repo db.Repository, branch, ref 
 		return err
 	}
 
+	slug := repo.GithubOwner + "/" + repo.GithubRepo
+
 	builds, err := s.Queries.ListConfiguredBuildsByRepositoryAndBranch(ctx, db.ListConfiguredBuildsByRepositoryAndBranchParams{
 		RepositoryID: repo.ID, Branch: branch,
 	})
 	if err != nil {
 		return fmt.Errorf("listing configured builds: %w", err)
 	}
+	// Every decision below used to be silent, so a push that didn't deploy gave
+	// no signal at all. Log each outcome so "auto-deploy didn't deploy" is
+	// always diagnosable from the orchestrator/api log.
 	if !ciPassed {
+		log.Printf("webhook: %s@%s: commit did not pass validation (%d issue(s)) -- not auto-building", slug, branch, len(result.Issues))
 		return nil
 	}
+	if len(builds) == 0 {
+		log.Printf("webhook: %s@%s: content valid, but no configured build tracks this branch -- nothing to auto-build (add one to enable auto-deploy)", slug, branch)
+		return nil
+	}
+	log.Printf("webhook: %s@%s: content valid, %d configured build(s) track this branch", slug, branch, len(builds))
 	for _, cb := range builds {
 		if cb.CompetitionStarted {
+			log.Printf("webhook: %s@%s: configured build %s is competition-locked -- not auto-deploying", slug, branch, cb.ID)
 			continue
 		}
 		updated, err := s.Queries.SetConfiguredBuildCurrentRevision(ctx, db.SetConfiguredBuildCurrentRevisionParams{
@@ -481,12 +493,13 @@ func (s *Server) reconcile(ctx context.Context, repo db.Repository, branch, ref 
 			// (e.g. the environment file itself is broken in a way schema
 			// validation didn't catch) shouldn't block every other
 			// configured build tracking this same branch from building.
-			log.Printf("webhook: auto-build for configured build %s: %v", cb.ID, err)
+			log.Printf("webhook: %s@%s: auto-build for configured build %s failed: %v", slug, branch, cb.ID, err)
 			continue
 		}
 
 		if !cb.AutoDeployEnabled {
-			continue // planned build sits, waiting for a manual Deploy
+			log.Printf("webhook: %s@%s: auto-built build %s; auto-deploy is OFF for this configured build, leaving it planned (click Deploy, or turn auto-deploy on)", slug, branch, build.ID)
+			continue
 		}
 
 		live, err := s.Queries.GetLiveDeployingBuildForConfiguredBuild(ctx, cb.ID)
@@ -494,8 +507,9 @@ func (s *Server) reconcile(ctx context.Context, repo db.Repository, branch, ref 
 			// Something is already live: apply the new commit to it in place
 			// rather than deploying a second copy (the fresh planned build
 			// above is left as a record of the commit).
+			log.Printf("webhook: %s@%s: applying commit to live build %s in place", slug, branch, live.ID)
 			if _, err := s.applyUpcoming(ctx, live, updated); err != nil && !errors.Is(err, errNothingPending) {
-				log.Printf("webhook: auto-deploy for configured build %s: %v", cb.ID, err)
+				log.Printf("webhook: %s@%s: auto-deploy (apply-in-place) for configured build %s: %v", slug, branch, cb.ID, err)
 			}
 			continue
 		}
@@ -507,8 +521,10 @@ func (s *Server) reconcile(ctx context.Context, repo db.Repository, branch, ref 
 		// auto-deploy on, "deploy" means deploy: take the fresh build straight
 		// to 'deploying' rather than leaving it 'planned' for a manual click.
 		if _, err := s.Queries.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: build.ID, Status: "deploying"}); err != nil {
-			log.Printf("webhook: auto-deploying fresh build for configured build %s: %v", cb.ID, err)
+			log.Printf("webhook: %s@%s: auto-deploying fresh build %s failed: %v", slug, branch, build.ID, err)
+			continue
 		}
+		log.Printf("webhook: %s@%s: auto-deploying build %s", slug, branch, build.ID)
 	}
 	return nil
 }

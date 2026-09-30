@@ -170,6 +170,7 @@ func (s *Server) routes() {
 
 	mux.HandleFunc("GET /builder-configs", s.handleListBuilderConfigs)
 	mux.HandleFunc("GET /builder-configs/{name}", s.handleGetBuilderConfig)
+	mux.HandleFunc("GET /builder-configs/{name}/available-images", s.handleListBuilderConfigImages)
 	mux.HandleFunc("POST /builder-configs/{name}", s.handleCreateBuilderConfig)
 	mux.HandleFunc("PUT /builder-configs/{name}", s.handleUpdateBuilderConfig)
 	mux.HandleFunc("DELETE /builder-configs/{name}", s.handleDeleteBuilderConfig)
@@ -182,6 +183,8 @@ func (s *Server) routes() {
 
 	mux.HandleFunc("GET /registry-credentials", s.handleListRegistryCredentials)
 	mux.HandleFunc("PUT /registry-credentials", s.handleUpsertRegistryCredential)
+	mux.HandleFunc("POST /registry-credentials/{host}/test", s.handleTestRegistryCredential)
+	mux.HandleFunc("GET /registry-credentials/{host}/images", s.handleListRegistryImages)
 	mux.HandleFunc("DELETE /registry-credentials/{host}", s.handleDeleteRegistryCredential)
 
 	mux.HandleFunc("GET /auth/client-id", s.handleClientID)

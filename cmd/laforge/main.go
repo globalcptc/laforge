@@ -54,6 +54,12 @@ func main() {
 		err = runRepo(os.Args[2:])
 	case "build":
 		err = runBuild(os.Args[2:])
+	case "builders":
+		err = runBuilders(os.Args[2:])
+	case "images":
+		err = runImages(os.Args[2:])
+	case "registries":
+		err = runRegistries(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -105,6 +111,18 @@ http://localhost:8080).
   laforge build lock <configured-build-id> <on|off>
       Configure a build (branch + environment file + builder config),
       inspect it, and toggle follow mode / the competition-started lock.
+
+  laforge builders
+      List every configured builder: name, kind, hoster URL, and image count.
+
+  laforge images <builder> [--available]
+      List the os -> image mappings a builder provides (the names content's
+      os: field must match) -- use it to diagnose a "builder has no image for
+      X" deploy block. With --available, instead list every image the builder's
+      hoster actually holds, discovered live: what you could map an os to.
+
+  laforge registries
+      List the stored private-registry credentials (host + username).
 
   laforge version
       Print the build version.`)

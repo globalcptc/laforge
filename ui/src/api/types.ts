@@ -74,6 +74,11 @@ export interface Build {
   environment_name: string
   status: 'planned' | 'deploying' | 'building' | 'finished' | 'failed' | 'tearing_down' | 'torn_down' | 'purged'
   created_at: string
+  // Set when the orchestrator's last reconcile of this build failed for a
+  // reason that isn't a content error -- most often a build/builder
+  // incompatibility (the chosen builder has no image for an os the environment
+  // uses). Null/absent when the last reconcile succeeded.
+  reconcile_error?: string | null
   // Commit facts + auto/manual marker are populated by the builds listing
   // (GET /repos/{id}/builds); other endpoints returning a bare build omit them.
   commit_sha?: string

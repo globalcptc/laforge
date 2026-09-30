@@ -119,8 +119,27 @@ func main() {
 				log.Printf("resolving content for build %s: %v", b.ID, err)
 				continue
 			}
+			recErr := ""
 			if err := orchestrator.Reconcile(ctx, pool, dir, b.ID); err != nil {
 				log.Printf("reconcile build %s: %v", b.ID, err)
+				recErr = err.Error()
+			}
+			// Record the reconcile outcome on the build so the UI can show WHY a
+			// build is stuck -- a build/builder incompatibility, say, which
+			// isn't a content error and so can't be caught by `laforge check`.
+			// Write only on a change to avoid an UPDATE every tick.
+			prev := ""
+			if b.ReconcileError != nil {
+				prev = *b.ReconcileError
+			}
+			if recErr != prev {
+				var val *string
+				if recErr != "" {
+					val = &recErr
+				}
+				if e := q.SetBuildReconcileError(ctx, db.SetBuildReconcileErrorParams{ID: b.ID, ReconcileError: val}); e != nil {
+					log.Printf("recording reconcile error for build %s: %v", b.ID, e)
+				}
 			}
 			// Enforce visible_from once a team's networks are up (peering + ACLs
 			// via the builder). Deliberately after Reconcile, which drives the

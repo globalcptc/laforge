@@ -78,6 +78,7 @@ CREATE TABLE public.build (
     status text DEFAULT 'planned'::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     auto_built boolean DEFAULT false NOT NULL,
+    reconcile_error text,
     CONSTRAINT build_status_check CHECK ((status = ANY (ARRAY['planned'::text, 'deploying'::text, 'building'::text, 'finished'::text, 'failed'::text, 'tearing_down'::text, 'torn_down'::text, 'purged'::text])))
 );
 --

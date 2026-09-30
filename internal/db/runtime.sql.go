@@ -13,7 +13,7 @@ import (
 )
 
 const applyContentRevisionToBuild = `-- name: ApplyContentRevisionToBuild :one
-UPDATE build SET content_revision_id = $2, environment_name = $3 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built
+UPDATE build SET content_revision_id = $2, environment_name = $3 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error
 `
 
 type ApplyContentRevisionToBuildParams struct {
@@ -39,6 +39,7 @@ func (q *Queries) ApplyContentRevisionToBuild(ctx context.Context, arg ApplyCont
 		&i.Status,
 		&i.CreatedAt,
 		&i.AutoBuilt,
+		&i.ReconcileError,
 	)
 	return i, err
 }
@@ -170,7 +171,7 @@ func (q *Queries) CreateAgentStepEvent(ctx context.Context, arg CreateAgentStepE
 const createBuild = `-- name: CreateBuild :one
 INSERT INTO build (configured_build_id, content_revision_id, environment_name, auto_built)
 VALUES ($1, $2, $3, $4)
-RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built
+RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error
 `
 
 type CreateBuildParams struct {
@@ -196,6 +197,7 @@ func (q *Queries) CreateBuild(ctx context.Context, arg CreateBuildParams) (Build
 		&i.Status,
 		&i.CreatedAt,
 		&i.AutoBuilt,
+		&i.ReconcileError,
 	)
 	return i, err
 }
@@ -508,7 +510,7 @@ func (q *Queries) FailTask(ctx context.Context, arg FailTaskParams) (Task, error
 }
 
 const getBuild = `-- name: GetBuild :one
-SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built FROM build WHERE id = $1
+SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error FROM build WHERE id = $1
 `
 
 func (q *Queries) GetBuild(ctx context.Context, id pgtype.UUID) (Build, error) {
@@ -522,6 +524,7 @@ func (q *Queries) GetBuild(ctx context.Context, id pgtype.UUID) (Build, error) {
 		&i.Status,
 		&i.CreatedAt,
 		&i.AutoBuilt,
+		&i.ReconcileError,
 	)
 	return i, err
 }
@@ -612,7 +615,7 @@ func (q *Queries) GetFakeHosterResource(ctx context.Context, externalRef string)
 }
 
 const getLiveDeployingBuildForConfiguredBuild = `-- name: GetLiveDeployingBuildForConfiguredBuild :one
-SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built FROM build
+SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error FROM build
 WHERE configured_build_id = $1 AND status IN ('deploying', 'building', 'finished')
 ORDER BY created_at DESC
 LIMIT 1
@@ -637,6 +640,7 @@ func (q *Queries) GetLiveDeployingBuildForConfiguredBuild(ctx context.Context, c
 		&i.Status,
 		&i.CreatedAt,
 		&i.AutoBuilt,
+		&i.ReconcileError,
 	)
 	return i, err
 }
@@ -901,7 +905,7 @@ func (q *Queries) LeaseTaskForBuild(ctx context.Context, arg LeaseTaskForBuildPa
 }
 
 const listActiveBuilds = `-- name: ListActiveBuilds :many
-SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, content_revision.repository_id, content_revision.commit_sha,
+SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error, content_revision.repository_id, content_revision.commit_sha,
        COALESCE(content_revision.ref, '')::text AS ref,
        COALESCE(configured_build.builder_config_name, '')::text AS builder_config_name
 FROM build
@@ -919,6 +923,7 @@ type ListActiveBuildsRow struct {
 	Status            string             `json:"status"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	AutoBuilt         bool               `json:"auto_built"`
+	ReconcileError    *string            `json:"reconcile_error"`
 	RepositoryID      pgtype.UUID        `json:"repository_id"`
 	CommitSha         string             `json:"commit_sha"`
 	Ref               string             `json:"ref"`
@@ -946,6 +951,7 @@ func (q *Queries) ListActiveBuilds(ctx context.Context) ([]ListActiveBuildsRow, 
 			&i.Status,
 			&i.CreatedAt,
 			&i.AutoBuilt,
+			&i.ReconcileError,
 			&i.RepositoryID,
 			&i.CommitSha,
 			&i.Ref,
@@ -962,7 +968,7 @@ func (q *Queries) ListActiveBuilds(ctx context.Context) ([]ListActiveBuildsRow, 
 }
 
 const listBuildsByRepository = `-- name: ListBuildsByRepository :many
-SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built,
+SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error,
        content_revision.commit_sha,
        content_revision.commit_message,
        content_revision.committed_at
@@ -980,6 +986,7 @@ type ListBuildsByRepositoryRow struct {
 	Status            string             `json:"status"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	AutoBuilt         bool               `json:"auto_built"`
+	ReconcileError    *string            `json:"reconcile_error"`
 	CommitSha         string             `json:"commit_sha"`
 	CommitMessage     *string            `json:"commit_message"`
 	CommittedAt       pgtype.Timestamptz `json:"committed_at"`
@@ -1006,6 +1013,7 @@ func (q *Queries) ListBuildsByRepository(ctx context.Context, repositoryID pgtyp
 			&i.Status,
 			&i.CreatedAt,
 			&i.AutoBuilt,
+			&i.ReconcileError,
 			&i.CommitSha,
 			&i.CommitMessage,
 			&i.CommittedAt,
@@ -1021,7 +1029,7 @@ func (q *Queries) ListBuildsByRepository(ctx context.Context, repositoryID pgtyp
 }
 
 const listBuildsByStatus = `-- name: ListBuildsByStatus :many
-SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built FROM build WHERE status = ANY($1::text[])
+SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error FROM build WHERE status = ANY($1::text[])
 `
 
 func (q *Queries) ListBuildsByStatus(ctx context.Context, statuses []string) ([]Build, error) {
@@ -1041,6 +1049,7 @@ func (q *Queries) ListBuildsByStatus(ctx context.Context, statuses []string) ([]
 			&i.Status,
 			&i.CreatedAt,
 			&i.AutoBuilt,
+			&i.ReconcileError,
 		); err != nil {
 			return nil, err
 		}
@@ -1751,8 +1760,24 @@ func (q *Queries) RetryTask(ctx context.Context, arg RetryTaskParams) (Task, err
 	return i, err
 }
 
+const setBuildReconcileError = `-- name: SetBuildReconcileError :exec
+UPDATE build SET reconcile_error = $2 WHERE id = $1
+`
+
+type SetBuildReconcileErrorParams struct {
+	ID             pgtype.UUID `json:"id"`
+	ReconcileError *string     `json:"reconcile_error"`
+}
+
+// The last reconcile outcome for a build: the error text when reconcile failed
+// (e.g. build/builder incompatibility), or NULL to clear it after a success.
+func (q *Queries) SetBuildReconcileError(ctx context.Context, arg SetBuildReconcileErrorParams) error {
+	_, err := q.db.Exec(ctx, setBuildReconcileError, arg.ID, arg.ReconcileError)
+	return err
+}
+
 const setBuildStatus = `-- name: SetBuildStatus :one
-UPDATE build SET status = $2 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built
+UPDATE build SET status = $2 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error
 `
 
 type SetBuildStatusParams struct {
@@ -1771,6 +1796,7 @@ func (q *Queries) SetBuildStatus(ctx context.Context, arg SetBuildStatusParams) 
 		&i.Status,
 		&i.CreatedAt,
 		&i.AutoBuilt,
+		&i.ReconcileError,
 	)
 	return i, err
 }
