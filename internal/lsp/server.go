@@ -7,6 +7,8 @@ import (
 
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
+
+	"github.com/globalcptc/laforge/internal/updatecheck"
 )
 
 // Server is the go.lsp.dev/protocol.Server implementation -- the only
@@ -17,8 +19,9 @@ import (
 type Server struct {
 	protocol.UnimplementedServer
 
-	client protocol.Client
-	ws     *Workspace
+	client  protocol.Client
+	ws      *Workspace
+	version string // the laforge-lsp build version, for the update nudge
 
 	// lastDiagURIs is every file that had at least one diagnostic on the
 	// previous publishAll pass. Diagnostics(w) only ever returns entries
@@ -31,8 +34,11 @@ type Server struct {
 	lastDiagURIs map[uri.URI]bool
 }
 
-func NewServer() *Server {
-	return &Server{}
+// NewServer builds the language server. version is the laforge-lsp binary's
+// build version (stamped at release, "dev" for a local build), used only for
+// the one-time "a newer release is available" nudge on Initialized.
+func NewServer(version string) *Server {
+	return &Server{version: version}
 }
 
 // SetClient wires the server-initiated notifications (PublishDiagnostics)
@@ -65,13 +71,38 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 			HoverProvider:      protocol.Boolean(true),
 			DefinitionProvider: protocol.Boolean(true),
 		},
-		ServerInfo: protocol.ServerInfo{Name: "laforge-lsp", Version: protocol.NewOptional("0.1.0")},
+		ServerInfo: protocol.ServerInfo{Name: "laforge-lsp", Version: protocol.NewOptional(s.version)},
 	}, nil
 }
 
 func (s *Server) Initialized(ctx context.Context, params *protocol.InitializedParams) error {
 	s.publishAll(ctx)
+	s.notifyIfOutdated()
 	return nil
+}
+
+// notifyIfOutdated checks this language server's build version against the
+// latest GitHub release once per session and, if a newer one exists, surfaces
+// a warning in the editor (window/showMessage). It runs in the background so
+// it never delays startup, and is best-effort throughout: a dev build,
+// LAFORGE_NO_UPDATE_CHECK, no client, or any network error just means no
+// nudge. People routinely forget to rebuild laforge-lsp after pulling, so an
+// editor that silently speaks an old protocol to a moved-on schema is exactly
+// what this catches.
+func (s *Server) notifyIfOutdated() {
+	if s.client == nil || updatecheck.Disabled() || !updatecheck.IsRelease(s.version) {
+		return
+	}
+	go func() {
+		res, err := updatecheck.Check(context.Background(), s.version)
+		if err != nil || !res.Outdated {
+			return
+		}
+		_ = s.client.ShowMessage(context.Background(), &protocol.ShowMessageParams{
+			Type:    protocol.MessageTypeWarning,
+			Message: res.Message(),
+		})
+	}()
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

@@ -30,6 +30,11 @@ type stdio struct {
 
 func (stdio) Close() error { return nil }
 
+// version is the language server's build version, stamped in at release time
+// via -ldflags "-X main.version=<tag>" (see the Makefile), matching the CLI.
+// "dev" for a plain `go build`/`go install`, which skips the update check.
+var version = "dev"
+
 func main() {
 	// Every real diagnostic message goes to stderr, never stdout --
 	// stdout is the LSP wire itself; writing anything else to it would
@@ -37,7 +42,7 @@ func main() {
 	log.SetOutput(os.Stderr)
 	log.SetFlags(0)
 
-	srv := lsp.NewServer()
+	srv := lsp.NewServer(version)
 	ctx := context.Background()
 	stream := jsonrpc2.NewHeaderStream(stdio{Reader: os.Stdin, Writer: os.Stdout})
 

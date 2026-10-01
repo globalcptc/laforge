@@ -67,7 +67,7 @@ func TestServerIntegrationRealJSONRPCRoundTrip(t *testing.T) {
 	left, right := jsonrpc2.NewChannelStreamPair(16)
 	ctx := context.Background()
 
-	srv := NewServer()
+	srv := NewServer("dev") // "dev" skips the update-check network call in tests
 	_, serverConn, client := protocol.NewServer(ctx, srv, left)
 	srv.SetClient(client)
 	t.Cleanup(func() { serverConn.Close() })

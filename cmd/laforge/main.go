@@ -11,18 +11,21 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/globalcptc/laforge/internal/hclconvert"
 	"github.com/globalcptc/laforge/internal/loader"
 	"github.com/globalcptc/laforge/internal/render"
+	"github.com/globalcptc/laforge/internal/updatecheck"
 )
 
 // version is the CLI's build version, stamped in at release time via
@@ -35,6 +38,7 @@ func main() {
 		usage()
 		os.Exit(2)
 	}
+	warnIfOutdated()
 	var err error
 	switch os.Args[1] {
 	case "version", "-v", "--version":
@@ -79,6 +83,27 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
+	}
+}
+
+// warnIfOutdated prints a one-line nudge to stderr when a newer LaForge
+// release exists on GitHub. Best-effort and throttled: the GitHub API is hit
+// at most once a day (cached under ~/.laforge), a dev build or
+// LAFORGE_NO_UPDATE_CHECK skips it entirely, and any error (offline,
+// rate-limited) is silently ignored -- it must never get in the way of the
+// command the person actually ran. stderr, never stdout, so machine-readable
+// output (e.g. `laforge access --json`) stays clean.
+func warnIfOutdated() {
+	if updatecheck.Disabled() || !updatecheck.IsRelease(version) {
+		return
+	}
+	cachePath := ""
+	if dir, err := laforgeDir(); err == nil {
+		cachePath = filepath.Join(dir, "update-check.json")
+	}
+	res, _ := updatecheck.CheckCached(context.Background(), version, cachePath, 24*time.Hour)
+	if msg := res.Message(); msg != "" {
+		fmt.Fprintln(os.Stderr, msg)
 	}
 }
 
@@ -156,7 +181,11 @@ http://localhost:8080).
       and the login username/password) for handing to teams.
 
   laforge version
-      Print the build version.`)
+      Print the build version.
+
+Every command checks GitHub once a day for a newer release and prints a one-line
+nudge to stderr if this build is behind. Set LAFORGE_NO_UPDATE_CHECK=1 to turn
+it off (e.g. in CI or air-gapped runs).`)
 }
 
 func repoFlag(fs *flag.FlagSet) *string {
