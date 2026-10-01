@@ -58,7 +58,12 @@ openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
   -extfile <(printf 'subjectAltName=%s' "$san")
 
 rm -f server.csr
-chmod 600 ca.key server.key
+# ca.key is the CA signing secret -- only the runner reads it, and that
+# container is root, so keep it 600. The gateway, however, runs as a NON-root
+# container user (distroless :nonroot) and must read the server key + the CA
+# cert, so those stay world-readable (644) or the gateway can't start.
+chmod 600 ca.key
+chmod 644 ca.crt server.crt server.key
 echo
 echo "certs written to $out/ for gateway host: $host ($san)"
 echo "ca.key is the runner's signing key -- keep it secret; back it up and restrict it in production."
