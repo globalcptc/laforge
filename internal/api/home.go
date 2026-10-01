@@ -8,6 +8,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -76,11 +77,22 @@ type homeBuilder struct {
 	Counts       homeCounts `json:"counts"`
 }
 
+// Attention categories: the stable key a person's "close this item" dismissal
+// is recorded against (the Reason text varies with counts, so it can't be the
+// key). Kept in sync with the attention() calls in handleGetHome.
+const (
+	attnBuildFailed   = "build_failed"
+	attnObjectsFailed = "objects_failed"
+	attnAgentsMissing = "agents_missing"
+	attnStepsFailed   = "steps_failed"
+)
+
 type homeAttention struct {
 	RepositoryID    string `json:"repository_id"`
 	Repository      string `json:"repository"`
 	BuildID         string `json:"build_id"`
 	EnvironmentName string `json:"environment_name"`
+	Category        string `json:"category"`
 	Reason          string `json:"reason"`
 }
 
@@ -120,6 +132,14 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 		if _, ok := visible[b.RepositoryID]; ok {
 			builds = append(builds, b)
 			buildIDs = append(buildIDs, b.ID)
+		}
+	}
+
+	// Items this person has closed, so the needs-attention list leaves them out.
+	dismissed := map[string]bool{}
+	if dis, err := s.Queries.ListAttentionDismissalsByAccount(ctx, sess.AccountID); err == nil {
+		for _, d := range dis {
+			dismissed[d.BuildID.String()+"|"+d.Category] = true
 		}
 	}
 
@@ -178,23 +198,32 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 			bl.Counts.add(hb.Counts)
 		}
 
-		attention := func(reason string) {
+		// Needs-attention is scoped to a person's OWN builds: with several
+		// people sharing a repository the cross-build list grew unusable, so a
+		// build created by someone else (or auto-built, which has no owner)
+		// never lands in this person's list. Each item can also be individually
+		// closed (attention_dismissal), which filters it out by category here.
+		owned := b.CreatedByAccountID.Valid && b.CreatedByAccountID == sess.AccountID
+		attention := func(category, reason string) {
+			if !owned || dismissed[hb.ID+"|"+category] {
+				return
+			}
 			view.Attention = append(view.Attention, homeAttention{
 				RepositoryID: repo.ID.String(), Repository: repo.GithubOwner + "/" + repo.GithubRepo,
-				BuildID: hb.ID, EnvironmentName: hb.EnvironmentName, Reason: reason,
+				BuildID: hb.ID, EnvironmentName: hb.EnvironmentName, Category: category, Reason: reason,
 			})
 		}
 		if hb.Status == "failed" {
-			attention("Build failed")
+			attention(attnBuildFailed, "Build failed")
 		}
 		if n := hb.Counts.ObjectsFailed; n > 0 {
-			attention(plural(n, "object failed", "objects failed"))
+			attention(attnObjectsFailed, plural(n, "object failed", "objects failed"))
 		}
 		if n := hb.Counts.AgentsMissing; n > 0 {
-			attention(plural(n, "agent missing", "agents missing"))
+			attention(attnAgentsMissing, plural(n, "agent missing", "agents missing"))
 		}
 		if n := hb.Counts.TasksFailed; n > 0 {
-			attention(plural(n, "step failed", "steps failed"))
+			attention(attnStepsFailed, plural(n, "step failed", "steps failed"))
 		}
 	}
 
@@ -285,6 +314,77 @@ func (s *Server) homeBuild(r *http.Request, b db.ListActiveBuildsRow) (homeBuild
 		json.Unmarshal(env.Access, &hb.Access) // malformed/absent -- no countdown, not a failure
 	}
 	return hb, nil
+}
+
+// attentionCategories is the closed set a dismissal may name -- guards against
+// a client writing arbitrary rows, and keeps them aligned with handleGetHome.
+var attentionCategories = map[string]bool{
+	attnBuildFailed: true, attnObjectsFailed: true, attnAgentsMissing: true, attnStepsFailed: true,
+}
+
+type attentionDismissRequest struct {
+	BuildID  string `json:"build_id"`
+	Category string `json:"category"`
+}
+
+// handleDismissAttention closes one needs-attention item for the requesting
+// person (POST /home/attention/dismiss). Per-account: it only affects this
+// person's own home view, never anyone else's. handleUndismissAttention
+// reopens it. Both require the build to be one the person can see.
+func (s *Server) handleDismissAttention(w http.ResponseWriter, r *http.Request) {
+	s.setAttentionDismissed(w, r, true)
+}
+
+func (s *Server) handleUndismissAttention(w http.ResponseWriter, r *http.Request) {
+	s.setAttentionDismissed(w, r, false)
+}
+
+func (s *Server) setAttentionDismissed(w http.ResponseWriter, r *http.Request, dismiss bool) {
+	ctx := r.Context()
+	sess, err := s.sessionFromRequest(r)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	var req attentionDismissRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if !attentionCategories[req.Category] {
+		writeError(w, http.StatusBadRequest, fmt.Errorf("unknown attention category %q", req.Category))
+		return
+	}
+	buildID, err := parseUUID(req.BuildID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, fmt.Errorf("invalid build_id: %w", err))
+		return
+	}
+	// The build must be one this person can see at all (its repository is
+	// visible to them) -- no writing dismissal rows against unseen builds.
+	repo, err := s.Queries.GetBuildRepository(ctx, buildID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, errors.New("no such build"))
+		return
+	}
+	if len(s.visibleRepositories(ctx, sess, []db.Repository{repo})) == 0 {
+		writeError(w, http.StatusNotFound, errors.New("no such build"))
+		return
+	}
+	if dismiss {
+		err = s.Queries.DismissAttention(ctx, db.DismissAttentionParams{
+			AccountID: sess.AccountID, BuildID: buildID, Category: req.Category,
+		})
+	} else {
+		err = s.Queries.UndismissAttention(ctx, db.UndismissAttentionParams{
+			AccountID: sess.AccountID, BuildID: buildID, Category: req.Category,
+		})
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func plural(n int, one, many string) string {

@@ -66,15 +66,23 @@ type AgentTask struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
+type AttentionDismissal struct {
+	AccountID pgtype.UUID        `json:"account_id"`
+	BuildID   pgtype.UUID        `json:"build_id"`
+	Category  string             `json:"category"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type Build struct {
-	ID                pgtype.UUID        `json:"id"`
-	ConfiguredBuildID pgtype.UUID        `json:"configured_build_id"`
-	ContentRevisionID pgtype.UUID        `json:"content_revision_id"`
-	EnvironmentName   string             `json:"environment_name"`
-	Status            string             `json:"status"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	AutoBuilt         bool               `json:"auto_built"`
-	ReconcileError    *string            `json:"reconcile_error"`
+	ID                 pgtype.UUID        `json:"id"`
+	ConfiguredBuildID  pgtype.UUID        `json:"configured_build_id"`
+	ContentRevisionID  pgtype.UUID        `json:"content_revision_id"`
+	EnvironmentName    string             `json:"environment_name"`
+	Status             string             `json:"status"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	AutoBuilt          bool               `json:"auto_built"`
+	ReconcileError     *string            `json:"reconcile_error"`
+	CreatedByAccountID pgtype.UUID        `json:"created_by_account_id"`
 }
 
 type BuilderConfig struct {

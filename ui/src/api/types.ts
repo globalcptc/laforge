@@ -777,5 +777,14 @@ export interface HomeData {
   totals: HomeCounts
   repositories: { id: string; github_owner: string; github_repo: string; builds: HomeBuild[] }[]
   builders: { name: string; kind: string; active_builds: number; counts: HomeCounts }[]
-  attention: { repository_id: string; repository: string; build_id: string; environment_name: string; reason: string }[]
+  attention: AttentionItem[]
+}
+
+export interface AttentionItem {
+  repository_id: string
+  repository: string
+  build_id: string
+  environment_name: string
+  category: string
+  reason: string
 }

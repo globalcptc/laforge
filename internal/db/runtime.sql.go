@@ -13,7 +13,7 @@ import (
 )
 
 const applyContentRevisionToBuild = `-- name: ApplyContentRevisionToBuild :one
-UPDATE build SET content_revision_id = $2, environment_name = $3 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error
+UPDATE build SET content_revision_id = $2, environment_name = $3 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id
 `
 
 type ApplyContentRevisionToBuildParams struct {
@@ -40,6 +40,7 @@ func (q *Queries) ApplyContentRevisionToBuild(ctx context.Context, arg ApplyCont
 		&i.CreatedAt,
 		&i.AutoBuilt,
 		&i.ReconcileError,
+		&i.CreatedByAccountID,
 	)
 	return i, err
 }
@@ -169,16 +170,17 @@ func (q *Queries) CreateAgentStepEvent(ctx context.Context, arg CreateAgentStepE
 }
 
 const createBuild = `-- name: CreateBuild :one
-INSERT INTO build (configured_build_id, content_revision_id, environment_name, auto_built)
-VALUES ($1, $2, $3, $4)
-RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error
+INSERT INTO build (configured_build_id, content_revision_id, environment_name, auto_built, created_by_account_id)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id
 `
 
 type CreateBuildParams struct {
-	ConfiguredBuildID pgtype.UUID `json:"configured_build_id"`
-	ContentRevisionID pgtype.UUID `json:"content_revision_id"`
-	EnvironmentName   string      `json:"environment_name"`
-	AutoBuilt         bool        `json:"auto_built"`
+	ConfiguredBuildID  pgtype.UUID `json:"configured_build_id"`
+	ContentRevisionID  pgtype.UUID `json:"content_revision_id"`
+	EnvironmentName    string      `json:"environment_name"`
+	AutoBuilt          bool        `json:"auto_built"`
+	CreatedByAccountID pgtype.UUID `json:"created_by_account_id"`
 }
 
 func (q *Queries) CreateBuild(ctx context.Context, arg CreateBuildParams) (Build, error) {
@@ -187,6 +189,7 @@ func (q *Queries) CreateBuild(ctx context.Context, arg CreateBuildParams) (Build
 		arg.ContentRevisionID,
 		arg.EnvironmentName,
 		arg.AutoBuilt,
+		arg.CreatedByAccountID,
 	)
 	var i Build
 	err := row.Scan(
@@ -198,6 +201,7 @@ func (q *Queries) CreateBuild(ctx context.Context, arg CreateBuildParams) (Build
 		&i.CreatedAt,
 		&i.AutoBuilt,
 		&i.ReconcileError,
+		&i.CreatedByAccountID,
 	)
 	return i, err
 }
@@ -511,7 +515,7 @@ func (q *Queries) FailTask(ctx context.Context, arg FailTaskParams) (Task, error
 }
 
 const getBuild = `-- name: GetBuild :one
-SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error FROM build WHERE id = $1
+SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id FROM build WHERE id = $1
 `
 
 func (q *Queries) GetBuild(ctx context.Context, id pgtype.UUID) (Build, error) {
@@ -526,6 +530,7 @@ func (q *Queries) GetBuild(ctx context.Context, id pgtype.UUID) (Build, error) {
 		&i.CreatedAt,
 		&i.AutoBuilt,
 		&i.ReconcileError,
+		&i.CreatedByAccountID,
 	)
 	return i, err
 }
@@ -617,7 +622,7 @@ func (q *Queries) GetFakeHosterResource(ctx context.Context, externalRef string)
 }
 
 const getLiveDeployingBuildForConfiguredBuild = `-- name: GetLiveDeployingBuildForConfiguredBuild :one
-SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error FROM build
+SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id FROM build
 WHERE configured_build_id = $1 AND status IN ('deploying', 'building', 'finished')
 ORDER BY created_at DESC
 LIMIT 1
@@ -643,6 +648,7 @@ func (q *Queries) GetLiveDeployingBuildForConfiguredBuild(ctx context.Context, c
 		&i.CreatedAt,
 		&i.AutoBuilt,
 		&i.ReconcileError,
+		&i.CreatedByAccountID,
 	)
 	return i, err
 }
@@ -971,7 +977,7 @@ func (q *Queries) LeaseTaskForBuild(ctx context.Context, arg LeaseTaskForBuildPa
 }
 
 const listActiveBuilds = `-- name: ListActiveBuilds :many
-SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error, content_revision.repository_id, content_revision.commit_sha,
+SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error, build.created_by_account_id, content_revision.repository_id, content_revision.commit_sha,
        COALESCE(content_revision.ref, '')::text AS ref,
        COALESCE(configured_build.builder_config_name, '')::text AS builder_config_name
 FROM build
@@ -982,18 +988,19 @@ ORDER BY build.created_at DESC
 `
 
 type ListActiveBuildsRow struct {
-	ID                pgtype.UUID        `json:"id"`
-	ConfiguredBuildID pgtype.UUID        `json:"configured_build_id"`
-	ContentRevisionID pgtype.UUID        `json:"content_revision_id"`
-	EnvironmentName   string             `json:"environment_name"`
-	Status            string             `json:"status"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	AutoBuilt         bool               `json:"auto_built"`
-	ReconcileError    *string            `json:"reconcile_error"`
-	RepositoryID      pgtype.UUID        `json:"repository_id"`
-	CommitSha         string             `json:"commit_sha"`
-	Ref               string             `json:"ref"`
-	BuilderConfigName string             `json:"builder_config_name"`
+	ID                 pgtype.UUID        `json:"id"`
+	ConfiguredBuildID  pgtype.UUID        `json:"configured_build_id"`
+	ContentRevisionID  pgtype.UUID        `json:"content_revision_id"`
+	EnvironmentName    string             `json:"environment_name"`
+	Status             string             `json:"status"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	AutoBuilt          bool               `json:"auto_built"`
+	ReconcileError     *string            `json:"reconcile_error"`
+	CreatedByAccountID pgtype.UUID        `json:"created_by_account_id"`
+	RepositoryID       pgtype.UUID        `json:"repository_id"`
+	CommitSha          string             `json:"commit_sha"`
+	Ref                string             `json:"ref"`
+	BuilderConfigName  string             `json:"builder_config_name"`
 }
 
 // Home's "what is live right now": every build that has (or is getting,
@@ -1018,6 +1025,7 @@ func (q *Queries) ListActiveBuilds(ctx context.Context) ([]ListActiveBuildsRow, 
 			&i.CreatedAt,
 			&i.AutoBuilt,
 			&i.ReconcileError,
+			&i.CreatedByAccountID,
 			&i.RepositoryID,
 			&i.CommitSha,
 			&i.Ref,
@@ -1034,7 +1042,7 @@ func (q *Queries) ListActiveBuilds(ctx context.Context) ([]ListActiveBuildsRow, 
 }
 
 const listBuildsByRepository = `-- name: ListBuildsByRepository :many
-SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error,
+SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error, build.created_by_account_id,
        content_revision.commit_sha,
        content_revision.commit_message,
        content_revision.committed_at
@@ -1045,17 +1053,18 @@ ORDER BY build.created_at DESC
 `
 
 type ListBuildsByRepositoryRow struct {
-	ID                pgtype.UUID        `json:"id"`
-	ConfiguredBuildID pgtype.UUID        `json:"configured_build_id"`
-	ContentRevisionID pgtype.UUID        `json:"content_revision_id"`
-	EnvironmentName   string             `json:"environment_name"`
-	Status            string             `json:"status"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	AutoBuilt         bool               `json:"auto_built"`
-	ReconcileError    *string            `json:"reconcile_error"`
-	CommitSha         string             `json:"commit_sha"`
-	CommitMessage     *string            `json:"commit_message"`
-	CommittedAt       pgtype.Timestamptz `json:"committed_at"`
+	ID                 pgtype.UUID        `json:"id"`
+	ConfiguredBuildID  pgtype.UUID        `json:"configured_build_id"`
+	ContentRevisionID  pgtype.UUID        `json:"content_revision_id"`
+	EnvironmentName    string             `json:"environment_name"`
+	Status             string             `json:"status"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	AutoBuilt          bool               `json:"auto_built"`
+	ReconcileError     *string            `json:"reconcile_error"`
+	CreatedByAccountID pgtype.UUID        `json:"created_by_account_id"`
+	CommitSha          string             `json:"commit_sha"`
+	CommitMessage      *string            `json:"commit_message"`
+	CommittedAt        pgtype.Timestamptz `json:"committed_at"`
 }
 
 // "Every build of this repository" (Build → Builds) --
@@ -1080,6 +1089,7 @@ func (q *Queries) ListBuildsByRepository(ctx context.Context, repositoryID pgtyp
 			&i.CreatedAt,
 			&i.AutoBuilt,
 			&i.ReconcileError,
+			&i.CreatedByAccountID,
 			&i.CommitSha,
 			&i.CommitMessage,
 			&i.CommittedAt,
@@ -1095,7 +1105,7 @@ func (q *Queries) ListBuildsByRepository(ctx context.Context, repositoryID pgtyp
 }
 
 const listBuildsByStatus = `-- name: ListBuildsByStatus :many
-SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error FROM build WHERE status = ANY($1::text[])
+SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id FROM build WHERE status = ANY($1::text[])
 `
 
 func (q *Queries) ListBuildsByStatus(ctx context.Context, statuses []string) ([]Build, error) {
@@ -1116,6 +1126,7 @@ func (q *Queries) ListBuildsByStatus(ctx context.Context, statuses []string) ([]
 			&i.CreatedAt,
 			&i.AutoBuilt,
 			&i.ReconcileError,
+			&i.CreatedByAccountID,
 		); err != nil {
 			return nil, err
 		}
@@ -1868,7 +1879,7 @@ func (q *Queries) SetBuildReconcileError(ctx context.Context, arg SetBuildReconc
 }
 
 const setBuildStatus = `-- name: SetBuildStatus :one
-UPDATE build SET status = $2 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error
+UPDATE build SET status = $2 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id
 `
 
 type SetBuildStatusParams struct {
@@ -1888,6 +1899,7 @@ func (q *Queries) SetBuildStatus(ctx context.Context, arg SetBuildStatusParams) 
 		&i.CreatedAt,
 		&i.AutoBuilt,
 		&i.ReconcileError,
+		&i.CreatedByAccountID,
 	)
 	return i, err
 }

@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/globalcptc/laforge/internal/db"
 )
@@ -54,7 +55,11 @@ import (
 // auto records whether this build was created automatically off a CI-passing
 // push (reconcile) or by a deliberate operator "Build Now" (handleTriggerBuild),
 // stored on the build so the UI can flag the automatic ones.
-func (s *Server) triggerBuild(ctx context.Context, cb db.ConfiguredBuild, auto bool) (db.Build, error) {
+// createdBy is the account that triggered this build, recorded as its owner so
+// Home can scope its needs-attention list to a person's own builds. Pass a zero
+// UUID for an auto-built (webhook) build, which has no operator and so belongs
+// to no one.
+func (s *Server) triggerBuild(ctx context.Context, cb db.ConfiguredBuild, auto bool, createdBy pgtype.UUID) (db.Build, error) {
 	env, err := s.Queries.GetEnvironmentByRevisionAndPath(ctx, db.GetEnvironmentByRevisionAndPathParams{
 		ContentRevisionID: cb.CurrentContentRevisionID, Path: cb.EnvironmentPath,
 	})
@@ -65,7 +70,7 @@ func (s *Server) triggerBuild(ctx context.Context, cb db.ConfiguredBuild, auto b
 		return db.Build{}, err
 	}
 	return s.Queries.CreateBuild(ctx, db.CreateBuildParams{
-		ConfiguredBuildID: cb.ID, ContentRevisionID: cb.CurrentContentRevisionID, EnvironmentName: env.Name, AutoBuilt: auto,
+		ConfiguredBuildID: cb.ID, ContentRevisionID: cb.CurrentContentRevisionID, EnvironmentName: env.Name, AutoBuilt: auto, CreatedByAccountID: createdBy,
 	})
 }
 
@@ -188,7 +193,7 @@ func (s *Server) handleTriggerBuild(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, errors.New("no CI-passed commit tracked yet for this configured build"))
 		return
 	}
-	build, err := s.triggerBuild(r.Context(), cb, false)
+	build, err := s.triggerBuild(r.Context(), cb, false, sess.AccountID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return

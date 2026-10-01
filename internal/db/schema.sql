@@ -99,7 +99,18 @@ CREATE TABLE public.build (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     auto_built boolean DEFAULT false NOT NULL,
     reconcile_error text,
+    created_by_account_id uuid,
     CONSTRAINT build_status_check CHECK ((status = ANY (ARRAY['planned'::text, 'deploying'::text, 'building'::text, 'finished'::text, 'failed'::text, 'tearing_down'::text, 'torn_down'::text, 'purged'::text])))
+);
+--
+-- Name: attention_dismissal; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.attention_dismissal (
+    account_id uuid NOT NULL,
+    build_id uuid NOT NULL,
+    category text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT attention_dismissal_pkey PRIMARY KEY (account_id, build_id, category)
 );
 --
 -- Name: builder_config; Type: TABLE; Schema: public; Owner: -

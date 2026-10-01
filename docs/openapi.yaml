@@ -331,7 +331,19 @@ paths:
     post: { tags: [Auth], summary: Set the account's IANA timezone preference., responses: { '200': { description: OK }, '400': { $ref: '#/components/responses/BadRequest' } } }
 
   /home:
-    get: { tags: [Repositories], summary: Home dashboard — visible repositories and cross-build attention items., responses: { '200': { description: OK } } }
+    get: { tags: [Repositories], summary: Home dashboard — visible repositories and the current user's own needs-attention items., responses: { '200': { description: OK } } }
+  /home/attention/dismiss:
+    post:
+      tags: [Repositories]
+      summary: Close one needs-attention item for the current user (per-person; persists until the build goes away).
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [build_id, category], properties: { build_id: { type: string, format: uuid }, category: { type: string, enum: [build_failed, objects_failed, agents_missing, steps_failed] } } } } } }
+      responses: { '204': { description: Dismissed }, '400': { description: Unknown category or bad build_id }, '404': { description: Build not visible } }
+  /home/attention/undismiss:
+    post:
+      tags: [Repositories]
+      summary: Reopen a previously-closed needs-attention item for the current user.
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [build_id, category], properties: { build_id: { type: string, format: uuid }, category: { type: string, enum: [build_failed, objects_failed, agents_missing, steps_failed] } } } } } }
+      responses: { '204': { description: Reopened }, '400': { description: Unknown category or bad build_id }, '404': { description: Build not visible } }
   /repos:
     get: { tags: [Repositories], summary: List registered repositories visible to the caller., responses: { '200': { description: OK } } }
     post: { tags: [Repositories], summary: Register a repository (requires GitHub push)., responses: { '201': { description: Created }, '403': { $ref: '#/components/responses/Forbidden' } } }

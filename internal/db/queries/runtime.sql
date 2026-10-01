@@ -1,6 +1,6 @@
 -- name: CreateBuild :one
-INSERT INTO build (configured_build_id, content_revision_id, environment_name, auto_built)
-VALUES ($1, $2, $3, $4)
+INSERT INTO build (configured_build_id, content_revision_id, environment_name, auto_built, created_by_account_id)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: GetBuild :one

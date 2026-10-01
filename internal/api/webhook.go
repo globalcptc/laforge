@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/ghclient"
@@ -486,7 +487,7 @@ func (s *Server) reconcile(ctx context.Context, repo db.Repository, branch, ref 
 			return fmt.Errorf("advancing configured build %s: %w", cb.ID, err)
 		}
 
-		build, err := s.triggerBuild(ctx, updated, true)
+		build, err := s.triggerBuild(ctx, updated, true, pgtype.UUID{}) // auto-built: no operator owns it
 		if err != nil {
 			// Not fatal to the webhook as a whole -- current_content_revision_id
 			// already moved for real, and a build that failed to resolve

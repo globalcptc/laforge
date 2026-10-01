@@ -85,6 +85,22 @@ export function useHome() {
   return useQuery<HomeData>({ queryKey: ['home'], queryFn: () => api.get('/home'), refetchInterval: 15_000 })
 }
 
+// useDismissAttention closes (or reopens) one of the current user's own
+// needs-attention items on Home. Per-person and server-side
+// (internal/api/home.go), so it sticks across reloads and devices; invalidates
+// the Home aggregate so the item disappears immediately.
+export function useDismissAttention() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { buildId: string; category: string; dismissed: boolean }) =>
+      api.post<void>(`/home/attention/${v.dismissed ? 'dismiss' : 'undismiss'}`, {
+        build_id: v.buildId,
+        category: v.category,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['home'] }),
+  })
+}
+
 // useExternalAccess lists a build's realized external endpoints (the public
 // address:port for each host's `public:` ports). Refreshed periodically so
 // endpoints appear as the orchestrator realizes them during a deploy.

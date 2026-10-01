@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
-import { AlertTriangle, Boxes, ChevronRight, FolderGit2, GitCommit, Network, Server, ServerCog, Users } from 'lucide-react'
-import { useHome, useMe } from '../api/hooks'
-import type { HomeBuild, HomeCounts, HomeData } from '../api/types'
+import { AlertTriangle, Boxes, ChevronRight, FolderGit2, GitCommit, Network, Server, ServerCog, Users, X } from 'lucide-react'
+import { useDismissAttention, useHome, useMe } from '../api/hooks'
+import type { AttentionItem, HomeBuild, HomeCounts, HomeData } from '../api/types'
 import { AccessCountdown } from '../components/AccessCountdown'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
 import { KIND_LABEL, type Kind } from '../components/builder-wizard/model'
-import { Card, PageHeader, Spinner, cn } from '../ui'
+import { Button, Card, PageHeader, Spinner, cn } from '../ui'
 
 // Home: what is live right now and whether it's healthy,
 // without walking into each repository. Totals across everything, anything
@@ -61,19 +61,8 @@ function Dashboard({ data }: { data: HomeData }) {
             <AlertTriangle size={14} /> Needs attention
           </div>
           <div className="divide-y divide-danger/20 border-t border-danger/20">
-            {data.attention.map((a, i) => (
-              <Link
-                key={i}
-                to="/repos/$repoId/builds/$buildId"
-                params={{ repoId: a.repository_id, buildId: a.build_id }}
-                className="flex items-center gap-3 px-4 py-2 text-sm text-fg hover:bg-danger/10"
-              >
-                <span className="font-medium">{a.reason}</span>
-                <span className="text-fg-muted">
-                  {a.repository} · {a.environment_name}
-                </span>
-                <ChevronRight size={14} className="ml-auto text-fg-subtle" />
-              </Link>
+            {data.attention.map((a) => (
+              <AttentionRow key={`${a.build_id}:${a.category}`} item={a} />
             ))}
           </div>
         </div>
@@ -111,6 +100,39 @@ function Dashboard({ data }: { data: HomeData }) {
         ))
       )}
     </>
+  )
+}
+
+// AttentionRow is one needs-attention item: it clicks through to the build,
+// with a close button that dismisses the item for this person (server-side, so
+// it stays closed). Close is a sibling of the Link, not nested inside it, so a
+// click on the X never also navigates.
+function AttentionRow({ item }: { item: AttentionItem }) {
+  const dismiss = useDismissAttention()
+  return (
+    <div className="flex items-center gap-3 px-4 py-2 text-sm text-fg hover:bg-danger/10">
+      <Link
+        to="/repos/$repoId/builds/$buildId"
+        params={{ repoId: item.repository_id, buildId: item.build_id }}
+        className="flex min-w-0 flex-1 items-center gap-3"
+      >
+        <span className="font-medium">{item.reason}</span>
+        <span className="truncate text-fg-muted">
+          {item.repository} · {item.environment_name}
+        </span>
+        <ChevronRight size={14} className="ml-auto shrink-0 text-fg-subtle" />
+      </Link>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Close this item"
+        title="Close"
+        disabled={dismiss.isPending}
+        onClick={() => dismiss.mutate({ buildId: item.build_id, category: item.category, dismissed: true })}
+      >
+        <X size={14} />
+      </Button>
+    </div>
   )
 }
 

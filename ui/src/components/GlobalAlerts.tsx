@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Bell } from 'lucide-react'
-import { useHome } from '../api/hooks'
-import { AnchoredPopover, cn } from '../ui'
+import { Bell, X } from 'lucide-react'
+import { useDismissAttention, useHome } from '../api/hooks'
+import { AnchoredPopover, Button, cn } from '../ui'
 
 // App-wide, high-level alerts (direct product feedback: alerts should be
 // "app-wide high-level alerts, not per-build"). Driven by the same
@@ -20,6 +20,7 @@ export function GlobalAlerts() {
   const anchorRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
+  const dismiss = useDismissAttention()
   const alerts = home?.attention ?? []
   const count = alerts.length
 
@@ -72,18 +73,29 @@ export function GlobalAlerts() {
           ) : (
             <div className="divide-y divide-border">
               {alerts.map((a) => (
-                <Link
-                  key={`${a.build_id}:${a.reason}`}
-                  to="/repos/$repoId/builds/$buildId"
-                  params={{ repoId: a.repository_id, buildId: a.build_id }}
-                  onClick={() => setOpen(false)}
-                  className="block px-3 py-2 hover:bg-surface-hover"
-                >
-                  <div className="text-sm font-medium text-danger">{a.reason}</div>
-                  <div className="mt-0.5 truncate text-xs text-fg-muted">
-                    {a.environment_name} · {a.repository}
-                  </div>
-                </Link>
+                <div key={`${a.build_id}:${a.category}`} className="flex items-center gap-1 pr-1 hover:bg-surface-hover">
+                  <Link
+                    to="/repos/$repoId/builds/$buildId"
+                    params={{ repoId: a.repository_id, buildId: a.build_id }}
+                    onClick={() => setOpen(false)}
+                    className="block min-w-0 flex-1 px-3 py-2"
+                  >
+                    <div className="text-sm font-medium text-danger">{a.reason}</div>
+                    <div className="mt-0.5 truncate text-xs text-fg-muted">
+                      {a.environment_name} · {a.repository}
+                    </div>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Close this item"
+                    title="Close"
+                    disabled={dismiss.isPending}
+                    onClick={() => dismiss.mutate({ buildId: a.build_id, category: a.category, dismissed: true })}
+                  >
+                    <X size={13} />
+                  </Button>
+                </div>
               ))}
             </div>
           )}

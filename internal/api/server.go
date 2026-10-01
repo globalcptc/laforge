@@ -156,6 +156,8 @@ func (s *Server) routes() {
 	mux.HandleFunc("POST /repos", s.handleCreateRepo)
 	mux.HandleFunc("GET /repos", s.handleListRepos)
 	mux.HandleFunc("GET /home", s.handleGetHome)
+	mux.HandleFunc("POST /home/attention/dismiss", s.handleDismissAttention)
+	mux.HandleFunc("POST /home/attention/undismiss", s.handleUndismissAttention)
 	mux.HandleFunc("GET /agent-binary/{id}", s.handleGetAgentBinary)
 	mux.HandleFunc("GET /builders", s.handleListBuilders)
 	mux.HandleFunc("GET /repos/{id}", s.handleGetRepo)
