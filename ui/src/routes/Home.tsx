@@ -34,27 +34,14 @@ export function Home() {
 }
 
 function Dashboard({ data }: { data: HomeData }) {
-  const t = data.totals
-  const failures = t.objects_failed + t.tasks_failed
-  const agents = t.agents_healthy + t.agents_late + t.agents_missing + t.agents_booting
+  // The home page is a cross-build overview, not a build view: per-build health
+  // (failures, outstanding steps, agent status) is noise here -- it's loud and
+  // meaningless while many builds are mid-test. So this shows only what belongs
+  // at the instance level: infrastructure usage and the active builds.
   const buildersInUse = data.builders.filter((b) => b.active_builds > 0).length
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <StatTile label="Active builds" value={data.active_builds} detail={`${data.repositories.length} repositor${data.repositories.length === 1 ? 'y' : 'ies'}`} />
-        <StatTile label="Hosts" value={t.hosts} detail={`${t.containers} containers`} />
-        <StatTile label="Networks" value={t.networks} />
-        <StatTile
-          label="Agents healthy"
-          value={agents ? `${t.agents_healthy}/${agents}` : '—'}
-          detail={agents ? `${t.agents_late} late · ${t.agents_missing} missing` : 'No agents yet'}
-          tone={t.agents_missing > 0 ? 'bad' : agents > 0 && t.agents_healthy === agents ? 'good' : undefined}
-        />
-        <StatTile label="Steps outstanding" value={t.tasks_outstanding} />
-        <StatTile label="Failures" value={failures} detail={`${t.objects_failed} objects · ${t.tasks_failed} steps`} tone={failures > 0 ? 'bad' : 'good'} />
-      </div>
-
       {data.attention.length > 0 && (
         <div className="rounded-token border border-danger/30 bg-danger-soft">
           <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-danger">
@@ -133,16 +120,6 @@ function AttentionRow({ item }: { item: AttentionItem }) {
         <X size={14} />
       </Button>
     </div>
-  )
-}
-
-function StatTile({ label, value, detail, tone }: { label: string; value: ReactNode; detail?: string; tone?: 'good' | 'bad' }) {
-  return (
-    <Card className="px-4 py-3">
-      <div className="text-xs font-medium uppercase tracking-wide text-fg-muted">{label}</div>
-      <div className={cn('mt-1 text-2xl font-semibold text-fg', tone === 'bad' && 'text-danger', tone === 'good' && 'text-success')}>{value}</div>
-      {detail && <div className="mt-0.5 text-xs text-fg-muted">{detail}</div>}
-    </Card>
   )
 }
 
