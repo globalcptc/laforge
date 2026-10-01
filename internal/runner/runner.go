@@ -270,6 +270,8 @@ func (r *Runner) execute(ctx context.Context, q *db.Queries, task db.Task) (reso
 		return false, r.executeAccess(ctx, q, task)
 	case "configure_network_access":
 		return false, r.executeConfigureNetworkAccess(ctx, q, task)
+	case "configure_external_access":
+		return false, r.executeConfigureExternalAccess(ctx, q, task)
 	}
 
 	if !task.DeployedObjectID.Valid {
@@ -863,6 +865,108 @@ func (r *Runner) executeConfigureNetworkAccess(ctx context.Context, q *db.Querie
 		return fmt.Errorf("configuring network access for team %s: %w", payload.Team, err)
 	}
 	r.logEvent(ctx, q, task.BuildID, task.ID, "network_access.configured", fmt.Sprintf("team %s: %d network(s)", payload.Team, len(access)))
+	return nil
+}
+
+// executeConfigureExternalAccess realizes a team's content `public:` ports: it
+// gathers every deployed host/container whose topology copy declares public
+// ports, hands them to the builder to make externally reachable (a public IP
+// per host on AWS; a port-NAT on a shared uplink IP on Incus/MicroCloud), and
+// records the external endpoints the builder assigns in external_access for the
+// UI/CLI to surface. `public:` is declared per topology COPY, so it's keyed by
+// the copy's as-name here, not the host definition.
+func (r *Runner) executeConfigureExternalAccess(ctx context.Context, q *db.Queries, task db.Task) error {
+	b, err := r.builderFor(ctx, task)
+	if err != nil {
+		return fmt.Errorf("resolving builder: %w", err)
+	}
+	var payload struct {
+		Team string `json:"team"`
+	}
+	json.Unmarshal(task.Payload, &payload)
+	teamNum, err := strconv.ParseInt(payload.Team, 10, 32)
+	if err != nil {
+		return fmt.Errorf("configure_external_access team payload %q isn't a real team number: %w", payload.Team, err)
+	}
+	team, err := q.GetTeamByNumber(ctx, db.GetTeamByNumberParams{BuildID: task.BuildID, TeamNumber: int32(teamNum)})
+	if err != nil {
+		return fmt.Errorf("loading team %s: %w", payload.Team, err)
+	}
+	objs, err := q.ListDeployedObjectsByTeam(ctx, team.ID)
+	if err != nil {
+		return fmt.Errorf("listing team %s objects: %w", payload.Team, err)
+	}
+	repoRoot, err := r.repoRootFor(ctx, task)
+	if err != nil {
+		return fmt.Errorf("resolving checkout: %w", err)
+	}
+	c, err := loader.Load(repoRoot)
+	if err != nil {
+		return fmt.Errorf("loading content: %w", err)
+	}
+	build, err := q.GetBuild(ctx, task.BuildID)
+	if err != nil {
+		return fmt.Errorf("loading build for team %s: %w", payload.Team, err)
+	}
+	refToObjID := map[string]pgtype.UUID{}
+	var hosts []builder.ExternalHost
+	var touched []pgtype.UUID
+	for _, o := range objs {
+		if o.Kind != "host" && o.Kind != "container" {
+			continue
+		}
+		// `public:` lives on the host/container definition, so read it from there
+		// by object name (not the per-copy placement).
+		var pub *loader.Ports
+		if h := findHost(c, o.ObjectName); h != nil {
+			pub = h.Public
+		} else if ct := findContainer(c, o.ObjectName); ct != nil {
+			pub = ct.Public
+		}
+		if pub == nil || (len(pub.TCP) == 0 && len(pub.UDP) == 0) {
+			continue
+		}
+		ref := db.StrOrEmpty(o.ExternalRef)
+		if ref == "" {
+			continue // not deployed at the hoster yet
+		}
+		rctx, err := render.Resolve(c, build.EnvironmentName, db.StrOrEmpty(o.AsName), int(teamNum))
+		if err != nil {
+			return fmt.Errorf("resolving address for %s: %w", db.StrOrEmpty(o.AsName), err)
+		}
+		hosts = append(hosts, builder.ExternalHost{ExternalRef: ref, Address: rctx.Address, TCPPorts: pub.TCP, UDPPorts: pub.UDP})
+		refToObjID[ref] = o.ID
+		touched = append(touched, o.ID)
+	}
+	if len(hosts) == 0 {
+		return nil // nothing public in this team
+	}
+
+	endpoints, err := b.ConfigureExternalAccess(ctx, payload.Team, hosts)
+	if err != nil {
+		return fmt.Errorf("configuring external access for team %s: %w", payload.Team, err)
+	}
+
+	// Replace every touched object's recorded endpoints, then write what the
+	// builder returned -- so a removed public port leaves no stale row behind.
+	for _, id := range touched {
+		if err := q.DeleteExternalAccessForObject(ctx, id); err != nil {
+			return fmt.Errorf("clearing external access rows: %w", err)
+		}
+	}
+	for _, e := range endpoints {
+		id, ok := refToObjID[e.ExternalRef]
+		if !ok {
+			continue
+		}
+		if err := q.UpsertExternalAccess(ctx, db.UpsertExternalAccessParams{
+			DeployedObjectID: id, Protocol: e.Protocol, InternalPort: e.InternalPort,
+			PublicAddress: e.PublicAddress, ExternalPort: e.ExternalPort,
+		}); err != nil {
+			return fmt.Errorf("recording external access endpoint: %w", err)
+		}
+	}
+	r.logEvent(ctx, q, task.BuildID, task.ID, "external_access.configured", fmt.Sprintf("team %s: %d endpoint(s)", payload.Team, len(endpoints)))
 	return nil
 }
 

@@ -34,3 +34,11 @@ func StrOrEmpty(s *string) string {
 	}
 	return *s
 }
+
+// Int32OrZero reads a nullable int4 column back as a plain int32, NULL as 0.
+func Int32OrZero(n *int32) int32 {
+	if n == nil {
+		return 0
+	}
+	return *n
+}

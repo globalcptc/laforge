@@ -645,4 +645,15 @@ func parsePortRange(p string) (int32, int32, bool) {
 // --- DNS ------------------------------------------------------------------
 
 // Compile-time check that the draft satisfies the full Builder contract.
+// ConfigureExternalAccess (DRAFT) would make each host reachable from outside
+// the environment on its `public:` ports. On AWS this is the simple case the
+// per-builder design calls out: associate a public IP (or Elastic IP) with the
+// instance and authorize those ports in its security group, so the endpoint is
+// just <public-ip>:<port> with no remap. Not implemented yet -- returns a clear
+// error rather than silently exposing nothing, same honest-DRAFT stance as this
+// builder's security-group network access.
+func (b *Builder) ConfigureExternalAccess(ctx context.Context, team string, hosts []builder.ExternalHost) ([]builder.ExternalEndpoint, error) {
+	return nil, fmt.Errorf("external access (public: ports) on the AWS builder is not implemented yet -- it needs a public IP per host plus a security-group ingress rule per public port")
+}
+
 var _ builder.Builder = (*Builder)(nil)

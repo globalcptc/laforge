@@ -66,6 +66,8 @@ func main() {
 		err = runSchedule(os.Args[2:])
 	case "cert-status":
 		err = runCertStatus(os.Args[2:])
+	case "access":
+		err = runAccess(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -146,6 +148,12 @@ http://localhost:8080).
   laforge cert-status
       Show the agent mTLS CA and gateway certificate expiry. Exits non-zero if
       either is expired or within 3 months of expiring (handy for a monitor).
+
+  laforge access --build <id> [--csv | --json]
+      List the external endpoints a build exposes -- for each team/host, the
+      public address:port to connect to for its public: ports (e.g. RDP). With
+      --csv or --json, export the full connection detail (team, host, IP, port,
+      and the login username/password) for handing to teams.
 
   laforge version
       Print the build version.`)

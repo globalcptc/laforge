@@ -312,16 +312,13 @@ func persistContent(ctx context.Context, q *db.Queries, revID pgtype.UUID, c *lo
 					kind = "container"
 				}
 				for _, cp := range copies {
-					var public []byte
-					if cp.Public != nil {
-						public, err = json.Marshal(cp.Public)
-						if err != nil {
-							return fmt.Errorf("environment %q, placement %s/%s: %w", e.Name, networkName, cp.As, err)
-						}
-					}
+					// `public:` moved onto the host/container definition, so it's
+					// no longer a per-placement value; external access reads it from
+					// content (loader.Load), not this row. The placement.public
+					// column is left unused (nothing reads it).
 					if _, err := q.CreatePlacement(ctx, db.CreatePlacementParams{
 						EnvironmentID: envRow.ID, NetworkName: networkName, ObjectKind: kind, ObjectName: objName,
-						AsName: cp.As, LastOctet: int32(cp.LastOctet), Public: public,
+						AsName: cp.As, LastOctet: int32(cp.LastOctet), Public: nil,
 					}); err != nil {
 						return fmt.Errorf("environment %q, placement %s/%s: %w", e.Name, networkName, cp.As, err)
 					}

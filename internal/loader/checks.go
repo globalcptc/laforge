@@ -23,6 +23,7 @@ func (c *Content) crossCheck() {
 	c.checkNameCollisions()
 	c.checkDependsOn()
 	c.checkEnvironmentTopology()
+	c.checkPublicPorts()
 	c.checkPeopleReferences()
 	c.checkNetworkVisibility()
 	c.checkScriptReferences()
@@ -187,20 +188,11 @@ func (c *Content) checkDependsOnCycles() {
 }
 
 // checkEnvironmentTopology resolves every environment's `networks:` block:
-// network names must exist, object names must exist, `as` names must be
-// unique within the environment (they become hostnames), and a copy's
-// `public` ports must be a subset of that object's own declared `ports`.
+// network names must exist, object names must exist, and `as` names must be
+// unique within the environment (they become hostnames).
 func (c *Content) checkEnvironmentTopology() {
 	networks := c.networkNames()
 	objects := c.objectNames()
-
-	hostPorts := make(map[string]Ports)
-	for _, h := range c.Hosts {
-		hostPorts[h.Name] = h.Ports
-	}
-	for _, ct := range c.Containers {
-		hostPorts[ct.Name] = ct.Ports
-	}
 
 	for _, e := range c.Environments {
 		asNames := make(map[string]bool)
@@ -213,17 +205,12 @@ func (c *Content) checkEnvironmentTopology() {
 					c.addf(e.SourceFile, 0, "environment %q places %q on network %q, but no host or container named %q exists", e.Name, objName, netName, objName)
 					continue
 				}
-				declared := hostPorts[objName]
-				declaredSet := portSet(declared)
 				for _, cp := range copies {
 					if cp.As != "" {
 						if asNames[cp.As] {
 							c.addf(e.SourceFile, 0, "environment %q has two copies named %q -- `as` becomes the hostname and must be unique within the environment", e.Name, cp.As)
 						}
 						asNames[cp.As] = true
-					}
-					if cp.Public != nil {
-						checkPublicSubset(c, e, objName, cp, declaredSet)
 					}
 				}
 			}
@@ -242,16 +229,32 @@ func portSet(p Ports) map[string]bool {
 	return s
 }
 
-func checkPublicSubset(c *Content, e Environment, objName string, cp Copy, declared map[string]bool) {
-	for _, t := range cp.Public.TCP {
-		if !declared["tcp/"+t] {
-			c.addf(e.SourceFile, 0, "environment %q: copy %q of %q publishes tcp port %s, which is not in %q's own `ports`", e.Name, cp.As, objName, t, objName)
+// checkPublicPorts validates that every host/container's `public:` ports are a
+// subset of its own declared `ports` -- you can only expose a port the host
+// actually serves. `public:` is a property of the host (it lives in the host
+// file), so this is checked per definition, not per environment placement.
+func (c *Content) checkPublicPorts() {
+	check := func(file, name string, declared Ports, public *Ports) {
+		if public == nil {
+			return
+		}
+		set := portSet(declared)
+		for _, t := range public.TCP {
+			if !set["tcp/"+t] {
+				c.addf(file, 0, "%q publishes tcp port %s in `public`, which is not in its own `ports`", name, t)
+			}
+		}
+		for _, u := range public.UDP {
+			if !set["udp/"+u] {
+				c.addf(file, 0, "%q publishes udp port %s in `public`, which is not in its own `ports`", name, u)
+			}
 		}
 	}
-	for _, u := range cp.Public.UDP {
-		if !declared["udp/"+u] {
-			c.addf(e.SourceFile, 0, "environment %q: copy %q of %q publishes udp port %s, which is not in %q's own `ports`", e.Name, cp.As, objName, u, objName)
-		}
+	for _, h := range c.Hosts {
+		check(h.SourceFile, h.Name, h.Ports, h.Public)
+	}
+	for _, ct := range c.Containers {
+		check(ct.SourceFile, ct.Name, ct.Ports, ct.Public)
 	}
 }
 

@@ -86,6 +86,12 @@ type Host struct {
 	Size       string   `yaml:"size" json:"size"`
 	Disk       int      `yaml:"disk" json:"disk"`
 	Ports      Ports    `yaml:"ports,omitempty" json:"ports,omitempty"`
+	// Public is the subset of Ports reachable from OUTSIDE the environment
+	// (RDP and the like). nil when absent or `false`. The builder realizes it
+	// (a public IP, or a port-NAT on a shared uplink IP) -- see
+	// internal/orchestrator.ReconcileExternalAccess. A property of the host, so
+	// it lives here, not on the environment placement.
+	Public     *Ports   `yaml:"public,omitempty" json:"public,omitempty"`
 	DependsOn  []string `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
 	Steps      []Step   `yaml:"steps,omitempty" json:"steps,omitempty"`
 	// Schedule is deliberately a separate list from Steps, not a step
@@ -115,6 +121,9 @@ type Container struct {
 	// Command overrides the image's default command/entrypoint arguments.
 	Command   []string `yaml:"command,omitempty" json:"command,omitempty"`
 	Ports     Ports    `yaml:"ports,omitempty" json:"ports,omitempty"`
+	// Public: see Host.Public -- the subset of Ports reachable from outside the
+	// environment.
+	Public    *Ports   `yaml:"public,omitempty" json:"public,omitempty"`
 	DependsOn []string `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
 	Steps     []Step   `yaml:"steps,omitempty" json:"steps,omitempty"`
 	// Schedule: see Host.Schedule's own comment -- same shape, same reasoning.
@@ -161,13 +170,9 @@ type AccessWindow struct {
 	Close string `yaml:"close" json:"close"`
 }
 
-// Public is nil if the field was absent, a non-nil *Ports if it was an
-// object, per "Leave `public` out, or set it to `false`, and nothing is
-// made public" -- both "absent" and "false" collapse to the same nil here.
 type Copy struct {
 	As        string `yaml:"as" json:"as"`
 	LastOctet int    `yaml:"last_octet" json:"last_octet"`
-	Public    *Ports `yaml:"public,omitempty" json:"public,omitempty"`
 }
 
 type Environment struct {

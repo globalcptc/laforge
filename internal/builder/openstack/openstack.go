@@ -558,4 +558,13 @@ func parsePortRange(p string) (int, int, bool) {
 // --- DNS ------------------------------------------------------------------
 
 // Compile-time check that the draft satisfies the full Builder contract.
+// ConfigureExternalAccess (DRAFT) would make each host reachable from outside
+// the environment on its `public:` ports -- on OpenStack a floating IP per host
+// plus a security-group ingress rule per port, the same public-IP shape as AWS.
+// Not implemented yet; returns a clear error rather than silently exposing
+// nothing, matching this builder's DRAFT security-group network access.
+func (b *Builder) ConfigureExternalAccess(ctx context.Context, team string, hosts []builder.ExternalHost) ([]builder.ExternalEndpoint, error) {
+	return nil, fmt.Errorf("external access (public: ports) on the OpenStack builder is not implemented yet -- it needs a floating IP per host plus a security-group ingress rule per public port")
+}
+
 var _ builder.Builder = (*Builder)(nil)

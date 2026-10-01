@@ -746,6 +746,34 @@ func (q *Queries) GetTeamByNumber(ctx context.Context, arg GetTeamByNumberParams
 	return i, err
 }
 
+const hasConfigureExternalAccessTask = `-- name: HasConfigureExternalAccessTask :one
+SELECT EXISTS (
+    SELECT 1 FROM task
+    WHERE build_id = $1
+      AND kind = 'configure_external_access'
+      AND payload->>'team' = $2::text
+      AND payload->>'fingerprint' = $3::text
+) AS present
+`
+
+type HasConfigureExternalAccessTaskParams struct {
+	BuildID     pgtype.UUID `json:"build_id"`
+	Team        string      `json:"team"`
+	Fingerprint string      `json:"fingerprint"`
+}
+
+// Dedup for the external-access reconciler, exactly like network access above:
+// one configure_external_access task per (team, public-ports fingerprint), across
+// all statuses. A content change to a team's `public:` ports yields a new
+// fingerprint and a fresh task; an unchanged set never re-runs (the builder call
+// is idempotent).
+func (q *Queries) HasConfigureExternalAccessTask(ctx context.Context, arg HasConfigureExternalAccessTaskParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasConfigureExternalAccessTask, arg.BuildID, arg.Team, arg.Fingerprint)
+	var present bool
+	err := row.Scan(&present)
+	return present, err
+}
+
 const hasConfigureNetworkAccessTask = `-- name: HasConfigureNetworkAccessTask :one
 SELECT EXISTS (
     SELECT 1 FROM task

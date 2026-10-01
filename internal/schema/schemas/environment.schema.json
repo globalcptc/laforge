@@ -73,8 +73,8 @@
         },
         "networks": {
           "$ref": "common.json#/$defs/networksTopology",
-          "description": "The topology: for each network, which hosts/containers are placed on it, how many copies, and their addresses/public ports. The only place hosts, containers, and networks are connected to each other.",
-          "example": "networks:\n  prod:\n    database:\n      - as: db01\n        last_octet: 11\n    webserver:\n      - as: web01\n        last_octet: 12\n  vdi:\n    kali:\n      - as: kali01\n        last_octet: 201\n      - as: kali02\n        last_octet: 202\n  vpn:\n    wireguard:\n      - as: wireguard\n        last_octet: 5\n        public:\n          tcp: [\"51820\"]\n          udp: [\"51820\"]"
+          "description": "The topology: for each network, which hosts/containers are placed on it, how many copies, and their addresses. The only place hosts, containers, and networks are connected to each other. (Which of a host's ports are externally reachable is `public:` on the host itself, not here.)",
+          "example": "networks:\n  prod:\n    database:\n      - as: db01\n        last_octet: 11\n    webserver:\n      - as: web01\n        last_octet: 12\n  vdi:\n    kali:\n      - as: kali01\n        last_octet: 201\n      - as: kali02\n        last_octet: 202\n  vpn:\n    wireguard:\n      - as: wireguard\n        last_octet: 5"
         },
         "extends": {
           "type": "string",

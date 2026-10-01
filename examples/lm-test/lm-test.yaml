@@ -55,6 +55,3 @@ environment:
       wireguard:
         - as: wireguard
           last_octet: 5
-          public:
-            tcp: ["51820"]
-            udp: ["51820"]

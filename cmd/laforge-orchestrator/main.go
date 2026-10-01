@@ -147,6 +147,11 @@ func main() {
 			if err := orchestrator.ReconcileNetworkAccess(ctx, pool, b.ID); err != nil {
 				log.Printf("reconcile network access for build %s: %v", b.ID, err)
 			}
+			// Realize content `public:` ports once a team's hosts are up (a
+			// public IP or a port-NAT on a shared uplink IP, per builder).
+			if err := orchestrator.ReconcileExternalAccess(ctx, pool, dir, b.ID); err != nil {
+				log.Printf("reconcile external access for build %s: %v", b.ID, err)
+			}
 		}
 	}
 

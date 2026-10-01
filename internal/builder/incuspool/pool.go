@@ -188,3 +188,13 @@ func (p *Pool) ConfigureNetworkAccess(ctx context.Context, team string, networks
 	}
 	return h.ConfigureNetworkAccess(ctx, team, networks)
 }
+
+// ConfigureExternalAccess dispatches to the team's own host, same as the rest of
+// a team's infrastructure lives there.
+func (p *Pool) ConfigureExternalAccess(ctx context.Context, team string, hosts []builder.ExternalHost) ([]builder.ExternalEndpoint, error) {
+	h, err := p.hostForTeam(team)
+	if err != nil {
+		return nil, err
+	}
+	return h.ConfigureExternalAccess(ctx, team, hosts)
+}

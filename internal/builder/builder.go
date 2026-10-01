@@ -224,6 +224,21 @@ type Builder interface {
 	// meaningless for PowerStart and ignored there.
 	PowerAction(ctx context.Context, team, externalRef, action string, force bool) error
 
+	// ConfigureExternalAccess realizes content's `public:` ports -- making the
+	// given hosts reachable from OUTSIDE the environment on those ports (RDP and
+	// the like) -- and returns the real endpoints assigned, so an operator or
+	// competitor knows the address:port to connect to. How is builder-specific
+	// and the whole reason this is per-builder: a public IP per host (AWS,
+	// OpenStack), or a port-NAT from a shared uplink IP with allocated external
+	// ports (Incus, MicroCloud, which share one external IP across every team).
+	// Idempotent: re-asserting the same hosts returns the same endpoints without
+	// duplicating forwards. The caller (internal/runner) records what comes back;
+	// the builder, not the caller, allocates, by inspecting its own hoster's
+	// live forwards -- so there is no cross-build port collision to coordinate in
+	// our own state. A builder that genuinely cannot do external ingress returns
+	// an error rather than a capability opt-out, same contract as the rest here.
+	ConfigureExternalAccess(ctx context.Context, team string, hosts []ExternalHost) ([]ExternalEndpoint, error)
+
 	// ConfigureNetworkAccess enforces a team's inter-network reachability
 	// (content's `visible_from:`). It is a
 	// TEAM-level operation, not per-network, because the policy is inherently
@@ -241,6 +256,32 @@ type Builder interface {
 	// (OpenStack). A builder that cannot enforce this returns an error rather
 	// than silently under-enforcing -- there is no capability opt-out.
 	ConfigureNetworkAccess(ctx context.Context, team string, networks []NetworkAccess) error
+}
+
+// ExternalHost is one deployed host/container to make reachable from outside the
+// environment, on its listed public ports. ExternalRef/Address are the deployed
+// instance's own (what DeployHost returned, and its lab IP); TCPPorts/UDPPorts
+// are the subset of its `ports` that content marked `public:`. Empty port lists
+// mean nothing to expose.
+type ExternalHost struct {
+	ExternalRef string
+	Address     string
+	TCPPorts    []string
+	UDPPorts    []string
+}
+
+// ExternalEndpoint is one realized external mapping: the public address:port a
+// client connects to for a host's internal port. On a public-IP builder
+// ExternalPort equals InternalPort (no remap) and PublicAddress is that host's
+// own public IP; on a shared-IP builder ExternalPort is the allocated port and
+// PublicAddress is <shared-ip>:<ExternalPort>. The runner records these in
+// external_access for the UI/CLI to show.
+type ExternalEndpoint struct {
+	ExternalRef   string
+	Protocol      string // "tcp" | "udp"
+	InternalPort  string
+	ExternalPort  string
+	PublicAddress string // "ip:port"
 }
 
 // NetworkAccess is one network's place in its team's reachability policy, passed

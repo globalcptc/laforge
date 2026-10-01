@@ -55,6 +55,13 @@ type builderConfigRequest struct {
 	// builder_probe.go's handleConnectBuilder) -- when set, the older
 	// incus_api_url/cert path/server cert fields are left empty.
 	IncusCredentialID string `json:"incus_credential_id,omitempty"`
+	// ExternalAccessIP + the port window realize content `public:` ports on a
+	// shared-IP builder (Incus/MicroCloud): the single external IP, and the
+	// range of external ports allocated on it. Empty IP = external access off.
+	// 0 ports = builder defaults. Public-IP builders ignore these.
+	ExternalAccessIP string `json:"external_access_ip,omitempty"`
+	ExternalPortMin  int32  `json:"external_port_min,omitempty"`
+	ExternalPortMax  int32  `json:"external_port_max,omitempty"`
 }
 
 // validate turns req into the columns CreateBuilderConfig/UpdateBuilderConfig
@@ -103,9 +110,16 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		IncusImages:           images,
 		IncusSizes:            sizes,
 		IncusHosts:            hosts,
+		ExternalAccessIp:      db.StrPtr(req.ExternalAccessIP),
 	}
 	if req.IncusOperationTimeoutSeconds > 0 {
 		params.IncusOperationTimeoutSeconds = &req.IncusOperationTimeoutSeconds
+	}
+	if req.ExternalPortMin > 0 {
+		params.ExternalPortMin = &req.ExternalPortMin
+	}
+	if req.ExternalPortMax > 0 {
+		params.ExternalPortMax = &req.ExternalPortMax
 	}
 	if req.IncusCredentialID != "" {
 		if err := params.IncusCredentialID.Scan(req.IncusCredentialID); err != nil {
@@ -310,6 +324,8 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		IncusOperationTimeoutSeconds: params.IncusOperationTimeoutSeconds,
 		IncusImages:                  params.IncusImages, IncusSizes: params.IncusSizes,
 		IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
+		ExternalAccessIp: params.ExternalAccessIp,
+		ExternalPortMin:  params.ExternalPortMin, ExternalPortMax: params.ExternalPortMax,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

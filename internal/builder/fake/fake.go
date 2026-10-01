@@ -12,6 +12,7 @@ package fake
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -148,4 +149,29 @@ func (b *Builder) CloseAccess(ctx context.Context, team string) error { return n
 // network fabric to peer or firewall.
 func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, networks []builder.NetworkAccess) error {
 	return nil
+}
+
+// ConfigureExternalAccess fabricates endpoints without touching anything real:
+// a deterministic synthetic public address per (host, port) so the whole
+// pipeline (reconcile -> record -> surface) can be exercised end to end in
+// tests. Models the shared-IP builders' port-NAT (one address, a remapped
+// external port per entry) rather than the public-IP ones.
+func (b *Builder) ConfigureExternalAccess(ctx context.Context, team string, hosts []builder.ExternalHost) ([]builder.ExternalEndpoint, error) {
+	const fakeIP = "198.51.100.1" // TEST-NET-2, never a real address
+	var out []builder.ExternalEndpoint
+	port := 40000
+	for _, h := range hosts {
+		add := func(proto string, ports []string) {
+			for _, p := range ports {
+				out = append(out, builder.ExternalEndpoint{
+					ExternalRef: h.ExternalRef, Protocol: proto, InternalPort: p,
+					ExternalPort: strconv.Itoa(port), PublicAddress: fakeIP + ":" + strconv.Itoa(port),
+				})
+				port++
+			}
+		}
+		add("tcp", h.TCPPorts)
+		add("udp", h.UDPPorts)
+	}
+	return out, nil
 }

@@ -4,6 +4,7 @@ import { API_BASE, api } from './client'
 import type {
   AdHocResult,
   CertStatus,
+  ExternalAccessEntry,
   PowerActionResponse,
   RebuildResponse,
   AdHocTarget,
@@ -82,6 +83,18 @@ export function useConfig() {
 // fresh while the page is open.
 export function useHome() {
   return useQuery<HomeData>({ queryKey: ['home'], queryFn: () => api.get('/home'), refetchInterval: 15_000 })
+}
+
+// useExternalAccess lists a build's realized external endpoints (the public
+// address:port for each host's `public:` ports). Refreshed periodically so
+// endpoints appear as the orchestrator realizes them during a deploy.
+export function useExternalAccess(buildId: string | undefined) {
+  return useQuery<ExternalAccessEntry[]>({
+    queryKey: ['external-access', buildId],
+    queryFn: () => api.get(`/builds/${buildId}/external-access`),
+    enabled: !!buildId,
+    refetchInterval: 15_000,
+  })
 }
 
 // useCertStatus reports the agent CA / gateway cert expiry so the UI can warn

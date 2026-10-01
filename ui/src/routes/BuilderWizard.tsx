@@ -67,7 +67,7 @@ export function BuilderWizard() {
   const create = useCreateBuilderConfig()
   const update = useUpdateBuilderConfig()
 
-  const [draft, setDraft] = useState<Draft>({ name: '', kind: 'microcloud', hosts: [emptyHost()], images: [], sizes: [] })
+  const [draft, setDraft] = useState<Draft>({ name: '', kind: 'microcloud', hosts: [emptyHost()], images: [], sizes: [], externalAccessIp: '' })
   const [initialized, setInitialized] = useState(false)
   const [stepIndex, setStepIndex] = useState(editingName ? 1 : 0)
   const [furthest, setFurthest] = useState(editingName ? 5 : 0)
@@ -212,7 +212,17 @@ export function BuilderWizard() {
                   />
                 )}
                 {step === 'connect' && <StepConnect kind={draft.kind} hosts={draft.hosts} onChange={(hosts) => setDraft((d) => ({ ...d, hosts }))} />}
-                {step === 'placement' && <StepPlacement kind={draft.kind} hosts={draft.hosts} onChange={(hosts) => setDraft((d) => ({ ...d, hosts }))} />}
+                {step === 'placement' && (
+                  <StepPlacement
+                    kind={draft.kind}
+                    hosts={draft.hosts}
+                    onChange={(hosts) => setDraft((d) => ({ ...d, hosts }))}
+                    externalAccessIp={draft.externalAccessIp}
+                    externalPortMin={draft.externalPortMin}
+                    externalPortMax={draft.externalPortMax}
+                    onExternalChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+                  />
+                )}
                 {step === 'images' && (
                   <StepImages
                     kind={draft.kind}

@@ -138,6 +138,20 @@ SELECT EXISTS (
       AND payload->>'fingerprint' = @fingerprint::text
 ) AS present;
 
+-- name: HasConfigureExternalAccessTask :one
+-- Dedup for the external-access reconciler, exactly like network access above:
+-- one configure_external_access task per (team, public-ports fingerprint), across
+-- all statuses. A content change to a team's `public:` ports yields a new
+-- fingerprint and a fresh task; an unchanged set never re-runs (the builder call
+-- is idempotent).
+SELECT EXISTS (
+    SELECT 1 FROM task
+    WHERE build_id = @build_id
+      AND kind = 'configure_external_access'
+      AND payload->>'team' = @team::text
+      AND payload->>'fingerprint' = @fingerprint::text
+) AS present;
+
 -- name: EnsureDeployedObject :one
 -- Same no-op-update-on-conflict trick as EnsureTeam: Reconcile calls this
 -- for every COPY desired in every team, every pass, and needs the row's id

@@ -36,6 +36,17 @@ type Config struct {
 	// that cluster with "Failed loading storage pool: Storage pool not
 	// found." Per-cluster, like OVNUplinkNetwork above, not a constant.
 	StoragePool string
+	// ExternalAccessIP is the single external IP that content's `public:` ports
+	// are NAT'd in on -- shared across every team, since a MicroCloud/Incus
+	// cluster typically has one external address, with a distinct external port
+	// per (team, host, port). Empty means external access isn't configured for
+	// this builder, and ConfigureExternalAccess returns a clear error rather than
+	// silently exposing nothing. Per-cluster builder config, like OVNUplinkNetwork.
+	ExternalAccessIP string
+	// ExternalPortMin/Max bound the external ports allocated on ExternalAccessIP.
+	// Defaults apply when unset -- see externalPortRange.
+	ExternalPortMin int
+	ExternalPortMax int
 	// DockerBaseFingerprint is a legacy field from when a container was run as
 	// nested Docker inside an LXD system container. The Incus builder now runs a
 	// LaForge `container:` as a native OCI application container (Incus 6.3+ speaks

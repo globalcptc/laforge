@@ -55,6 +55,10 @@
           "description": "TCP/UDP ports this host listens on.",
           "example": "ports: { tcp: [\"8080\"] }"
         },
+        "public": {
+          "$ref": "common.json#/$defs/publicBlock",
+          "example": "public: { tcp: [\"3389\"] }"
+        },
         "depends_on": {
           "type": "array",
           "description": "Other hosts, containers, or networks that must be up before this host builds -- e.g. a workstation waiting on its domain controller. Names the object, not one specific copy: every copy of that object within the same team is waited on. This host's own network is always waited on implicitly.",

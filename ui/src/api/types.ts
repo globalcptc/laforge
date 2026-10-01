@@ -416,6 +416,20 @@ export interface CertStatus {
   server: CertInfo
 }
 
+// One realized external endpoint (GET /builds/{id}/external-access): the public
+// address:port to connect to for a host's `public:` port.
+export interface ExternalAccessEntry {
+  deployed_object_id: string
+  team_number: number
+  object_name: string
+  as_name: string | null
+  kind: string
+  protocol: string
+  internal_port: string
+  external_port: string
+  public_address: string
+}
+
 // ObjectConfig (GET /builds/{id}/objects/{objectId}/config): one host/container's
 // full authored config from the build's content revision -- what the host info
 // panel shows beyond runtime state.
@@ -578,6 +592,9 @@ export interface BuilderConfig {
   incus_sizes: Record<string, IncusSizeSpec>
   incus_hosts: IncusHostConfig[]
   incus_credential_id: string | null
+  external_access_ip: string | null
+  external_port_min: number | null
+  external_port_max: number | null
   created_at: string
   updated_at: string
 }
@@ -597,6 +614,9 @@ export interface BuilderConfigRequest {
   incus_sizes?: Record<string, IncusSizeSpec>
   incus_hosts?: IncusHostConfig[]
   incus_credential_id?: string
+  external_access_ip?: string
+  external_port_min?: number
+  external_port_max?: number
 }
 
 // StoragePoolInfo/NetworkInfo/ImageInfo mirror internal/builder/incus's

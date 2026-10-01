@@ -94,7 +94,7 @@ func (q *Queries) FinishImageBuildSuccess(ctx context.Context, arg FinishImageBu
 }
 
 const getBuilderConfigByID = `-- name: GetBuilderConfigByID :one
-SELECT id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint FROM builder_config WHERE id = $1
+SELECT id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max FROM builder_config WHERE id = $1
 `
 
 func (q *Queries) GetBuilderConfigByID(ctx context.Context, id pgtype.UUID) (BuilderConfig, error) {
@@ -120,6 +120,9 @@ func (q *Queries) GetBuilderConfigByID(ctx context.Context, id pgtype.UUID) (Bui
 		&i.ContainerBaseServer,
 		&i.ContainerBaseAlias,
 		&i.DockerBaseFingerprint,
+		&i.ExternalAccessIp,
+		&i.ExternalPortMin,
+		&i.ExternalPortMax,
 	)
 	return i, err
 }

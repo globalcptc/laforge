@@ -296,7 +296,7 @@
     },
 
     "publicBlock": {
-      "description": "Ports to make reachable from outside the competition network. Every port listed here must also appear in this object's own `ports` block. Omit, or set to `false`, to keep this copy private.",
+      "description": "Ports to make reachable from OUTSIDE the competition network (e.g. RDP for direct access). Every port listed here must also appear in this host's own `ports` block. Omit, or set to `false`, to keep it private. The builder realizes this -- a public IP, or a port-NAT on a shared external IP -- and the assigned address:port is shown in the build's external access view (`laforge access`).",
       "oneOf": [
         { "type": "boolean", "const": false },
         { "$ref": "#/$defs/portsBlock" }
@@ -309,8 +309,7 @@
       "additionalProperties": false,
       "properties": {
         "as": { "type": "string", "minLength": 1, "description": "The hostname this copy gets. Also what depends_on and generated DNS records resolve it by." },
-        "last_octet": { "type": "integer", "minimum": 0, "maximum": 255, "description": "The last octet of this copy's address on the network's CIDR (0-255)." },
-        "public": { "$ref": "#/$defs/publicBlock" }
+        "last_octet": { "type": "integer", "minimum": 0, "maximum": 255, "description": "The last octet of this copy's address on the network's CIDR (0-255)." }
       }
     },
     "copiesList": {

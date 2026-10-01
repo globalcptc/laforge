@@ -58,6 +58,12 @@ export interface Draft {
   hosts: HostDraft[]
   images: ImageDraft[]
   sizes: SizeDraft[]
+  // External access (Incus/MicroCloud): the single external IP content `public:`
+  // ports are NAT'd in on, and the external-port window allocated on it. Empty
+  // IP = external access off; 0 ports = builder defaults.
+  externalAccessIp: string
+  externalPortMin?: number
+  externalPortMax?: number
 }
 
 let seq = 0
@@ -195,7 +201,16 @@ export function draftFromConfig(bc: BuilderConfig): Draft {
       })
     }
   }
-  return { name: bc.name, kind: bc.kind, hosts, images: [], sizes: [] }
+  return {
+    name: bc.name,
+    kind: bc.kind,
+    hosts,
+    images: [],
+    sizes: [],
+    externalAccessIp: bc.external_access_ip ?? '',
+    externalPortMin: bc.external_port_min ?? undefined,
+    externalPortMax: bc.external_port_max ?? undefined,
+  }
 }
 
 export function toRequest(d: Draft): BuilderConfigRequest {
@@ -225,6 +240,13 @@ export function toRequest(d: Draft): BuilderConfigRequest {
   const incus_sizes: Record<string, IncusSizeSpec> = {}
   for (const s of d.sizes) incus_sizes[s.name] = { cpu: s.cpu, memory: s.memory }
 
+  // Builder-level external access -- shared across the whole builder, not per host.
+  const externalAccess = {
+    external_access_ip: d.externalAccessIp || undefined,
+    external_port_min: d.externalPortMin || undefined,
+    external_port_max: d.externalPortMax || undefined,
+  }
+
   if (d.kind === 'microcloud') {
     const h = d.hosts[0]
     const placement = {
@@ -232,7 +254,7 @@ export function toRequest(d: Draft): BuilderConfigRequest {
       incus_ovn_uplink_network: h.uplink,
       incus_operation_timeout_seconds: h.timeoutSeconds,
     }
-    if (h.credentialId) return { kind: 'microcloud', incus_credential_id: h.credentialId, ...placement, incus_images, incus_sizes }
+    if (h.credentialId) return { kind: 'microcloud', incus_credential_id: h.credentialId, ...placement, ...externalAccess, incus_images, incus_sizes }
     return {
       kind: 'microcloud',
       incus_api_url: h.legacy?.api_url,
@@ -240,6 +262,7 @@ export function toRequest(d: Draft): BuilderConfigRequest {
       incus_client_key_path: h.legacy?.client_key_path,
       incus_server_cert_pem: h.legacy?.server_cert_pem,
       ...placement,
+      ...externalAccess,
       incus_images,
       incus_sizes,
     }
@@ -251,7 +274,7 @@ export function toRequest(d: Draft): BuilderConfigRequest {
       return { credential_id: h.credentialId, api_url: '', client_cert_path: '', client_key_path: '', server_cert_pem: '', ...placement }
     return { ...(h.legacy as IncusHostConfig), ...placement }
   })
-  return { kind: 'incus', incus_hosts, incus_images, incus_sizes }
+  return { kind: 'incus', incus_hosts, ...externalAccess, incus_images, incus_sizes }
 }
 
 export function shortFingerprint(fp: string): string {

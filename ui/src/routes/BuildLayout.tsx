@@ -11,6 +11,7 @@ const TABS = [
   { to: '', label: 'Overview' },
   { to: 'hosts', label: 'Hosts' },
   { to: 'access', label: 'Access' },
+  { to: 'external-access', label: 'External Access' },
   { to: 'schedule', label: 'Schedule' },
   { to: 'logs', label: 'Logs' },
   { to: 'findings', label: 'Findings' },

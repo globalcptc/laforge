@@ -8,6 +8,7 @@ import { BuildLayout } from './routes/BuildLayout'
 import { BuildOverview } from './routes/BuildOverview'
 import { BuildHosts } from './routes/BuildHosts'
 import { BuildAccess } from './routes/BuildAccess'
+import { BuildExternalAccess } from './routes/BuildExternalAccess'
 import { BuildLogs } from './routes/BuildLogs'
 import { BuildFindings } from './routes/BuildFindings'
 import { BuildSchedule } from './routes/BuildSchedule'
@@ -86,6 +87,7 @@ const buildLayoutRoute = createRoute({
 const buildIndexRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: '/', component: BuildOverview })
 const buildHostsRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'hosts', component: BuildHosts })
 const buildAccessRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'access', component: BuildAccess })
+const buildExternalAccessRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'external-access', component: BuildExternalAccess })
 const buildLogsRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'logs', component: BuildLogs })
 const buildFindingsRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'findings', component: BuildFindings })
 const buildScheduleRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'schedule', component: BuildSchedule })
@@ -173,7 +175,7 @@ const routeTree = rootRoute.addChildren([
   newBuilderRoute,
   editBuilderRoute,
   repoAccessRoute,
-  buildLayoutRoute.addChildren([buildIndexRoute, buildHostsRoute, buildAccessRoute, buildLogsRoute, buildFindingsRoute, buildScheduleRoute, buildTopologyRoute, buildArtifactsRoute]),
+  buildLayoutRoute.addChildren([buildIndexRoute, buildHostsRoute, buildAccessRoute, buildExternalAccessRoute, buildLogsRoute, buildFindingsRoute, buildScheduleRoute, buildTopologyRoute, buildArtifactsRoute]),
 ])
 
 export const router = createRouter({ routeTree })

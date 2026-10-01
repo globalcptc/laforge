@@ -97,6 +97,9 @@ type BuilderConfig struct {
 	ContainerBaseServer          string             `json:"container_base_server"`
 	ContainerBaseAlias           string             `json:"container_base_alias"`
 	DockerBaseFingerprint        string             `json:"docker_base_fingerprint"`
+	ExternalAccessIp             *string            `json:"external_access_ip"`
+	ExternalPortMin              *int32             `json:"external_port_min"`
+	ExternalPortMax              *int32             `json:"external_port_max"`
 }
 
 type BuilderCredential struct {
@@ -219,6 +222,17 @@ type Event struct {
 	Payload          json.RawMessage    `json:"payload"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+}
+
+type ExternalAccess struct {
+	ID               pgtype.UUID        `json:"id"`
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	Protocol         string             `json:"protocol"`
+	InternalPort     string             `json:"internal_port"`
+	PublicAddress    string             `json:"public_address"`
+	ExternalPort     string             `json:"external_port"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type FakeDnsRecord struct {

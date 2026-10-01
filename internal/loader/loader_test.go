@@ -96,6 +96,7 @@ func TestPublicPortMustBeSubsetOfHostPorts(t *testing.T) {
   size: small
   disk: 20
   ports: { udp: ["51820"] }
+  public: { tcp: ["51820"] }
 `,
 		"networks/vpn.yaml": "network:\n  name: vpn\n  cidr: 10.0.1.0/24\n",
 		"env.yaml": `environment:
@@ -106,8 +107,6 @@ func TestPublicPortMustBeSubsetOfHostPorts(t *testing.T) {
       wireguard:
         - as: wg01
           last_octet: 5
-          public:
-            tcp: ["51820"]
 `,
 	})
 	c, _ := loader.Load(root)
@@ -124,6 +123,7 @@ func TestPublicPortThatIsDeclaredPasses(t *testing.T) {
   size: small
   disk: 20
   ports: { udp: ["51820"] }
+  public: { udp: ["51820"] }
 `,
 		"networks/vpn.yaml": "network:\n  name: vpn\n  cidr: 10.0.1.0/24\n",
 		"env.yaml": `environment:
@@ -134,8 +134,6 @@ func TestPublicPortThatIsDeclaredPasses(t *testing.T) {
       wireguard:
         - as: wg01
           last_octet: 5
-          public:
-            udp: ["51820"]
 `,
 	})
 	c, _ := loader.Load(root)

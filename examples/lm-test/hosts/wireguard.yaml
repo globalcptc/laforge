@@ -4,5 +4,7 @@ host:
   size: small
   disk: 50
   ports: { tcp: ["51820", "23226"], udp: ["51820"] }
+  # Reachable from outside the environment (the VPN endpoint teams connect to).
+  public: { tcp: ["51820"], udp: ["51820"] }
   steps:
     - script: install-wireguard-server

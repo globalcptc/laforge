@@ -32,6 +32,21 @@ CREATE TABLE public.agent_heartbeat (
     net_tx_bps double precision
 );
 --
+-- Name: external_access; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.external_access (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    deployed_object_id uuid NOT NULL,
+    protocol text NOT NULL,
+    internal_port text NOT NULL,
+    public_address text NOT NULL,
+    external_port text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT external_access_pkey PRIMARY KEY (id),
+    CONSTRAINT external_access_object_proto_port_key UNIQUE (deployed_object_id, protocol, internal_port)
+);
+--
 -- Name: agent_artifact; Type: TABLE; Schema: public; Owner: -
 --
 CREATE TABLE public.agent_artifact (
@@ -109,6 +124,9 @@ CREATE TABLE public.builder_config (
     container_base_server text DEFAULT 'https://cloud-images.ubuntu.com/releases'::text NOT NULL,
     container_base_alias text DEFAULT '22.04'::text NOT NULL,
     docker_base_fingerprint text DEFAULT ''::text NOT NULL,
+    external_access_ip text,
+    external_port_min integer,
+    external_port_max integer,
     CONSTRAINT builder_config_kind_check CHECK ((kind = ANY (ARRAY['fake'::text, 'incus'::text, 'microcloud'::text, 'aws'::text, 'openstack'::text])))
 );
 

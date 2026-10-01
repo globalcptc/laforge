@@ -36,6 +36,16 @@ type Config struct {
 	// that cluster with "Failed loading storage pool: Storage pool not
 	// found." Per-cluster, like OVNUplinkNetwork above, not a constant.
 	StoragePool string
+	// ExternalAccessIP is the single external IP content's `public:` ports are
+	// NAT'd in on -- shared across every team (one external address, a distinct
+	// external port per (team, host, port)). Empty means external access isn't
+	// configured; ConfigureExternalAccess then errors clearly. Per-cluster
+	// builder config, like OVNUplinkNetwork.
+	ExternalAccessIP string
+	// ExternalPortMin/Max bound the external ports allocated on ExternalAccessIP;
+	// defaults apply when unset (see externalPortRange).
+	ExternalPortMin int
+	ExternalPortMax int
 	// DockerBaseFingerprint is the fingerprint of this builder's published
 	// docker-ready base image (built by the per-builder image-build job,
 	// migration 00024). A LaForge `container:` is a Docker container, run
