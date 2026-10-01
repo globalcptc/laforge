@@ -27,8 +27,7 @@ func TestTeardownDestroysEveryRealObjectAndMarksTheBuildTornDown(t *testing.T) {
 	q := db.New(pool)
 	build := newTestBuildWithFakeBuilder(t, pool, "teardown-e2e")
 
-	// Deploy everything for real. Convergence (not a single Reconcile) because
-	// depends_on ordering brings dependents up only after their dependencies.
+	// Deploy everything for real (drive the runner to convergence).
 	deployToConvergence(t, pool, "../../examples/lm-test", build.ID)
 
 	// A runner to drain the destroy_* tasks Teardown creates later (teardown

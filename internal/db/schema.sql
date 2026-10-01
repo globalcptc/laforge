@@ -251,6 +251,7 @@ CREATE TABLE public.deployed_object (
     power_state text DEFAULT ''::text NOT NULL,
     power_state_checked_at timestamp with time zone,
     tags jsonb DEFAULT '{}'::jsonb NOT NULL,
+    steps_materialized_at timestamp with time zone,
     CONSTRAINT deployed_object_kind_check CHECK ((kind = ANY (ARRAY['network'::text, 'host'::text, 'container'::text, 'dns'::text]))),
     CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroying'::text, 'destroyed'::text])))
 );

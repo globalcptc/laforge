@@ -62,3 +62,60 @@ func (c *Content) Dependents(roots []string) []string {
 	sort.Strings(out)
 	return out
 }
+
+// DependencyDepth maps each host/container object name to its depth in the
+// depends_on graph: 0 for an object with no object-level dependencies (a
+// root), otherwise 1 + the greatest depth among its dependencies. It is used
+// to order deploys roots-first, so that a dependency's box (and then its
+// configuration) gets underway before the dependents that wait on it --
+// "prioritize image deployments based on the tree." Only object edges count
+// (networks have no depends_on and are foundational, exactly as Dependents and
+// checkDependsOnCycles treat them); a dependency naming something not placed
+// as an object resolves to depth 0. checkDependsOnCycles guarantees a DAG, so
+// the memoized recursion always terminates; a cycle that somehow slipped
+// through is broken defensively by treating an in-progress node as depth 0.
+func (c *Content) DependencyDepth() map[string]int {
+	objects := c.objectNames()
+	dependsOn := make(map[string][]string, len(objects))
+	record := func(name string, deps []string) {
+		var kept []string
+		for _, d := range deps {
+			if _, ok := objects[d]; ok { // object dep only (skip networks/unknowns)
+				kept = append(kept, d)
+			}
+		}
+		dependsOn[name] = kept
+	}
+	for _, h := range c.Hosts {
+		record(h.Name, h.DependsOn)
+	}
+	for _, ct := range c.Containers {
+		record(ct.Name, ct.DependsOn)
+	}
+
+	depth := make(map[string]int, len(objects))
+	inProgress := make(map[string]bool, len(objects))
+	var compute func(name string) int
+	compute = func(name string) int {
+		if d, ok := depth[name]; ok {
+			return d
+		}
+		if inProgress[name] {
+			return 0 // defensive: a cycle the loader should already have rejected
+		}
+		inProgress[name] = true
+		max := 0
+		for _, d := range dependsOn[name] {
+			if dd := compute(d) + 1; dd > max {
+				max = dd
+			}
+		}
+		inProgress[name] = false
+		depth[name] = max
+		return max
+	}
+	for name := range objects {
+		compute(name)
+	}
+	return depth
+}

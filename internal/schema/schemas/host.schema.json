@@ -61,7 +61,7 @@
         },
         "depends_on": {
           "type": "array",
-          "description": "Other hosts, containers, or networks that must be up before this host builds -- e.g. a workstation waiting on its domain controller. Names the object, not one specific copy: every copy of that object within the same team is waited on. This host's own network is always waited on implicitly.",
+          "description": "Other hosts, containers, or networks that must be fully configured (finished building) before this host's own steps run. The host's box is still created ahead of time -- only its steps wait -- e.g. a workstation's domain-join step waits until its domain controller is actually a working DC, not just a booted Windows box. Names the object, not one specific copy: every copy of that object within the same team is waited on. This host's own network is always waited on implicitly.",
           "example": "depends_on: [domain-controller, prod]   # a host, and a network",
           "items": {
             "type": "string",

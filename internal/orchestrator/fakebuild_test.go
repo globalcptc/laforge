@@ -14,10 +14,9 @@ import (
 )
 
 // deployToConvergence drives Reconcile + a fake-builder runner to a fixed
-// point. depends_on ordering holds a dependent's deploy task until its
-// dependencies are up, so a single Reconcile can't create every task -- this
-// loops (create ready tasks, then execute them, bringing objects up) until no
-// object is still pending or deploying.
+// point: loop (create deploy tasks, then execute them, bringing objects up)
+// until no object is still pending or deploying. Boxes deploy ahead of their
+// dependencies now, so this typically converges in a single pass.
 func deployToConvergence(t *testing.T, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID) {
 	t.Helper()
 	ctx := context.Background()

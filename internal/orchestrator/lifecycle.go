@@ -79,12 +79,29 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 		badValidator[id.String()] = true
 	}
 
+	// Which objects have had their steps materialized. An object's steps are
+	// now queued lazily -- only once its dependencies have finished -- so a
+	// host with its agent in but no agent_task rows yet is NOT done: it's still
+	// waiting for a dependency, not finished-with-nothing-to-do. The stamp is
+	// what tells those two apart (set even for a genuinely stepless object).
+	materialized := make(map[string]bool, len(objs))
+	for _, o := range objs {
+		materialized[o.ID.String()] = o.StepsMaterializedAt.Valid
+	}
+
 	// evaluateBuild decides the terminal-or-still-building state for an object
 	// whose agent is in, from its step counts and validator results.
 	evaluateBuild := func(id string) string {
 		s := steps[id] // zero value when the object has no steps
 		if s.failed > 0 {
 			return "build_failed"
+		}
+		if !materialized[id] {
+			// Agent is in but steps haven't been queued yet -- a dependency is
+			// still configuring. Hold at building; don't finish prematurely
+			// (which would both paint it green early and wrongly satisfy its
+			// own dependents).
+			return "building"
 		}
 		if s.open > 0 {
 			return "building"

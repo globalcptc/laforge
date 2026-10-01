@@ -225,6 +225,15 @@ WHERE id = $1 AND status IN ('running', 'building');
 UPDATE deployed_object SET status = 'invalid', last_error = $2, updated_at = now()
 WHERE id = $1 AND status IN ('running', 'building');
 
+-- name: MarkDeployedObjectStepsMaterialized :exec
+-- Record that this object's authored steps have been turned into agent_task
+-- rows (the orchestrator does this only once every dependency has finished).
+-- Set even when an object has zero authored steps, so the lifecycle advancer
+-- can tell "finished with nothing to do" from "still waiting to materialize".
+-- Idempotent: only the first materialization stamps the time.
+UPDATE deployed_object SET steps_materialized_at = now()
+WHERE id = $1 AND steps_materialized_at IS NULL;
+
 -- name: SetDeployedObjectExternalRef :exec
 -- Record the hoster ref for an object whose deploy did NOT fully succeed,
 -- so a partially-created instance is still destroyable by teardown. The
@@ -264,8 +273,10 @@ UPDATE deployed_object SET status = 'destroyed', power_state = '', power_state_c
 -- Used after a destroy that happened only because the fingerprint changed
 -- ("rebuild means recreate"): back to pending, cleared external_ref/
 -- fingerprint, so the *next* Reconcile pass sees it as needing a fresh
--- deploy task with the new fingerprint.
-UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', last_error = NULL, updated_at = now()
+-- deploy task with the new fingerprint. Also clears steps_materialized_at so
+-- the redeploy re-materializes this object's steps once its dependencies are
+-- finished again (its agent_task rows are deleted on the same path).
+UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', last_error = NULL, steps_materialized_at = NULL, updated_at = now()
 WHERE id = $1 RETURNING *;
 
 -- name: DeleteDeployedObject :exec

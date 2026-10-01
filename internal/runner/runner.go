@@ -28,7 +28,6 @@ import (
 	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/checkout"
 	"github.com/globalcptc/laforge/internal/db"
-	"github.com/globalcptc/laforge/internal/gateway"
 	"github.com/globalcptc/laforge/internal/loader"
 	"github.com/globalcptc/laforge/internal/render"
 )
@@ -542,11 +541,12 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		return fmt.Errorf("recording running state: %w", err)
 	}
 
-	if obj.Kind == "host" || obj.Kind == "container" {
-		if err := r.materializeSteps(ctx, q, task, repoRoot, c, obj, teamNumber); err != nil {
-			return fmt.Errorf("materializing steps: %w", err)
-		}
-	}
+	// Authored steps are NOT queued here. The box is now deployed ahead of its
+	// dependencies, but its steps must not run until those dependencies have
+	// finished configuring -- so step materialization moved to the orchestrator
+	// (internal/orchestrator.materializeStepsIfReady), which knows each team's
+	// dependency readiness. A just-deployed object sits at "running" with no
+	// agent_task rows until the orchestrator queues them.
 	return nil
 }
 
@@ -578,68 +578,6 @@ func (r *Runner) deliverAgent(ctx context.Context, q *db.Queries, obj db.Deploye
 		return agentdelivery.Delivery{}, fmt.Errorf("storing agent binary: %w", err)
 	}
 	return del, nil
-}
-
-// materializeSteps queues a just-deployed host/container's own `steps:`
-// list as real agent_task rows -- the real fix for a gap found by direct
-// audit:
-// internal/api/tasks.go's own doc comment on ExpandSteps called it
-// "production-unwired", and nothing
-// anywhere ever actually called it at deploy time. A build reported
-// `deployed` with every host green, but no host's authored steps --
-// scripts, users, services, vulnerabilities, the entire reason a host
-// exists for a real event -- had ever actually run. Reuses the exact
-// same internal/gateway.ExpandSteps translation the ad-hoc task endpoint
-// and the schedule dispatcher already use, so a step queued here and one
-// queued by hand produce byte-identical commands.
-//
-// Idempotent, not transactional: skips entirely once anything has
-// already been queued for this object (NextStepIndexForHost > 0). This
-// object's own deploy task can be retried (the builder call above is
-// naturally idempotent, ensure-semantics), and re-running this
-// unconditionally on a retry would duplicate every already-queued
-// command.
-func (r *Runner) materializeSteps(ctx context.Context, q *db.Queries, task db.Task, repoRoot string, c *loader.Content, obj db.DeployedObject, teamNumber int32) error {
-	next, err := q.NextStepIndexForHost(ctx, obj.ID)
-	if err != nil {
-		return fmt.Errorf("checking existing steps: %w", err)
-	}
-	if next != 0 {
-		return nil // already materialized (or an ad-hoc/scheduled command beat us to it)
-	}
-	build, err := q.GetBuild(ctx, task.BuildID)
-	if err != nil {
-		return fmt.Errorf("loading build: %w", err)
-	}
-	authored, notes, err := gateway.ExpandSteps(repoRoot, c, build.EnvironmentName, db.StrOrEmpty(obj.AsName), int(teamNumber))
-	if err != nil {
-		return fmt.Errorf("expanding steps: %w", err)
-	}
-	// A container's steps run from INSIDE its application container (its agent
-	// is the container's entrypoint, on every builder), exactly like a host's
-	// steps run on the host. There is no builder-specific prelude here: the
-	// image pull/run is the builder's own business (a nesting builder does it in
-	// DeployContainer; a native-OCI builder runs the image directly), never a
-	// materialized agent step -- a container's agent has no Docker to run one.
-	cmds := authored
-	for i, cmd := range cmds {
-		payload, err := json.Marshal(cmd.Payload)
-		if err != nil {
-			return fmt.Errorf("encoding payload for step %d: %w", i, err)
-		}
-		if _, err := q.CreateAgentTask(ctx, db.CreateAgentTaskParams{
-			DeployedObjectID: obj.ID, StepIndex: int32(i), Command: cmd.Command, Payload: payload, IgnoreErrors: cmd.IgnoreErrors,
-		}); err != nil {
-			return fmt.Errorf("queuing step %d (%s): %w", i, cmd.Command, err)
-		}
-	}
-	for _, n := range notes {
-		r.logEvent(ctx, q, task.BuildID, task.ID, "steps.note", n)
-	}
-	if len(cmds) > 0 {
-		r.logEvent(ctx, q, task.BuildID, task.ID, "steps.materialized", fmt.Sprintf("%d step command(s) queued for %s", len(cmds), db.StrOrEmpty(obj.AsName)))
-	}
-	return nil
 }
 
 func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task, obj db.DeployedObject, externalName string, teamNumber int32) (resolved bool, err error) {

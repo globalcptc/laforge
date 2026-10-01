@@ -53,7 +53,7 @@
         },
         "depends_on": {
           "type": "array",
-          "description": "Other hosts, containers, or networks that must be up before this container builds. Names the object, not one specific copy: every copy of that object within the same team is waited on. This container's own network is always waited on implicitly.",
+          "description": "Other hosts, containers, or networks that must be fully configured (finished building) before this container's own steps run. The container is still started ahead of time -- only its steps wait. Names the object, not one specific copy: every copy of that object within the same team is waited on. This container's own network is always waited on implicitly.",
           "example": "depends_on: [database]",
           "items": { "type": "string", "minLength": 1 }
         },

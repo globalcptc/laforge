@@ -100,8 +100,8 @@ func TestReconcileAndRunnerRemoveDroppedObjects(t *testing.T) {
 		ID: "test-runner-removal", LeaseDuration: 10 * time.Second, HeartbeatInterval: 2 * time.Second,
 		BuildID: &build.ID,
 	}
-	// Interleave reconcile + drain to convergence -- depends_on ordering brings
-	// dependents up only after their dependencies.
+	// Interleave reconcile + drain to convergence; every box deploys regardless
+	// of depends_on (which now gates step execution, not the deploy).
 	if n := drainToConvergence(t, ctx, pool, q, r, "../../examples/lm-test", build.ID); n != 65 {
 		t.Fatalf("initial full deploy drained %d tasks, want 65", n)
 	}

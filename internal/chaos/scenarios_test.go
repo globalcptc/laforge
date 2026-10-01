@@ -30,16 +30,14 @@ func identityOf(obj db.DeployedObject) string {
 
 const wantObjects = 65 // 5 teams x 13 objects each, matching examples/lm-test -- see internal/orchestrator's own test for the breakdown
 
-// wantFirstPassTasks is how many deploy tasks a single reconcile creates: 55,
-// because depends_on ordering holds 2 objects/team (webserver -> database,
-// workstation -> domain-controller) until their dependencies deploy.
-const wantFirstPassTasks = 55
+// wantFirstPassTasks is how many deploy tasks a single reconcile creates: 65,
+// one per object. The box deploys ahead of time regardless of depends_on
+// (which now gates step execution, not the infrastructure deploy), so every
+// object gets its deploy task on the first pass.
+const wantFirstPassTasks = 65
 
 // convergeRemaining interleaves reconcile + a healthy runner until every object
-// is running. A single reconcile can't create every deploy task (depends_on
-// ordering holds dependents back), so after the first wave of a chaos scenario
-// deploys the independent objects, this finishes the dependents. In-process
-// Reconcile is fine here -- the crash scenarios use the orchestrator binary;
+// is running. In-process Reconcile is fine here -- the crash scenarios use the orchestrator binary;
 // this is just the completion phase.
 func convergeRemaining(t *testing.T, pool *pgxpool.Pool, buildID pgtype.UUID, runnerPrefix string) {
 	t.Helper()
@@ -352,7 +350,7 @@ func TestChaos_OrchestratorKilledMidReconcile(t *testing.T) {
 		t.Fatalf("ListTasksByBuild: %v", err)
 	}
 	if len(tasks) != wantFirstPassTasks {
-		t.Fatalf("tasks = %d, want %d (one open task per ready object; depends_on holds 2/team, no duplicates from the interrupted first pass)", len(tasks), wantFirstPassTasks)
+		t.Fatalf("tasks = %d, want %d (one deploy task per object; deploy no longer gated on depends_on, no duplicates from the interrupted first pass)", len(tasks), wantFirstPassTasks)
 	}
 
 	// Prove the end state is genuinely usable, not just "no duplicate

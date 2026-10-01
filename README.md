@@ -115,19 +115,23 @@ sequenceDiagram
     Dev->>API: create build + deploy
     loop every ~2s
         Orch->>Orch: reconcile: desired vs actual
-        Orch-->>Run: enqueue deploy tasks (respecting depends_on)
+        Orch-->>Run: enqueue deploy tasks (roots first)
     end
     Run->>Bld: DeployNetwork / DeployHost / DeployContainer
     Bld->>Host: create instance (+ cloud-init installs the agent)
     Host->>GW: mTLS check-in
-    Run->>Run: materialize host steps into agent tasks
+    Orch->>Orch: materialize host steps once its dependencies finish
     Host->>GW: pull next step, run it, report result, heartbeat
     Orch->>Bld: ConfigureNetworkAccess, Open/CloseAccess (on schedule)
 ```
 
 Ordering falls out of two simple mechanisms rather than a dependency engine:
 deterministic resource names let any task be retried safely (create-or-adopt), and
-`depends_on` holds a host's deploy until the things it needs are up.
+`depends_on` holds a host's *steps* until the things it needs have finished
+configuring. The box itself deploys ahead of time (roots first, so a dependency
+is underway before its dependents), and only step execution waits -- a
+workstation's domain-join runs once its domain controller is a working DC, not
+merely a booted Windows box.
 
 ### Builders: one interface, many platforms
 

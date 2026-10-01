@@ -16,9 +16,9 @@ import (
 )
 
 // drainToConvergence interleaves Reconcile and drainQueue until every object is
-// running, returning the total tasks drained. depends_on ordering means a
-// dependent's deploy task appears only after its dependency deploys, so a
-// single Reconcile+drain can't deploy the whole example in one shot.
+// running, returning the total tasks drained. Boxes deploy ahead of their
+// dependencies (depends_on gates step execution, not the deploy), so every
+// object's deploy task is created on the first pass.
 func drainToConvergence(t *testing.T, ctx context.Context, pool *pgxpool.Pool, q *db.Queries, r *Runner, repo string, buildID pgtype.UUID) int {
 	t.Helper()
 	total := 0
@@ -126,8 +126,10 @@ func TestFullBuildConverges(t *testing.T) {
 		BuildID: &build.ID,
 	}
 
-	// Interleave reconcile + drain to convergence -- depends_on ordering brings
-	// dependents up only after their dependencies.
+	// Interleave reconcile + drain to convergence. Every box deploys regardless
+	// of depends_on (the box comes up ahead of its dependencies, ordered
+	// roots-first for efficiency); depends_on now gates step execution, not the
+	// deploy, so every object still reaches "running" here.
 	drained := drainToConvergence(t, ctx, pool, q, r, "../../examples/lm-test", build.ID)
 	if drained != 65 {
 		t.Fatalf("drained %d tasks total, want 65 (5 teams x 13 objects)", drained)
@@ -167,39 +169,77 @@ func TestFullBuildConverges(t *testing.T) {
 		t.Fatalf("saw %d distinct external_refs, want 65", len(seenRefs))
 	}
 
-	// A real fix, found by direct audit: a host/container's own authored `steps:`
-	// used to never run automatically at deploy time at all (see
-	// materializeSteps' own doc comment) -- web01's real step list
-	// (script:base, download, extract, script:vuln-sqli, from
-	// examples/lm-test/hosts/webserver.yaml) must now have queued real
-	// agent_task rows the instant its deploy task completed above, with
-	// no separate action needed.
+	// Step execution is now gated on depends_on being FINISHED, not merely on
+	// the box being up: the box deploys ahead of time, but a host's authored
+	// `steps:` are materialized only once every dependency has finished
+	// configuring. The convergence loop above returns the moment every box is
+	// "running" (nothing is materialized during deploy anymore), so run one
+	// more Reconcile -- what the orchestrator's poll loop does continuously --
+	// to let roots materialize now that their boxes are up.
+	if err := orchestrator.Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+		t.Fatalf("Reconcile (post-deploy, to materialize roots): %v", err)
+	}
+	// webserver.yaml declares `depends_on: [database]`, and this harness never
+	// advances the lifecycle, so team 1's database stays "running" (never
+	// "finished") -- team 1's web01 must therefore have NO agent_task rows yet,
+	// while a root like database (no depends_on) must have materialized its
+	// steps as soon as its box came up.
+	team1, err := q.GetTeamByNumber(ctx, db.GetTeamByNumberParams{BuildID: build.ID, TeamNumber: 1})
+	if err != nil {
+		t.Fatalf("GetTeamByNumber: %v", err)
+	}
+	team1Objs, err := q.ListDeployedObjectsByTeam(ctx, team1.ID)
+	if err != nil {
+		t.Fatalf("ListDeployedObjectsByTeam: %v", err)
+	}
+	// depends_on keys on the object definition name across all of its copies,
+	// so collect every copy of database (db01, devdb) and of webserver (web01).
+	var databaseCopies []db.DeployedObject
 	var web01 db.DeployedObject
-	for _, o := range objs {
-		if o.Kind == "host" && o.AsName != nil && *o.AsName == "web01" {
-			tm, err := q.GetTeam(ctx, o.TeamID)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if tm.TeamNumber == 1 {
-				web01 = o
-				break
-			}
+	for _, o := range team1Objs {
+		switch o.ObjectName {
+		case "database":
+			databaseCopies = append(databaseCopies, o)
+		case "webserver":
+			web01 = o
 		}
 	}
-	if !web01.ID.Valid {
-		t.Fatal("team 1's web01 object not found")
+	if len(databaseCopies) == 0 || !web01.ID.Valid {
+		t.Fatalf("team 1 missing database copies (%d) or webserver", len(databaseCopies))
+	}
+	for _, dbCopy := range databaseCopies {
+		if !dbCopy.StepsMaterializedAt.Valid {
+			t.Errorf("database copy %s (a root, no depends_on) should have materialized its steps once its box was up", db.StrOrEmpty(dbCopy.AsName))
+		}
+	}
+	if web01.StepsMaterializedAt.Valid {
+		t.Error("web01 steps must NOT be materialized while its dependency (database) has not finished")
+	}
+	if gated, err := q.ListAgentTasksByHost(ctx, web01.ID); err != nil {
+		t.Fatalf("ListAgentTasksByHost(web01): %v", err)
+	} else if len(gated) != 0 {
+		t.Fatalf("web01 agent_task rows = %d while gated on database, want 0", len(gated))
+	}
+
+	// Now let every database copy finish, then reconcile once: web01's steps
+	// must materialize. script: expands to two commands each (write_file the
+	// rendered script, then execute it) -- see internal/gateway/steps.go's own
+	// "script" case -- so webserver.yaml's base + download + extract +
+	// vuln-sqli is 6 real commands, not 4.
+	for _, dbCopy := range databaseCopies {
+		if err := q.SetDeployedObjectFinished(ctx, dbCopy.ID); err != nil {
+			t.Fatalf("SetDeployedObjectFinished(%s): %v", db.StrOrEmpty(dbCopy.AsName), err)
+		}
+	}
+	if err := orchestrator.Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+		t.Fatalf("Reconcile (after finishing database): %v", err)
 	}
 	agentTasks, err := q.ListAgentTasksByHost(ctx, web01.ID)
 	if err != nil {
 		t.Fatalf("ListAgentTasksByHost: %v", err)
 	}
-	// script: expands to two commands each (write_file the rendered
-	// script, then execute it) -- see internal/gateway/steps.go's own
-	// "script" case -- so base + download + extract + vuln-sqli is 6
-	// real commands, not 4.
 	if len(agentTasks) != 6 {
-		t.Fatalf("web01 agent_task rows = %d, want 6 (script:base -> write_file+execute, download, extract, script:vuln-sqli -> write_file+execute)", len(agentTasks))
+		t.Fatalf("web01 agent_task rows = %d after database finished, want 6 (script:base -> write_file+execute, download, extract, script:vuln-sqli -> write_file+execute)", len(agentTasks))
 	}
 	wantCommands := []string{"write_file", "execute", "download", "extract", "write_file", "execute"}
 	for i, at := range agentTasks {

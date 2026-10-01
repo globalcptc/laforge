@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -80,11 +81,26 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 	// exists to prevent, since a "planned" build was never actually
 	// safe to look at and discard.
 	deployTasks := build.Status == "deploying"
+	// Step materialization must continue through the "building" phase, not just
+	// "deploying": the build leaves "deploying" as soon as all infra is up and
+	// the first agent starts working, but dependents' steps are queued only as
+	// their dependencies FINISH, which happens during "building". A planned
+	// build still materializes nothing (it touches neither hoster nor agent).
+	materializeActive := build.Status == "deploying" || build.Status == "building"
 	anchors := anchorsFromEnvironment(env)
 	// Object + network names placed in this environment's topology -- the set
 	// depends_on ordering can actually wait on (a dependency not placed here
 	// can't be ordered on, so it's ignored rather than wedging the build).
 	placed := placedNames(env.Networks)
+	// Every copy this environment places, ordered roots-first by depends_on
+	// depth: a dependency's box (and its configuration) gets underway before
+	// the dependents that wait on it. The topology is identical for every
+	// team, so this is computed once and reused across the team loop. See
+	// "prioritize image deployments based on the tree" -- deploy tasks are no
+	// longer gated on depends_on (the box deploys ahead of time); ordering
+	// their creation is what makes the tree-priority real, since LeaseTask
+	// draws pending tasks oldest-first.
+	placements := orderedPlacements(env, containerNames, c.DependencyDepth())
 
 	for teamNum := 1; teamNum <= env.Teams; teamNum++ {
 		team, err := q.EnsureTeam(ctx, db.EnsureTeamParams{BuildID: buildID, TeamNumber: int32(teamNum)})
@@ -92,9 +108,12 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 			return fmt.Errorf("team %d: %w", teamNum, err)
 		}
 
-		// This team's dependency readiness as of the start of this pass: an
-		// object name is "ready" only when every one of its copies is up.
-		readyDeps, err := teamDepReadiness(ctx, q, team.ID)
+		// This team's dependency readiness as of the start of this pass, used
+		// to gate STEP execution (not the box deploy): finishedDeps[name] is
+		// true only when every copy of that object has fully FINISHED
+		// configuring; failedDeps[name] is true when any copy failed terminally
+		// (so a dependent can be failed rather than waiting on it forever).
+		finishedDeps, failedDeps, err := teamDepReadiness(ctx, q, team.ID)
 		if err != nil {
 			return fmt.Errorf("team %d readiness: %w", teamNum, err)
 		}
@@ -108,18 +127,10 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 			}
 		}
 
-		for networkName, objs := range env.Networks {
-			for objectName, copies := range objs {
-				kind := "host"
-				if containerNames[objectName] {
-					kind = "container"
-				}
-				for _, cp := range copies {
-					desired[kind+"/"+cp.As] = true
-					if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, teamNum, kind, objectName, cp.As, networkName, deployTasks, anchors, placed, readyDeps); err != nil {
-						return fmt.Errorf("team %d, %s %q: %w", teamNum, kind, cp.As, err)
-					}
-				}
+		for _, pl := range placements {
+			desired[pl.kind+"/"+pl.as] = true
+			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps); err != nil {
+				return fmt.Errorf("team %d, %s %q: %w", teamNum, pl.kind, pl.as, err)
 			}
 		}
 
@@ -272,11 +283,11 @@ func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, tea
 	if err != nil {
 		return err
 	}
-	_, err = reconcileObject(ctx, q, buildID, obj, fp, deployTasks, true) // networks have no depends_on
+	_, err = reconcileObject(ctx, q, buildID, obj, fp, deployTasks)
 	return err
 }
 
-func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, deployTasks bool, anchors schedule.Anchors, placed, readyDeps map[string]bool) error {
+func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool) error {
 	rctx, err := render.Resolve(c, envName, asName, teamNum)
 	if err != nil {
 		return fmt.Errorf("resolving: %w", err)
@@ -328,19 +339,13 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	if err := q.SetDeployedObjectTags(ctx, db.SetDeployedObjectTagsParams{ID: obj.ID, Tags: tagsJSON}); err != nil {
 		return fmt.Errorf("setting tags: %w", err)
 	}
-	// depends_on ordering: this copy is ready to deploy only when every
-	// dependency that is actually placed in this environment is up for this
-	// team. A dependency not placed here is ignored (it can't be ordered on),
-	// and readyDeps is this team's converged state as of the pass's start, so
-	// ordering emerges over successive 2-second passes.
-	depsReady := true
-	for _, d := range dependsOn {
-		if placed[d] && !readyDeps[d] {
-			depsReady = false
-			break
-		}
-	}
-	created, err := reconcileObject(ctx, q, buildID, obj, fp, deployTasks, depsReady)
+	// The box deploys ahead of time: its deploy task is no longer gated on
+	// depends_on (that only ever waited for a dependency's instance to exist,
+	// which isn't the same as the dependency being configured). Ordering is
+	// handled instead by deploying roots-first (see orderedPlacements), and
+	// correctness by holding this object's STEP execution below until every
+	// dependency has actually finished.
+	created, err := reconcileObject(ctx, q, buildID, obj, fp, deployTasks)
 	if err != nil {
 		return err
 	}
@@ -350,6 +355,14 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 		if err := materializeSchedule(ctx, q, buildID, obj, rctx.Schedule, anchors); err != nil {
 			return fmt.Errorf("materializing schedule: %w", err)
 		}
+	}
+	// Once the box is up AND every dependency has finished configuring, queue
+	// this object's authored steps. obj here is this pass's snapshot (its
+	// status and steps_materialized_at are current via EnsureDeployedObject's
+	// RETURNING), so this converges over successive passes as dependencies
+	// finish.
+	if err := materializeStepsIfReady(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, dependsOn, placed, finishedDeps, failedDeps, materializeActive); err != nil {
+		return fmt.Errorf("materializing steps: %w", err)
 	}
 	return nil
 }
@@ -367,7 +380,12 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 // host/container's own schedule: entries exactly once per real
 // (re)deploy, not on every reconcile pass over an already-deploying
 // object.
-func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, desiredFP string, deployTasks, depsReady bool) (created bool, err error) {
+//
+// Deploy is NOT gated on depends_on: the box is provisioned as soon as its
+// turn comes (ordered roots-first by the caller), ahead of its dependencies
+// finishing. depends_on now holds only step EXECUTION (materializeStepsIfReady),
+// not the infrastructure deploy.
+func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, desiredFP string, deployTasks bool) (created bool, err error) {
 	if infraUp(obj.Status) {
 		if obj.Fingerprint == desiredFP {
 			return false, nil // already correct
@@ -383,13 +401,6 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 	}
 	if !deployTasks {
 		return false, nil // planned: the object row and its fingerprint are already recorded above; stop here
-	}
-	if !depsReady {
-		// depends_on ordering: hold this object's deploy task until every
-		// dependency is up. The object row + fingerprint are already recorded
-		// above (so it stays inspectable); a later pass creates the task once
-		// dependencies converge. checkDependsOnCycles rules out a deadlock.
-		return false, nil
 	}
 	// pending, deploying, or deploy_failed: ensure a deploy task exists.
 	// CreateTaskIfNoneOpen is the idempotency guard here -- if one's
@@ -442,26 +453,77 @@ func placedNames(networks map[string]map[string][]loader.Copy) map[string]bool {
 	return out
 }
 
-// teamDepReadiness maps each object name to whether ALL of its copies for this
-// team are up (infraUp). An object with no row yet, or any copy not up, is not
-// ready. Used to hold a dependent's deploy until its dependencies converge.
-func teamDepReadiness(ctx context.Context, q *db.Queries, teamID pgtype.UUID) (map[string]bool, error) {
-	objs, err := q.ListDeployedObjectsByTeam(ctx, teamID)
-	if err != nil {
-		return nil, err
-	}
-	ready := make(map[string]bool, len(objs))
-	seen := make(map[string]bool, len(objs))
-	for _, o := range objs {
-		up := infraUp(o.Status)
-		if !seen[o.ObjectName] {
-			seen[o.ObjectName] = true
-			ready[o.ObjectName] = up
-		} else {
-			ready[o.ObjectName] = ready[o.ObjectName] && up
+// placement is one host/container copy to reconcile, carrying its depends_on
+// depth so the whole set can be ordered roots-first.
+type placement struct {
+	networkName string
+	objectName  string
+	as          string
+	kind        string
+	depth       int
+}
+
+// orderedPlacements flattens an environment's topology into every copy it
+// places, sorted by depends_on depth (roots first) with a deterministic
+// tiebreak. Deploy tasks are created in this order so a dependency's box is
+// provisioned before its dependents' -- the tree-priority the box-deploy
+// decoupling asks for. The order is identical for every team (the topology is
+// too), so callers compute it once.
+func orderedPlacements(env *loader.Environment, containerNames map[string]bool, depth map[string]int) []placement {
+	var out []placement
+	for networkName, objs := range env.Networks {
+		for objectName, copies := range objs {
+			kind := "host"
+			if containerNames[objectName] {
+				kind = "container"
+			}
+			for _, cp := range copies {
+				out = append(out, placement{networkName, objectName, cp.As, kind, depth[objectName]})
+			}
 		}
 	}
-	return ready, nil
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].depth != out[j].depth {
+			return out[i].depth < out[j].depth
+		}
+		if out[i].objectName != out[j].objectName {
+			return out[i].objectName < out[j].objectName
+		}
+		return out[i].as < out[j].as
+	})
+	return out
+}
+
+// teamDepReadiness summarizes a team's objects for depends_on gating of step
+// execution. finished[name] is true only when EVERY copy of that object has
+// fully FINISHED configuring (status "finished"); failed[name] is true when
+// ANY copy reached a terminal failure (deploy_failed/build_failed/invalid). An
+// object with no row yet is neither finished nor failed. A dependent's steps
+// are materialized only once all its dependencies are finished (the box having
+// merely come up is no longer enough -- a DC must be a configured DC); a
+// dependency that failed lets the dependent fail fast instead of waiting
+// forever.
+func teamDepReadiness(ctx context.Context, q *db.Queries, teamID pgtype.UUID) (finished, failed map[string]bool, err error) {
+	objs, err := q.ListDeployedObjectsByTeam(ctx, teamID)
+	if err != nil {
+		return nil, nil, err
+	}
+	finished = make(map[string]bool, len(objs))
+	failed = make(map[string]bool, len(objs))
+	seen := make(map[string]bool, len(objs))
+	for _, o := range objs {
+		isFin := o.Status == "finished"
+		isFail := o.Status == "deploy_failed" || o.Status == "build_failed" || o.Status == "invalid"
+		if !seen[o.ObjectName] {
+			seen[o.ObjectName] = true
+			finished[o.ObjectName] = isFin
+			failed[o.ObjectName] = isFail
+		} else {
+			finished[o.ObjectName] = finished[o.ObjectName] && isFin
+			failed[o.ObjectName] = failed[o.ObjectName] || isFail
+		}
+	}
+	return finished, failed, nil
 }
 
 // effectiveTags computes the tags stored on a deployed_object, cascading from

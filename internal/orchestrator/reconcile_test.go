@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/globalcptc/laforge/internal/db"
@@ -137,12 +138,11 @@ func TestReconcileOnRealExampleRepo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListTasksByBuild: %v", err)
 	}
-	// 11 of a team's 13 objects get a deploy task on the first pass; the two
-	// with unmet depends_on (webserver -> database, workstation ->
-	// domain-controller) are held by the ordering gate until their
-	// dependencies come up on a later pass.
-	if len(tasks) != 5*11 {
-		t.Fatalf("ListTasksByBuild = %d, want %d -- one deploy task per ready object (depends_on holds 2/team)", len(tasks), 5*11)
+	// Every one of a team's 13 objects gets a deploy task on the first pass:
+	// the box deploys ahead of time regardless of depends_on (which now gates
+	// step execution, not the infrastructure deploy). 13 objects x 5 teams.
+	if len(tasks) != 5*13 {
+		t.Fatalf("ListTasksByBuild = %d, want %d -- one deploy task per object (deploy no longer gated on depends_on)", len(tasks), 5*13)
 	}
 	for _, tk := range tasks {
 		if tk.Status != "pending" {
@@ -326,32 +326,42 @@ func TestReconcilePlannedBuildCreatesNoRealWork(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListTasksByBuild (after deploy): %v", err)
 	}
-	// 11/team on the first deploying pass -- the two objects with unmet
-	// depends_on are held by the ordering gate until dependencies come up.
-	if len(tasksAfterDeploy) != 5*11 {
-		t.Fatalf("ListTasksByBuild (after deploy) = %d, want %d -- deploying creates real tasks (depends_on holds 2/team on the first pass)", len(tasksAfterDeploy), 5*11)
+	// 13/team on the first deploying pass -- every object's box deploys ahead
+	// of time; depends_on no longer holds the deploy (it gates step execution).
+	if len(tasksAfterDeploy) != 5*13 {
+		t.Fatalf("ListTasksByBuild (after deploy) = %d, want %d -- deploying creates one deploy task per object (deploy not gated on depends_on)", len(tasksAfterDeploy), 5*13)
 	}
 }
 
-// TestDependsOnHoldsDeployUntilDependencyUp proves the ordering gate: a host
-// with an unmet depends_on gets no deploy task, and one appears only after its
-// dependency is up. webserver depends_on database in examples/lm-test.
-func TestDependsOnHoldsDeployUntilDependencyUp(t *testing.T) {
+// TestDependsOnHoldsStepsUntilDependencyFinished proves the redesigned gate:
+// the box deploys ahead of time (a webserver deploy task appears immediately,
+// not held by depends_on), but the webserver's STEPS are materialized only once
+// its dependency (database) has fully FINISHED configuring -- "a domain
+// controller must be configured as a domain controller, not just running
+// Windows." webserver depends_on database in examples/lm-test.
+func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 	pool := testPool(t)
 	ctx := context.Background()
 	q := db.New(pool)
 	build := newTestBuildWithFakeBuilder(t, pool, "depends-on-order")
 
-	countWebserverTasks := func() int {
+	webserverIDs := func() []pgtype.UUID {
 		objs, err := q.ListDeployedObjectsByBuild(ctx, build.ID)
 		if err != nil {
 			t.Fatalf("ListDeployedObjectsByBuild: %v", err)
 		}
-		webIDs := map[string]bool{}
+		var ids []pgtype.UUID
 		for _, o := range objs {
 			if o.ObjectName == "webserver" {
-				webIDs[o.ID.String()] = true
+				ids = append(ids, o.ID)
 			}
+		}
+		return ids
+	}
+	countWebserverTasks := func() int {
+		webIDs := map[string]bool{}
+		for _, id := range webserverIDs() {
+			webIDs[id.String()] = true
 		}
 		tasks, err := q.ListTasksByBuild(ctx, build.ID)
 		if err != nil {
@@ -365,25 +375,52 @@ func TestDependsOnHoldsDeployUntilDependencyUp(t *testing.T) {
 		}
 		return n
 	}
+	webserverSteps := func() int {
+		total := 0
+		for _, id := range webserverIDs() {
+			rows, err := q.ListAgentTasksByHost(ctx, id)
+			if err != nil {
+				t.Fatalf("ListAgentTasksByHost: %v", err)
+			}
+			total += len(rows)
+		}
+		return total
+	}
 
-	// First pass: database isn't up, so webserver is held -- no task.
+	// First pass: the box deploys ahead of time, so webserver gets its deploy
+	// task immediately even though database hasn't finished.
 	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
-	if got := countWebserverTasks(); got != 0 {
-		t.Fatalf("webserver deploy tasks on first pass = %d, want 0 (held by depends_on)", got)
+	if got := countWebserverTasks(); got != 5 {
+		t.Fatalf("webserver deploy tasks on first pass = %d, want 5 (deploy not gated on depends_on)", got)
 	}
 
-	// Bring every team's database copy up, then reconcile again.
+	// Bring every team's webserver box up (agent in) but leave database merely
+	// "running", not "finished": steps must still be held.
 	if _, err := pool.Exec(ctx,
-		"UPDATE deployed_object SET status='running' WHERE object_name='database' AND team_id IN (SELECT id FROM team WHERE build_id=$1)",
+		"UPDATE deployed_object SET status='running' WHERE object_name IN ('webserver','database') AND team_id IN (SELECT id FROM team WHERE build_id=$1)",
 		build.ID); err != nil {
-		t.Fatalf("marking database up: %v", err)
+		t.Fatalf("marking boxes up: %v", err)
 	}
 	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
-		t.Fatalf("Reconcile (second pass): %v", err)
+		t.Fatalf("Reconcile (boxes up): %v", err)
 	}
-	if got := countWebserverTasks(); got != 5 {
-		t.Fatalf("webserver deploy tasks after database up = %d, want 5 (one per team)", got)
+	if got := webserverSteps(); got != 0 {
+		t.Fatalf("webserver steps materialized = %d while database only 'running', want 0 (steps wait for the dependency to FINISH)", got)
+	}
+
+	// Finish every team's database copy, then reconcile: now webserver's steps
+	// materialize. webserver.yaml expands to 6 commands per copy x 5 teams.
+	if _, err := pool.Exec(ctx,
+		"UPDATE deployed_object SET status='finished' WHERE object_name='database' AND team_id IN (SELECT id FROM team WHERE build_id=$1)",
+		build.ID); err != nil {
+		t.Fatalf("finishing database: %v", err)
+	}
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+		t.Fatalf("Reconcile (database finished): %v", err)
+	}
+	if got := webserverSteps(); got != 5*6 {
+		t.Fatalf("webserver steps materialized after database finished = %d, want %d (6 commands x 5 teams)", got, 5*6)
 	}
 }

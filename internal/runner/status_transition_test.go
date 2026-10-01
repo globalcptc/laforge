@@ -64,10 +64,9 @@ func TestExecuteDeployTransitionsThroughDeploying(t *testing.T) {
 	}
 
 	// Drain every other task at full speed, holding the host's own task
-	// aside, unexecuted, the moment it's leased. The chosen host may be one
-	// held by depends_on ordering (its deploy task appears only after its
-	// dependencies deploy), so when we run out of tasks, reconcile again to
-	// create newly-unblocked tasks before giving up.
+	// aside, unexecuted, the moment it's leased. Reconcile again if we run out
+	// of leasable tasks before finding it (defensive -- every deploy task is
+	// created on the first pass now).
 	var hostTask *db.Task
 	reconciles := 0
 	for hostTask == nil {
