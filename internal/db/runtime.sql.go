@@ -645,6 +645,42 @@ func (q *Queries) GetLiveDeployingBuildForConfiguredBuild(ctx context.Context, c
 	return i, err
 }
 
+const getLogContextByDeployedObject = `-- name: GetLogContextByDeployedObject :one
+SELECT team.build_id, team.team_number,
+       deployed_object.object_name, deployed_object.as_name, deployed_object.kind
+FROM deployed_object
+JOIN team ON team.id = deployed_object.team_id
+WHERE deployed_object.id = $1
+`
+
+type GetLogContextByDeployedObjectRow struct {
+	BuildID    pgtype.UUID `json:"build_id"`
+	TeamNumber int32       `json:"team_number"`
+	ObjectName string      `json:"object_name"`
+	AsName     *string     `json:"as_name"`
+	Kind       string      `json:"kind"`
+}
+
+// The identity the log sink needs to make one captured console line a
+// self-contained record for an external ingester: its build, team number,
+// display name and kind, resolved from the agent's deployed_object id (its
+// cert CN). Same deployed_object -> team -> build hop GetBuildIDByDeployedObject
+// uses; the laforge_gateway role already has SELECT on all three tables
+// (migrations/00004). The gateway caches this per object, so it is read once
+// per object, not once per log batch.
+func (q *Queries) GetLogContextByDeployedObject(ctx context.Context, id pgtype.UUID) (GetLogContextByDeployedObjectRow, error) {
+	row := q.db.QueryRow(ctx, getLogContextByDeployedObject, id)
+	var i GetLogContextByDeployedObjectRow
+	err := row.Scan(
+		&i.BuildID,
+		&i.TeamNumber,
+		&i.ObjectName,
+		&i.AsName,
+		&i.Kind,
+	)
+	return i, err
+}
+
 const getTask = `-- name: GetTask :one
 SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at FROM task WHERE id = $1
 `

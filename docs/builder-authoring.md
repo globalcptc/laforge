@@ -85,6 +85,21 @@ type Builder interface {
   Zun (OpenStack). The agent is delivered *into* the container (`AgentBinary` for a
   pushed binary, `AgentDownloadURL` for fetch-at-start) so it checks in and runs
   steps/validators exactly like a host.
+  - **The agent must run as PID 1 *inside the application container*, not on the
+    host next to it** — it is the container's entrypoint, supervising the image's
+    real command (`LAFORGE_SUPERVISE`). This is load-bearing, not a style choice:
+    validators run natively in the agent's own namespace (`process_running` shells
+    `pgrep`, `port_listening` dials `127.0.0.1`), so the agent has to be where the
+    app is or a content check would see the wrong process table and ports. A
+    nesting builder therefore injects the agent as the nested container's own
+    `--entrypoint` (see `microcloud.runNestedContainer`), **never** runs the agent
+    on the Docker host and the app beside it — that would make `process_running:
+    dockerd` pass on your builder and fail on a native-OCI one, which is exactly
+    the builder leak content must never see. The image pull/run is *your* job here
+    (the runner no longer materializes a `docker run` step); a container's agent
+    has no Docker to run one. If the host also needs an agent for its own
+    visibility, that is a *separate* identity/object — it never carries the
+    container's identity or its steps.
 
 ### Destroy\* — idempotent, takes `team`
 

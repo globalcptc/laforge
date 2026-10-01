@@ -1,7 +1,7 @@
 import { useParams } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Box, CalendarClock, CheckCircle2, ChevronDown, Container, Info, Network, Play, Power, Radar, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, type LucideIcon } from 'lucide-react'
-import { useAdHocTask, useBuild, useCreateScheduledTask, useDetectDrift, usePowerAction, useTopology } from '../api/hooks'
+import { AlertTriangle, Box, CalendarClock, CheckCircle2, ChevronDown, Container, Hammer, Info, Network, Play, Power, Radar, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, type LucideIcon } from 'lucide-react'
+import { useAdHocTask, useBuild, useCreateScheduledTask, useDetectDrift, usePowerAction, useRebuild, useTopology } from '../api/hooks'
 import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
 import { ObjectLogPanel } from '../components/ObjectLogPanel'
@@ -9,7 +9,7 @@ import { TaskActionFields, buildTaskPayload, taskFormValid } from '../components
 import { WhenField } from '../components/WhenField'
 import { Boxes } from 'lucide-react'
 import { ApiError } from '../api/client'
-import type { DeployedObject, DriftReport, ObjectKind, TopologyMember } from '../api/types'
+import type { DeployedObject, DriftReport, ObjectKind, RebuildAffected, TopologyMember } from '../api/types'
 import { Badge, Button, cn, Label, Modal, Spinner, Table, TableScroller, Td, Th, useToast } from '../ui'
 import { buildIsReadOnly } from '../lib/build'
 
@@ -54,30 +54,43 @@ const POWER_ACTIONS: Record<string, { action: PowerAct; icon: LucideIcon; label:
 // InfraCell shows the live power pill, and on hover (after a ~0.5s dwell, so it
 // doesn't flicker while scanning the list) reveals same-size Start/Stop/Restart
 // controls just past the pill. Each opens the confirm modal for this one host.
-function InfraCell({ obj, onAction }: { obj: DeployedObject; onAction: (action: PowerAct, obj: DeployedObject) => void }) {
+function InfraCell({ obj, onAction, onRebuild }: { obj: DeployedObject; onAction: (action: PowerAct, obj: DeployedObject) => void; onRebuild?: (obj: DeployedObject) => void }) {
   if (!obj.power_state || GONE_STATES.has(obj.status)) return <span className="text-fg-muted">—</span>
   const actions = POWER_ACTIONS[obj.power_state] ?? []
+  const name = obj.as_name ?? obj.object_name
+  if (actions.length === 0 && !onRebuild) return <PowerBadge state={obj.power_state} />
   return (
     <div className="group/pw relative inline-flex items-center">
       <PowerBadge state={obj.power_state} />
-      {actions.length > 0 && (
-        <div className="pointer-events-none absolute left-full top-1/2 z-20 ml-1 flex -translate-y-1/2 -translate-x-1 items-center gap-0.5 rounded-full border border-border bg-surface-raised px-1 py-0.5 opacity-0 shadow-raised transition delay-500 duration-150 group-hover/pw:pointer-events-auto group-hover/pw:translate-x-0 group-hover/pw:opacity-100">
-          {actions.map((a) => {
-            const Icon = a.icon
-            return (
-              <button
-                key={a.action}
-                onClick={() => onAction(a.action, obj)}
-                title={`${a.label} ${obj.as_name ?? obj.object_name}`}
-                aria-label={`${a.label} ${obj.as_name ?? obj.object_name}`}
-                className="flex h-5 w-5 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
-              >
-                <Icon size={12} />
-              </button>
-            )
-          })}
-        </div>
-      )}
+      <div className="pointer-events-none absolute left-full top-1/2 z-20 ml-1 flex -translate-y-1/2 -translate-x-1 items-center gap-0.5 rounded-full border border-border bg-surface-raised px-1 py-0.5 opacity-0 shadow-raised transition delay-500 duration-150 group-hover/pw:pointer-events-auto group-hover/pw:translate-x-0 group-hover/pw:opacity-100">
+        {actions.map((a) => {
+          const Icon = a.icon
+          return (
+            <button
+              key={a.action}
+              onClick={() => onAction(a.action, obj)}
+              title={`${a.label} ${name}`}
+              aria-label={`${a.label} ${name}`}
+              className="flex h-5 w-5 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
+            >
+              <Icon size={12} />
+            </button>
+          )
+        })}
+        {onRebuild && (
+          <>
+            {actions.length > 0 && <span className="mx-0.5 h-3.5 w-px bg-border" />}
+            <button
+              onClick={() => onRebuild(obj)}
+              title={`Rebuild ${name} and everything that depends on it`}
+              aria-label={`Rebuild ${name}`}
+              className="flex h-5 w-5 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-danger-soft hover:text-danger"
+            >
+              <Hammer size={12} />
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -131,6 +144,9 @@ export function BuildHosts() {
   // A single-instance power action from the Infra pill's hover controls,
   // confirmed in the same PowerDialog the bulk bar uses (one target here).
   const [powerSingle, setPowerSingle] = useState<{ action: 'start' | 'stop' | 'reboot'; id: string; name: string } | null>(null)
+  // A forced rebuild (tear down + recreate) of one or more hosts plus their
+  // dependents; confirmed in RebuildDialog, which previews the full blast radius.
+  const [rebuilding, setRebuilding] = useState<{ ids: string[]; names: string[] } | null>(null)
   const [logPanelFor, setLogPanelFor] = useState<{ id: string; label: string; kind: ObjectKind; object?: DeployedObject; teamNumber?: number } | null>(null)
   const [driftReport, setDriftReport] = useState<DriftReport | null>(null)
   const [driftError, setDriftError] = useState<string | null>(null)
@@ -518,7 +534,11 @@ export function BuildHosts() {
                                       <StatusBadge status={h.status} kind={h.kind} />
                                     </Td>
                                     <Td>
-                                      <InfraCell obj={h} onAction={(action, obj) => setPowerSingle({ action, id: obj.id, name: obj.as_name ?? obj.object_name })} />
+                                      <InfraCell
+                                        obj={h}
+                                        onAction={(action, obj) => setPowerSingle({ action, id: obj.id, name: obj.as_name ?? obj.object_name })}
+                                        onRebuild={readOnly ? undefined : (obj) => setRebuilding({ ids: [obj.id], names: [obj.as_name ?? obj.object_name] })}
+                                      />
                                     </Td>
                                     <Td>{h.agent ? <StatusBadge status={h.agent.agent_status} /> : <span className="text-fg-muted">—</span>}</Td>
                                     <Td className="font-mono text-xs text-fg-muted">{h.external_ref ?? '—'}</Td>
@@ -553,6 +573,15 @@ export function BuildHosts() {
             </Button>
             <Button variant="secondary" size="icon" onClick={() => setPowering('reboot')} title="Reboot" aria-label="Reboot">
               <RotateCw size={14} />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={() => setRebuilding({ ids: selectedHosts.map((h) => h.id), names: selectedHosts.map((h) => h.as_name ?? h.object_name) })}
+              title="Rebuild — tear down and recreate, cascading to dependents"
+              aria-label="Rebuild"
+            >
+              <Hammer size={14} />
             </Button>
           </span>
 
@@ -590,6 +619,18 @@ export function BuildHosts() {
           matched={[powerSingle.name]}
           onClose={() => setPowerSingle(null)}
           onDone={() => setPowerSingle(null)}
+        />
+      )}
+
+      {rebuilding && buildId && (
+        <RebuildDialog
+          buildId={buildId}
+          targetIds={rebuilding.ids}
+          onClose={() => setRebuilding(null)}
+          onDone={() => {
+            setRebuilding(null)
+            setSelected(new Set())
+          }}
         />
       )}
 
@@ -808,6 +849,111 @@ function PowerDialog({
 
       <Label>Affects</Label>
       <div className="mt-1 max-h-32 overflow-auto rounded-token border border-border bg-surface-sunken p-2 text-xs text-fg-muted">{matched.join(', ')}</div>
+    </Modal>
+  )
+}
+
+// RebuildDialog confirms a forced rebuild: tear the selected host(s) down at the
+// hoster and recreate them fresh, cascading to everything in their team that
+// depends on them. It opens by asking the server for the full blast radius
+// (a dry run) so the operator sees exactly what will be destroyed before
+// committing -- a rebuild re-runs every step and loses any in-place state.
+function RebuildDialog({
+  buildId,
+  targetIds,
+  onClose,
+  onDone,
+}: {
+  buildId: string
+  targetIds: string[]
+  onClose: () => void
+  onDone: () => void
+}) {
+  const rebuild = useRebuild(buildId)
+  const toast = useToast()
+  const [preview, setPreview] = useState<RebuildAffected[] | null>(null)
+  const [previewErr, setPreviewErr] = useState<string | null>(null)
+
+  const idsKey = targetIds.join(',')
+  useEffect(() => {
+    let cancelled = false
+    setPreview(null)
+    setPreviewErr(null)
+    rebuild
+      .mutateAsync({ target: { ids: targetIds }, include_dependents: true, dry_run: true })
+      .then((res) => {
+        if (!cancelled) setPreview(res.affected)
+      })
+      .catch((e) => {
+        if (!cancelled) setPreviewErr(e instanceof ApiError ? e.message : 'Could not compute the rebuild set')
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildId, idsKey])
+
+  async function run() {
+    try {
+      const res = await rebuild.mutateAsync({ target: { ids: targetIds }, include_dependents: true, dry_run: false })
+      toast({
+        title: 'Rebuild started',
+        description: `${res.count} host(s) will be torn down and recreated`,
+        tone: 'success',
+      })
+      onDone()
+    } catch (e) {
+      toast({ title: 'Rebuild failed', description: e instanceof ApiError ? e.message : undefined, tone: 'danger', duration: 0 })
+    }
+  }
+
+  const count = preview?.length ?? 0
+  const extra = preview ? Math.max(0, count - targetIds.length) : 0
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`Rebuild ${targetIds.length} host(s)`}
+      description="Tears the selected host(s) down at the hoster and deploys them fresh, re-running their steps — cascading to everything in their team that depends on them."
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={run} disabled={rebuild.isPending || preview === null || previewErr !== null}>
+            {rebuild.isPending && preview !== null ? 'Working…' : count > 0 ? `Rebuild ${count}` : 'Rebuild'}
+          </Button>
+        </>
+      }
+    >
+      <div className="mb-3 flex items-start gap-1.5 text-xs text-danger">
+        <TriangleAlert size={13} className="mt-0.5 shrink-0" />
+        <span>This destroys the instances at the hoster and recreates them. Anything changed on them since deploy is lost.</span>
+      </div>
+
+      <Label>
+        Will rebuild
+        {extra > 0 ? ` (${targetIds.length} selected + ${extra} dependent${extra === 1 ? '' : 's'})` : ''}
+      </Label>
+      {previewErr !== null ? (
+        <div className="mt-1 rounded-token border border-danger bg-danger-soft p-2 text-xs text-danger">{previewErr}</div>
+      ) : preview === null ? (
+        <div className="mt-1 flex items-center gap-2 text-xs text-fg-muted">
+          <Spinner /> Computing the rebuild set…
+        </div>
+      ) : (
+        <div className="mt-1 max-h-48 overflow-auto rounded-token border border-border bg-surface-sunken p-2 text-xs text-fg-muted">
+          {preview.map((a) => (
+            <div key={a.id} className="flex items-center justify-between gap-2 py-0.5">
+              <span className="truncate">{a.as_name || a.object_name}</span>
+              <span className="shrink-0 text-fg-subtle">
+                team {a.team_number} · {a.kind}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </Modal>
   )
 }

@@ -490,18 +490,26 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		if derr != nil {
 			return derr
 		}
-		externalRef, err = b.DeployContainer(ctx, builder.ContainerSpec{
+		// The registry credential for this image, if one is configured, so a
+		// nesting builder (MicroCloud) can `docker login` before pulling a
+		// private image. The builder, not a materialized agent step, owns the
+		// pull now -- a container's agent runs INSIDE the app and has no Docker.
+		cspec := builder.ContainerSpec{
 			ExternalName: externalName, DisplayName: displayName, Team: team,
 			Network: networkExternalName(task.BuildID, teamNumber, obj), NetworkDisplayName: networkDisplayName(teamNumber, db.StrOrEmpty(obj.NetworkName)), Address: addr,
 			Image: ct.Image, Size: ct.Size, Env: ct.Env, Command: ct.Command,
 			TCPPorts: ct.Ports.TCP, UDPPorts: ct.Ports.UDP,
-			// Native OCI (Incus): the agent binary is pushed in and made the
-			// entrypoint. Nesting (MicroCloud): the cloud-init user-data is used.
-			// Cloud (Fargate/Zun): the agent is downloaded at start from its URL.
-			// Each builder takes what it needs; the others are ignored.
+			// The agent binary is planted as the app container's entrypoint on
+			// every builder (native OCI: oci.entrypoint; nesting: a bind-mounted
+			// --entrypoint). Cloud (Fargate/Zun): downloaded at start from its
+			// URL. Each builder takes what it needs; the others are ignored.
 			CloudInitUserData: del.UserData, CloudInitViaISO: del.Platform == agentdelivery.Windows,
 			AgentBinary: del.Binary, AgentDownloadURL: del.DownloadURL,
-		})
+		}
+		if cred := r.registryCredFor(ctx, q, ct.Image); cred != nil {
+			cspec.RegistryHost, cspec.RegistryUser, cspec.RegistrySecret = cred.RegistryHost, cred.Username, cred.Secret
+		}
+		externalRef, err = b.DeployContainer(ctx, cspec)
 	default:
 		return fmt.Errorf("unknown deployed_object kind %q", obj.Kind)
 	}
@@ -605,17 +613,13 @@ func (r *Runner) materializeSteps(ctx context.Context, q *db.Queries, task db.Ta
 	if err != nil {
 		return fmt.Errorf("expanding steps: %w", err)
 	}
-	// A container's very first step is the Docker run: pull and run its OCI
-	// image on the LXD box's own IP. Any authored steps follow it (they run
-	// in the LXD box via the agent, e.g. docker exec / host provisioning).
-	var cmds []gateway.PlannedCommand
-	if obj.Kind == "container" {
-		if ct := findContainer(c, obj.ObjectName); ct != nil {
-			cred := r.registryCredFor(ctx, q, ct.Image)
-			cmds = append(cmds, dockerRunPlannedCommand(ct, cred))
-		}
-	}
-	cmds = append(cmds, authored...)
+	// A container's steps run from INSIDE its application container (its agent
+	// is the container's entrypoint, on every builder), exactly like a host's
+	// steps run on the host. There is no builder-specific prelude here: the
+	// image pull/run is the builder's own business (a nesting builder does it in
+	// DeployContainer; a native-OCI builder runs the image directly), never a
+	// materialized agent step -- a container's agent has no Docker to run one.
+	cmds := authored
 	for i, cmd := range cmds {
 		payload, err := json.Marshal(cmd.Payload)
 		if err != nil {
@@ -700,6 +704,15 @@ func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task
 	}
 	if _, err := q.ResetDeployedObjectForRedeploy(ctx, obj.ID); err != nil {
 		return false, fmt.Errorf("resetting object for redeploy: %w", err)
+	}
+	// Clear this object's materialized steps so the redeploy re-materializes
+	// them. materializeSteps skips when any agent_task already exists
+	// (NextStepIndexForHost != 0), so without this a rebuilt instance would come
+	// up but never re-run its scripts/users/services/validators. Applies to both
+	// a content-change redeploy (fingerprint diff) and a forced rebuild
+	// (orchestrator.RebuildObjects); validator_result rows cascade.
+	if err := q.DeleteAgentTasksForObject(ctx, obj.ID); err != nil {
+		return false, fmt.Errorf("clearing steps for redeploy: %w", err)
 	}
 	return false, nil
 }

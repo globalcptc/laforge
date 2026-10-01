@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/globalcptc/laforge/internal/builder/incus"
@@ -153,8 +154,35 @@ func (s *Server) verifyImages(r *http.Request, params db.CreateBuilderConfigPara
 	})
 }
 
+// authAndAdmin resolves the caller from a session cookie OR a bearer token and
+// reports whether they are an instance admin. err is non-nil only when the
+// caller isn't authenticated at all -- so a GET gated by this is readable by any
+// signed-in user, with admin-only fields redacted for the rest.
+func (s *Server) authAndAdmin(ctx context.Context, r *http.Request) (bool, error) {
+	sess, err := s.authSessionForRequest(ctx, r)
+	if err != nil {
+		return false, err
+	}
+	return s.isInstanceAdmin(sess), nil
+}
+
+// redactBuilderConfig strips the connection/credential material from a builder
+// config so a non-admin can see WHAT is configured (name, kind, hoster URL, the
+// os->image and size maps) without its cert paths, server cert, pooled-host
+// connection list, or credential reference -- the same "none of its connection
+// details" line builderSummary already draws for non-admins.
+func redactBuilderConfig(c db.BuilderConfig) db.BuilderConfig {
+	c.IncusClientCertPath = nil
+	c.IncusClientKeyPath = nil
+	c.IncusServerCertPem = nil
+	c.IncusHosts = nil
+	c.IncusCredentialID = pgtype.UUID{}
+	return c
+}
+
 func (s *Server) handleListBuilderConfigs(w http.ResponseWriter, r *http.Request) {
-	if _, err := s.requireInstanceAdmin(r.Context(), r); err != nil {
+	admin, err := s.authAndAdmin(r.Context(), r)
+	if err != nil {
 		writeAuthError(w, err)
 		return
 	}
@@ -165,6 +193,11 @@ func (s *Server) handleListBuilderConfigs(w http.ResponseWriter, r *http.Request
 	}
 	if rows == nil {
 		rows = []db.BuilderConfig{}
+	}
+	if !admin {
+		for i := range rows {
+			rows[i] = redactBuilderConfig(rows[i])
+		}
 	}
 	writeJSON(w, http.StatusOK, rows)
 }
@@ -197,7 +230,8 @@ func (s *Server) handleListBuilders(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetBuilderConfig(w http.ResponseWriter, r *http.Request) {
-	if _, err := s.requireInstanceAdmin(r.Context(), r); err != nil {
+	admin, err := s.authAndAdmin(r.Context(), r)
+	if err != nil {
 		writeAuthError(w, err)
 		return
 	}
@@ -205,6 +239,9 @@ func (s *Server) handleGetBuilderConfig(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		writeError(w, http.StatusNotFound, err)
 		return
+	}
+	if !admin {
+		row = redactBuilderConfig(row)
 	}
 	writeJSON(w, http.StatusOK, row)
 }

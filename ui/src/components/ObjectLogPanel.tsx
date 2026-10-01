@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check } from 'lucide-react'
-import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectSteps, useObjectInfra } from '../api/hooks'
+import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
 import type { RenderedStep, StepStatus, ObjectKind, DeployedObject } from '../api/types'
@@ -9,6 +9,25 @@ import { Badge, Button, cn, InspectorPanel, Spinner } from '../ui'
 import { StatusBadge, PowerBadge, GONE_STATES } from './StatusBadge'
 
 type Tab = 'info' | 'events' | 'steps' | 'heartbeats' | 'render'
+
+// A percentage metric (0-100), rounded, or a dash when the agent didn't send it.
+function pct(v: number | null): string {
+  return v == null ? '—' : `${Math.round(v)}%`
+}
+
+// A bytes-per-second rate, compact (—, 0, 1.2K, 3M, ...).
+function bps(v: number | null): string {
+  if (v == null) return '—'
+  if (v < 1) return '0'
+  const units = ['', 'K', 'M', 'G']
+  let n = v
+  let u = 0
+  while (n >= 1024 && u < units.length - 1) {
+    n /= 1024
+    u++
+  }
+  return `${n >= 10 || u === 0 ? Math.round(n) : n.toFixed(1)}${units[u]}`
+}
 
 // "Per-object logs" -- one host/container's own
 // slice of the journal (real data, GET
@@ -121,19 +140,38 @@ export function ObjectLogPanel({
             />
           )}
           {heartbeats && heartbeats.length > 0 && (
-            <div className="flex flex-col gap-2 font-mono text-xs">
-              {heartbeats.map((h, i) => {
-                const addrChanged = i < heartbeats.length - 1 && h.remote_addr !== heartbeats[i + 1].remote_addr
-                return (
-                  <div key={h.id} className="border-b border-border pb-2">
-                    <div className="flex gap-2">
-                      <span className="text-fg-muted">{fmt.time(h.created_at)}</span>
-                      <span className={addrChanged ? 'text-warning' : 'text-fg-muted'}>{h.remote_addr ?? '—'}</span>
-                    </div>
-                    {addrChanged && <div className="mt-0.5 text-warning">remote address changed from the previous check-in</div>}
-                  </div>
-                )
-              })}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse font-mono text-xs">
+                <thead>
+                  <tr className="border-b border-border text-left text-fg-subtle">
+                    <th className="py-1 pr-2 font-medium">Time</th>
+                    <th className="py-1 px-2 text-right font-medium">CPU</th>
+                    <th className="py-1 px-2 text-right font-medium">Mem</th>
+                    <th className="py-1 px-2 text-right font-medium">Disk</th>
+                    <th className="py-1 px-2 text-right font-medium" title="Network received / sent per second">Net ↓/↑</th>
+                    <th className="py-1 pl-2 font-medium">Remote</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {heartbeats.map((h, i) => {
+                    const addrChanged = i < heartbeats.length - 1 && h.remote_addr !== heartbeats[i + 1].remote_addr
+                    return (
+                      <tr key={h.id} className="border-b border-border/60">
+                        <td className="whitespace-nowrap py-1 pr-2 text-fg-muted">{fmt.time(h.created_at)}</td>
+                        <td className="py-1 px-2 text-right">{pct(h.cpu_pct)}</td>
+                        <td className="py-1 px-2 text-right">{pct(h.mem_pct)}</td>
+                        <td className="py-1 px-2 text-right">{pct(h.disk_pct)}</td>
+                        <td className="whitespace-nowrap py-1 px-2 text-right text-fg-muted">
+                          {bps(h.net_rx_bps)} / {bps(h.net_tx_bps)}
+                        </td>
+                        <td className={cn('whitespace-nowrap py-1 pl-2', addrChanged ? 'text-warning' : 'text-fg-muted')} title={addrChanged ? 'remote address changed from the previous check-in' : undefined}>
+                          {h.remote_addr ?? '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </>
@@ -323,6 +361,14 @@ function InfoTab({
   // Builder placement + the root password for hand access -- resolved
   // server-side from the builder-config chain (varies by builder).
   const { data: infra } = useObjectInfra(buildId, objectId, true)
+  // The host's full authored config (open ports, env, vars, deps, findings) --
+  // content-resolved, not on the row. Networks have none.
+  const { data: config } = useObjectConfig(buildId, objectId, kind !== 'network')
+  const ports = [...(config?.tcp_ports ?? []).map((p) => `${p}/tcp`), ...(config?.udp_ports ?? []).map((p) => `${p}/udp`)].join(', ')
+  const kv = (o?: Record<string, string>) => (o ? Object.entries(o).map(([k, v]) => `${k}=${v}`).join(', ') : '')
+  const envLabel = kv(config?.env)
+  const varsLabel = kv(config?.vars)
+  const tagsLabel = kv(config?.tags)
   return (
     <div className="flex flex-col gap-4">
       <dl className="flex flex-col divide-y divide-border text-sm">
@@ -344,6 +390,38 @@ function InfoTab({
         {object?.external_ref && <InfoRow label="Hoster ref" value={object.external_ref} mono />}
         {object?.last_error && <InfoRow label="Last error" value={object.last_error} mono danger />}
       </dl>
+
+      {config && kind !== 'network' && (
+        <div>
+          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+            <Info size={12} /> Configuration
+          </div>
+          <dl className="flex flex-col divide-y divide-border text-sm">
+            {config.os && <InfoRow label="OS" value={config.os} mono />}
+            {config.image && <InfoRow label="Image" value={config.image} mono />}
+            {config.size && <InfoRow label="Size" value={config.size} />}
+            {!!config.disk && <InfoRow label="Disk" value={`${config.disk} GB`} />}
+            {config.command && config.command.length > 0 && <InfoRow label="Command" value={config.command.join(' ')} mono />}
+            {ports && <InfoRow label="Open ports" value={ports} mono />}
+            {config.depends_on && config.depends_on.length > 0 && <InfoRow label="Depends on" value={config.depends_on.join(', ')} mono />}
+            {envLabel && <InfoRow label="Environment" value={envLabel} mono />}
+            {varsLabel && <InfoRow label="Vars" value={varsLabel} mono />}
+            {tagsLabel && <InfoRow label="Tags" value={tagsLabel} mono />}
+          </dl>
+          {config.findings && config.findings.length > 0 && (
+            <div className="mt-2">
+              <div className="mb-1 text-xs font-medium text-fg-muted">Findings</div>
+              <div className="flex flex-col gap-1">
+                {config.findings.map((f, i) => (
+                  <div key={i} className="rounded-token border border-border bg-surface-sunken px-2 py-1 text-xs text-fg-muted">
+                    <span className="font-medium text-fg">sev {f.severity} · diff {f.difficulty}</span> — {f.description}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {infra && (infra.placement.length > 0 || infra.password) && (
         <div>

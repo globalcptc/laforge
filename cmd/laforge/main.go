@@ -60,6 +60,12 @@ func main() {
 		err = runImages(os.Args[2:])
 	case "registries":
 		err = runRegistries(os.Args[2:])
+	case "run":
+		err = runRun(os.Args[2:])
+	case "schedule":
+		err = runSchedule(os.Args[2:])
+	case "cert-status":
+		err = runCertStatus(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -123,6 +129,23 @@ http://localhost:8080).
 
   laforge registries
       List the stored private-registry credentials (host + username).
+
+  laforge run --build <id> [targets] [--dry-run] -- <command>
+      Run a command on the matched hosts now, through their agents. Targets:
+      --team <n>, --id <object-id> (repeatable), --tag <k[=v]> (repeatable),
+      --kind host|container, --search <text>, --network <name>. The default
+      command is 'execute' (the shell command after --); other kinds take
+      --command <kind> --payload '<json>'. --dry-run shows the matched hosts.
+      Needs manage access on the repo.
+
+  laforge schedule --build <id> --when "<phrase>" [targets] -- <command>
+      Schedule a command with a natural-language time ("every 30 minutes",
+      "45 minutes after competition start"). Same targets and command flags
+      as 'run'. Needs manage access on the repo.
+
+  laforge cert-status
+      Show the agent mTLS CA and gateway certificate expiry. Exits non-zero if
+      either is expired or within 3 months of expiring (handy for a monitor).
 
   laforge version
       Print the build version.`)

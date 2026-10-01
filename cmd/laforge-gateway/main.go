@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -34,6 +35,15 @@ func main() {
 	leaseSeconds := envInt("LEASE_SECONDS", 60)
 	basePollMS := envInt("BASE_POLL_MS", 15000)
 	jitterMS := envInt("JITTER_MS", 5000)
+	// Optional container-log forwarding. LOG_SINK_URL is the HTTP endpoint the
+	// gateway POSTs NDJSON to (a generic collector -- Vector/Fluent Bit in front
+	// of Splunk/Loki/Elastic, or anything that accepts newline-JSON). Unset =
+	// disabled. LOG_SINK_HEADERS carries any auth ("Authorization: Splunk <tok>")
+	// as comma-separated "Name: value" pairs; LOG_SINK_LABELS adds static
+	// key=value fields to every record (e.g. env=cptc2026).
+	logSinkURL := os.Getenv("LOG_SINK_URL")
+	logSinkHeaders := parseKV(os.Getenv("LOG_SINK_HEADERS"), ":")
+	logSinkLabels := parseKV(os.Getenv("LOG_SINK_LABELS"), "=")
 
 	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
@@ -65,6 +75,12 @@ func main() {
 		Pool: pool, TLSConfig: tlsCfg,
 		LeaseDuration: time.Duration(leaseSeconds) * time.Second,
 		BasePollMS:    basePollMS, JitterMS: jitterMS,
+	}
+	if logSinkURL != "" {
+		sink := gateway.NewHTTPSink(logSinkURL, logSinkHeaders, logSinkLabels)
+		defer sink.Close()
+		srv.LogSink = sink
+		log.Printf("laforge-gateway forwarding container logs to %s", logSinkURL)
 	}
 	ln, err := srv.Listen(listenAddr)
 	if err != nil {
@@ -102,4 +118,26 @@ func envInt(name string, fallback int) int {
 		log.Fatalf("invalid integer for %s: %q", name, v)
 	}
 	return n
+}
+
+// parseKV splits a comma-separated "key<sep>value" list into a map, trimming
+// surrounding whitespace. Empty or malformed entries are skipped. Used for the
+// optional log-sink headers (sep ":") and static labels (sep "=").
+func parseKV(s, sep string) map[string]string {
+	if s == "" {
+		return nil
+	}
+	m := make(map[string]string)
+	for _, pair := range strings.Split(s, ",") {
+		i := strings.Index(pair, sep)
+		if i < 0 {
+			continue
+		}
+		k := strings.TrimSpace(pair[:i])
+		v := strings.TrimSpace(pair[i+1:])
+		if k != "" {
+			m[k] = v
+		}
+	}
+	return m
 }

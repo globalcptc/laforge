@@ -71,8 +71,8 @@ func (q *Queries) CreateAgentArtifact(ctx context.Context, arg CreateAgentArtifa
 }
 
 const createAgentHeartbeat = `-- name: CreateAgentHeartbeat :exec
-INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms)
-VALUES ($1, $2, $3, $4)
+INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 type CreateAgentHeartbeatParams struct {
@@ -80,6 +80,11 @@ type CreateAgentHeartbeatParams struct {
 	CertFingerprint  string      `json:"cert_fingerprint"`
 	RemoteAddr       *string     `json:"remote_addr"`
 	NextPollMs       *int32      `json:"next_poll_ms"`
+	CpuPct           *float64    `json:"cpu_pct"`
+	MemPct           *float64    `json:"mem_pct"`
+	DiskPct          *float64    `json:"disk_pct"`
+	NetRxBps         *float64    `json:"net_rx_bps"`
+	NetTxBps         *float64    `json:"net_tx_bps"`
 }
 
 // The append-only counterpart to UpsertAgentSession -- called alongside
@@ -99,6 +104,11 @@ func (q *Queries) CreateAgentHeartbeat(ctx context.Context, arg CreateAgentHeart
 		arg.CertFingerprint,
 		arg.RemoteAddr,
 		arg.NextPollMs,
+		arg.CpuPct,
+		arg.MemPct,
+		arg.DiskPct,
+		arg.NetRxBps,
+		arg.NetTxBps,
 	)
 	return err
 }
@@ -202,6 +212,21 @@ func (q *Queries) DeleteAgentHeartbeatsOlderThan(ctx context.Context, createdAt 
 	return result.RowsAffected(), nil
 }
 
+const deleteAgentTasksForObject = `-- name: DeleteAgentTasksForObject :exec
+DELETE FROM agent_task WHERE deployed_object_id = $1
+`
+
+// Clear every materialized step for an object so a redeploy re-materializes
+// them from scratch. materializeSteps skips when ANY agent_task already exists
+// (NextStepIndexForHost != 0), so without this a rebuilt instance would never
+// re-run its steps. validator_result rows reference agent_task ON DELETE
+// CASCADE, so they go with it; the append-only `event` journal (keyed by
+// deployed_object_id, not agent_task_id) is untouched history.
+func (q *Queries) DeleteAgentTasksForObject(ctx context.Context, deployedObjectID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAgentTasksForObject, deployedObjectID)
+	return err
+}
+
 const failAgentTask = `-- name: FailAgentTask :one
 UPDATE agent_task SET status = $2, last_error = $3, updated_at = now()
 WHERE id = $1
@@ -298,7 +323,7 @@ func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, 
 }
 
 const listAgentHeartbeatsByBuild = `-- name: ListAgentHeartbeatsByBuild :many
-SELECT agent_heartbeat.id, agent_heartbeat.deployed_object_id, agent_heartbeat.cert_fingerprint, agent_heartbeat.remote_addr, agent_heartbeat.next_poll_ms, agent_heartbeat.created_at FROM agent_heartbeat
+SELECT agent_heartbeat.id, agent_heartbeat.deployed_object_id, agent_heartbeat.cert_fingerprint, agent_heartbeat.remote_addr, agent_heartbeat.next_poll_ms, agent_heartbeat.created_at, agent_heartbeat.cpu_pct, agent_heartbeat.mem_pct, agent_heartbeat.disk_pct, agent_heartbeat.net_rx_bps, agent_heartbeat.net_tx_bps FROM agent_heartbeat
 JOIN deployed_object ON deployed_object.id = agent_heartbeat.deployed_object_id
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1
@@ -325,6 +350,11 @@ func (q *Queries) ListAgentHeartbeatsByBuild(ctx context.Context, buildID pgtype
 			&i.RemoteAddr,
 			&i.NextPollMs,
 			&i.CreatedAt,
+			&i.CpuPct,
+			&i.MemPct,
+			&i.DiskPct,
+			&i.NetRxBps,
+			&i.NetTxBps,
 		); err != nil {
 			return nil, err
 		}
@@ -337,7 +367,7 @@ func (q *Queries) ListAgentHeartbeatsByBuild(ctx context.Context, buildID pgtype
 }
 
 const listAgentHeartbeatsByObject = `-- name: ListAgentHeartbeatsByObject :many
-SELECT id, deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, created_at FROM agent_heartbeat WHERE deployed_object_id = $1 ORDER BY created_at DESC LIMIT $2
+SELECT id, deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, created_at, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps FROM agent_heartbeat WHERE deployed_object_id = $1 ORDER BY created_at DESC LIMIT $2
 `
 
 type ListAgentHeartbeatsByObjectParams struct {
@@ -366,6 +396,11 @@ func (q *Queries) ListAgentHeartbeatsByObject(ctx context.Context, arg ListAgent
 			&i.RemoteAddr,
 			&i.NextPollMs,
 			&i.CreatedAt,
+			&i.CpuPct,
+			&i.MemPct,
+			&i.DiskPct,
+			&i.NetRxBps,
+			&i.NetTxBps,
 		); err != nil {
 			return nil, err
 		}

@@ -81,6 +81,12 @@ and addressing. The file is fully commented; the important groups:
   easiest thing to get wrong, so it has its own section: **[Addressing](#addressing-the-urls-explained)**.
 - **Certificates** — the mTLS cert paths (`GATEWAY_CA_CERT`, `GATEWAY_SERVER_CERT`,
   `GATEWAY_SERVER_KEY`); see [Certificates](#certificates).
+- **Container logs** (optional) — `LOG_SINK_URL`, `LOG_SINK_HEADERS`, `LOG_SINK_LABELS`.
+  When set, each container's agent streams its application's console output (stdout/stderr)
+  to the gateway, which forwards it as newline-delimited JSON (NDJSON) to this HTTP
+  endpoint. Leave unset to disable. The format is deliberately generic — point it at a
+  collector (Vector, Fluent Bit, Splunk HEC, …) and shape/route from there. See
+  [Container logs](#container-logs).
 
 Under Compose, the database connection and gateway CA paths are set by Compose itself;
 you mainly touch `.env` for the GitHub App values, admin logins, and the addresses below.
@@ -197,7 +203,45 @@ Then wire the runner for agent delivery (see the [`.env`](#the-env-file) variabl
 
 ---
 
+## Container logs
+
+Every container runs the LaForge agent as its entrypoint (it supervises the image's
+real command), so the agent also sees the application's console output. When you set
+`LOG_SINK_URL`, each agent streams that output (stdout and stderr) to the gateway over
+the mTLS connection it already holds; the gateway tags every line with its build, team,
+object and stream and forwards batches as newline-delimited JSON (`application/x-ndjson`)
+to the endpoint you named. A line still reaches the container's own console too (`docker
+logs` / `incus console` keep working), and a backend that's slow or down drops lines
+rather than ever stalling a host.
+
+```bash
+# Gateway .env — all optional; unset LOG_SINK_URL disables forwarding entirely.
+LOG_SINK_URL=http://vector:9000/laforge-logs
+LOG_SINK_HEADERS=Authorization: Splunk 00000000-0000-0000-0000-000000000000
+LOG_SINK_LABELS=env=cptc2026,source=laforge
+```
+
+Each record looks like:
+
+```json
+{"ts":"2026-10-01T18:04:11.000Z","build_id":"…","team":3,"object":"scoreboard",
+ "object_id":"…","kind":"container","stream":"stdout","line":"…"}
+```
+
+The format is deliberately generic — any collector that accepts newline JSON. For a
+backend that speaks its own wire format (Splunk HEC, Loki's push API, Elastic's bulk
+format), point `LOG_SINK_URL` at a **Vector / Fluent Bit / Promtail** receiver and let it
+reshape and route; `LOG_SINK_HEADERS` carries any auth token, `LOG_SINK_LABELS` adds
+static fields to every record. Host logs (journald/services) are not forwarded yet — this
+is container application output only.
+
+---
+
 ## The `laforge` CLI
+
+> The full HTTP API the CLI and UI use is documented in
+> [`docs/openapi.yaml`](docs/openapi.yaml) (OpenAPI 3.1) — a reference, not a
+> publicly hosted service.
 
 The easiest way to get the CLI (for validating content with `laforge check`) is to
 **download a prebuilt binary** for your OS from the repository's

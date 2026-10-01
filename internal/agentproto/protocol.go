@@ -37,6 +37,12 @@ const (
 	GetTaskResponse      MessageType = 0x04
 	ReportStatusRequest  MessageType = 0x05
 	ReportStatusResponse MessageType = 0x06
+	// LogBatchRequest carries a batch of an object's captured console lines
+	// (a container's supervised app stdout/stderr); LogBatchResponse is the
+	// gateway's ack. Fire-and-ack like every other verb: the agent sends what
+	// it has buffered, the gateway enriches and ships it to the log sink.
+	LogBatchRequest  MessageType = 0x07
+	LogBatchResponse MessageType = 0x08
 )
 
 func (m MessageType) String() string {
@@ -53,6 +59,10 @@ func (m MessageType) String() string {
 		return "ReportStatusRequest"
 	case ReportStatusResponse:
 		return "ReportStatusResponse"
+	case LogBatchRequest:
+		return "LogBatchRequest"
+	case LogBatchResponse:
+		return "LogBatchResponse"
 	default:
 		return fmt.Sprintf("Unknown(0x%02x)", byte(m))
 	}
@@ -114,6 +124,21 @@ func ReadFrame(r io.Reader) (MessageType, []byte, error) {
 // and the Rust agent (agent/src/protocol.rs mirrors these field-for-field,
 // independently). ---
 
+// HeartbeatRequestPayload carries the basic host metrics the agent samples on
+// each check-in. cpu/mem/disk are percentages (0-100); net_rx/tx are bytes per
+// second since the previous heartbeat. Every field is a pointer so "not
+// collected" (an older agent, a metric the agent couldn't read, or the first
+// heartbeat of a session before a network rate can be computed) is distinct
+// from a real zero. The gateway stores them on the agent_heartbeat row. Mirrors
+// the Rust agent's HeartbeatRequestPayload (agent/src/protocol.rs).
+type HeartbeatRequestPayload struct {
+	CPUPct   *float64 `json:"cpu_pct,omitempty"`
+	MemPct   *float64 `json:"mem_pct,omitempty"`
+	DiskPct  *float64 `json:"disk_pct,omitempty"`
+	NetRxBps *float64 `json:"net_rx_bps,omitempty"`
+	NetTxBps *float64 `json:"net_tx_bps,omitempty"`
+}
+
 type HeartbeatResponsePayload struct {
 	NextPollMS int `json:"next_poll_ms"`
 }
@@ -156,5 +181,28 @@ type ReportStatusRequestPayload struct {
 }
 
 type ReportStatusResponsePayload struct {
+	OK bool `json:"ok"`
+}
+
+// LogLine is one captured console line as the agent sends it: only what the
+// agent knows -- when (epoch milliseconds, the agent's wall clock), which
+// stream, and the text. The gateway enriches it with the object's build / team
+// / name / kind (keyed off the agent's cert, like every other message) before
+// it reaches a sink. Dropped > 0 marks a synthetic record standing in for that
+// many lines the agent's bounded buffer had to drop before this one (overflow),
+// so a flood is visible as a gap, never silent. Mirrors the Rust agent's
+// LogLine (agent/src/applog.rs) field-for-field.
+type LogLine struct {
+	TSMs    int64  `json:"ts_ms"`
+	Stream  string `json:"stream"` // "stdout" | "stderr"
+	Line    string `json:"line"`
+	Dropped int    `json:"dropped,omitempty"`
+}
+
+type LogBatchRequestPayload struct {
+	Records []LogLine `json:"records"`
+}
+
+type LogBatchResponsePayload struct {
 	OK bool `json:"ok"`
 }

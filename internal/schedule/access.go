@@ -42,6 +42,33 @@ func NextBoundary(windows []AccessWindow, now time.Time) (t time.Time, ok bool) 
 	return t, ok
 }
 
+// CurrentWindowClose returns the close time of the access window now falls
+// inside (open inclusive, close exclusive), if any. It's the team's scheduled
+// access end right now -- what "extend/reduce by N" move up or down.
+func CurrentWindowClose(windows []AccessWindow, now time.Time) (time.Time, bool) {
+	for _, w := range windows {
+		if !now.Before(w.Open) && now.Before(w.Close) {
+			return w.Close, true
+		}
+	}
+	return time.Time{}, false
+}
+
+// OpenInWindowStartingAfter reports whether now falls inside a window whose OPEN
+// edge is strictly after `after`. Once a manually-set access end (`after`, from
+// an extend/reduce override) has passed, this is how the reconciler tells a
+// genuinely NEW window that has since opened (reopen) from still being inside
+// the window that end cut short (stay closed). Without it, shortening a window's
+// end wouldn't stick: the schedule would re-open the very window just trimmed.
+func OpenInWindowStartingAfter(windows []AccessWindow, now, after time.Time) bool {
+	for _, w := range windows {
+		if w.Open.After(after) && !now.Before(w.Open) && now.Before(w.Close) {
+			return true
+		}
+	}
+	return false
+}
+
 // ParseAccessWindows reads an environment row's stored `access` JSON (the same
 // [{open,close}] RFC3339 shape loader.AccessWindow marshals to, persisted on
 // the environment table at ingest) into real AccessWindow timestamps. A window

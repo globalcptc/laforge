@@ -138,6 +138,12 @@ func main() {
 	server.AppPrivateKey = appPrivateKey
 	server.AppSlug = appSlug
 	server.AdminLogins = adminLogins
+	// The agent mTLS CA and gateway server cert, read only to report expiry via
+	// GET /cert-status (the same files the gateway/runner use; mounted read-only
+	// into this service). Optional -- unset means the endpoint reports them as
+	// unconfigured rather than failing.
+	server.CACertPath = os.Getenv("GATEWAY_CA_CERT")
+	server.ServerCertPath = os.Getenv("GATEWAY_SERVER_CERT")
 	// Same graceful degradation as everywhere else this exists (see
 	// checkout.Cache's own doc comment): with an App or service token
 	// configured, handleRenderObject resolves each build's own

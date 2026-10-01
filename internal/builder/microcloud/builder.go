@@ -291,13 +291,20 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, spec.CloudInitUserData, spec.CloudInitViaISO)
 }
 
-// DeployContainer runs a LaForge `container:` -- a Docker container. On Incus
-// that's a thin, nesting-enabled LXD system container booted from this
-// builder's docker-ready base image (built by the image-build job); the
-// agent comes up in it via cloud-init exactly like a host, and a materialized
-// step then `docker run`s spec.Image. spec.Image is the OCI ref, NOT an
-// entry in the builder's LXD image map -- the base image is always the
-// docker base, so authors never pick the runtime.
+// DeployContainer runs a LaForge `container:` as a nested Docker container. LXD
+// has no native OCI support, so this deploys a thin, nesting-enabled LXD system
+// container from this builder's docker-ready base image (the "Docker host",
+// built by the image-build job) and then `docker run`s spec.Image inside it.
+// spec.Image is the OCI ref, NOT an entry in the builder's LXD image map -- the
+// base image is always the docker base, so authors never pick the runtime.
+//
+// The Docker host itself runs NO LaForge agent: it is pure infrastructure, as
+// invisible to content as a native-OCI host's own OS. The agent that checks in
+// and runs the container's steps/validators is planted INSIDE the nested
+// application container (runNestedContainer makes it the container's entrypoint
+// and has it supervise the image's real command). So a `container:` runs its
+// steps from inside the app on MicroCloud exactly as it does on a native-OCI
+// builder -- the Docker runtime never leaks into content.
 func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpec) (string, error) {
 	if b.Config.DockerBaseFingerprint == "" {
 		return "", fmt.Errorf("this builder has no docker base image yet -- build it first (Infrastructure → Base image)")
@@ -307,7 +314,16 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 		return "", fmt.Errorf("no size configured for %q", spec.Size)
 	}
 	base := ImageRef{Fingerprint: b.Config.DockerBaseFingerprint}
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", base, size, 0, true, spec.CloudInitUserData, spec.CloudInitViaISO)
+	// No cloud-init on the Docker host: it needs no agent of its own. The docker
+	// base image already brings dockerd up on boot.
+	name, err := b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", base, size, 0, true, "", false)
+	if err != nil {
+		return name, err
+	}
+	if err := b.runNestedContainer(ctx, name, spec); err != nil {
+		return name, err
+	}
+	return name, nil
 }
 
 // teamConfigKey is the Incus instance config key OpenAccess/CloseAccess

@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, api } from './client'
 import type {
   AdHocResult,
+  CertStatus,
   PowerActionResponse,
+  RebuildResponse,
   AdHocTarget,
   AgentHeartbeat,
   Build,
@@ -34,6 +36,7 @@ import type {
   PublicConfig,
   RenderedStep,
   StepStatus,
+  ObjectConfig,
   ObjectInfra,
   Repository,
   ScheduledTask,
@@ -79,6 +82,13 @@ export function useConfig() {
 // fresh while the page is open.
 export function useHome() {
   return useQuery<HomeData>({ queryKey: ['home'], queryFn: () => api.get('/home'), refetchInterval: 15_000 })
+}
+
+// useCertStatus reports the agent CA / gateway cert expiry so the UI can warn
+// before the trust anchor lapses. Certs expire slowly, so this only needs an
+// hourly refresh to notice the <3-month crossing, not aggressive polling.
+export function useCertStatus() {
+  return useQuery<CertStatus>({ queryKey: ['cert-status'], queryFn: () => api.get('/cert-status'), refetchInterval: 3_600_000 })
 }
 
 export function useRepositories() {
@@ -359,6 +369,14 @@ export function useObjectSteps(buildId: string | undefined, objectId: string | u
 // builder) plus the environment root password, for hand access. Reads the
 // builder-config chain server-side (internal/api/object_infra.go), so like
 // render it's disabled until the Info tab that shows it is actually open.
+export function useObjectConfig(buildId: string | undefined, objectId: string | undefined, enabled: boolean) {
+  return useQuery<ObjectConfig>({
+    queryKey: ['object-config', buildId, objectId],
+    queryFn: () => api.get(`/builds/${buildId}/objects/${objectId}/config`),
+    enabled: !!buildId && !!objectId && enabled,
+  })
+}
+
 export function useObjectInfra(buildId: string | undefined, objectId: string | undefined, enabled: boolean) {
   return useQuery<ObjectInfra>({
     queryKey: ['object-infra', buildId, objectId],
@@ -712,6 +730,24 @@ export function usePowerAction(buildId: string) {
   })
 }
 
+// useRebuild forces a tear-down-and-recreate of the target host(s) and, when
+// include_dependents is set, everything in their team that depends on them.
+// dry_run resolves the affected set without changing anything (the confirm
+// dialog's blast-radius preview); a real rebuild refreshes the build so the
+// objects' flip back through pending/deploying shows up.
+export function useRebuild(buildId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (req: { target: AdHocTarget; include_dependents: boolean; dry_run?: boolean }) =>
+      api.post<RebuildResponse>(`/builds/${buildId}/rebuild`, req),
+    onSuccess: (_res, req) => {
+      if (req.dry_run) return // a preview changed nothing
+      qc.invalidateQueries({ queryKey: ['objects', buildId] })
+      qc.invalidateQueries({ queryKey: ['build', buildId] })
+    },
+  })
+}
+
 // useScheduledTasks/useCreateScheduledTask/useCancelScheduledTask back
 // "Build → Schedule: injects, upcoming and past... manage access can
 // cancel or reschedule", plus ad-hoc scheduling
@@ -759,8 +795,8 @@ export function useCancelScheduledTask(buildId: string) {
 export function useSetTeamAccess(buildId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ team, action, extendMinutes }: { team: number; action: 'open' | 'close' | 'extend'; extendMinutes?: number }) =>
-      api.post<Task | Team>(`/builds/${buildId}/teams/${team}/access`, { action, extend_minutes: extendMinutes }),
+    mutationFn: ({ team, action, extendMinutes, reduceMinutes }: { team: number; action: 'open' | 'close' | 'extend' | 'reduce'; extendMinutes?: number; reduceMinutes?: number }) =>
+      api.post<Task | Team>(`/builds/${buildId}/teams/${team}/access`, { action, extend_minutes: extendMinutes, reduce_minutes: reduceMinutes }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['build', buildId] }),
   })
 }

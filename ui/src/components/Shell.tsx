@@ -5,6 +5,7 @@ import { AppShell, BrandMark, cn, type NavSection } from '../ui'
 import { RepoNav } from './RepoNav'
 import { UserMenu } from './UserMenu'
 import { GlobalAlerts } from './GlobalAlerts'
+import { CertExpiryBanner } from './CertExpiryBanner'
 import { api } from '../api/client'
 import { useMe } from '../api/hooks'
 
@@ -72,6 +73,7 @@ export function Shell() {
         </div>
       }
     >
+      <CertExpiryBanner />
       <Outlet />
     </AppShell>
   )

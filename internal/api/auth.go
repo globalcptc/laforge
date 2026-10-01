@@ -5,6 +5,10 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/globalcptc/laforge/internal/db"
 )
 
 var (
@@ -81,6 +85,46 @@ func (s *Server) pushToken(r *http.Request) (string, error) {
 		return sess.GithubToken, nil
 	}
 	return bearerToken(r)
+}
+
+// authSessionForRequest resolves the caller to an authSession from EITHER the
+// browser session cookie OR a Bearer GitHub token (the CLI's device-flow
+// token) -- so the four-level, repository-scoped endpoints (requireLevel) work
+// for a CLI client the same way requirePush/pushToken already let the
+// GitHub-permission endpoints take a bearer token. A bearer identity is
+// resolved live against GitHub and reconciled to its account row (looked up by
+// login, upserted the first time it's seen), so the admin-login list and any
+// repository_access grants apply to it identically to a browser session. The
+// cookie path is tried first and is unchanged; this only adds the bearer path
+// when there is no session.
+func (s *Server) authSessionForRequest(ctx context.Context, r *http.Request) (authSession, error) {
+	if sess, err := s.sessionFromRequest(r); err == nil {
+		return sess, nil
+	}
+	tok, err := bearerToken(r)
+	if err != nil {
+		return authSession{}, err
+	}
+	ghUser, err := s.GH.GetAuthenticatedUser(ctx, tok)
+	if err != nil {
+		return authSession{}, errUnauthenticated
+	}
+	account, err := s.Queries.GetAccountByLogin(ctx, ghUser.Login)
+	if errors.Is(err, pgx.ErrNoRows) {
+		account, err = s.Queries.UpsertAccount(ctx, db.UpsertAccountParams{
+			GithubID: ghUser.ID, GithubLogin: ghUser.Login, AvatarUrl: db.StrPtr(ghUser.AvatarURL),
+		})
+	}
+	if err != nil {
+		return authSession{}, err
+	}
+	return authSession{db.GetSessionByTokenHashRow{
+		AccountID:   account.ID,
+		GithubToken: tok,
+		GithubID:    ghUser.ID,
+		GithubLogin: ghUser.Login,
+		AvatarUrl:   db.StrPtr(ghUser.AvatarURL),
+	}}, nil
 }
 
 func writeAuthError(w http.ResponseWriter, err error) {

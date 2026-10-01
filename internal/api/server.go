@@ -105,6 +105,14 @@ type Server struct {
 	// levelAdmin.
 	AdminLogins []string
 
+	// CACertPath/ServerCertPath are the agent mTLS CA and gateway server
+	// certificate files (the same ones the gateway/runner use), read only to
+	// report their expiry via GET /cert-status so the UI can warn before the
+	// agent trust anchor lapses. Empty when not configured -- the endpoint then
+	// reports the cert as unconfigured rather than failing.
+	CACertPath     string
+	ServerCertPath string
+
 	mux *http.ServeMux
 }
 
@@ -213,10 +221,13 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/render", s.handleRenderObject)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/steps", s.handleListObjectSteps)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/infra", s.handleObjectInfra)
+	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/config", s.handleObjectConfig)
 	mux.HandleFunc("GET /builds/{id}/events", s.handleListEvents)
 	mux.HandleFunc("GET /builds/{id}/live", s.handleLiveStatus)
 	mux.HandleFunc("POST /builds/{id}/tasks", s.handleCreateAdHocTask)
 	mux.HandleFunc("POST /builds/{id}/power", s.handlePowerAction)
+	mux.HandleFunc("POST /builds/{id}/rebuild", s.handleRebuild)
+	mux.HandleFunc("GET /cert-status", s.handleCertStatus)
 	mux.HandleFunc("POST /builds/{id}/scheduled-tasks", s.handleCreateScheduledTask)
 	mux.HandleFunc("POST /builds/{id}/scheduled-tasks/preview", s.handlePreviewScheduledTask)
 	mux.HandleFunc("GET /builds/{id}/scheduled-tasks", s.handleListScheduledTasks)

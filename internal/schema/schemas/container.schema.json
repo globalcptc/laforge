@@ -22,7 +22,7 @@
         "image": {
           "type": "string",
           "minLength": 1,
-          "description": "The OCI image ref to run, e.g. \"nginx:alpine\" or \"registry.internal/team/scoreboard:latest\". Pulled from Docker Hub, or from a configured private registry when the ref names one. Runs as a Docker container.",
+          "description": "The OCI image ref to run, e.g. \"nginx:alpine\" or \"registry.internal/team/scoreboard:latest\". Pulled from Docker Hub, or from a configured private registry when the ref names one. Run as a container by whatever primitive the builder has (native OCI, or a nested runtime) -- you never pick the runtime.",
           "example": "image: registry.internal/cptc/scoreboard:latest"
         },
         "size": {
@@ -32,7 +32,7 @@
         },
         "env": {
           "type": "object",
-          "description": "Environment variables passed to the container (docker -e).",
+          "description": "Environment variables passed to the container.",
           "example": "env: { LOG_LEVEL: debug, PORT: \"8080\" }",
           "additionalProperties": { "type": "string" }
         },
@@ -55,7 +55,7 @@
         },
         "steps": {
           "$ref": "common.json#/$defs/stepsList",
-          "description": "The ordered steps this container runs after it's provisioned. Each one is exactly one of the action kinds below, plus an optional `validate` block. For anything recurring or time-based, use `schedule:` instead -- steps run once, in order; they were never meant to hold recurring work.",
+          "description": "The ordered steps this container runs after it's provisioned. Each one is exactly one of the action kinds below, plus an optional `validate` block. They run INSIDE the container (its agent is the container's entrypoint on every builder), so they describe the application itself -- not the container runtime underneath it: a check like `process_running: nginx` or `port_listening: 80` is right, `process_running: dockerd` is not. For anything recurring or time-based, use `schedule:` instead -- steps run once, in order; they were never meant to hold recurring work.",
           "example": "steps:\n  - script: base\n  - write_file: { path: /etc/motd, content: \"Property of Allports\" }\n  - service: { name: nginx, action: restart }"
         },
         "schedule": {

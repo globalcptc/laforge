@@ -133,17 +133,32 @@ type ContainerSpec struct {
 	CloudInitUserData string
 	CloudInitViaISO   bool
 	// AgentBinary is the object's patched LaForge agent (a static musl-linux
-	// binary), delivered INTO a native OCI container so it runs the agent as the
-	// container's entrypoint and supervises the image's real command -- making a
-	// container check in and run steps/validators exactly like a host. A native
-	// builder (Incus) pushes and runs it; a nesting builder (MicroCloud) ignores
-	// it and uses CloudInitUserData instead. Empty when agent delivery is off.
+	// binary). It is planted so the agent is the application container's own
+	// entrypoint, supervising the image's real command -- making a container
+	// check in and run its steps/validators from INSIDE the app, exactly like a
+	// host, on every builder. A native-OCI builder (Incus) pushes it in and sets
+	// oci.entrypoint; a nesting builder (MicroCloud) pushes it into the Docker
+	// host and bind-mounts it as the nested container's `--entrypoint`. Either
+	// way the agent runs inside the app container and never sees the container
+	// runtime, so content (`docker ps`, `process_running: dockerd`) behaves the
+	// same regardless of builder. Empty when agent delivery is off (the image
+	// then runs its own entrypoint, unmanaged).
 	AgentBinary []byte
 	// AgentDownloadURL is the same agent as AgentBinary but fetched at start via
 	// its one-time-token URL, for a container platform that can't take a pushed
 	// binary (AWS Fargate, OpenStack Zun): an init step downloads it, then the
 	// app container runs it in supervisor mode. Empty when agent delivery is off.
 	AgentDownloadURL string
+	// RegistryHost/RegistryUser/RegistrySecret are the credential for the image's
+	// registry, resolved by the caller (internal/runner) from stored registry
+	// credentials. A nesting builder (MicroCloud) `docker login`s with them
+	// before pulling a private image; empty means an unauthenticated/public pull.
+	// A native-OCI builder that pulls through its own daemon's configured
+	// registry auth ignores them, same "each builder takes what it needs" shape
+	// as the agent fields above.
+	RegistryHost   string
+	RegistryUser   string
+	RegistrySecret string
 }
 
 // Resource is one thing Inspect finds already existing at the hoster,

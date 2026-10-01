@@ -45,13 +45,19 @@ export function BuildAccess() {
   const { data: build } = useBuild(buildId)
   const setAccess = useSetTeamAccess(buildId)
   const [extendFor, setExtendFor] = useState<number | null>(null)
-  // The expanded +Nm choices collapse back to the Extend button after 30s of
-  // no choice, so a half-open control doesn't linger.
+  const [reduceFor, setReduceFor] = useState<number | null>(null)
+  // The expanded +Nm / -Nm choices collapse back to the button after 30s of no
+  // choice, so a half-open control doesn't linger.
   useEffect(() => {
     if (extendFor === null) return
     const t = setTimeout(() => setExtendFor(null), 30_000)
     return () => clearTimeout(t)
   }, [extendFor])
+  useEffect(() => {
+    if (reduceFor === null) return
+    const t = setTimeout(() => setReduceFor(null), 30_000)
+    return () => clearTimeout(t)
+  }, [reduceFor])
   const fmt = useTimeFormat()
 
   if (!build)
@@ -78,6 +84,7 @@ export function BuildAccess() {
       {build.teams.map((team) => {
         const accessEnd = currentAccessEnd(build.access, team)
         const extending = extendFor === team.team_number
+        const reducing = reduceFor === team.team_number
         return (
           <Card key={team.id} className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-3">
@@ -134,6 +141,34 @@ export function BuildAccess() {
                         }}
                       >
                         +{mins}m
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                {/* Reduce is a penalty (close the team for N more minutes),
+                    always available -- a team may be penalized whether or not
+                    it's currently extended. Mirrors Extend. */}
+                <div className="flex items-center gap-1">
+                  <div className={cn('overflow-hidden transition-all duration-500 ease-in-out', reducing ? 'max-w-0 opacity-0' : 'max-w-[7rem] opacity-100')}>
+                    <Button variant="ghost" size="sm" className="shrink-0" tabIndex={reducing ? -1 : undefined} onClick={() => setReduceFor(team.team_number)}>
+                      <Clock size={14} /> Reduce
+                    </Button>
+                  </div>
+                  <div className={cn('flex items-center gap-1 overflow-hidden transition-all duration-500 ease-in-out', reducing ? 'max-w-md opacity-100' : 'pointer-events-none max-w-0 opacity-0')}>
+                    <span className="shrink-0 whitespace-nowrap pl-0.5 text-xs text-fg-muted">Reduce by</span>
+                    {[1, 5, 15, 30, 60].map((mins) => (
+                      <Button
+                        key={mins}
+                        variant="secondary"
+                        size="sm"
+                        className="shrink-0"
+                        tabIndex={reducing ? undefined : -1}
+                        onClick={() => {
+                          setAccess.mutate({ team: team.team_number, action: 'reduce', reduceMinutes: mins })
+                          setReduceFor(null)
+                        }}
+                      >
+                        −{mins}m
                       </Button>
                     ))}
                   </div>

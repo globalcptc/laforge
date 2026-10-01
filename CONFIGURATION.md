@@ -332,7 +332,7 @@ container:
 | `command` | Overrides the image's default command arguments. |
 | `ports` | TCP/UDP ports this container listens on. |
 | `depends_on` | Same as a host's. |
-| `steps` / `schedule` | Same as a host's — a container runs the LaForge agent as its entrypoint, so it configures and reports exactly like a host. |
+| `steps` / `schedule` | Same as a host's — a container runs the LaForge agent as its entrypoint, so it configures and reports exactly like a host. Steps and validators run **inside** the container, so they describe the application (`process_running: nginx`, `port_listening: 80`), never the container runtime underneath it (`process_running: dockerd` is wrong, and fails on every builder). |
 | `vars` / `tags` / `findings` / `people` / `extends` | Same as a host's. |
 
 ---

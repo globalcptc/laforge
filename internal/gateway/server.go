@@ -12,6 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -46,6 +47,17 @@ type Server struct {
 	// JitterMS, a new random draw every heartbeat.
 	BasePollMS int
 	JitterMS   int
+	// LogSink, when set, receives every container's captured console lines
+	// (enriched with build/team/object identity) for forwarding to an external
+	// ingester. Nil disables log forwarding -- agents still send, the gateway
+	// just acks and discards, so delivery is an operator choice, not a build
+	// requirement. See logsink.go.
+	LogSink LogSink
+
+	// logCtx caches each object's enrichment identity (build/team/name/kind),
+	// resolved once per object rather than on every log batch.
+	logCtxMu sync.Mutex
+	logCtx   map[string]logContext
 }
 
 // Serve accepts connections on ln (expected to be a *tls.Conn listener,
@@ -114,23 +126,31 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 		}
 		switch mt {
 		case agentproto.HeartbeatRequest:
-			s.handleHeartbeat(ctx, tconn, objID, fingerprint)
+			s.handleHeartbeat(ctx, tconn, objID, fingerprint, payload)
 		case agentproto.GetTaskRequest:
 			s.handleGetTask(ctx, tconn, objID)
 		case agentproto.ReportStatusRequest:
 			s.handleReportStatus(ctx, tconn, payload)
+		case agentproto.LogBatchRequest:
+			s.handleLogBatch(ctx, tconn, objID, payload)
 		default:
 			return
 		}
 	}
 }
 
-func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtype.UUID, fingerprint string) {
+func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtype.UUID, fingerprint string, payload []byte) {
 	q := db.New(s.Pool)
 	if _, err := q.UpsertAgentSession(ctx, db.UpsertAgentSessionParams{
 		DeployedObjectID: objID, CertFingerprint: fingerprint,
 	}); err != nil {
 		log.Printf("gateway: heartbeat: recording session: %v", err)
+	}
+	// Host metrics, when the agent sent them -- a malformed or empty payload
+	// just leaves them nil (older agents send none), never fails the heartbeat.
+	var metrics agentproto.HeartbeatRequestPayload
+	if len(payload) > 0 {
+		_ = json.Unmarshal(payload, &metrics)
 	}
 	next := s.BasePollMS + rand.Intn(max(s.JitterMS, 1))
 	// The append-only log, alongside (never instead of) the upsert above
@@ -146,6 +166,8 @@ func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtyp
 	if err := q.CreateAgentHeartbeat(ctx, db.CreateAgentHeartbeatParams{
 		DeployedObjectID: objID, CertFingerprint: fingerprint,
 		RemoteAddr: remoteAddrString(conn), NextPollMs: &nextI32,
+		CpuPct: metrics.CPUPct, MemPct: metrics.MemPct, DiskPct: metrics.DiskPct,
+		NetRxBps: metrics.NetRxBps, NetTxBps: metrics.NetTxBps,
 	}); err != nil {
 		log.Printf("gateway: heartbeat: logging history: %v", err)
 	}
@@ -326,6 +348,87 @@ func currentAttempts(ctx context.Context, q *db.Queries, taskID pgtype.UUID) (at
 		return 0, false, err
 	}
 	return task.Attempts, task.IgnoreErrors, nil
+}
+
+// logContext is one object's enrichment identity, cached in Server.logCtx.
+type logContext struct {
+	buildID string
+	team    int32
+	object  string
+	kind    string
+}
+
+// handleLogBatch enriches a batch of captured console lines with the object's
+// build/team/name/kind (keyed off the agent's cert, like every other verb) and
+// hands each to the log sink. Enqueue never blocks, so a slow backend can't
+// stall the agent; the ack goes back regardless. A nil sink (forwarding
+// disabled) still acks and discards -- an agent must not fail because the
+// operator chose not to ship logs.
+func (s *Server) handleLogBatch(ctx context.Context, conn net.Conn, objID pgtype.UUID, payload []byte) {
+	var req agentproto.LogBatchRequestPayload
+	ok := true
+	if err := json.Unmarshal(payload, &req); err != nil {
+		ok = false
+	} else if s.LogSink != nil && len(req.Records) > 0 {
+		lc, found := s.logContextFor(ctx, objID)
+		oid := uuidString(objID)
+		for _, r := range req.Records {
+			rec := LogRecord{
+				TS:       time.UnixMilli(r.TSMs).UTC().Format("2006-01-02T15:04:05.000Z07:00"),
+				ObjectID: oid,
+				Stream:   r.Stream,
+				Line:     r.Line,
+				Dropped:  r.Dropped,
+			}
+			if found {
+				rec.BuildID, rec.Team, rec.Object, rec.Kind = lc.buildID, lc.team, lc.object, lc.kind
+			}
+			s.LogSink.Enqueue(rec)
+		}
+	}
+	body, _ := json.Marshal(agentproto.LogBatchResponsePayload{OK: ok})
+	if err := agentproto.WriteFrame(conn, agentproto.LogBatchResponse, body); err != nil {
+		log.Printf("gateway: log-batch: writing response: %v", err)
+	}
+}
+
+// logContextFor resolves and caches an object's enrichment identity. Cached
+// because it never changes for the life of a build, so chatty container logs
+// read it once, not once per batch. A resolution failure returns ok=false and
+// the records still ship with their object_id (self-identifying), just without
+// the human-readable build/team/name -- better than dropping the line.
+func (s *Server) logContextFor(ctx context.Context, objID pgtype.UUID) (logContext, bool) {
+	key := uuidString(objID)
+	s.logCtxMu.Lock()
+	if s.logCtx == nil {
+		s.logCtx = make(map[string]logContext)
+	}
+	if lc, ok := s.logCtx[key]; ok {
+		s.logCtxMu.Unlock()
+		return lc, true
+	}
+	s.logCtxMu.Unlock()
+
+	row, err := db.New(s.Pool).GetLogContextByDeployedObject(ctx, objID)
+	if err != nil {
+		return logContext{}, false
+	}
+	object := row.ObjectName
+	if row.AsName != nil && *row.AsName != "" {
+		object = *row.AsName
+	}
+	lc := logContext{buildID: uuidString(row.BuildID), team: row.TeamNumber, object: object, kind: row.Kind}
+	s.logCtxMu.Lock()
+	s.logCtx[key] = lc
+	s.logCtxMu.Unlock()
+	return lc, true
+}
+
+// uuidString renders a pgtype.UUID in canonical 8-4-4-4-12 form, for a map key
+// and for the self-identifying object_id/build_id a log record carries.
+func uuidString(u pgtype.UUID) string {
+	b := u.Bytes
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
 
 func certFingerprint(cert *x509.Certificate) string {

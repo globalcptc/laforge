@@ -61,6 +61,10 @@ services:
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
       UI_BASE_URL: ${UI_BASE_URL:-http://localhost:8081}
       REPO_ROOT: /content
+      # Read-only, only to report agent CA / gateway cert expiry via
+      # GET /cert-status (the .certs mount below). Same files the gateway uses.
+      GATEWAY_CA_CERT: /.certs/ca.crt
+      GATEWAY_SERVER_CERT: /.certs/server.crt
     volumes:
       - ./examples/lm-test:/content:ro
       # Mounted at the container's own working directory (unset in the

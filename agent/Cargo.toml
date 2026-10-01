@@ -30,6 +30,12 @@ ureq = { version = "2", default-features = false, features = ["tls"] }
 tar = "0.4"
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 zip = { version = "2", default-features = false, features = ["deflate"] }
+# Basic host metrics on each heartbeat (CPU %, memory %, disk usage %, network
+# bytes/sec), collected uniformly across Linux and Windows. default-features off
+# and only the three facets we use, to keep the binary small: on Linux it reads
+# /proc (pure, no C) so it stays musl-static, and the Windows facets link system
+# DLLs (no C toolchain) so cargo-zigbuild still cross-compiles cleanly.
+sysinfo = { version = "0.33", default-features = false, features = ["system", "disk", "network"] }
 
 [profile.release]
 opt-level = "z"

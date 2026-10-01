@@ -16,6 +16,8 @@ pub enum MessageType {
     GetTaskResponse = 0x04,
     ReportStatusRequest = 0x05,
     ReportStatusResponse = 0x06,
+    LogBatchRequest = 0x07,
+    LogBatchResponse = 0x08,
 }
 
 impl MessageType {
@@ -27,6 +29,8 @@ impl MessageType {
             0x04 => Ok(Self::GetTaskResponse),
             0x05 => Ok(Self::ReportStatusRequest),
             0x06 => Ok(Self::ReportStatusResponse),
+            0x07 => Ok(Self::LogBatchRequest),
+            0x08 => Ok(Self::LogBatchResponse),
             other => Err(Error::new(
                 ErrorKind::InvalidData,
                 format!("unknown message type 0x{other:02x}"),
@@ -66,6 +70,25 @@ pub fn read_frame<R: Read>(r: &mut R) -> IoResult<(MessageType, Vec<u8>)> {
     r.read_exact(&mut body)?;
     let mt = MessageType::from_u8(body[0])?;
     Ok((mt, body[1..].to_vec()))
+}
+
+/// Basic host metrics the agent samples on each heartbeat: cpu/mem/disk are
+/// percentages (0-100); net_rx/tx are bytes per second since the previous
+/// heartbeat. Every field is optional so a value the agent couldn't read, and
+/// the first heartbeat of a session (before a network rate exists), send none
+/// rather than a misleading zero. Mirrors internal/agentproto.HeartbeatRequestPayload.
+#[derive(serde::Serialize, Debug, Default)]
+pub struct HeartbeatRequestPayload {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu_pct: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mem_pct: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disk_pct: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub net_rx_bps: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub net_tx_bps: Option<f64>,
 }
 
 #[derive(serde::Deserialize, Debug)]
@@ -116,6 +139,36 @@ pub struct ReportStatusRequestPayload {
 #[derive(serde::Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct ReportStatusResponsePayload {
+    #[allow(dead_code)]
+    pub ok: bool,
+}
+
+/// One captured console line, as the agent sends it: when (epoch milliseconds,
+/// the agent's wall clock), which stream, and the text. The gateway enriches it
+/// with the object's build/team/name/kind. `dropped` > 0 marks a synthetic
+/// record standing in for that many lines the bounded buffer had to drop before
+/// this one. Mirrors internal/agentproto.LogLine field-for-field.
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct LogLine {
+    pub ts_ms: i64,
+    pub stream: &'static str, // "stdout" | "stderr"
+    pub line: String,
+    #[serde(skip_serializing_if = "is_zero")]
+    pub dropped: usize,
+}
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct LogBatchRequestPayload {
+    pub records: Vec<LogLine>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+#[allow(dead_code)]
+pub struct LogBatchResponsePayload {
     #[allow(dead_code)]
     pub ok: bool,
 }

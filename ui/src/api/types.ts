@@ -382,6 +382,66 @@ export interface PowerActionResponse {
   failed: number
 }
 
+// One object a rebuild will tear down and recreate -- the target host plus,
+// when cascading, everything in its team that depends on it.
+export interface RebuildAffected {
+  id: string
+  object_name: string
+  as_name: string
+  kind: string
+  team_number: number
+}
+
+export interface RebuildResponse {
+  affected: RebuildAffected[]
+  count: number
+  dry_run: boolean
+}
+
+// Agent trust-anchor expiry (GET /cert-status): the mTLS CA that signs every
+// per-host agent cert, and the gateway's server cert. No key material, dates only.
+export interface CertInfo {
+  configured: boolean
+  subject?: string
+  not_after?: string
+  days_remaining: number
+  expiring_soon: boolean
+  expired: boolean
+  error?: string
+}
+
+export interface CertStatus {
+  warn_threshold_days: number
+  ca: CertInfo
+  server: CertInfo
+}
+
+// ObjectConfig (GET /builds/{id}/objects/{objectId}/config): one host/container's
+// full authored config from the build's content revision -- what the host info
+// panel shows beyond runtime state.
+export interface ConfigFinding {
+  severity: number
+  difficulty: number
+  description: string
+}
+
+export interface ObjectConfig {
+  kind: string
+  name: string
+  os?: string
+  image?: string
+  size?: string
+  disk?: number
+  command?: string[]
+  tcp_ports?: string[]
+  udp_ports?: string[]
+  env?: Record<string, string>
+  vars?: Record<string, string>
+  tags?: Record<string, string>
+  depends_on?: string[]
+  findings?: ConfigFinding[]
+}
+
 export interface SchedulePreview {
   valid: boolean
   error?: string
@@ -416,6 +476,14 @@ export interface AgentHeartbeat {
   remote_addr: string | null
   next_poll_ms: number | null
   created_at: string
+  // Basic host metrics sampled by the agent on this check-in (null from an
+  // older agent or a metric it couldn't read). cpu/mem/disk are percentages;
+  // net_rx/tx are bytes per second since the previous heartbeat.
+  cpu_pct: number | null
+  mem_pct: number | null
+  disk_pct: number | null
+  net_rx_bps: number | null
+  net_tx_bps: number | null
 }
 
 // IncusImageRef/IncusSizeSpec mirror internal/builder/incus.ImageRef/

@@ -393,7 +393,7 @@ func parseLevel(s string) accessLevel {
 // person on that repository and REPLACES the GitHub-derived level --
 // raising it, lowering it, or ('none') removing access (migration 00018).
 func (s *Server) requireLevel(ctx context.Context, r *http.Request, repo db.Repository, min accessLevel) (authSession, error) {
-	sess, err := s.sessionFromRequest(r)
+	sess, err := s.authSessionForRequest(ctx, r)
 	if err != nil {
 		return authSession{}, err
 	}

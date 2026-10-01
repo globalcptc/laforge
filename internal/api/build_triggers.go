@@ -132,7 +132,8 @@ func (s *Server) handleApplyUpcoming(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err)
 		return
 	}
-	if _, err := s.requireLevel(r.Context(), r, repo, levelBuild); err != nil {
+	sess, err := s.requireLevel(r.Context(), r, repo, levelBuild)
+	if err != nil {
 		writeAuthError(w, err)
 		return
 	}
@@ -157,6 +158,13 @@ func (s *Server) handleApplyUpcoming(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	// applyUpcoming records the commit-applied event itself (shared with
+	// reconcile's automatic path); add who did it when it's a manual action.
+	s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
+		BuildID: updated.ID, Kind: "build.commit_applied",
+		Message: sess.GithubLogin + " applied a newer commit to this build",
+		Payload: []byte("{}"),
+	})
 	writeJSON(w, http.StatusOK, updated)
 }
 
@@ -171,7 +179,8 @@ func (s *Server) handleTriggerBuild(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err)
 		return
 	}
-	if _, err := s.requireLevel(r.Context(), r, repo, levelBuild); err != nil {
+	sess, err := s.requireLevel(r.Context(), r, repo, levelBuild)
+	if err != nil {
 		writeAuthError(w, err)
 		return
 	}
@@ -184,6 +193,16 @@ func (s *Server) handleTriggerBuild(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	// A manual build is an operator action, not the content lifecycle advancing
+	// on its own -- record who kicked it off in the build's own log, the same way
+	// teardown/access actions record their actor. (The webhook's automatic
+	// triggerBuild path has no operator and writes no such event; AutoBuilt on
+	// the build row already marks those.)
+	s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
+		BuildID: build.ID, Kind: "build.triggered",
+		Message: sess.GithubLogin + " started a manual build",
+		Payload: []byte("{}"),
+	})
 	// Go straight to deploying rather than leaving a 'planned' build for a
 	// second, manual "Deploy" click: now that a Build Now only runs off a
 	// CI-passed tracked commit, the plan-then-deploy split is friction, not a
@@ -211,7 +230,8 @@ func (s *Server) handleDeployBuild(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, err)
 		return
 	}
-	if _, err := s.requireLevel(r.Context(), r, repo, levelBuild); err != nil {
+	sess, err := s.requireLevel(r.Context(), r, repo, levelBuild)
+	if err != nil {
 		writeAuthError(w, err)
 		return
 	}
@@ -224,6 +244,12 @@ func (s *Server) handleDeployBuild(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	// Record who deployed it, same as Build Now / teardown record their actor.
+	s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
+		BuildID: build.ID, Kind: "build.deploy.requested",
+		Message: sess.GithubLogin + " deployed this build",
+		Payload: []byte("{}"),
+	})
 	writeJSON(w, http.StatusOK, updated)
 }
 

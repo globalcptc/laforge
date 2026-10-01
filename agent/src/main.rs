@@ -6,21 +6,29 @@
 // execution in commands.rs and validators.rs.
 
 mod antitamper;
+mod applog;
 mod chaff;
 mod commands;
 mod identity;
+mod metrics;
 mod obfuscate;
 mod protocol;
 mod selfhash;
 mod validators;
 
-use protocol::{GetTaskResponsePayload, HeartbeatResponsePayload, MessageType, ReportStatusRequestPayload};
+use protocol::{GetTaskResponsePayload, HeartbeatResponsePayload, LogBatchRequestPayload, MessageType, ReportStatusRequestPayload};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, ServerName};
 use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned};
 use std::io;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+
+// Bounds for container console-log forwarding: how many lines the agent buffers
+// before dropping the oldest (memory cap), and the most it ships in one frame.
+const LOG_BUFFER_CAP: usize = 10_000;
+const LOG_BATCH_MAX: usize = 500;
 
 fn main() {
     // Basic anti-debug/anti-tamper self-checks -- see antitamper.rs's own
@@ -48,7 +56,9 @@ fn main() {
 // so this just exits on failure.
 fn run_host() -> ! {
     match load_agent() {
-        Some((identity, tls_config, host_only)) => agent_loop(&identity, &host_only, tls_config),
+        // A host has no supervised app, so no console log queue -- host log
+        // collection (journald/services) is a separate follow-up.
+        Some((identity, tls_config, host_only)) => agent_loop(&identity, &host_only, tls_config, None),
         None => std::process::exit(1),
     }
 }
@@ -59,10 +69,15 @@ fn run_host() -> ! {
 // management can't connect -- so a broken/absent identity never takes the
 // service down, it only means no check-in. load_agent logs why, if it can't.
 fn run_container(cmd: String) -> ! {
+    // One buffer shared between the app's output readers (push) and the gateway
+    // loop (drain + ship). Created even if the agent can't connect, so capture
+    // is independent of gateway health.
+    let logq = Arc::new(applog::LogQueue::new(LOG_BUFFER_CAP));
     if let Some((identity, tls_config, host_only)) = load_agent() {
-        std::thread::spawn(move || agent_loop(&identity, &host_only, tls_config));
+        let lq = logq.clone();
+        std::thread::spawn(move || agent_loop(&identity, &host_only, tls_config, Some(lq)));
     }
-    supervise_app(cmd)
+    supervise_app(cmd, logq)
 }
 
 // load_agent loads the embedded/dev identity and builds its TLS config, or None
@@ -91,7 +106,7 @@ fn load_agent() -> Option<(identity::Identity, Arc<ClientConfig>, String)> {
 
 // agent_loop is the steady-state connection loop: connect to the gateway, run a
 // session, reconnect with a short delay. Never returns.
-fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<ClientConfig>) -> ! {
+fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<ClientConfig>, logq: Option<Arc<applog::LogQueue>>) -> ! {
     // "Agents tolerate it being down. They retry with backoff and keep their
     // current work." Exponential backoff between reconnects: start at BASE and
     // double up to MAX, so a brief blip retries almost immediately but a long
@@ -103,9 +118,14 @@ fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<Cl
     const MAX: Duration = Duration::from_secs(60);
     const RESET_AFTER: Duration = Duration::from_secs(10);
     let mut backoff = BASE;
+    // One metrics collector for the agent's whole life (not per session): CPU and
+    // network are deltas since the last sample, so it must persist across
+    // reconnects to keep producing real averages. Both hosts and containers
+    // report metrics -- the collector is here, above the host/container split.
+    let mut metrics = metrics::Collector::new();
     loop {
         let started = Instant::now();
-        match run_session(&identity.gateway_addr, host_only, tls_config.clone()) {
+        match run_session(&identity.gateway_addr, host_only, tls_config.clone(), logq.as_ref(), &mut metrics) {
             Ok(()) => {}
             Err(e) => eprintln!("laforge-agent: session ended: {e}"),
         }
@@ -131,14 +151,36 @@ fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<Cl
 // (parse the argv instead). Incus provides the container's real PID 1 and reaps
 // orphans itself, so the agent only has to wait on its own child -- no libc/init
 // duties needed. Never returns.
-fn supervise_app(cmd: String) -> ! {
-    let mut child = match std::process::Command::new("sh").arg("-c").arg(&cmd).spawn() {
+//
+// The child's stdout/stderr are piped so the agent can capture the app's console
+// for forwarding (logq). Each line is TEED: re-printed to the agent's own
+// stdout/stderr (which is the container console, so `docker logs`/`incus
+// console` still work live) AND pushed onto the bounded queue the gateway loop
+// ships. Capture is best-effort: a read error on a stream just ends that
+// stream's tee, never the app.
+fn supervise_app(cmd: String, logq: Arc<applog::LogQueue>) -> ! {
+    use std::process::Stdio;
+    let mut child = match std::process::Command::new("sh")
+        .arg("-c")
+        .arg(&cmd)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+    {
         Ok(c) => c,
         Err(e) => {
             eprintln!("laforge-agent: supervisor: failed to start app command {cmd:?}: {e}");
             std::process::exit(1);
         }
     };
+    if let Some(out) = child.stdout.take() {
+        let q = logq.clone();
+        std::thread::spawn(move || tee_stream(out, "stdout", q));
+    }
+    if let Some(err) = child.stderr.take() {
+        let q = logq.clone();
+        std::thread::spawn(move || tee_stream(err, "stderr", q));
+    }
     let status = child.wait().unwrap_or_else(|e| {
         eprintln!("laforge-agent: supervisor: waiting on app: {e}");
         std::process::exit(1);
@@ -146,6 +188,28 @@ fn supervise_app(cmd: String) -> ! {
     let code = status.code().unwrap_or(1);
     eprintln!("laforge-agent: supervised app exited (code {code}); stopping container");
     std::process::exit(code);
+}
+
+// tee_stream reads one of the app's console streams line by line, echoes each
+// line to the agent's matching console stream (preserving the container's live
+// console), and pushes it onto the log queue for the gateway loop to ship.
+// Reads as UTF-8 lines; non-UTF-8 console output is a documented follow-up
+// (read raw bytes instead). Returns when the stream closes (app exit) or on a
+// read error.
+fn tee_stream<R: Read>(r: R, stream: &'static str, logq: Arc<applog::LogQueue>) {
+    let reader = BufReader::new(r);
+    for line in reader.lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => break,
+        };
+        if stream == "stdout" {
+            println!("{line}");
+        } else {
+            eprintln!("{line}");
+        }
+        logq.push(stream, line);
+    }
 }
 
 fn build_tls_config(identity: &identity::Identity) -> Result<ClientConfig, String> {
@@ -168,7 +232,7 @@ fn build_tls_config(identity: &identity::Identity) -> Result<ClientConfig, Strin
         .map_err(|e| format!("building client config: {e}"))
 }
 
-fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>) -> io::Result<()> {
+fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq: Option<&Arc<applog::LogQueue>>, metrics: &mut metrics::Collector) -> io::Result<()> {
     let tcp = TcpStream::connect(addr)?;
     tcp.set_nodelay(true).ok();
 
@@ -178,7 +242,11 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>) -> io
     let mut tls = StreamOwned::new(conn, tcp);
 
     loop {
-        protocol::write_frame(&mut tls, MessageType::HeartbeatRequest, &[])?;
+        // Sample basic host metrics and carry them on the heartbeat. Best-effort:
+        // if serialization somehow fails, send an empty heartbeat rather than
+        // dropping the check-in.
+        let hb_body = serde_json::to_vec(&metrics.sample()).unwrap_or_default();
+        protocol::write_frame(&mut tls, MessageType::HeartbeatRequest, &hb_body)?;
         let (mt, body) = protocol::read_frame(&mut tls)?;
         expect(mt, MessageType::HeartbeatResponse)?;
         let hb: HeartbeatResponsePayload = serde_json::from_slice(&body)
@@ -189,6 +257,10 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>) -> io
         expect(mt, MessageType::GetTaskResponse)?;
         let gt: GetTaskResponsePayload = serde_json::from_slice(&body)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("decoding get-task response: {e}")))?;
+
+        // Ship any buffered console lines every iteration, task or not, so logs
+        // keep flowing at the poll cadence rather than only when idle.
+        flush_logs(&mut tls, logq)?;
 
         if let Some(task) = gt.task {
             eprintln!("laforge-agent: running task {} ({})", task.id, task.command);
@@ -218,6 +290,28 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>) -> io
 
         std::thread::sleep(Duration::from_millis(hb.next_poll_ms));
     }
+}
+
+// flush_logs drains buffered console lines and ships them as one LogBatch,
+// in-band on the same mTLS session (request/response, like every other verb).
+// A no-op when there is no queue (a host) or nothing buffered. The gateway acks
+// and the agent reads that ack to keep the stream framed; the records
+// themselves are fire-and-ack -- the agent does not resend on a non-ok.
+fn flush_logs<S: Read + Write>(tls: &mut S, logq: Option<&Arc<applog::LogQueue>>) -> io::Result<()> {
+    let q = match logq {
+        Some(q) => q,
+        None => return Ok(()),
+    };
+    let records = q.drain_batch(LOG_BATCH_MAX);
+    if records.is_empty() {
+        return Ok(());
+    }
+    let body = serde_json::to_vec(&LogBatchRequestPayload { records })
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding log batch: {e}")))?;
+    protocol::write_frame(tls, MessageType::LogBatchRequest, &body)?;
+    let (mt, _body) = protocol::read_frame(tls)?;
+    expect(mt, MessageType::LogBatchResponse)?;
+    Ok(())
 }
 
 fn expect(got: MessageType, want: MessageType) -> io::Result<()> {

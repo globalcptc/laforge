@@ -61,11 +61,47 @@ func TestDesiredAccess(t *testing.T) {
 			db.Team{AccessOverrideState: "open"},
 			"2026-10-01T20:00:00Z", "open", true,
 		},
+		// Reduce moves the end to 16:30 (an open override). Before the new end the
+		// team is open; at/after it the team stays CLOSED for the rest of the
+		// window it trimmed -- the schedule does NOT re-open 16:30-17:00.
+		{
+			"reduced end: open before the new end",
+			db.Team{AccessOverrideState: "open", AccessOverrideUntil: ts(at(t, "2026-10-01T16:30:00Z"))},
+			"2026-10-01T16:00:00Z", "open", true,
+		},
+		{
+			"reduced end: closed for the rest of the trimmed window",
+			db.Team{AccessOverrideState: "open", AccessOverrideUntil: ts(at(t, "2026-10-01T16:30:00Z"))},
+			"2026-10-01T16:45:00Z", "closed", true,
+		},
 	}
 	for _, c := range cases {
 		gotState, gotEnforce := desiredAccess(w, c.team, at(t, c.now))
 		if gotState != c.wantState || gotEnforce != c.wantEnforce {
 			t.Errorf("%s: desiredAccess = (%q, %v), want (%q, %v)", c.name, gotState, gotEnforce, c.wantState, c.wantEnforce)
+		}
+	}
+}
+
+func TestDesiredAccessReducedEndReopensNextWindow(t *testing.T) {
+	// Two daily 9-5 windows. A reduced end on day 1 (open override until 16:30)
+	// keeps day 1 closed after 16:30 but must NOT suppress day 2 -- a genuinely
+	// new window still opens normally.
+	windows := []schedule.AccessWindow{
+		{Open: at(t, "2026-10-01T09:00:00Z"), Close: at(t, "2026-10-01T17:00:00Z")},
+		{Open: at(t, "2026-10-02T09:00:00Z"), Close: at(t, "2026-10-02T17:00:00Z")},
+	}
+	team := db.Team{AccessOverrideState: "open", AccessOverrideUntil: ts(at(t, "2026-10-01T16:30:00Z"))}
+	cases := []struct {
+		name, now, want string
+	}{
+		{"day-1 after trimmed end", "2026-10-01T16:45:00Z", "closed"},
+		{"overnight", "2026-10-02T03:00:00Z", "closed"},
+		{"day-2 new window opens", "2026-10-02T12:00:00Z", "open"},
+	}
+	for _, c := range cases {
+		if got, _ := desiredAccess(windows, team, at(t, c.now)); got != c.want {
+			t.Errorf("%s: desiredAccess = %q, want %q", c.name, got, c.want)
 		}
 	}
 }

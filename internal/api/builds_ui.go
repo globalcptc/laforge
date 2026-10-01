@@ -410,9 +410,9 @@ type stepGroupRef struct {
 
 // stepGroups recomputes, aligned to materialized step_index, the authored
 // step each command came from -- the same content resolution the Render tab
-// uses (internal/gateway.ExpandSteps), plus the container's own leading
-// Docker-run command. Best-effort: any failure returns nil and the caller
-// shows the steps ungrouped.
+// uses (internal/gateway.ExpandSteps). A container's steps align one-to-one
+// with its authored steps, same as a host's. Best-effort: any failure returns
+// nil and the caller shows the steps ungrouped.
 func (s *Server) stepGroups(ctx context.Context, build db.Build, objectID pgtype.UUID) []stepGroupRef {
 	obj, err := s.Queries.GetDeployedObject(ctx, objectID)
 	if err != nil || obj.Kind == "network" || obj.AsName == nil {
@@ -438,12 +438,11 @@ func (s *Server) stepGroups(ctx context.Context, build db.Build, objectID pgtype
 	if err != nil {
 		return nil
 	}
-	refs := make([]stepGroupRef, 0, len(cmds)+1)
-	// materializeSteps prepends the Docker-run command for a container, so
-	// the group list must lead with it to stay aligned to step_index.
-	if obj.Kind == "container" {
-		refs = append(refs, stepGroupRef{group: -1, label: "Container image"})
-	}
+	// A container's materialized steps are exactly its authored steps now, in
+	// the same order -- no leading Docker-run command to offset for. Its agent
+	// runs inside the app container and its steps run there, just like a host's;
+	// the image pull/run is the builder's business, never a materialized step.
+	refs := make([]stepGroupRef, 0, len(cmds))
 	for _, cmd := range cmds {
 		refs = append(refs, stepGroupRef{group: cmd.Group, label: cmd.GroupLabel})
 	}

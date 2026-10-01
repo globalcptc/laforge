@@ -452,6 +452,20 @@ SELECT team.build_id FROM deployed_object
 JOIN team ON team.id = deployed_object.team_id
 WHERE deployed_object.id = $1;
 
+-- name: GetLogContextByDeployedObject :one
+-- The identity the log sink needs to make one captured console line a
+-- self-contained record for an external ingester: its build, team number,
+-- display name and kind, resolved from the agent's deployed_object id (its
+-- cert CN). Same deployed_object -> team -> build hop GetBuildIDByDeployedObject
+-- uses; the laforge_gateway role already has SELECT on all three tables
+-- (migrations/00004). The gateway caches this per object, so it is read once
+-- per object, not once per log batch.
+SELECT team.build_id, team.team_number,
+       deployed_object.object_name, deployed_object.as_name, deployed_object.kind
+FROM deployed_object
+JOIN team ON team.id = deployed_object.team_id
+WHERE deployed_object.id = $1;
+
 -- name: EnsureFakeHosterResource :one
 -- The fake builder's own idempotent "deploy": create-or-adopt, keyed on a
 -- deterministic external_ref the orchestrator assigns. Backed by a real

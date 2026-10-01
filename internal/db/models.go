@@ -35,6 +35,11 @@ type AgentHeartbeat struct {
 	RemoteAddr       *string            `json:"remote_addr"`
 	NextPollMs       *int32             `json:"next_poll_ms"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	CpuPct           *float64           `json:"cpu_pct"`
+	MemPct           *float64           `json:"mem_pct"`
+	DiskPct          *float64           `json:"disk_pct"`
+	NetRxBps         *float64           `json:"net_rx_bps"`
+	NetTxBps         *float64           `json:"net_tx_bps"`
 }
 
 type AgentSession struct {

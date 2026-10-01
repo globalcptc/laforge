@@ -24,7 +24,12 @@ CREATE TABLE public.agent_heartbeat (
     cert_fingerprint text NOT NULL,
     remote_addr text,
     next_poll_ms integer,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    cpu_pct double precision,
+    mem_pct double precision,
+    disk_pct double precision,
+    net_rx_bps double precision,
+    net_tx_bps double precision
 );
 --
 -- Name: agent_artifact; Type: TABLE; Schema: public; Owner: -

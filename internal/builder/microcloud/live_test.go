@@ -261,7 +261,7 @@ func TestMicroCloudNestedDockerContainerLive(t *testing.T) {
 		Team:               "97",
 		Network:            net.ExternalName,
 		NetworkDisplayName: net.DisplayName,
-		Image:              "nginx:alpine", // the OCI ref a materialized step would `docker run`
+		Image:              "nginx:alpine", // the OCI ref DeployContainer `docker run`s inside the box
 		Size:               "small",
 	}
 	ref, err := b.DeployContainer(ctx, ctr)

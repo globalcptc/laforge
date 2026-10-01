@@ -175,18 +175,24 @@ func (s *Server) handleCreateAdHocTask(w http.ResponseWriter, r *http.Request) {
 // --- team access windows ("Build → Access") ---
 
 type setTeamAccessRequest struct {
-	// Action is "open", "close", or "extend". A hand open/close records a
-	// manual override (direction + how long it holds) AND fires the builder
+	// Action is "open", "close", "extend", or "reduce". A hand open/close records
+	// a manual override (direction + how long it holds) AND fires the builder
 	// call now for immediate effect; the override is what stops the access
 	// reconciler (internal/orchestrator/access.go) from reverting the team to
 	// the schedule on its next pass. "extend" pushes an open override's expiry
 	// out -- and, if the team isn't open yet, opens it too, so it acts rather
-	// than only lengthening. A team's real open/closed state still only flips
-	// once the OpenAccess/CloseAccess builder call completes (internal/runner's
-	// executeAccess); the override records intent, not an achieved state.
+	// than only lengthening. "reduce" is extend's exact inverse -- a penalty:
+	// it holds the team CLOSED for N more minutes (taking that access away now),
+	// after which the schedule resumes. Always available, and stacking reduces
+	// add up the same way stacking extends do. A team's real open/closed state
+	// still only flips once the OpenAccess/CloseAccess builder call completes
+	// (internal/runner's executeAccess); the override records intent, not an
+	// achieved state.
 	Action string `json:"action"`
 	// ExtendMinutes is only read for action "extend".
 	ExtendMinutes int `json:"extend_minutes,omitempty"`
+	// ReduceMinutes is only read for action "reduce".
+	ReduceMinutes int `json:"reduce_minutes,omitempty"`
 }
 
 // accessWindowsForBuild reads a build's authored access: windows from the
@@ -202,6 +208,17 @@ func (s *Server) accessWindowsForBuild(ctx context.Context, build db.Build) []sc
 		return nil
 	}
 	return schedule.ParseAccessWindows(env.Access)
+}
+
+// effectiveAccessEnd is the team's current access end -- what extend/reduce move
+// later/earlier: an active open override's expiry if one holds, else the close
+// of the scheduled window it's in. Not ok means the team has no finite end right
+// now (it's closed, or open with no schedule), so there's nothing to move.
+func effectiveAccessEnd(windows []schedule.AccessWindow, team db.Team, now time.Time) (time.Time, bool) {
+	if team.AccessOverrideState == "open" && team.AccessOverrideUntil.Valid && team.AccessOverrideUntil.Time.After(now) {
+		return team.AccessOverrideUntil.Time, true
+	}
+	return schedule.CurrentWindowClose(windows, now)
 }
 
 // handleSetTeamAccess is the operator front door onto the same
@@ -276,30 +293,56 @@ func (s *Server) handleSetTeamAccess(w http.ResponseWriter, r *http.Request) {
 			Payload: []byte("{}"),
 		})
 		writeJSON(w, http.StatusAccepted, task)
-	case "extend":
-		if req.ExtendMinutes <= 0 {
-			writeError(w, http.StatusBadRequest, errors.New("extend_minutes must be positive"))
+	case "extend", "reduce":
+		// Extend and reduce both just move the team's access END time -- extend
+		// pushes it later, reduce pulls it earlier -- recorded as an open override
+		// whose expiry IS that end. The team stays open until then; it is never
+		// shut off now (reduce takes time off the END, it doesn't punch a hole in
+		// the middle). The access reconciler closes the team when the end passes
+		// and -- crucially -- keeps it closed for the rest of the window the end
+		// belonged to (see desiredAccess), so a reduced end actually sticks and a
+		// later window still opens normally.
+		mins := req.ExtendMinutes
+		if req.Action == "reduce" {
+			mins = req.ReduceMinutes
+		}
+		if mins <= 0 {
+			writeError(w, http.StatusBadRequest, errors.New(req.Action+"_minutes must be positive"))
 			return
 		}
-		// Extends from whichever is later, now or an already-active override --
-		// "extend team 4 by 30 minutes" twice in a row should add up, not reset
-		// to 30 minutes from the second click. An extend always means "hold
-		// open," so it sets the override direction to open.
-		base := now
-		if team.AccessOverrideUntil.Valid && team.AccessOverrideUntil.Time.After(base) {
-			base = team.AccessOverrideUntil.Time
+		windows := s.accessWindowsForBuild(r.Context(), build)
+		end, haveEnd := effectiveAccessEnd(windows, team, now)
+		if req.Action == "reduce" && !haveEnd {
+			writeError(w, http.StatusBadRequest, errors.New("team has no open access window to reduce -- it's already closed"))
+			return
 		}
-		until := pgtype.Timestamptz{Time: base.Add(time.Duration(req.ExtendMinutes) * time.Minute), Valid: true}
+		// Extend from the current end if there is one, else from now (extending a
+		// closed team opens it for the next N minutes). Reduce always has an end.
+		base := now
+		if haveEnd {
+			base = end
+		}
+		delta := time.Duration(mins) * time.Minute
+		var newEnd time.Time
+		if req.Action == "extend" {
+			newEnd = base.Add(delta)
+		} else {
+			newEnd = base.Add(-delta)
+			if newEnd.Before(now) {
+				newEnd = now // reducing past now just ends access now
+			}
+		}
 		updated, err := s.Queries.SetTeamAccessOverride(r.Context(), db.SetTeamAccessOverrideParams{
-			ID: team.ID, AccessOverrideState: "open", AccessOverrideUntil: until,
+			ID: team.ID, AccessOverrideState: "open", AccessOverrideUntil: pgtype.Timestamptz{Time: newEnd, Valid: true},
 		})
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		// If the team isn't open yet, open it now so extend also acts, not only
-		// lengthens; an already-open team needs no task.
-		if team.AccessState != "open" {
+		// Extending a team that isn't open yet opens it now; reduce never opens a
+		// team (it only moves an existing end in), and neither shuts one off now --
+		// the reconciler closes at newEnd.
+		if req.Action == "extend" && team.AccessState != "open" {
 			payload, _ := json.Marshal(map[string]string{"team": teamStr})
 			if task, err := s.Queries.CreateTeamTask(r.Context(), db.CreateTeamTaskParams{
 				BuildID: build.ID, Kind: "open_access", Payload: payload,
@@ -311,13 +354,17 @@ func (s *Server) handleSetTeamAccess(w http.ResponseWriter, r *http.Request) {
 				})
 			}
 		}
+		past := "extended"
+		if req.Action == "reduce" {
+			past = "reduced"
+		}
 		s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
-			BuildID: build.ID, Kind: "access.extended",
-			Message: sess.GithubLogin + " extended team " + teamStr + " by " + strconv.Itoa(req.ExtendMinutes) + " minutes",
+			BuildID: build.ID, Kind: "access." + past,
+			Message: sess.GithubLogin + " " + past + " team " + teamStr + " by " + strconv.Itoa(mins) + " minutes",
 			Payload: []byte("{}"),
 		})
 		writeJSON(w, http.StatusOK, updated)
 	default:
-		writeError(w, http.StatusBadRequest, errors.New("action must be open, close, or extend"))
+		writeError(w, http.StatusBadRequest, errors.New("action must be open, close, extend, or reduce"))
 	}
 }

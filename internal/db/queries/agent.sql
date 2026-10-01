@@ -28,8 +28,8 @@ SELECT * FROM agent_session ORDER BY last_heartbeat_at DESC;
 -- theoretical concern) -- so this query only ever needs the INSERT
 -- privilege migrations/00007 actually grants, matching its own "no
 -- SELECT" design intent instead of contradicting it.
-INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms)
-VALUES ($1, $2, $3, $4);
+INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 
 -- name: DeleteAgentHeartbeatsOlderThan :execrows
 -- The real answer to migrations/00007's own "deliberately unaddressed:
@@ -82,6 +82,15 @@ INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
 RETURNING *;
+
+-- name: DeleteAgentTasksForObject :exec
+-- Clear every materialized step for an object so a redeploy re-materializes
+-- them from scratch. materializeSteps skips when ANY agent_task already exists
+-- (NextStepIndexForHost != 0), so without this a rebuilt instance would never
+-- re-run its steps. validator_result rows reference agent_task ON DELETE
+-- CASCADE, so they go with it; the append-only `event` journal (keyed by
+-- deployed_object_id, not agent_task_id) is untouched history.
+DELETE FROM agent_task WHERE deployed_object_id = $1;
 
 -- name: NextStepIndexForHost :one
 -- Ad-hoc tasks (internal/api's tasks.go) append after whatever steps a

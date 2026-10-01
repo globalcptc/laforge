@@ -1,0 +1,557 @@
+openapi: 3.1.0
+info:
+  title: LaForge API
+  version: "3.0"
+  description: >
+    The HTTP API for LaForge — the one service humans, the `laforge` CLI, and
+    GitHub talk to. This document is for internal reference and is not hosted
+    publicly.
+
+
+    **Authentication.** Two interchangeable schemes on the gated endpoints:
+
+    - `cookieAuth` — the browser session cookie minted by the GitHub OAuth
+      flow (`/auth/github/*`). Used by the web UI.
+    - `bearerAuth` — `Authorization: Bearer <github-token>`, a GitHub token
+      (e.g. from `laforge login`). Used by the CLI.
+
+    Most endpoints accept either. `POST /webhook/github` is authenticated by a
+    GitHub HMAC signature header instead. A handful of `/auth/*` endpoints are
+    public.
+
+
+    **Access levels.** Repository-scoped endpoints are gated at one of
+    `read < build < manage < admin`, resolved from an instance-admin list, an
+    explicit per-repository grant, or the caller's live GitHub permission on the
+    repo (pull→read, push→build, admin→admin). Running or scheduling agent
+    commands, power actions, rebuilds, and access overrides require `manage`.
+servers:
+  - url: http://localhost:8080
+    description: Local development (docker compose)
+tags:
+  - name: System
+  - name: Auth
+  - name: Repositories
+  - name: Access
+  - name: Configured Builds
+  - name: Builds
+  - name: Objects
+  - name: Operations
+  - name: Schedule
+  - name: Builders
+  - name: Registry
+  - name: Admin
+  - name: Agents
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: laforge_session
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: A GitHub token (user-to-server or PAT), as sent by the CLI.
+  parameters:
+    BuildId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Build id.
+    ObjectId:
+      name: objectId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Deployed-object id.
+    RepoId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: Repository id.
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+    AdHocTarget:
+      type: object
+      description: >
+        Host selector. `ids` is the complete match on its own (hostnames repeat
+        across teams, so an id is the only build-wide-unique handle); otherwise
+        every set field narrows the match (AND).
+      properties:
+        ids: { type: array, items: { type: string, format: uuid } }
+        team: { type: integer, description: Team number. }
+        kind: { type: string, enum: [host, container] }
+        search: { type: string }
+        network: { type: string }
+        tags:
+          type: object
+          additionalProperties: { type: string }
+    ExecutePayload:
+      type: object
+      properties:
+        command: { type: string, example: /bin/sh }
+        args: { type: array, items: { type: string } }
+        working_dir: { type: string }
+        timeout_sec: { type: integer }
+    CreateAdHocTaskRequest:
+      type: object
+      required: [target, command]
+      properties:
+        target: { $ref: '#/components/schemas/AdHocTarget' }
+        command:
+          type: string
+          description: Agent command kind.
+          enum: [execute, reboot, service, write_file, append_file, delete, change_perms, create_user, set_password, add_to_group, validate, download, upload, extract]
+        payload:
+          description: Command-specific payload (e.g. ExecutePayload for `execute`).
+          oneOf:
+            - $ref: '#/components/schemas/ExecutePayload'
+            - type: object
+        dry_run:
+          type: boolean
+          description: Resolve and return the matched set without running anything.
+    AdHocResult:
+      type: object
+      properties:
+        matched: { type: integer }
+        objects: { type: array, items: { $ref: '#/components/schemas/DeployedObject' } }
+        created: { type: array, items: { type: object } }
+    CreateScheduledTaskRequest:
+      type: object
+      required: [target, command, when]
+      properties:
+        target: { $ref: '#/components/schemas/AdHocTarget' }
+        command: { type: string }
+        payload: { type: object }
+        when:
+          type: string
+          description: Natural-language schedule, e.g. "every 30 minutes" or "45 minutes after competition start".
+          example: every 30 minutes
+    PowerRequest:
+      type: object
+      required: [target, action]
+      properties:
+        target: { $ref: '#/components/schemas/AdHocTarget' }
+        action: { type: string, enum: [start, stop, reboot] }
+        force: { type: boolean, description: Hard power op vs graceful OS-level. }
+    PowerResponse:
+      type: object
+      properties:
+        failed: { type: integer }
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              object_id: { type: string, format: uuid }
+              name: { type: string }
+              error: { type: string }
+    RebuildRequest:
+      type: object
+      required: [target]
+      properties:
+        target: { $ref: '#/components/schemas/AdHocTarget' }
+        include_dependents:
+          type: boolean
+          description: Also rebuild everything in the same team that transitively depends on the target.
+        dry_run:
+          type: boolean
+          description: Resolve and return the affected set without changing anything.
+    RebuildResponse:
+      type: object
+      properties:
+        count: { type: integer }
+        dry_run: { type: boolean }
+        affected:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              object_name: { type: string }
+              as_name: { type: string }
+              kind: { type: string }
+              team_number: { type: integer }
+    SetTeamAccessRequest:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [open, close, extend, reduce] }
+        extend_minutes: { type: integer, description: Only for action=extend. }
+        reduce_minutes: { type: integer, description: Only for action=reduce. }
+    DeployedObject:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        team_id: { type: string, format: uuid }
+        kind: { type: string, enum: [network, host, container] }
+        object_name: { type: string }
+        as_name: { type: string, nullable: true }
+        network_name: { type: string, nullable: true }
+        status: { type: string }
+        external_ref: { type: string, nullable: true }
+        power_state: { type: string, nullable: true }
+    ObjectConfig:
+      type: object
+      description: One host/container's full authored config from the build's content revision.
+      properties:
+        kind: { type: string }
+        name: { type: string }
+        os: { type: string }
+        image: { type: string }
+        size: { type: string }
+        disk: { type: integer }
+        command: { type: array, items: { type: string } }
+        tcp_ports: { type: array, items: { type: string } }
+        udp_ports: { type: array, items: { type: string } }
+        env: { type: object, additionalProperties: { type: string } }
+        vars: { type: object, additionalProperties: { type: string } }
+        tags: { type: object, additionalProperties: { type: string } }
+        depends_on: { type: array, items: { type: string } }
+        findings:
+          type: array
+          items:
+            type: object
+            properties:
+              severity: { type: integer }
+              difficulty: { type: integer }
+              description: { type: string }
+    CertInfo:
+      type: object
+      properties:
+        configured: { type: boolean }
+        subject: { type: string }
+        not_after: { type: string, format: date-time }
+        days_remaining: { type: integer }
+        expiring_soon: { type: boolean }
+        expired: { type: boolean }
+        error: { type: string }
+    CertStatus:
+      type: object
+      properties:
+        warn_threshold_days: { type: integer }
+        ca: { $ref: '#/components/schemas/CertInfo' }
+        server: { $ref: '#/components/schemas/CertInfo' }
+    BuilderConfig:
+      type: object
+      description: >
+        A configured builder. Connection/credential fields
+        (incus_client_cert_path, incus_client_key_path, incus_server_cert_pem,
+        incus_hosts, incus_credential_id) are returned only to instance admins;
+        other authenticated callers get them blank.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        kind: { type: string }
+        incus_api_url: { type: string, nullable: true }
+        incus_images: { type: object }
+        incus_sizes: { type: object }
+        docker_base_fingerprint: { type: string }
+  responses:
+    Unauthorized:
+      description: Not authenticated.
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/Error' } }
+    Forbidden:
+      description: Authenticated but lacks the required access level.
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/Error' } }
+    NotFound:
+      description: Not found.
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/Error' } }
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/Error' } }
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+
+paths:
+  /config:
+    get:
+      tags: [System]
+      summary: Public UI config (feature flags, public identifiers).
+      security: []
+      responses: { '200': { description: OK } }
+  /cert-status:
+    get:
+      tags: [System]
+      summary: Agent CA and gateway certificate expiry.
+      description: Reports expiry dates (no key material). `expiring_soon` is true within 90 days.
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/CertStatus' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /webhook/github:
+    post:
+      tags: [System]
+      summary: GitHub App webhook receiver.
+      description: Authenticated by the GitHub HMAC signature header, not a session/bearer.
+      security: []
+      responses: { '200': { description: Processed }, '400': { $ref: '#/components/responses/BadRequest' } }
+  /agent-binary/{id}:
+    get:
+      tags: [Agents]
+      summary: Download a deployed object's per-host agent binary (one-time token).
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: token, in: query, required: true, schema: { type: string } }
+      responses: { '200': { description: Binary }, '403': { $ref: '#/components/responses/Forbidden' } }
+
+  /auth/client-id:
+    get: { tags: [Auth], summary: The OAuth client id for the browser flow., security: [], responses: { '200': { description: OK } } }
+  /auth/github/login:
+    get: { tags: [Auth], summary: Begin the GitHub OAuth login (redirects to GitHub)., security: [], responses: { '302': { description: Redirect to GitHub } } }
+  /auth/github/callback:
+    get:
+      tags: [Auth]
+      summary: OAuth callback — exchanges the code, gates sign-in, sets the session cookie.
+      security: []
+      parameters:
+        - { name: code, in: query, required: true, schema: { type: string } }
+        - { name: state, in: query, required: true, schema: { type: string } }
+      responses:
+        '302': { description: Redirect to the UI on success }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /auth/logout:
+    post: { tags: [Auth], summary: End the session (clears the row and the cookie)., responses: { '200': { description: OK } } }
+  /auth/me:
+    get: { tags: [Auth], summary: The signed-in account (login, avatar, instance-admin flag, timezone)., responses: { '200': { description: OK }, '401': { $ref: '#/components/responses/Unauthorized' } } }
+  /auth/me/timezone:
+    post: { tags: [Auth], summary: Set the account's IANA timezone preference., responses: { '200': { description: OK }, '400': { $ref: '#/components/responses/BadRequest' } } }
+
+  /home:
+    get: { tags: [Repositories], summary: Home dashboard — visible repositories and cross-build attention items., responses: { '200': { description: OK } } }
+  /repos:
+    get: { tags: [Repositories], summary: List registered repositories visible to the caller., responses: { '200': { description: OK } } }
+    post: { tags: [Repositories], summary: Register a repository (requires GitHub push)., responses: { '201': { description: Created }, '403': { $ref: '#/components/responses/Forbidden' } } }
+  /repos/{id}:
+    get:
+      tags: [Repositories]
+      summary: One repository.
+      parameters: [ { $ref: '#/components/parameters/RepoId' } ]
+      responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/NotFound' } }
+  /repos/{id}/builds:
+    get: { tags: [Builds], summary: Builds for a repository., parameters: [ { $ref: '#/components/parameters/RepoId' } ], responses: { '200': { description: OK } } }
+  /repos/{id}/branches:
+    get: { tags: [Repositories], summary: Branches of the repository (via GitHub)., parameters: [ { $ref: '#/components/parameters/RepoId' } ], responses: { '200': { description: OK } } }
+  /repos/{id}/environment-files:
+    get: { tags: [Repositories], summary: Environment files found in a branch., parameters: [ { $ref: '#/components/parameters/RepoId' } ], responses: { '200': { description: OK } } }
+  /repos/{id}/people:
+    get: { tags: [Repositories], summary: People CSV sources referenced by the repository's content., parameters: [ { $ref: '#/components/parameters/RepoId' } ], responses: { '200': { description: OK } } }
+
+  /repos/{id}/access:
+    get: { tags: [Access], summary: The repository's access list (people and effective levels)., parameters: [ { $ref: '#/components/parameters/RepoId' } ], responses: { '200': { description: OK } } }
+  /repos/{id}/my-access:
+    get: { tags: [Access], summary: The caller's own effective level on the repository., parameters: [ { $ref: '#/components/parameters/RepoId' } ], responses: { '200': { description: OK } } }
+  /repos/{id}/access/{login}:
+    put:
+      tags: [Access]
+      summary: Grant or change a person's access level (admin).
+      parameters:
+        - { $ref: '#/components/parameters/RepoId' }
+        - { name: login, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: OK }, '403': { $ref: '#/components/responses/Forbidden' } }
+    delete:
+      tags: [Access]
+      summary: Remove a person's explicit grant (admin).
+      parameters:
+        - { $ref: '#/components/parameters/RepoId' }
+        - { name: login, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: OK }, '403': { $ref: '#/components/responses/Forbidden' } }
+
+  /repos/{id}/configured-builds:
+    get: { tags: [Configured Builds], summary: List a repository's configured builds., parameters: [ { $ref: '#/components/parameters/RepoId' } ], responses: { '200': { description: OK } } }
+    post: { tags: [Configured Builds], summary: Create a configured build (branch + env + builder) (build)., parameters: [ { $ref: '#/components/parameters/RepoId' } ], responses: { '201': { description: Created }, '403': { $ref: '#/components/responses/Forbidden' } } }
+  /configured-builds/{id}:
+    get: { tags: [Configured Builds], summary: One configured build., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
+    delete: { tags: [Configured Builds], summary: Delete a configured build (build)., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
+  /configured-builds/{id}/auto-deploy:
+    post: { tags: [Configured Builds], summary: Toggle auto-deploy following (build)., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
+  /configured-builds/{id}/lock:
+    post: { tags: [Configured Builds], summary: Toggle the competition-started lock (build)., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
+  /configured-builds/{id}/sync:
+    post: { tags: [Configured Builds], summary: Sync the latest commit for this configured build (build)., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
+  /configured-builds/{id}/builds:
+    post: { tags: [Configured Builds], summary: Create (trigger) a build from the tracked commit (build)., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '201': { description: Created } } }
+  /content-revisions/{id}/environments:
+    get: { tags: [Configured Builds], summary: Environments found in a content revision., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
+
+  /builds/{id}:
+    get:
+      tags: [Builds]
+      summary: Build detail (teams, objects, access, status).
+      parameters: [ { $ref: '#/components/parameters/BuildId' } ]
+      responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/NotFound' } }
+  /builds/{id}/deploy:
+    post: { tags: [Builds], summary: Deploy a planned build (build)., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK }, '409': { $ref: '#/components/responses/BadRequest' } } }
+  /builds/{id}/teardown:
+    post: { tags: [Builds], summary: Tear down a build's infrastructure (manage)., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '202': { description: Accepted } } }
+  /builds/{id}/upcoming:
+    get: { tags: [Builds], summary: Pending newer commit for this build, if any., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/apply-upcoming:
+    post: { tags: [Builds], summary: Apply the newer commit to this build in place (build)., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK }, '409': { $ref: '#/components/responses/BadRequest' } } }
+  /builds/{id}/drift:
+    get: { tags: [Builds], summary: Drift report — hoster state vs what was deployed., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/events:
+    get: { tags: [Builds], summary: The build's event journal., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/live:
+    get: { tags: [Builds], summary: Server-sent events stream of live build updates., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: text/event-stream } } }
+  /builds/{id}/findings:
+    get: { tags: [Builds], summary: Findings resolved for this build., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/dashboard:
+    get: { tags: [Builds], summary: Dashboard aggregates for the build., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/topology:
+    get: { tags: [Builds], summary: The build's resolved topology (teams, networks, members)., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/artifacts:
+    get: { tags: [Builds], summary: Artifacts captured for the build., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/artifacts/purge:
+    post: { tags: [Builds], summary: Purge the build's stored artifacts (manage)., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+
+  /builds/{id}/objects:
+    get: { tags: [Objects], summary: Deployed objects for the build., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/DeployedObject' } } } } } } }
+  /builds/{id}/objects/{objectId}/events:
+    get: { tags: [Objects], summary: One object's event history., parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/objects/{objectId}/heartbeats:
+    get: { tags: [Objects], summary: One object's agent heartbeat history (with host metrics)., parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/objects/{objectId}/steps:
+    get: { tags: [Objects], summary: One object's materialized steps and their status., parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/objects/{objectId}/render:
+    get: { tags: [Objects], summary: What was rendered and delivered to the object., parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/objects/{objectId}/infra:
+    get: { tags: [Objects], summary: Builder placement for the object plus the root password for hand access., parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/objects/{objectId}/config:
+    get:
+      tags: [Objects]
+      summary: One object's full authored config (ports, env, vars, depends_on, findings).
+      parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ObjectConfig' } } } } }
+
+  /builds/{id}/tasks:
+    post:
+      tags: [Operations]
+      summary: Run an ad-hoc command on the matched hosts now (manage).
+      parameters: [ { $ref: '#/components/parameters/BuildId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateAdHocTaskRequest' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdHocResult' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /builds/{id}/power:
+    post:
+      tags: [Operations]
+      summary: Infrastructure power action at the hoster (manage).
+      parameters: [ { $ref: '#/components/parameters/BuildId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PowerRequest' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/PowerResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /builds/{id}/rebuild:
+    post:
+      tags: [Operations]
+      summary: Tear down and recreate a host and, optionally, its dependents (manage).
+      parameters: [ { $ref: '#/components/parameters/BuildId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RebuildRequest' } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/RebuildResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/BadRequest' }
+  /builds/{id}/teams/{team}/access:
+    post:
+      tags: [Operations]
+      summary: Open, close, extend, or reduce a team's access window (manage).
+      parameters:
+        - { $ref: '#/components/parameters/BuildId' }
+        - { name: team, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/SetTeamAccessRequest' } } }
+      responses:
+        '200': { description: OK }
+        '202': { description: Accepted (builder call queued) }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /builds/{id}/scheduled-tasks:
+    get: { tags: [Schedule], summary: List scheduled tasks for the build., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+    post:
+      tags: [Schedule]
+      summary: Schedule a command with a natural-language time (manage).
+      parameters: [ { $ref: '#/components/parameters/BuildId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateScheduledTaskRequest' } } }
+      responses:
+        '201': { description: Created }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /builds/{id}/scheduled-tasks/preview:
+    post:
+      tags: [Schedule]
+      summary: Validate a `when:` expression and preview its next occurrences.
+      parameters: [ { $ref: '#/components/parameters/BuildId' } ]
+      responses: { '200': { description: OK } }
+  /builds/{id}/scheduled-tasks/{taskId}/cancel:
+    post:
+      tags: [Schedule]
+      summary: Cancel a scheduled task (manage).
+      parameters:
+        - { $ref: '#/components/parameters/BuildId' }
+        - { name: taskId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses: { '200': { description: OK } }
+
+  /builders:
+    get: { tags: [Builders], summary: List builders by name and kind (any signed-in user)., responses: { '200': { description: OK } } }
+  /builder-configs:
+    get: { tags: [Builders], summary: List configured builders (connection fields redacted for non-admins)., responses: { '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/BuilderConfig' } } } } } } }
+  /builder-configs/{name}:
+    get:
+      tags: [Builders]
+      summary: One builder config (connection fields redacted for non-admins).
+      parameters: [ { name: name, in: path, required: true, schema: { type: string } } ]
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/BuilderConfig' } } } }, '404': { $ref: '#/components/responses/NotFound' } }
+    post: { tags: [Builders], summary: Create a builder config (admin)., parameters: [ { name: name, in: path, required: true, schema: { type: string } } ], responses: { '201': { description: Created }, '403': { $ref: '#/components/responses/Forbidden' } } }
+    put: { tags: [Builders], summary: Update a builder config (admin)., parameters: [ { name: name, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: OK }, '403': { $ref: '#/components/responses/Forbidden' } } }
+    delete: { tags: [Builders], summary: Delete a builder config (admin)., parameters: [ { name: name, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: OK }, '403': { $ref: '#/components/responses/Forbidden' } } }
+  /builder-configs/{name}/available-images:
+    get: { tags: [Builders], summary: Live-discover the images on the builder's hoster (admin)., parameters: [ { name: name, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: OK }, '403': { $ref: '#/components/responses/Forbidden' } } }
+  /builder-configs/{name}/image-builds:
+    get: { tags: [Builders], summary: Base-image build history (admin)., parameters: [ { name: name, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: OK } } }
+    post: { tags: [Builders], summary: Trigger a base-image (re)build (admin)., parameters: [ { name: name, in: path, required: true, schema: { type: string } } ], responses: { '202': { description: Accepted } } }
+  /builder-connections:
+    post: { tags: [Builders], summary: Probe/store a builder connection credential (admin)., responses: { '200': { description: OK } } }
+  /builder-connections/{id}:
+    get: { tags: [Builders], summary: One stored builder connection (admin)., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
+  /image-builds/{id}/log:
+    get: { tags: [Builders], summary: One base-image build's log (admin)., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
+
+  /registry-credentials:
+    get: { tags: [Registry], summary: List stored registry credentials (host + username; no secret) (admin)., responses: { '200': { description: OK } } }
+    put: { tags: [Registry], summary: Upsert a registry credential (admin)., responses: { '200': { description: OK } } }
+  /registry-credentials/{host}:
+    delete: { tags: [Registry], summary: Delete a registry credential (admin)., parameters: [ { name: host, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: OK } } }
+  /registry-credentials/{host}/test:
+    post: { tags: [Registry], summary: Test a registry credential (admin)., parameters: [ { name: host, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: OK } } }
+  /registry-credentials/{host}/images:
+    get: { tags: [Registry], summary: List images/tags in a private registry (admin)., parameters: [ { name: host, in: path, required: true, schema: { type: string } } ], responses: { '200': { description: OK } } }
+
+  /installations:
+    get: { tags: [Admin], summary: GitHub App installations (admin)., responses: { '200': { description: OK } } }
+  /installations/repositories:
+    get: { tags: [Admin], summary: Installed-but-unapproved repositories (admin)., responses: { '200': { description: OK } } }
+  /installations/repositories/approve:
+    post: { tags: [Admin], summary: Approve an installed repository into LaForge (admin)., responses: { '200': { description: OK }, '403': { $ref: '#/components/responses/Forbidden' } } }
