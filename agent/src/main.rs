@@ -14,15 +14,17 @@ mod metrics;
 mod obfuscate;
 mod protocol;
 mod selfhash;
+mod shell;
 mod validators;
 
 use protocol::{GetTaskResponsePayload, HeartbeatResponsePayload, LogBatchRequestPayload, MessageType, ReportStatusRequestPayload};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, ServerName};
 use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned};
+use std::collections::HashSet;
 use std::io;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 // Bounds for container console-log forwarding: how many lines the agent buffers
@@ -123,9 +125,13 @@ fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<Cl
     // reconnects to keep producing real averages. Both hosts and containers
     // report metrics -- the collector is here, above the host/container split.
     let mut metrics = metrics::Collector::new();
+    // Shell sessions this agent is already serving (or spawning), so a session
+    // id re-advertised on a later heartbeat before its attach completes is not
+    // started twice. Lives across reconnects; ids are unique per open.
+    let shell_handled: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
     loop {
         let started = Instant::now();
-        match run_session(&identity.gateway_addr, host_only, tls_config.clone(), logq.as_ref(), &mut metrics) {
+        match run_session(&identity.gateway_addr, host_only, tls_config.clone(), logq.as_ref(), &mut metrics, &shell_handled) {
             Ok(()) => {}
             Err(e) => eprintln!("laforge-agent: session ended: {e}"),
         }
@@ -232,12 +238,16 @@ fn build_tls_config(identity: &identity::Identity) -> Result<ClientConfig, Strin
         .map_err(|e| format!("building client config: {e}"))
 }
 
-fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq: Option<&Arc<applog::LogQueue>>, metrics: &mut metrics::Collector) -> io::Result<()> {
+fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq: Option<&Arc<applog::LogQueue>>, metrics: &mut metrics::Collector, shell_handled: &Arc<Mutex<HashSet<String>>>) -> io::Result<()> {
     let tcp = TcpStream::connect(addr)?;
     tcp.set_nodelay(true).ok();
 
     let server_name = ServerName::try_from(host_only.to_string())
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, format!("invalid server name {host_only:?}: {e}")))?;
+    // Keep a clone for spawning shell sessions, which each dial their own
+    // connection with the same client config -- ClientConnection::new consumes
+    // the Arc passed to it.
+    let shell_tls_config = tls_config.clone();
     let conn = ClientConnection::new(tls_config, server_name).map_err(|e| io::Error::other(format!("starting TLS: {e}")))?;
     let mut tls = StreamOwned::new(conn, tcp);
 
@@ -251,6 +261,13 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
         expect(mt, MessageType::HeartbeatResponse)?;
         let hb: HeartbeatResponsePayload = serde_json::from_slice(&body)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("decoding heartbeat response: {e}")))?;
+
+        // Open an interactive shell for any session a client is waiting on. Each
+        // runs on its own thread and its own mTLS connection, so it never blocks
+        // this heartbeat/task loop.
+        if !hb.pending_sessions.is_empty() {
+            shell::maybe_spawn(&hb.pending_sessions, shell_handled, addr, host_only, &shell_tls_config);
+        }
 
         protocol::write_frame(&mut tls, MessageType::GetTaskRequest, &[])?;
         let (mt, body) = protocol::read_frame(&mut tls)?;

@@ -113,6 +113,20 @@ CREATE TABLE public.attention_dismissal (
     CONSTRAINT attention_dismissal_pkey PRIMARY KEY (account_id, build_id, category)
 );
 --
+-- Name: shell_session; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.shell_session (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    deployed_object_id uuid NOT NULL,
+    opened_by_account_id uuid,
+    status text DEFAULT 'pending'::text NOT NULL,
+    client_addr text,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    ended_at timestamp with time zone,
+    CONSTRAINT shell_session_pkey PRIMARY KEY (id),
+    CONSTRAINT shell_session_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'active'::text, 'closed'::text])))
+);
+--
 -- Name: builder_config; Type: TABLE; Schema: public; Owner: -
 --
 CREATE TABLE public.builder_config (

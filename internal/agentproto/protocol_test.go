@@ -3,6 +3,7 @@ package agentproto
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"io"
 	"testing"
 )
@@ -31,6 +32,58 @@ func TestWriteReadRoundTrip(t *testing.T) {
 	}
 	if mt != GetTaskResponse || !bytes.Equal(body, payload) {
 		t.Fatalf("2nd frame = (%v, %q), want (GetTaskResponse, %q)", mt, body, payload)
+	}
+}
+
+// TestShellFramesRoundTrip covers the interactive-shell relay frames: a JSON
+// attach, a RAW (non-JSON) data frame, a resize, and a close, all through the
+// same WriteFrame/ReadFrame framing.
+func TestShellFramesRoundTrip(t *testing.T) {
+	var buf bytes.Buffer
+
+	attach, _ := json.Marshal(ShellAttachPayload{SessionID: "s1", Role: ShellRoleClient, ObjectID: "obj1", Cols: 120, Rows: 40})
+	if err := WriteFrame(&buf, ShellAttach, attach); err != nil {
+		t.Fatalf("WriteFrame attach: %v", err)
+	}
+	raw := []byte{0x00, 0x1b, '[', 'A', 0xff} // raw bytes incl. non-UTF8 / control chars
+	if err := WriteFrame(&buf, ShellData, raw); err != nil {
+		t.Fatalf("WriteFrame data: %v", err)
+	}
+	resize, _ := json.Marshal(ShellResizePayload{Cols: 80, Rows: 24})
+	if err := WriteFrame(&buf, ShellResize, resize); err != nil {
+		t.Fatalf("WriteFrame resize: %v", err)
+	}
+	cls, _ := json.Marshal(ShellClosePayload{Reason: "exit"})
+	if err := WriteFrame(&buf, ShellClose, cls); err != nil {
+		t.Fatalf("WriteFrame close: %v", err)
+	}
+
+	mt, body, err := ReadFrame(&buf)
+	if err != nil || mt != ShellAttach {
+		t.Fatalf("attach frame = (%v, err=%v), want ShellAttach", mt, err)
+	}
+	var gotAttach ShellAttachPayload
+	if err := json.Unmarshal(body, &gotAttach); err != nil || gotAttach.SessionID != "s1" || gotAttach.Role != ShellRoleClient || gotAttach.ObjectID != "obj1" || gotAttach.Cols != 120 || gotAttach.Rows != 40 {
+		t.Fatalf("attach payload = %+v (err=%v), want {s1 client obj1 120 40}", gotAttach, err)
+	}
+
+	mt, body, err = ReadFrame(&buf)
+	if err != nil || mt != ShellData || !bytes.Equal(body, raw) {
+		t.Fatalf("data frame = (%v, %q, err=%v), want (ShellData, raw bytes preserved)", mt, body, err)
+	}
+
+	mt, body, err = ReadFrame(&buf)
+	if err != nil || mt != ShellResize {
+		t.Fatalf("resize frame = (%v, err=%v), want ShellResize", mt, err)
+	}
+	var gotResize ShellResizePayload
+	if err := json.Unmarshal(body, &gotResize); err != nil || gotResize.Cols != 80 || gotResize.Rows != 24 {
+		t.Fatalf("resize payload = %+v, want {80 24}", gotResize)
+	}
+
+	mt, _, err = ReadFrame(&buf)
+	if err != nil || mt != ShellClose {
+		t.Fatalf("close frame = (%v, err=%v), want ShellClose", mt, err)
 	}
 }
 

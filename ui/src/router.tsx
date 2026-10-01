@@ -7,6 +7,7 @@ import { RepoBuilds } from './routes/RepoBuilds'
 import { BuildLayout } from './routes/BuildLayout'
 import { BuildOverview } from './routes/BuildOverview'
 import { BuildHosts } from './routes/BuildHosts'
+import { BuildTerminal } from './routes/BuildTerminal'
 import { BuildAccess } from './routes/BuildAccess'
 import { BuildExternalAccess } from './routes/BuildExternalAccess'
 import { BuildLogs } from './routes/BuildLogs'
@@ -103,6 +104,9 @@ const buildTopologyRoute = createRoute({
   },
 })
 const buildArtifactsRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'artifacts', component: BuildArtifacts })
+// Per-host interactive shell -- reached from a host's "Open terminal" action,
+// not a build-level tab, since a shell is always about one specific host.
+const buildTerminalRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'hosts/$objectId/terminal', component: BuildTerminal })
 
 const repoPeopleRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -175,7 +179,7 @@ const routeTree = rootRoute.addChildren([
   newBuilderRoute,
   editBuilderRoute,
   repoAccessRoute,
-  buildLayoutRoute.addChildren([buildIndexRoute, buildHostsRoute, buildAccessRoute, buildExternalAccessRoute, buildLogsRoute, buildFindingsRoute, buildScheduleRoute, buildTopologyRoute, buildArtifactsRoute]),
+  buildLayoutRoute.addChildren([buildIndexRoute, buildHostsRoute, buildAccessRoute, buildExternalAccessRoute, buildLogsRoute, buildFindingsRoute, buildScheduleRoute, buildTopologyRoute, buildArtifactsRoute, buildTerminalRoute]),
 ])
 
 export const router = createRouter({ routeTree })

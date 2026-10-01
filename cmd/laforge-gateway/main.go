@@ -32,6 +32,11 @@ func main() {
 	serverCertPath := requireEnv("GATEWAY_SERVER_CERT")
 	serverKeyPath := requireEnv("GATEWAY_SERVER_KEY")
 	listenAddr := envOr("LISTEN_ADDR", ":8443")
+	// Optional internal relay listener for interactive shells: the api dials it
+	// (mTLS, same CA) to bridge a user's PTY to the host agent. Unset = the
+	// shell feature is off. MUST stay on the internal network only -- never
+	// funnel-exposed -- so keep it on a distinct, unpublished port.
+	relayListenAddr := os.Getenv("RELAY_LISTEN_ADDR")
 	leaseSeconds := envInt("LEASE_SECONDS", 60)
 	basePollMS := envInt("BASE_POLL_MS", 15000)
 	jitterMS := envInt("JITTER_MS", 5000)
@@ -87,6 +92,23 @@ func main() {
 		log.Fatalf("listen %s: %v", listenAddr, err)
 	}
 	log.Printf("laforge-gateway listening on %s (mTLS)", listenAddr)
+
+	// The internal relay listener for interactive shells runs alongside the
+	// agent listener on its own goroutine; a failure there logs but never takes
+	// down the agent protocol, which is the gateway's real job.
+	if relayListenAddr != "" {
+		relayLn, err := srv.Listen(relayListenAddr)
+		if err != nil {
+			log.Fatalf("relay listen %s: %v", relayListenAddr, err)
+		}
+		log.Printf("laforge-gateway shell relay listening on %s (internal mTLS)", relayListenAddr)
+		go func() {
+			if err := srv.ServeRelay(ctx, relayLn); err != nil && ctx.Err() == nil {
+				log.Printf("laforge-gateway shell relay stopped: %v", err)
+			}
+		}()
+	}
+
 	if err := srv.Serve(ctx, ln); err != nil && ctx.Err() == nil {
 		log.Fatalf("serve: %v", err)
 	}

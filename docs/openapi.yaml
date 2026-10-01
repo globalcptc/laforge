@@ -448,6 +448,22 @@ paths:
       summary: One object's full authored config (ports, env, vars, depends_on, findings).
       parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ]
       responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/ObjectConfig' } } } } }
+  /builds/{id}/objects/{objectId}/terminal:
+    get:
+      tags: [Objects]
+      summary: >-
+        Open an interactive root/admin shell on a host/container (WebSocket upgrade).
+        Needs manage access. Binary messages carry raw PTY bytes both ways; a text
+        message {"type":"resize","cols":N,"rows":N} resizes. Relayed through the
+        gateway to the host agent; every session is audited and a small global
+        concurrency cap applies.
+      parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ]
+      responses:
+        '101': { description: Switching Protocols (WebSocket) }
+        '403': { description: Cross-origin refused, or caller lacks manage access }
+        '409': { description: Object is not a running host/container with a live agent }
+        '429': { description: Concurrent shell-session limit reached }
+        '503': { description: Interactive shell is not configured on this server }
 
   /builds/{id}/tasks:
     post:

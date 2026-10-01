@@ -66,6 +66,8 @@ func main() {
 		err = runRegistries(os.Args[2:])
 	case "run":
 		err = runRun(os.Args[2:])
+	case "shell":
+		err = runShell(os.Args[2:])
 	case "schedule":
 		err = runSchedule(os.Args[2:])
 	case "cert-status":
@@ -164,6 +166,12 @@ http://localhost:8080).
       command is 'execute' (the shell command after --); other kinds take
       --command <kind> --payload '<json>'. --dry-run shows the matched hosts.
       Needs manage access on the repo.
+
+  laforge shell --build <id> (--id <object-id> | --team <n> --host <as>)
+      Open a fully interactive root/admin shell on one host or container through
+      its agent -- encrypted end to end, a real PTY (vim, colors, Ctrl-C,
+      resize). Resolve the target with --id, or with --team plus the host's "as"
+      name. Needs manage access on the repo; only one or two run at once.
 
   laforge schedule --build <id> --when "<phrase>" [targets] -- <command>
       Schedule a command with a natural-language time ("every 30 minutes",

@@ -417,6 +417,16 @@ type Session struct {
 	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
 }
 
+type ShellSession struct {
+	ID                pgtype.UUID        `json:"id"`
+	DeployedObjectID  pgtype.UUID        `json:"deployed_object_id"`
+	OpenedByAccountID pgtype.UUID        `json:"opened_by_account_id"`
+	Status            string             `json:"status"`
+	ClientAddr        *string            `json:"client_addr"`
+	StartedAt         pgtype.Timestamptz `json:"started_at"`
+	EndedAt           pgtype.Timestamptz `json:"ended_at"`
+}
+
 type Task struct {
 	ID               pgtype.UUID        `json:"id"`
 	BuildID          pgtype.UUID        `json:"build_id"`

@@ -19,6 +19,7 @@ package api
 
 import (
 	"crypto/rsa"
+	"crypto/tls"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -113,6 +114,15 @@ type Server struct {
 	CACertPath     string
 	ServerCertPath string
 
+	// Interactive-shell relay. GatewayRelayAddr is the gateway's internal relay
+	// listener (host:port) the api dials to bridge a user's PTY to a host agent;
+	// RelayTLSConfig is the mTLS client config (api client cert + the shared CA)
+	// for that dial. Both empty disables the terminal feature (the endpoint then
+	// reports it unavailable). MaxShellSessions caps how many may run at once.
+	GatewayRelayAddr string
+	RelayTLSConfig   *tls.Config
+	MaxShellSessions int
+
 	mux *http.ServeMux
 }
 
@@ -158,6 +168,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /home", s.handleGetHome)
 	mux.HandleFunc("POST /home/attention/dismiss", s.handleDismissAttention)
 	mux.HandleFunc("POST /home/attention/undismiss", s.handleUndismissAttention)
+	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/terminal", s.handleTerminal)
 	mux.HandleFunc("GET /agent-binary/{id}", s.handleGetAgentBinary)
 	mux.HandleFunc("GET /builders", s.handleListBuilders)
 	mux.HandleFunc("GET /repos/{id}", s.handleGetRepo)

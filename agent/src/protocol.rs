@@ -18,10 +18,17 @@ pub enum MessageType {
     ReportStatusResponse = 0x06,
     LogBatchRequest = 0x07,
     LogBatchResponse = 0x08,
+    // Interactive shell relay (see internal/agentproto/protocol.go). These are a
+    // bidirectional PTY byte stream on a connection dedicated to one session,
+    // not the poll-driven request/response the verbs above use.
+    ShellAttach = 0x09,
+    ShellData = 0x0A,
+    ShellResize = 0x0B,
+    ShellClose = 0x0C,
 }
 
 impl MessageType {
-    fn from_u8(b: u8) -> IoResult<Self> {
+    pub fn from_u8(b: u8) -> IoResult<Self> {
         match b {
             0x01 => Ok(Self::HeartbeatRequest),
             0x02 => Ok(Self::HeartbeatResponse),
@@ -31,6 +38,10 @@ impl MessageType {
             0x06 => Ok(Self::ReportStatusResponse),
             0x07 => Ok(Self::LogBatchRequest),
             0x08 => Ok(Self::LogBatchResponse),
+            0x09 => Ok(Self::ShellAttach),
+            0x0A => Ok(Self::ShellData),
+            0x0B => Ok(Self::ShellResize),
+            0x0C => Ok(Self::ShellClose),
             other => Err(Error::new(
                 ErrorKind::InvalidData,
                 format!("unknown message type 0x{other:02x}"),
@@ -94,7 +105,41 @@ pub struct HeartbeatRequestPayload {
 #[derive(serde::Deserialize, Debug)]
 pub struct HeartbeatResponsePayload {
     pub next_poll_ms: u64,
+    /// Interactive-shell session ids a client has requested on this object that
+    /// have no agent connection yet. For each, the agent opens a second mTLS
+    /// connection and attaches as the "agent" half. Defaulted so an older
+    /// gateway (which never sends the field) deserializes to an empty list.
+    #[serde(default)]
+    pub pending_sessions: Vec<String>,
 }
+
+/// The first frame on a shell-relay connection the agent opens: which session
+/// and that this is the agent (PTY-holding) half. Mirrors
+/// internal/agentproto.ShellAttachPayload (the agent only ever sends the agent
+/// role, so object_id/cols/rows -- client-only fields -- are omitted).
+#[derive(serde::Serialize, Debug)]
+pub struct ShellAttachPayload {
+    pub session_id: String,
+    pub role: String,
+}
+
+/// A terminal-size change the agent receives from the client half.
+#[derive(serde::Deserialize, Debug)]
+pub struct ShellResizePayload {
+    pub cols: u16,
+    pub rows: u16,
+}
+
+/// Ends a session, sent or received by the agent. Mirrors
+/// internal/agentproto.ShellClosePayload.
+#[derive(serde::Serialize, serde::Deserialize, Debug, Default)]
+pub struct ShellClosePayload {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub reason: String,
+}
+
+/// The agent role string for ShellAttachPayload.role.
+pub const SHELL_ROLE_AGENT: &str = "agent";
 
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct Task {

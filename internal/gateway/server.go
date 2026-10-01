@@ -58,6 +58,14 @@ type Server struct {
 	// resolved once per object rather than on every log batch.
 	logCtxMu sync.Mutex
 	logCtx   map[string]logContext
+
+	// relaySessions holds in-flight interactive shell sessions keyed by session
+	// id, each pairing a client (api) connection with the host agent's
+	// connection for a live PTY. In-memory only -- the relay is a dumb byte
+	// pipe; the api owns the durable shell_session row. See relay.go. Guarded
+	// by relayMu.
+	relayMu       sync.Mutex
+	relaySessions map[string]*relaySession
 }
 
 // Serve accepts connections on ln (expected to be a *tls.Conn listener,
@@ -133,6 +141,12 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 			s.handleReportStatus(ctx, tconn, payload)
 		case agentproto.LogBatchRequest:
 			s.handleLogBatch(ctx, tconn, objID, payload)
+		case agentproto.ShellAttach:
+			// This connection is a dedicated interactive-shell channel, not the
+			// poll loop: hand it to the relay (which blocks until the session
+			// ends) and then let the connection close. See relay.go.
+			s.handleShellAgent(tconn, objID, payload)
+			return
 		default:
 			return
 		}
@@ -153,6 +167,14 @@ func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtyp
 		_ = json.Unmarshal(payload, &metrics)
 	}
 	next := s.BasePollMS + rand.Intn(max(s.JitterMS, 1))
+	// If a client is waiting for an interactive shell on this object, tell the
+	// agent to open its half now and poll back quickly so the shell comes up
+	// sub-second instead of waiting out the normal (jittered, multi-second)
+	// interval.
+	pending := s.pendingSessionsForObject(objID)
+	if len(pending) > 0 {
+		next = 250
+	}
 	// The append-only log, alongside (never instead of) the upsert above
 	// -- "log as much data as we can to help with live troubleshooting
 	// and rules checking" (see migrations/00007's own doc comment for

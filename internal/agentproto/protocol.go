@@ -43,6 +43,29 @@ const (
 	// it has buffered, the gateway enriches and ships it to the log sink.
 	LogBatchRequest  MessageType = 0x07
 	LogBatchResponse MessageType = 0x08
+
+	// --- Interactive shell relay (0x09-0x0C) ---
+	//
+	// These four are NOT the request/response, poll-driven shape the verbs
+	// above use. They are a bidirectional byte stream for an interactive PTY,
+	// spoken on a connection DEDICATED to one shell session -- the agent opens
+	// a second mTLS connection for it, and the api opens one to the gateway's
+	// internal relay listener. The gateway is a dumb relay keyed by session id:
+	// it consumes ShellAttach (to pair the two halves) and then forwards
+	// ShellData/ShellResize/ShellClose between them unchanged. There is no ack;
+	// closing the connection (or a ShellClose) ends the session.
+
+	// ShellAttach is the first frame on a relay connection, identifying the
+	// session and which half is connecting (ShellAttachPayload).
+	ShellAttach MessageType = 0x09
+	// ShellData carries RAW PTY bytes as its payload -- no JSON, no base64; the
+	// length-prefixed framing already delimits it. client->agent is stdin,
+	// agent->client is stdout/stderr.
+	ShellData MessageType = 0x0A
+	// ShellResize carries a new terminal size (ShellResizePayload), client->agent.
+	ShellResize MessageType = 0x0B
+	// ShellClose ends the session from either direction (ShellClosePayload).
+	ShellClose MessageType = 0x0C
 )
 
 func (m MessageType) String() string {
@@ -63,6 +86,14 @@ func (m MessageType) String() string {
 		return "LogBatchRequest"
 	case LogBatchResponse:
 		return "LogBatchResponse"
+	case ShellAttach:
+		return "ShellAttach"
+	case ShellData:
+		return "ShellData"
+	case ShellResize:
+		return "ShellResize"
+	case ShellClose:
+		return "ShellClose"
 	default:
 		return fmt.Sprintf("Unknown(0x%02x)", byte(m))
 	}
@@ -141,6 +172,48 @@ type HeartbeatRequestPayload struct {
 
 type HeartbeatResponsePayload struct {
 	NextPollMS int `json:"next_poll_ms"`
+	// PendingSessions are interactive-shell session ids a client has requested
+	// on this object but that have no agent connection yet. The agent opens a
+	// second mTLS connection per id and ShellAttaches as the "agent" half. Empty
+	// (omitted) on the common case; when non-empty the gateway also shortens
+	// NextPollMS so the shell opens sub-second. Mirrors the Rust agent's
+	// HeartbeatResponsePayload.
+	PendingSessions []string `json:"pending_sessions,omitempty"`
+}
+
+// ShellRole is which half of a relay connection this is: the agent that holds
+// the PTY, or the client (api, on behalf of a UI/CLI user) that holds the user.
+const (
+	ShellRoleAgent  = "agent"
+	ShellRoleClient = "client"
+)
+
+// ShellAttachPayload is the first frame on a shell-relay connection: which
+// session, which half, and the client's initial terminal size (so the PTY is
+// opened at the right dimensions). Cols/Rows are only meaningful from the
+// client half.
+type ShellAttachPayload struct {
+	SessionID string `json:"session_id"`
+	Role      string `json:"role"` // ShellRoleAgent | ShellRoleClient
+	// ObjectID is set only by the client (api) half: the deployed_object whose
+	// agent is allowed to attach to this session. The gateway records it from
+	// the trusted client attach and then admits the agent half only if the
+	// agent's own cert CN equals it -- so an agent can never attach to a shell
+	// aimed at a different host. The agent half leaves it empty.
+	ObjectID string `json:"object_id,omitempty"`
+	Cols     uint16 `json:"cols,omitempty"`
+	Rows     uint16 `json:"rows,omitempty"`
+}
+
+// ShellResizePayload is a terminal-size change, client->agent.
+type ShellResizePayload struct {
+	Cols uint16 `json:"cols"`
+	Rows uint16 `json:"rows"`
+}
+
+// ShellClosePayload ends a session; Reason is a short human string for logs.
+type ShellClosePayload struct {
+	Reason string `json:"reason,omitempty"`
 }
 
 // Task is what GetTaskResponse carries: one step for the requesting host

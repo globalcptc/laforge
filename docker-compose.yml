@@ -65,6 +65,16 @@ services:
       # GET /cert-status (the .certs mount below). Same files the gateway uses.
       GATEWAY_CA_CERT: /.certs/ca.crt
       GATEWAY_SERVER_CERT: /.certs/server.crt
+      # Interactive shells: the api dials the gateway's internal relay listener
+      # (below) over mTLS to bridge a user's terminal to a host agent. The
+      # gateway cert must carry "gateway" as a SAN -- run
+      # `./scripts/gen-certs.sh <host> gateway`. Unset GATEWAY_RELAY_ADDR to
+      # turn the feature off. MAX_SHELL_SESSIONS caps concurrent shells.
+      GATEWAY_RELAY_ADDR: ${GATEWAY_RELAY_ADDR:-gateway:8445}
+      GATEWAY_SERVER_NAME: ${GATEWAY_SERVER_NAME:-gateway}
+      API_CLIENT_CERT: /.certs/api.crt
+      API_CLIENT_KEY: /.certs/api.key
+      MAX_SHELL_SESSIONS: ${MAX_SHELL_SESSIONS:-2}
     volumes:
       - ./examples/lm-test:/content:ro
       # Mounted at the container's own working directory (unset in the
@@ -151,6 +161,10 @@ services:
     environment:
       DATABASE_URL: "host=db port=5432 user=laforge_gateway password=laforge_gateway_dev_only_do_not_use_in_prod dbname=laforge_dev sslmode=disable"
       LISTEN_ADDR: ":8443"
+      # Internal mTLS relay for interactive shells -- the api dials this; it is
+      # deliberately NOT published to the host (see ports below). Unset to turn
+      # the shell feature off.
+      RELAY_LISTEN_ADDR: ":8445"
       GATEWAY_CA_CERT: /certs/ca.crt
       GATEWAY_SERVER_CERT: /certs/server.crt
       GATEWAY_SERVER_KEY: /certs/server.key

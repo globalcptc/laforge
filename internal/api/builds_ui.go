@@ -190,6 +190,17 @@ func (s *Server) handleListDeployedObjects(w http.ResponseWriter, r *http.Reques
 	if views == nil {
 		views = []objectView{}
 	}
+	// Fill in the human team number per object so a client (e.g. `laforge shell`)
+	// can resolve a single host by team + name without mapping team_id itself.
+	if teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID); err == nil {
+		num := make(map[string]int32, len(teams))
+		for _, t := range teams {
+			num[t.ID.String()] = t.TeamNumber
+		}
+		for i := range views {
+			views[i].TeamNumber = num[views[i].TeamID.String()]
+		}
+	}
 	writeJSON(w, http.StatusOK, views)
 }
 

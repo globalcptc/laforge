@@ -36,6 +36,12 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 # /proc (pure, no C) so it stays musl-static, and the Windows facets link system
 # DLLs (no C toolchain) so cargo-zigbuild still cross-compiles cleanly.
 sysinfo = { version = "0.33", default-features = false, features = ["system", "disk", "network"] }
+# Interactive shell: a real PTY on the host -- openpty on Unix, ConPTY on
+# Windows -- so an operator gets a fully interactive root/admin prompt (vim,
+# colors, Ctrl-C, resize). Cross-platform by design; the Windows ConPTY path and
+# the musl / windows-gnu cross-compiles are verified at build time (see the
+# agent cross-compile notes).
+portable-pty = "0.8"
 
 [profile.release]
 opt-level = "z"

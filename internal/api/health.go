@@ -52,7 +52,11 @@ type agentHealth struct {
 // for a pending or destroyed object.
 type objectView struct {
 	db.DeployedObject
-	Agent *agentHealth `json:"agent,omitempty"`
+	// TeamNumber is the human team number (1..N) for this object's team, so
+	// clients don't have to resolve the team_id UUID themselves. Populated by
+	// handleListDeployedObjects; 0 where not filled in.
+	TeamNumber int32        `json:"team_number,omitempty"`
+	Agent      *agentHealth `json:"agent,omitempty"`
 }
 
 // attachAgentHealth is shared by handleListDeployedObjects and

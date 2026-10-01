@@ -19,15 +19,20 @@ package main
 import (
 	"context"
 	"crypto/rsa"
+	"crypto/tls"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/globalcptc/laforge/internal/agentpki"
 	"github.com/globalcptc/laforge/internal/api"
 	"github.com/globalcptc/laforge/internal/checkout"
 	"github.com/globalcptc/laforge/internal/db"
@@ -144,6 +149,24 @@ func main() {
 	// unconfigured rather than failing.
 	server.CACertPath = os.Getenv("GATEWAY_CA_CERT")
 	server.ServerCertPath = os.Getenv("GATEWAY_SERVER_CERT")
+	// Interactive shell relay: the gateway's internal relay address plus the api's
+	// own mTLS client identity (CA + api client cert/key), used to bridge a
+	// user's terminal to a host agent. All three unset leaves the feature off
+	// (the endpoint reports it unavailable). See internal/api/terminal.go.
+	server.GatewayRelayAddr = os.Getenv("GATEWAY_RELAY_ADDR")
+	server.MaxShellSessions = envInt("MAX_SHELL_SESSIONS", 2)
+	if server.GatewayRelayAddr != "" {
+		// Server name the api expects on the gateway's relay cert. Defaults to the
+		// host part of the relay address; override with GATEWAY_SERVER_NAME when
+		// the cert is issued for a different name (e.g. the docker service name
+		// must be a SAN on the gateway server cert -- see scripts/gen-certs.sh).
+		serverName := envOr("GATEWAY_SERVER_NAME", hostOnly(server.GatewayRelayAddr))
+		relayCfg, err := apiRelayTLS(os.Getenv("GATEWAY_CA_CERT"), os.Getenv("API_CLIENT_CERT"), os.Getenv("API_CLIENT_KEY"), serverName)
+		if err != nil {
+			log.Fatalf("building shell-relay TLS config: %v", err)
+		}
+		server.RelayTLSConfig = relayCfg
+	}
 	// Same graceful degradation as everywhere else this exists (see
 	// checkout.Cache's own doc comment): with an App or service token
 	// configured, handleRenderObject resolves each build's own
@@ -187,4 +210,47 @@ func envOr(name, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func envInt(name string, fallback int) int {
+	v := os.Getenv(name)
+	if v == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		log.Fatalf("invalid integer for %s: %q", name, v)
+	}
+	return n
+}
+
+// hostOnly returns the host part of a host:port address (the SNI the api
+// presents to the gateway relay), tolerating a bare host with no port.
+func hostOnly(addr string) string {
+	if h, _, err := net.SplitHostPort(addr); err == nil {
+		return h
+	}
+	return addr
+}
+
+// apiRelayTLS builds the mTLS client config the api uses to dial the gateway's
+// internal shell relay: the shared CA as the trust root, the api's own client
+// cert/key for mutual auth, verifying the gateway's cert against serverName.
+func apiRelayTLS(caPath, certPath, keyPath, serverName string) (*tls.Config, error) {
+	if caPath == "" || certPath == "" || keyPath == "" {
+		return nil, fmt.Errorf("GATEWAY_RELAY_ADDR is set but GATEWAY_CA_CERT / API_CLIENT_CERT / API_CLIENT_KEY are not all configured")
+	}
+	ca, err := os.ReadFile(caPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading CA cert %s: %w", caPath, err)
+	}
+	cert, err := os.ReadFile(certPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading API client cert %s: %w", certPath, err)
+	}
+	key, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading API client key %s: %w", keyPath, err)
+	}
+	return agentpki.ClientTLSConfig(ca, cert, key, serverName)
 }

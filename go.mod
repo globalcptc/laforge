@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.336.1
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.99.1
 	github.com/aws/smithy-go v1.28.1
+	github.com/coder/websocket v1.8.15
 	github.com/gophercloud/gophercloud/v2 v2.15.0
 	github.com/hashicorp/hcl/v2 v2.25.0
 	github.com/jackc/pgx/v5 v5.11.0
@@ -18,6 +19,7 @@ require (
 	go.lsp.dev/jsonrpc2 v1.0.1
 	go.lsp.dev/protocol v1.0.1
 	go.lsp.dev/uri v1.0.1
+	golang.org/x/term v0.46.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -48,6 +50,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/tools v0.48.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

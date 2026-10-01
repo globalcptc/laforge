@@ -176,15 +176,31 @@ reach the gateway on — and issues the certificate for exactly that name:
 ./scripts/gen-certs.sh gateway.example.com   # or an IP, or "localhost" for a local trial
 ```
 
-(Run it with no argument and it prompts.) It produces two things you set up by hand:
+(Run it with no argument and it prompts.) It produces the things you set up by hand:
 
 - **`ca.crt` / `ca.key`** — the CA the gateway trusts, and the key the runner uses to
   sign every host's agent certificate at deploy time.
 - **`server.crt` / `server.key`** — the gateway's own TLS certificate, signed by that CA.
+- **`api.crt` / `api.key`** — the api's client certificate for the interactive-shell
+  relay (below); harmless to have even if you don't use shells.
 
 The address you give must be the host in `GATEWAY_PUBLIC_ADDR` (without the port), because
 agents pin the gateway by that name. The certificate carries that single name and nothing
 else — no `localhost` or wildcard defaults — so it can't be reused for any other host.
+
+**Interactive shells** (`laforge shell`, and the UI's per-host "Open terminal"): the api
+reaches the agent through the gateway's internal relay listener over mTLS, so when you want
+that feature, pass a second argument — the name the api dials the gateway by (the docker
+service name `gateway`, or `localhost` for a local trial) — and it's added as an extra SAN
+on the gateway cert:
+
+```bash
+./scripts/gen-certs.sh gateway.example.com gateway   # agent host, then the api-facing name
+```
+
+The relay listens on the gateway's own `RELAY_LISTEN_ADDR` (default `:8445`, internal
+network only — never publish it). Unset it, or `GATEWAY_RELAY_ADDR` on the api, to turn
+shells off.
 
 You do **not** generate per-host agent certificates yourself: when agent delivery is
 configured, the runner mints one per host automatically and patches it into that host's
