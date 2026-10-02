@@ -8,10 +8,10 @@ package api
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 
 	"github.com/coder/websocket"
@@ -21,8 +21,14 @@ import (
 	"github.com/globalcptc/laforge/internal/db"
 )
 
+// gatewayRelayAddr is where the api reaches the gateway's shell relay: fixed
+// internal plumbing over the docker network (plaintext, like the DB
+// connection), not a configurable knob.
+const gatewayRelayAddr = "gateway:8445"
+
 // handleTerminal opens an interactive root/admin shell on a host/container. It
-// is the GET /builds/{id}/objects/{objectId}/terminal WebSocket endpoint.
+// is the GET /builds/{id}/objects/{objectId}/terminal WebSocket endpoint. The
+// feature is always on; access is gated by manage level, like `laforge run`.
 func (s *Server) handleTerminal(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	build, repo, err := s.buildAndOwningRepository(r)
@@ -36,11 +42,6 @@ func (s *Server) handleTerminal(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.requireLevel(ctx, r, repo, levelManage)
 	if err != nil {
 		writeAuthError(w, err)
-		return
-	}
-	// The shell feature must be configured (the gateway relay + api client cert).
-	if s.GatewayRelayAddr == "" || s.RelayTLSConfig == nil {
-		writeError(w, http.StatusServiceUnavailable, errors.New("interactive shell is not configured on this server"))
 		return
 	}
 	// CSRF defense for WebSockets: the CORS wrapper does not guard a WS upgrade,
@@ -73,21 +74,10 @@ func (s *Server) handleTerminal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Global concurrency cap -- "one or two at a time."
-	limit := s.MaxShellSessions
-	if limit <= 0 {
-		limit = 2
-	}
-	if n, err := s.Queries.CountLiveShellSessions(ctx); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	} else if int(n) >= limit {
-		writeError(w, http.StatusTooManyRequests, fmt.Errorf("the shell session limit (%d) is in use; try again shortly", limit))
-		return
-	}
-
-	// Record the session (audit + cap) BEFORE upgrading, so a refused/failed
-	// relay still leaves a trail.
+	// Record the session BEFORE upgrading, so even a failed relay leaves an
+	// audit trail (who opened a shell on which host). Sessions are independent
+	// and cheap, so there is no concurrency cap -- this row and its events are
+	// purely the log.
 	row, err := s.Queries.CreateShellSession(ctx, db.CreateShellSessionParams{
 		DeployedObjectID: objectID, OpenedByAccountID: sess.AccountID, ClientAddr: db.StrPtr(r.RemoteAddr),
 	})
@@ -99,11 +89,11 @@ func (s *Server) handleTerminal(w http.ResponseWriter, r *http.Request) {
 	if obj.AsName != nil && *obj.AsName != "" {
 		hostName = *obj.AsName
 	}
-	s.auditShell(ctx, build.ID, "shell.opened", fmt.Sprintf("%s opened a shell on %s", sess.GithubLogin, hostName))
+	s.auditShell(ctx, build.ID, objectID, "shell.opened", fmt.Sprintf("%s opened a shell on %s", sess.GithubLogin, hostName))
 	// Whatever happens next, the session ends and is audited exactly once.
 	defer func() {
 		_ = s.Queries.MarkShellSessionClosed(context.Background(), row.ID)
-		s.auditShell(context.Background(), build.ID, "shell.closed", fmt.Sprintf("shell on %s closed", hostName))
+		s.auditShell(context.Background(), build.ID, objectID, "shell.closed", fmt.Sprintf("%s's shell on %s closed", sess.GithubLogin, hostName))
 	}()
 
 	// Upgrade. We did the Origin check ourselves, so skip the library's.
@@ -113,8 +103,9 @@ func (s *Server) handleTerminal(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.CloseNow()
 
-	// Dial the gateway relay and attach as the client half for this session.
-	raw, err := tls.Dial("tcp", s.GatewayRelayAddr, s.RelayTLSConfig)
+	// Dial the gateway relay (plaintext, internal network -- see the gateway's
+	// ServeRelay) and attach as the client half for this session.
+	raw, err := net.Dial("tcp", gatewayRelayAddr)
 	if err != nil {
 		c.Close(websocket.StatusInternalError, "cannot reach the shell relay")
 		return
@@ -135,7 +126,7 @@ func (s *Server) handleTerminal(w http.ResponseWriter, r *http.Request) {
 // pumpTerminal copies bytes between the WebSocket and the gateway relay until
 // either side ends. One goroutine drives WS->relay (stdin/resize), this
 // goroutine drives relay->WS (stdout); cancelling closes both so neither blocks.
-func (s *Server) pumpTerminal(c *websocket.Conn, raw *tls.Conn) {
+func (s *Server) pumpTerminal(c *websocket.Conn, raw net.Conn) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	// Unblock the blocking ReadFrame below and the WS reader when either side
@@ -205,10 +196,12 @@ func shellReachable(status string) bool {
 	return false
 }
 
-// auditShell writes one shell lifecycle event to the build journal. Best-effort:
-// a journal write must never fail the session itself.
-func (s *Server) auditShell(ctx context.Context, buildID pgtype.UUID, kind, message string) {
-	s.Queries.CreateEvent(ctx, db.CreateEventParams{
-		BuildID: buildID, Kind: kind, Message: message, Payload: []byte("{}"),
+// auditShell writes one shell lifecycle event attributed to the host, so it
+// shows both in the build log and on that host's own timeline (who opened a
+// prompt, where, when). Best-effort: a journal write must never fail the
+// session itself.
+func (s *Server) auditShell(ctx context.Context, buildID, objectID pgtype.UUID, kind, message string) {
+	s.Queries.CreateObjectEvent(ctx, db.CreateObjectEventParams{
+		BuildID: buildID, DeployedObjectID: objectID, Kind: kind, Message: message, Payload: []byte("{}"),
 	})
 }

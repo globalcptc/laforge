@@ -11,19 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countLiveShellSessions = `-- name: CountLiveShellSessions :one
-SELECT COUNT(*) FROM shell_session WHERE status = ANY (ARRAY['pending'::text, 'active'::text])
-`
-
-// How many sessions are pending or active right now, across the whole instance
-// -- the global cap is enforced against this.
-func (q *Queries) CountLiveShellSessions(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countLiveShellSessions)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createShellSession = `-- name: CreateShellSession :one
 
 INSERT INTO shell_session (deployed_object_id, opened_by_account_id, status, client_addr)
@@ -37,9 +24,9 @@ type CreateShellSessionParams struct {
 	ClientAddr        *string     `json:"client_addr"`
 }
 
-// Interactive shell sessions. Only the api (full laforge role) touches this
-// table; the gateway relays bytes purely in memory. These back the audit trail
-// and the small global concurrency cap.
+// Interactive shell sessions -- the audit trail for who opened a root/admin
+// prompt on which host and when. Only the api (full laforge role) touches this
+// table; the gateway relays bytes purely in memory.
 func (q *Queries) CreateShellSession(ctx context.Context, arg CreateShellSessionParams) (ShellSession, error) {
 	row := q.db.QueryRow(ctx, createShellSession, arg.DeployedObjectID, arg.OpenedByAccountID, arg.ClientAddr)
 	var i ShellSession
@@ -53,60 +40,6 @@ func (q *Queries) CreateShellSession(ctx context.Context, arg CreateShellSession
 		&i.EndedAt,
 	)
 	return i, err
-}
-
-const listLiveShellSessions = `-- name: ListLiveShellSessions :many
-SELECT shell_session.id, shell_session.deployed_object_id, shell_session.opened_by_account_id, shell_session.status, shell_session.client_addr, shell_session.started_at, shell_session.ended_at, deployed_object.object_name, deployed_object.as_name, deployed_object.kind
-FROM shell_session
-JOIN deployed_object ON deployed_object.id = shell_session.deployed_object_id
-WHERE shell_session.status = ANY (ARRAY['pending'::text, 'active'::text])
-ORDER BY shell_session.started_at DESC
-`
-
-type ListLiveShellSessionsRow struct {
-	ID                pgtype.UUID        `json:"id"`
-	DeployedObjectID  pgtype.UUID        `json:"deployed_object_id"`
-	OpenedByAccountID pgtype.UUID        `json:"opened_by_account_id"`
-	Status            string             `json:"status"`
-	ClientAddr        *string            `json:"client_addr"`
-	StartedAt         pgtype.Timestamptz `json:"started_at"`
-	EndedAt           pgtype.Timestamptz `json:"ended_at"`
-	ObjectName        string             `json:"object_name"`
-	AsName            *string            `json:"as_name"`
-	Kind              string             `json:"kind"`
-}
-
-// The live sessions with the object they target, newest first -- for an
-// operator "who's in a shell right now" view.
-func (q *Queries) ListLiveShellSessions(ctx context.Context) ([]ListLiveShellSessionsRow, error) {
-	rows, err := q.db.Query(ctx, listLiveShellSessions)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListLiveShellSessionsRow
-	for rows.Next() {
-		var i ListLiveShellSessionsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.DeployedObjectID,
-			&i.OpenedByAccountID,
-			&i.Status,
-			&i.ClientAddr,
-			&i.StartedAt,
-			&i.EndedAt,
-			&i.ObjectName,
-			&i.AsName,
-			&i.Kind,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const markShellSessionActive = `-- name: MarkShellSessionActive :exec

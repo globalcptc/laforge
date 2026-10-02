@@ -242,6 +242,45 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (Event
 	return i, err
 }
 
+const createObjectEvent = `-- name: CreateObjectEvent :one
+INSERT INTO event (build_id, deployed_object_id, kind, message, payload)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, build_id, task_id, kind, message, payload, created_at, deployed_object_id
+`
+
+type CreateObjectEventParams struct {
+	BuildID          pgtype.UUID     `json:"build_id"`
+	DeployedObjectID pgtype.UUID     `json:"deployed_object_id"`
+	Kind             string          `json:"kind"`
+	Message          string          `json:"message"`
+	Payload          json.RawMessage `json:"payload"`
+}
+
+// An event attributed to a specific deployed_object, so it shows on that host's
+// own log timeline (ListEventsByDeployedObject) as well as the build-wide log.
+// Used for shell-session audit (who opened a prompt on which host).
+func (q *Queries) CreateObjectEvent(ctx context.Context, arg CreateObjectEventParams) (Event, error) {
+	row := q.db.QueryRow(ctx, createObjectEvent,
+		arg.BuildID,
+		arg.DeployedObjectID,
+		arg.Kind,
+		arg.Message,
+		arg.Payload,
+	)
+	var i Event
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.TaskID,
+		&i.Kind,
+		&i.Message,
+		&i.Payload,
+		&i.CreatedAt,
+		&i.DeployedObjectID,
+	)
+	return i, err
+}
+
 const createTaskIfNoneOpen = `-- name: CreateTaskIfNoneOpen :one
 INSERT INTO task (build_id, deployed_object_id, kind, payload)
 VALUES ($1, $2, $3, $4)

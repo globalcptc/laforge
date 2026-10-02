@@ -36,21 +36,12 @@ if [ -z "$host" ]; then
   exit 1
 fi
 
-# One SAN for the agent-facing host: IP:<addr> for a bare IPv4 literal,
+# Exactly one SAN, matching that host: IP:<addr> for a bare IPv4 literal,
 # DNS:<name> otherwise.
 if printf '%s' "$host" | grep -qE '^[0-9]+(\.[0-9]+){3}$'; then
   san="IP:$host"
 else
   san="DNS:$host"
-fi
-# Optional SECOND name for the internal shell-relay listener the api dials
-# (e.g. the docker service name "gateway"), passed as the 2nd argument. The
-# agent still verifies its own host; this only adds a name the api can verify
-# the SAME gateway cert against over the internal network. Omit it if you won't
-# use interactive shells, or if the relay name is already the agent host.
-relay_name="${2:-}"
-if [ -n "$relay_name" ] && [ "$relay_name" != "$host" ]; then
-  san="$san,DNS:$relay_name"
 fi
 
 out=.certs
@@ -67,24 +58,12 @@ openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
   -extfile <(printf 'subjectAltName=%s' "$san")
 
 rm -f server.csr
-
-# The api's own client cert, so it can mutually authenticate to the gateway's
-# internal shell-relay listener (interactive shells). CN is informational -- the
-# relay accepts any CA-signed client on its internal-only port. Harmless to mint
-# even if the shell feature is off.
-openssl req -newkey rsa:2048 -nodes \
-  -subj "/CN=laforge-api" -keyout api.key -out api.csr
-openssl x509 -req -in api.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
-  -days 3650 -out api.crt
-rm -f api.csr
-
 # ca.key is the CA signing secret -- only the runner reads it, and that
 # container is root, so keep it 600. The gateway, however, runs as a NON-root
 # container user (distroless :nonroot) and must read the server key + the CA
 # cert, so those stay world-readable (644) or the gateway can't start.
-chmod 600 ca.key api.key
-chmod 644 ca.crt server.crt server.key api.crt
+chmod 600 ca.key
+chmod 644 ca.crt server.crt server.key
 echo
 echo "certs written to $out/ for gateway host: $host ($san)"
-echo "api client cert: api.crt / api.key (for the interactive-shell relay)"
 echo "ca.key is the runner's signing key -- keep it secret; back it up and restrict it in production."

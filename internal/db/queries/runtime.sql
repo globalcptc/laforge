@@ -389,6 +389,14 @@ INSERT INTO event (build_id, task_id, kind, message, payload)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
+-- name: CreateObjectEvent :one
+-- An event attributed to a specific deployed_object, so it shows on that host's
+-- own log timeline (ListEventsByDeployedObject) as well as the build-wide log.
+-- Used for shell-session audit (who opened a prompt on which host).
+INSERT INTO event (build_id, deployed_object_id, kind, message, payload)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING *;
+
 -- name: ListEventsByBuild :many
 SELECT * FROM event WHERE build_id = $1 ORDER BY created_at;
 

@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"log"
 	"net"
@@ -49,9 +48,12 @@ func (rs *relaySession) teardown() {
 	})
 }
 
-// ServeRelay accepts internal mTLS connections from the api on a SEPARATE
-// listener from the agent protocol -- not funnel-exposed, internal network only.
-// Each connection's first (and only setup) frame is a ShellAttach with
+// ServeRelay accepts internal connections from the api on a SEPARATE listener
+// from the agent protocol. This listener is plaintext on purpose: it is never
+// funnel-exposed and only reachable on the internal (docker) network, exactly
+// like every laforge service's Postgres connection (sslmode=disable) -- the
+// agent<->gateway link stays mTLS because that one crosses the untrusted
+// network. Each connection's first (and only setup) frame is a ShellAttach with
 // role="client"; the gateway then bridges it to the matching agent half. Mirrors
 // Serve's accept/close-on-ctx shape.
 func (s *Server) ServeRelay(ctx context.Context, ln net.Listener) error {
@@ -69,30 +71,20 @@ func (s *Server) ServeRelay(ctx context.Context, ln net.Listener) error {
 				return err
 			}
 		}
-		go s.handleRelayConn(ctx, conn)
+		go s.handleRelayConn(conn)
 	}
 }
 
-// handleRelayConn does the mTLS handshake and reads the opening ShellAttach from
-// an api relay connection, then hands off to the client half. Any CA-signed
-// cert is accepted here (the listener is internal), so -- unlike the agent
-// listener -- the CN is not required to be a deployed_object id.
-func (s *Server) handleRelayConn(ctx context.Context, conn net.Conn) {
-	tconn, ok := conn.(*tls.Conn)
-	if !ok {
-		conn.Close()
-		return
-	}
-	if err := tconn.HandshakeContext(ctx); err != nil {
-		conn.Close()
-		return
-	}
-	mt, payload, err := agentproto.ReadFrame(tconn)
+// handleRelayConn reads the opening ShellAttach from an api relay connection and
+// hands off to the client half. No TLS/auth here: the listener is internal-only
+// (see ServeRelay), so reachability is the trust boundary, as it is for the DB.
+func (s *Server) handleRelayConn(conn net.Conn) {
+	mt, payload, err := agentproto.ReadFrame(conn)
 	if err != nil || mt != agentproto.ShellAttach {
 		conn.Close()
 		return
 	}
-	s.handleRelayClient(tconn, payload)
+	s.handleRelayClient(conn, payload)
 }
 
 // handleRelayClient registers the client half, waits for the agent half to
