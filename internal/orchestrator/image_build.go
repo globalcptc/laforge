@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/globalcptc/laforge/internal/builder/incus"
 	"github.com/globalcptc/laforge/internal/builder/microcloud"
 	"github.com/globalcptc/laforge/internal/builderconfig"
 	"github.com/globalcptc/laforge/internal/db"
@@ -68,19 +69,13 @@ func runImageBuild(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID)
 	}
 	appendLog(fmt.Sprintf("Building docker base image for builder %q (%s)…", cfg.Name, cfg.Kind))
 
-	client, err := builderconfig.ResolveMicrocloudClient(pool, cfg)
-	if err != nil {
-		fail(err.Error())
-		return
+	var fp string
+	switch cfg.Kind {
+	case "incus":
+		fp, err = buildIncusDockerBase(ctx, pool, cfg, appendLog)
+	default:
+		fp, err = buildMicrocloudDockerBase(ctx, pool, cfg, appendLog)
 	}
-	client.OperationTimeout = imageBuildTimeout
-
-	src := microcloud.BaseImageSource{
-		Server:   cfg.ContainerBaseServer,
-		Protocol: "simplestreams",
-		Alias:    cfg.ContainerBaseAlias,
-	}
-	fp, err := microcloud.BuildDockerBase(ctx, client, src, appendLog)
 	if err != nil {
 		fail(err.Error())
 		return
@@ -97,4 +92,51 @@ func runImageBuild(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID)
 	}); err != nil {
 		log.Printf("image build %s: recording fingerprint on builder config: %v", buildID.String(), err)
 	}
+}
+
+func buildMicrocloudDockerBase(ctx context.Context, pool *pgxpool.Pool, cfg db.BuilderConfig, appendLog func(string)) (string, error) {
+	client, err := builderconfig.ResolveMicrocloudClient(pool, cfg)
+	if err != nil {
+		return "", err
+	}
+	client.OperationTimeout = imageBuildTimeout
+	return microcloud.BuildDockerBase(ctx, client, microcloud.BaseImageSource{
+		Server:   cfg.ContainerBaseServer,
+		Protocol: "simplestreams",
+		Alias:    cfg.ContainerBaseAlias,
+	}, appendLog)
+}
+
+// lxdDefaultBaseServer is builder_config.container_base_server's column
+// default -- Canonical's image server, which serves LXD but not Incus.
+const lxdDefaultBaseServer = "https://cloud-images.ubuntu.com/releases"
+
+// buildIncusDockerBase builds the image on every host of an Incus builder --
+// they are independent, with no shared image store -- and returns the first
+// host's fingerprint as the record that the build happened. Any host failing
+// fails the build: a team placed on a host without the image couldn't deploy.
+func buildIncusDockerBase(ctx context.Context, pool *pgxpool.Pool, cfg db.BuilderConfig, appendLog func(string)) (string, error) {
+	hosts, err := builderconfig.ResolveIncusHosts(pool, cfg)
+	if err != nil {
+		return "", err
+	}
+	// A config still on the column default names a source Incus can't pull
+	// from; the zero value makes BuildDockerBase use its own default.
+	var src incus.BaseImageSource
+	if cfg.ContainerBaseServer != lxdDefaultBaseServer {
+		src = incus.BaseImageSource{Server: cfg.ContainerBaseServer, Protocol: "simplestreams", Alias: cfg.ContainerBaseAlias}
+	}
+	var first string
+	for i, h := range hosts {
+		appendLog(fmt.Sprintf("Host %d of %d: %s", i+1, len(hosts), h.Label))
+		h.Client.OperationTimeout = imageBuildTimeout
+		fp, err := incus.BuildDockerBase(ctx, h.Client, src, h.StoragePool, appendLog)
+		if err != nil {
+			return "", fmt.Errorf("%s: %w", h.Label, err)
+		}
+		if first == "" {
+			first = fp
+		}
+	}
+	return first, nil
 }

@@ -45,6 +45,9 @@ const agentBinInCapsule = "/laforge-agent"
 // client (Zun); if the cloud has no Zun endpoint, New leaves it nil and this
 // returns a clear error rather than a capability opt-out.
 func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpec) (string, error) {
+	if spec.ComposeHost {
+		return "", fmt.Errorf("compose containers are not supported on this builder yet")
+	}
 	if b.container == nil {
 		return "", fmt.Errorf("this OpenStack cloud has no Zun (container) service -- containers cannot be deployed here")
 	}

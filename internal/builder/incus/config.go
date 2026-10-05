@@ -47,12 +47,12 @@ type Config struct {
 	// Defaults apply when unset -- see externalPortRange.
 	ExternalPortMin int
 	ExternalPortMax int
-	// DockerBaseFingerprint is a legacy field from when a container was run as
-	// nested Docker inside an LXD system container. The Incus builder now runs a
-	// LaForge `container:` as a native OCI application container (Incus 6.3+ speaks
-	// the OCI protocol directly), so this is unused by the Incus builder; it
-	// remains for MicroCloud, which has no native container support (LXD) and
-	// still nests. See DeployContainer.
+	// DockerBaseFingerprint is non-empty once this builder's docker base image
+	// has been built (the per-builder image-build job). Only a compose
+	// container uses it -- a single-image `container:` runs as a native OCI
+	// application container -- and it is booted by alias
+	// (builder.DockerBaseAlias), since each host in a pool builds its own copy;
+	// this field only records that the build has happened.
 	DockerBaseFingerprint string
 	// OCIRegistry is the OCI/Docker registry a container's image is pulled from,
 	// as an Incus image `server` with `protocol: oci`. Defaults to

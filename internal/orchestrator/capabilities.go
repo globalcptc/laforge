@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/builderconfig"
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/loader"
@@ -57,6 +58,16 @@ func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool
 	if ic, ok := b.(imageCatalog); ok {
 		images = ic.ImageNames()
 	}
+	// A compose container boots from the builder's docker base image once it
+	// has been built, so that satisfies the compose-host requirement too.
+	if images != nil && row.DockerBaseFingerprint != "" && !images[builder.ComposeHostImage] {
+		withBase := make(map[string]bool, len(images)+1)
+		for name := range images {
+			withBase[name] = true
+		}
+		withBase[builder.ComposeHostImage] = true
+		images = withBase
+	}
 	return images, cb.BuilderConfigName, nil
 }
 
@@ -91,7 +102,15 @@ func checkEnvironmentImages(env *loader.Environment, c *loader.Content, containe
 	imageNames := map[string]bool{}
 	for _, objs := range env.Networks {
 		for objectName, copies := range objs {
-			if len(copies) == 0 || containerNames[objectName] {
+			if len(copies) == 0 {
+				continue
+			}
+			if containerNames[objectName] {
+				// A compose container runs on a machine booted from the
+				// builder's compose-host image.
+				if ct := findContainer(c, objectName); ct != nil && ct.Compose != "" {
+					imageNames[builder.ComposeHostImage] = true
+				}
 				continue
 			}
 			if h := findHost(c, objectName); h != nil {
@@ -100,6 +119,9 @@ func checkEnvironmentImages(env *loader.Environment, c *loader.Content, containe
 		}
 	}
 	for name := range imageNames {
+		if !images[name] && name == builder.ComposeHostImage {
+			return fmt.Errorf("has a compose container, which needs the builder's docker base image -- build it first (Infrastructure → Base image), or add a builder image named %q", name)
+		}
 		if !images[name] {
 			return fmt.Errorf("uses os/image %q, which the builder has no image configured for", name)
 		}

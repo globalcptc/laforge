@@ -115,7 +115,19 @@ type Container struct {
 	// "registry.internal/team/app:1.2". LaForge runs it as a Docker container
 	// (inside a thin nesting LXD instance on Incus) -- see the builder.
 	Image string `yaml:"image" json:"image"`
-	Size  string `yaml:"size" json:"size"`
+	// Compose runs a Docker Compose project instead of a single image: the
+	// path to its compose file, relative to this definition's own file (like a
+	// script's `source:`). The compose file's directory is the project and is
+	// shipped whole. Exactly one of Image and Compose is set.
+	Compose string `yaml:"compose,omitempty" json:"compose,omitempty"`
+	// ComposeFile is Compose resolved to a slash-separated path from the repo
+	// root, set by the loader -- what everything downstream reads, and what
+	// stays correct when Compose was inherited through `extends`.
+	ComposeFile string `yaml:"-" json:"-"`
+	Size        string `yaml:"size" json:"size"`
+	// Disk is the root disk, in GB, of the machine a Compose container runs
+	// on. Unused for an image container.
+	Disk int `yaml:"disk,omitempty" json:"disk,omitempty"`
 	// Env is passed to the container as environment variables (docker -e).
 	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 	// Command overrides the image's default command/entrypoint arguments.

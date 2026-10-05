@@ -449,3 +449,88 @@ func TestScheduleScriptReferenceIsChecked(t *testing.T) {
 		t.Fatalf("expected a missing-script error for the schedule entry, got: %v", errorMessages(c))
 	}
 }
+
+// TestLaforgeIgnoreKeepsOtherYAMLOutOfContent: paths listed in .laforgeignore
+// are not read at all -- which is what lets a Docker Compose project, or any
+// other tool's YAML, live in a content repo.
+func TestLaforgeIgnoreKeepsOtherYAMLOutOfContent(t *testing.T) {
+	files := map[string]string{
+		"hosts/web.yaml":                "host:\n  name: web\n  os: ubuntu22\n  size: small\n  disk: 20\n",
+		"containers/app/compose.yaml":   "services:\n  web:\n    image: nginx:alpine\n",
+		"containers/app/conf/extra.yml": "anything: goes\n",
+		"vendor/chart/values.yaml":      "replicas: 2\n",
+		"notes/scratch.yaml":            "todo: later\n",
+		"deep/down/skipme.yaml":         "x: 1\n",
+		"hosts/ignored-host.yaml":       "host:\n  name: ghost\n  os: ubuntu22\n  size: small\n  disk: 20\n",
+	}
+	c, _ := loader.Load(writeRepo(t, files))
+	if n := len(c.Errors); n != 5 {
+		t.Fatalf("without an ignore file every stray YAML is an error; got %d: %v", n, errorMessages(c))
+	}
+
+	files[".laforgeignore"] = "# compose projects and vendored config\ncontainers/app/\n/vendor\nnotes/*.yaml\nskipme.yaml\n**/ignored-*.yaml\n"
+	c, _ = loader.Load(writeRepo(t, files))
+	if len(c.Errors) != 0 {
+		t.Fatalf("ignored paths should not be read; got: %v", c.Errors)
+	}
+	if len(c.Hosts) != 1 || c.Hosts[0].Name != "web" {
+		t.Errorf("hosts = %+v, want only web (ignored-host.yaml is ignored)", c.Hosts)
+	}
+
+	files[".laforgeignore"] = "!hosts/web.yaml\n[bad\n"
+	c, _ = loader.Load(writeRepo(t, files))
+	msgs := errorMessages(c)
+	if !containsSubstring(msgs, "negated patterns") || !containsSubstring(msgs, "not a valid pattern") {
+		t.Errorf("expected errors for the unsupported and malformed patterns, got: %v", msgs)
+	}
+}
+
+// TestComposeContainer covers the content rules for a container that runs a
+// Compose project: a path relative to its own file, one of image/compose, and a
+// pointer to .laforgeignore when the project's YAML gets read as content.
+func TestComposeContainer(t *testing.T) {
+	good := map[string]string{
+		".laforgeignore":                "containers/flaky/\n",
+		"containers/flaky.yaml":         "container:\n  name: flaky\n  compose: flaky/compose.yaml\n  size: small\n  disk: 60\n",
+		"containers/flaky/compose.yaml": "services:\n  web:\n    image: nginx:alpine\n",
+		"containers/child.yaml":         "container:\n  name: child\n  extends: flaky\n",
+		"containers/plain.yaml":         "container:\n  name: plain\n  extends: flaky\n  image: nginx:alpine\n",
+	}
+	c, _ := loader.Load(writeRepo(t, good))
+	if len(c.Errors) != 0 {
+		t.Fatalf("should load clean, got: %v", c.Errors)
+	}
+	byName := map[string]loader.Container{}
+	for _, ct := range c.Containers {
+		byName[ct.Name] = ct
+	}
+	if got := byName["flaky"].ComposeFile; got != "containers/flaky/compose.yaml" {
+		t.Errorf("ComposeFile = %q, want it resolved from the container's own file", got)
+	}
+	if ch := byName["child"]; ch.ComposeFile != "containers/flaky/compose.yaml" || ch.Disk != 60 {
+		t.Errorf("child should inherit the project and disk, got %+v", ch)
+	}
+	if p := byName["plain"]; p.Image != "nginx:alpine" || p.Compose != "" {
+		t.Errorf("a child that sets image replaces the base's compose, got image=%q compose=%q", p.Image, p.Compose)
+	}
+
+	for name, tc := range map[string]struct{ container, want string }{
+		"both":          {"container:\n  name: x\n  image: a\n  compose: flaky/compose.yaml\n  size: small\n", ""},
+		"neither":       {"container:\n  name: x\n  size: small\n", ""},
+		"env":           {"container:\n  name: x\n  compose: flaky/compose.yaml\n  size: small\n  env: { A: b }\n", "put them in the compose file"},
+		"escapes repo":  {"container:\n  name: x\n  compose: ../../elsewhere/compose.yaml\n  size: small\n", "must be a path inside the content repo"},
+		"disk on image": {"container:\n  name: x\n  extends: base\n  disk: 20\n---\ncontainer:\n  name: base\n  image: a\n  size: small\n", "only applies with compose"},
+		"no directory":  {"container:\n  name: x\n  compose: compose.yaml\n  size: small\n", "must be in its own directory"},
+	} {
+		c, _ := loader.Load(writeRepo(t, map[string]string{".laforgeignore": "containers/flaky/\n", "containers/x.yaml": tc.container}))
+		if len(c.Errors) == 0 || !containsSubstring(errorMessages(c), tc.want) {
+			t.Errorf("%s: expected an error mentioning %q, got: %v", name, tc.want, errorMessages(c))
+		}
+	}
+
+	delete(good, ".laforgeignore")
+	c, _ = loader.Load(writeRepo(t, good))
+	if !containsSubstring(errorMessages(c), `add "containers/flaky/" to .laforgeignore`) {
+		t.Errorf("expected a pointer to .laforgeignore, got: %v", errorMessages(c))
+	}
+}

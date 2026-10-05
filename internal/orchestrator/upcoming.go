@@ -153,7 +153,7 @@ func DiffUpcoming(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buil
 						if ct == nil {
 							return nil, fmt.Errorf("container %q not found in content", objectName)
 						}
-						ports, dependsOn = ct.Ports, ct.DependsOn
+						disk, ports, dependsOn = ct.Disk, ct.Ports, ct.DependsOn
 					}
 					fp, err := Fingerprint(repoRoot, c, rctx, disk, ports, dependsOn)
 					if err != nil {

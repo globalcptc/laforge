@@ -366,3 +366,38 @@ func TestCheckAllCatchesABrokenTemplate(t *testing.T) {
 		t.Fatal("expected CheckAll to catch the broken template reference")
 	}
 }
+
+// TestCheckAllCatchesABrokenComposeProject: `laforge check` loads a compose
+// container's project the way deploying it would.
+func TestCheckAllCatchesABrokenComposeProject(t *testing.T) {
+	files := map[string]string{
+		".laforgeignore":        "containers/flaky/\n",
+		"env.yaml":              "environment:\n  name: e\n  teams: 1\n  networks:\n    lan:\n      flaky:\n        - as: flaky01\n          last_octet: 10\n",
+		"networks/lan.yaml":     "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"containers/flaky.yaml": "container:\n  name: flaky\n  compose: flaky/compose.yaml\n  size: small\n",
+	}
+	check := func(composeFile string) []render.RenderError {
+		t.Helper()
+		root := t.TempDir()
+		files["containers/flaky/compose.yaml"] = composeFile
+		for rel, content := range files {
+			p := filepath.Join(root, rel)
+			os.MkdirAll(filepath.Dir(p), 0o755)
+			if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		c, err := loader.Load(root)
+		if err != nil || len(c.Errors) > 0 {
+			t.Fatalf("fixture should load clean: %v %+v", err, c.Errors)
+		}
+		return render.CheckAll(root, c)
+	}
+	if errs := check("services:\n  web:\n    image: nginx:alpine\n"); len(errs) != 0 {
+		t.Errorf("a good project should check clean, got: %+v", errs)
+	}
+	errs := check("services:\n  web:\n    build: .\n")
+	if len(errs) != 1 || !strings.Contains(errs[0].Message, "does not build images") {
+		t.Errorf("expected one error about build: without image:, got: %+v", errs)
+	}
+}

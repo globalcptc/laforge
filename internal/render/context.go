@@ -51,6 +51,7 @@ type Context struct {
 	ObjectKind  string // "host" or "container"
 	OS          string // set when ObjectKind == "host"
 	Image       string // set when ObjectKind == "container"
+	Compose     string // a compose container's compose file, repo-relative; "" otherwise
 	Size        string
 	Address     string
 	NetworkName string
@@ -144,6 +145,7 @@ func Resolve(c *loader.Content, envName, as string, team int) (*Context, error) 
 	} else if ct := findContainer(c, objName); ct != nil {
 		ctx.ObjectKind = "container"
 		ctx.Image = ct.Image
+		ctx.Compose = ct.ComposeFile
 		ctx.Size = ct.Size
 		ctx.Steps = ct.Steps
 		ctx.Schedule = ct.Schedule

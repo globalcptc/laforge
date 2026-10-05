@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"github.com/globalcptc/laforge/internal/compose"
 	"sort"
 
 	"github.com/globalcptc/laforge/internal/loader"
@@ -56,6 +57,14 @@ func checkOneHost(repoRoot string, c *loader.Content, ctx *Context) []RenderErro
 		if err != nil {
 			errs = append(errs, RenderError{Environment: ctx.EnvironmentName, Team: ctx.Team, As: ctx.As, Message: err.Error()})
 		}
+	}
+
+	// Load a compose container's project exactly as deploying it would, so a
+	// missing file, a service with no image, or a bind mount that won't be
+	// shipped is caught here, not on the day.
+	if ctx.Compose != "" {
+		_, err := compose.Load(repoRoot, ctx.Compose)
+		add(err)
 	}
 
 	for _, step := range ctx.Steps {

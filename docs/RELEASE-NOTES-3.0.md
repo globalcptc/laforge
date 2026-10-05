@@ -48,6 +48,16 @@ This note covers the whole 3.0 line.
   ("every 30 minutes", "45 minutes after competition start"); `depends_on` ordering;
   `tags:` that cascade from environment → network → script → object; `ports:` firewalls;
   a `public:` block for external access; and a `people:` field backed by CSV rosters.
+- **Docker Compose projects as containers.** A `container:` can name a compose file
+  (`compose: app/compose.yaml`, relative to its own file) instead of an `image:`. The
+  compose file's directory is shipped whole and run with real `docker compose` on one
+  machine with one address; images are pulled, never built. Supported on the Incus and
+  MicroCloud builders, which boot that machine from the builder's docker base image —
+  now built for Incus builders too, and now installing Docker Engine and the compose
+  plugin from Docker's own apt repository instead of Ubuntu's `docker.io` package.
+- **`.laforgeignore`.** A content repo can list paths that aren't LaForge content (a
+  compose project, another tool's YAML) in a `.gitignore`-style file at its root;
+  `laforge check`, the server, and the editor all skip them.
 - **One-shot migration from 2.x.** `laforge convert <old-hcl-repo> <new-repo>` translates
   an existing HCL content repository into the new YAML format, printing every judgment
   call and anything that needs manual review.

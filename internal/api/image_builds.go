@@ -14,19 +14,20 @@ import (
 	"github.com/globalcptc/laforge/internal/db"
 )
 
-// usesDockerBase reports whether a builder kind boots LaForge containers from a
-// docker-ready base image this job builds. Only MicroCloud (LXD) does: LXD has
-// no OCI runtime, so a `container:` runs as a nesting LXD system container that
-// itself runs Docker off this image. Incus (6.3+) runs containers as native OCI
-// -- it pulls the image straight from the registry at deploy time and needs no
-// base image -- and fake/aws/openstack don't use one either.
-func usesDockerBase(kind string) bool { return kind == "microcloud" }
+// usesDockerBase reports whether a builder kind has a docker-ready base image
+// this job builds. MicroCloud (LXD) has no OCI runtime, so every `container:`
+// boots from it. Incus runs a single-image `container:` as native OCI and needs
+// it only for a container that runs a Docker Compose project. fake/aws/
+// openstack don't use one.
+func usesDockerBase(kind string) bool { return kind == "microcloud" || kind == "incus" }
 
-// queueDockerBaseBuild enqueues a docker-base build for a builder when its
-// kind uses one. Best-effort at create time: a failure to queue must not fail
-// creating the builder itself (the operator can always hit Rebuild).
+// queueDockerBaseBuild enqueues a docker-base build when a builder is created,
+// for the kind that can't run any container without one (MicroCloud). An Incus
+// builder's is built on demand (Rebuild), by an operator who wants compose
+// containers. Best-effort: a failure to queue must not fail creating the
+// builder itself (the operator can always hit Rebuild).
 func (s *Server) queueDockerBaseBuild(r *http.Request, cfg db.BuilderConfig) {
-	if !usesDockerBase(cfg.Kind) {
+	if cfg.Kind != "microcloud" {
 		return
 	}
 	_, _ = s.Queries.CreateImageBuild(r.Context(), db.CreateImageBuildParams{

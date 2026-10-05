@@ -154,7 +154,15 @@ func mergeHost(child, base Host) Host {
 }
 
 func mergeContainer(child, base Container) Container {
-	child.Image = orString(child.Image, base.Image)
+	// image and compose are alternatives: a child that sets either replaces
+	// the base's choice outright; one that sets neither inherits it.
+	if child.Image == "" && child.Compose == "" {
+		child.Image, child.Compose, child.ComposeFile = base.Image, base.Compose, base.ComposeFile
+	}
+	// disk sizes a compose project's machine, so it only follows compose.
+	if child.Disk == 0 && child.Compose != "" {
+		child.Disk = base.Disk
+	}
 	child.Size = orString(child.Size, base.Size)
 	child.Env = mergeStringMap(base.Env, child.Env)
 	child.Command = appendStrings(base.Command, child.Command)

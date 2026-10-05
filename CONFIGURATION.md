@@ -35,11 +35,16 @@ your-content-repo/
     domain-controller.yaml
   containers/
     scoreboard.yaml
+    flakyframes.yaml
+    flakyframes/       # a Docker Compose project a container runs
+      compose.yaml
+      .env
   scripts/
     install-nginx.yaml
     install-nginx.sh   # a script's source sits next to its .yaml definition
   people/
     employees.csv
+  .laforgeignore       # optional: paths that aren't LaForge content
 ```
 
 Each YAML file starts with a **type header** — the first key names what it is:
@@ -51,6 +56,28 @@ host:            # this file is a host
 ```
 
 Files can hold several `---`-separated objects, but one object per file is the norm.
+
+**Every `.yaml`/`.yml` file in the repo is read as LaForge content.** If the repo also
+holds YAML that isn't — a Compose project, another tool's configuration — list those
+paths in a `.laforgeignore` file at the root. It uses the familiar subset of `.gitignore`
+syntax, and `laforge check`, the server, and the editor all honor it:
+
+```
+# .laforgeignore -- one pattern per line; comments get their own line
+
+# a directory (trailing slash)
+containers/flakyframes/
+# anchored to the repo root
+/vendor
+# * ? [..] match within one path segment
+notes/*.yaml
+# ** spans directories
+**/generated-*.yml
+# a bare name matches at any depth
+scratch.yaml
+```
+
+Negation (`!pattern`) is not supported.
 
 **The pieces are reusable; the environment connects them.** A host or a script doesn't
 know which environment or network it belongs to. The **environment's `networks:`
@@ -309,7 +336,8 @@ host:
 
 The same idea as a host, deployed as a container instead of a VM. Every builder supports
 containers — natively where the platform has a container primitive, as a nested Docker
-runtime where it doesn't.
+runtime where it doesn't. A container runs either a single `image`, or a whole Docker
+Compose project (`compose`, below).
 
 ```yaml
 container:
@@ -327,13 +355,82 @@ container:
 | --- | --- |
 | `name` | Unique name, referenced from the topology and `depends_on`. Not a hostname — the topology's `as` sets that. |
 | `image` | The OCI image ref, e.g. `nginx:alpine` or `registry.internal/app:1.2`. Pulled from Docker Hub, or a configured private registry when the ref names one. |
+| `compose` | Instead of `image`: the path to a Docker Compose file, relative to this file. Runs the whole project (see [Compose projects](#compose-projects)). |
+| `disk` | With `compose` only: root disk in GB for the machine the project runs on (default 40). |
 | `size` | Abstract size name, mapped to concrete CPU/memory per builder. |
-| `env` | Environment variables passed to the container (`docker -e`). |
-| `command` | Overrides the image's default command arguments. |
+| `env` | Environment variables passed to the container (`docker -e`). Not with `compose`. |
+| `command` | Overrides the image's default command arguments. Not with `compose`. |
 | `ports` | TCP/UDP ports this container listens on. |
 | `depends_on` | Same as a host's. |
 | `steps` / `schedule` | Same as a host's — a container runs the LaForge agent as its entrypoint, so it configures and reports exactly like a host. Steps and validators run **inside** the container, so they describe the application (`process_running: nginx`, `port_listening: 80`), never the container runtime underneath it (`process_running: dockerd` is wrong, and fails on every builder). |
 | `vars` / `tags` / `findings` / `people` / `extends` | Same as a host's. |
+
+### Compose projects
+
+A container can run a Docker Compose project instead of a single image. Point `compose:`
+at the compose file, relative to the container's own file — the same way a script points
+at its `source:`:
+
+```yaml
+# containers/flakyframes.yaml
+container:
+  name: flakyframes
+  compose: flakyframes/compose.yaml
+  size: medium
+  ports: { tcp: ["80", "443"] }    # the ports the compose file publishes
+  steps:
+    - run: curl -fsSk https://localhost/healthz
+      validate:
+        - port_listening: { port: 443 }
+```
+
+```
+containers/
+  flakyframes.yaml
+  flakyframes/
+    compose.yaml
+    .env
+    nginx/
+      nginx.conf
+      certs/
+```
+
+```
+# .laforgeignore
+containers/flakyframes/
+```
+
+The compose file's **directory** is the project. LaForge gives the container one machine
+with one address, copies the whole directory to it, logs in to any registry it has a
+stored credential for (Admin → Infrastructure), pulls the images, and starts the project
+with real `docker compose up --wait` — so it counts as started only once every service is
+running and its healthcheck, if it has one, passes. The container's own `steps:` run
+after that, on that machine.
+
+What to know:
+
+- **One address.** The project is reached on the container's address, through the ports
+  the compose file publishes. List the same ports in `ports:`; they are its firewall.
+  Networks inside the compose file stay private to the project.
+- **Images are pulled, never built.** A service can keep `build:` for local development,
+  but must also name an `image:` that exists in a registry. Pin a version tag.
+- **The directory is shipped as-is.** Nothing in it is templated, so the same files a
+  developer runs locally run here, the same for every team. It is limited to 1 MiB
+  compressed — configuration, not application code. Bind mounts must be relative and
+  inside it (`./nginx/nginx.conf`).
+- **Add the directory to `.laforgeignore`**, so its YAML isn't read as LaForge content.
+  `laforge check` tells you when you've forgotten.
+- **Volumes last as long as the container.** They survive a restart and are gone on a
+  rebuild. Editing any file in the directory rebuilds the container.
+- **Steps see the machine, not a service.** `docker compose` is available to them;
+  `process_running: nginx` is not true there, `port_listening: 443` is.
+- **Builders.** The Incus and MicroCloud builders run compose containers, each on a
+  machine booted from the builder's own Docker-ready base image, which an admin builds
+  once (see [USAGE.md](USAGE.md#compose-containers-builder-setup)). Other builders reject
+  a compose container.
+
+`laforge check` loads every project and reports a missing compose file, a service
+without an `image:`, or a bind mount that won't be shipped.
 
 ---
 
@@ -615,3 +712,11 @@ It parses every file against the schema, runs the cross-file checks (name collis
 expressions parse, validators match the host OS), and renders every script for every host
 in every team to catch template errors — without touching any hoster. A clean run means
 the content will build. The VS Code extension runs the same checks live as you type.
+
+For a container that runs a [Compose project](#compose-projects), it also loads the
+project: the compose file must exist and parse, every service must name an `image:`, and
+every relative bind mount must be inside the project's directory.
+
+Every `.yaml`/`.yml` file is checked unless [`.laforgeignore`](#how-content-is-organized)
+lists it. A file that isn't LaForge content and isn't ignored fails with "no type header
+found".

@@ -166,10 +166,64 @@ func ResolveMicrocloudClient(pool *pgxpool.Pool, row db.BuilderConfig) (*microcl
 		}
 		return client, nil
 	case "incus":
-		return nil, fmt.Errorf("builder config %q: kind %q runs containers as native OCI and needs no docker base image", row.Name, row.Kind)
+		return nil, fmt.Errorf("builder config %q: kind %q is a pool of Incus hosts -- use ResolveIncusHosts", row.Name, row.Kind)
 	default:
 		return nil, fmt.Errorf("builder config %q: kind %q has no MicroCloud client", row.Name, row.Kind)
 	}
+}
+
+// IncusHost is one host of an Incus builder, for a job that has to run on each
+// of them directly rather than through the pool (the docker base image build:
+// the hosts share no image store).
+type IncusHost struct {
+	// Label identifies the host in a log: its API URL, or its position.
+	Label       string
+	Client      *incus.Client
+	StoragePool string
+}
+
+// ResolveIncusHosts returns a client for every host in a kind-"incus" builder
+// config's incus_hosts, in order.
+func ResolveIncusHosts(pool *pgxpool.Pool, row db.BuilderConfig) ([]IncusHost, error) {
+	if row.Kind != "incus" {
+		return nil, fmt.Errorf("builder config %q: kind %q is not an Incus pool", row.Name, row.Kind)
+	}
+	var hostConfigs []incus.HostConfig
+	if len(row.IncusHosts) > 0 {
+		if err := json.Unmarshal(row.IncusHosts, &hostConfigs); err != nil {
+			return nil, fmt.Errorf("builder config %q: decoding incus_hosts: %w", row.Name, err)
+		}
+	}
+	if len(hostConfigs) == 0 {
+		return nil, fmt.Errorf("builder config %q: incus_hosts lists no hosts", row.Name)
+	}
+	hosts := make([]IncusHost, 0, len(hostConfigs))
+	for i, hc := range hostConfigs {
+		var ep endpoint
+		var err error
+		if hc.CredentialID != "" {
+			var id pgtype.UUID
+			if err := id.Scan(hc.CredentialID); err != nil {
+				return nil, fmt.Errorf("builder config %q: incus_hosts[%d]: invalid credential_id: %w", row.Name, i, err)
+			}
+			ep, err = loadCredential(pool, id)
+		} else {
+			ep, err = pathEndpoint(hc.APIURL, hc.ClientCertPath, hc.ClientKeyPath, hc.ServerCertPEM)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("builder config %q: incus_hosts[%d]: %w", row.Name, i, err)
+		}
+		client, err := ep.client()
+		if err != nil {
+			return nil, fmt.Errorf("builder config %q: incus_hosts[%d]: constructing client: %w", row.Name, i, err)
+		}
+		label := ep.apiURL
+		if label == "" {
+			label = fmt.Sprintf("host %d", i+1)
+		}
+		hosts = append(hosts, IncusHost{Label: label, Client: client, StoragePool: hc.StoragePool})
+	}
+	return hosts, nil
 }
 
 // endpoint is one Incus/MicroCloud connection's material, however it was

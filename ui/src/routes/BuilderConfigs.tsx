@@ -10,10 +10,10 @@ import { KIND_LABEL } from '../components/builder-wizard/model'
 import type { BuilderConfig } from '../api/types'
 import { Badge, Button, Card, CardHeader, PageHeader, Spinner, Table, TableScroller, Td, Th, buttonClass, cn, useToast } from '../ui'
 
-// Which builder kinds run LaForge containers from a docker base image. Only
-// MicroCloud (LXD, no OCI runtime) does; Incus 6.3+ runs containers as native
-// OCI and needs no base image.
-const USES_DOCKER_BASE = (kind: string) => kind === 'microcloud'
+// Which builder kinds have a docker base image to build. MicroCloud (LXD, no
+// OCI runtime) boots every container from it; Incus runs a single-image
+// container as native OCI and needs it only for Docker Compose containers.
+const USES_DOCKER_BASE = (kind: string) => kind === 'microcloud' || kind === 'incus'
 
 // The builders a configured build can deploy with. Adding or editing one is
 // a step-by-step workflow (BuilderWizard.tsx) -- this page only lists them.
