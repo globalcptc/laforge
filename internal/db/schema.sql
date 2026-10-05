@@ -196,6 +196,16 @@ CREATE TABLE public.registry_credential (
     CONSTRAINT registry_credential_registry_host_key UNIQUE (registry_host)
 );
 --
+-- Name: instance_admin; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.instance_admin (
+    github_login text NOT NULL,
+    added_by text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE UNIQUE INDEX instance_admin_login_idx ON public.instance_admin USING btree (lower(github_login));
+--
 -- Name: builder_credential; Type: TABLE; Schema: public; Owner: -
 --
 CREATE TABLE public.builder_credential (

@@ -74,9 +74,10 @@ and addressing. The file is fully commented; the important groups:
   `GITHUB_APP_SLUG`. See [Connecting GitHub](#connecting-github-the-github-app). A
   deployment can run with no App configured at all, falling back to
   `GITHUB_SERVICE_TOKEN`.
-- **Admins** — `LAFORGE_ADMIN_LOGINS`: comma-separated GitHub logins with instance-wide
-  admin (needed to approve a repository into LaForge). Empty means nobody can approve
-  anything yet — a safe default.
+- **Admins** — `LAFORGE_ADMIN_LOGINS`: comma-separated GitHub logins that become the
+  first instance admins (needed to approve a repository into LaForge). It is only read
+  the first time the API starts with no admins recorded; after that, add and remove
+  admins in the UI under **Admin → Admins**, and this value is ignored.
 - **Addressing** — the URLs and gateway address the deployment answers on. This is the
   easiest thing to get wrong, so it has its own section: **[Addressing](#addressing-the-urls-explained)**.
 - **Certificates** — the mTLS cert paths (`GATEWAY_CA_CERT`, `GATEWAY_SERVER_CERT`,
@@ -344,7 +345,7 @@ with `repo` scope).
 
 From the App's page (`https://github.com/apps/<your-app-slug>`), click **Install**, choose
 your org, and select the repositories to install it on. Then sign in to the LaForge UI as
-a `LAFORGE_ADMIN_LOGINS` account, open **Installations**, and **Approve** each repository
+an instance admin, open **Installations**, and **Approve** each repository
 you want to build from. Installing makes a repo reachable; approving is what makes LaForge
 track it.
 

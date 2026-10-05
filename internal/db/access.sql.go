@@ -11,6 +11,37 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addInstanceAdmin = `-- name: AddInstanceAdmin :execrows
+INSERT INTO instance_admin (github_login, added_by)
+VALUES ($1, $2)
+ON CONFLICT (lower(github_login)) DO NOTHING
+`
+
+type AddInstanceAdminParams struct {
+	GithubLogin string  `json:"github_login"`
+	AddedBy     *string `json:"added_by"`
+}
+
+// Adding someone who is already an admin changes nothing (0 rows).
+func (q *Queries) AddInstanceAdmin(ctx context.Context, arg AddInstanceAdminParams) (int64, error) {
+	result, err := q.db.Exec(ctx, addInstanceAdmin, arg.GithubLogin, arg.AddedBy)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const countInstanceAdmins = `-- name: CountInstanceAdmins :one
+SELECT count(*) FROM instance_admin
+`
+
+func (q *Queries) CountInstanceAdmins(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countInstanceAdmins)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createSession = `-- name: CreateSession :one
 INSERT INTO session (account_id, token_hash, github_token, expires_at)
 VALUES ($1, $2, $3, $4)
@@ -55,6 +86,22 @@ DELETE FROM session WHERE expires_at <= now()
 // retention boundary, set once at CreateSession time.
 func (q *Queries) DeleteExpiredSessions(ctx context.Context) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteExpiredSessions)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteInstanceAdmin = `-- name: DeleteInstanceAdmin :execrows
+DELETE FROM instance_admin
+WHERE lower(instance_admin.github_login) = lower($1::text)
+  AND (SELECT count(*) FROM instance_admin) > 1
+`
+
+// Refuses to remove the last admin: with none left nobody could add another
+// from the UI.
+func (q *Queries) DeleteInstanceAdmin(ctx context.Context, githubLogin string) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteInstanceAdmin, githubLogin)
 	if err != nil {
 		return 0, err
 	}
@@ -189,6 +236,46 @@ func (q *Queries) GetSessionByTokenHash(ctx context.Context, tokenHash string) (
 		&i.Timezone,
 	)
 	return i, err
+}
+
+const listInstanceAdmins = `-- name: ListInstanceAdmins :many
+SELECT instance_admin.github_login, instance_admin.added_by, instance_admin.created_at, account.avatar_url
+FROM instance_admin
+LEFT JOIN account ON lower(account.github_login) = lower(instance_admin.github_login)
+ORDER BY lower(instance_admin.github_login)
+`
+
+type ListInstanceAdminsRow struct {
+	GithubLogin string             `json:"github_login"`
+	AddedBy     *string            `json:"added_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	AvatarUrl   *string            `json:"avatar_url"`
+}
+
+// avatar_url is only known once the person has signed in at least once.
+func (q *Queries) ListInstanceAdmins(ctx context.Context) ([]ListInstanceAdminsRow, error) {
+	rows, err := q.db.Query(ctx, listInstanceAdmins)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListInstanceAdminsRow
+	for rows.Next() {
+		var i ListInstanceAdminsRow
+		if err := rows.Scan(
+			&i.GithubLogin,
+			&i.AddedBy,
+			&i.CreatedAt,
+			&i.AvatarUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listRepositoryAccessByAccount = `-- name: ListRepositoryAccessByAccount :many

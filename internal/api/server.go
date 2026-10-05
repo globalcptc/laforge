@@ -20,6 +20,7 @@ package api
 import (
 	"crypto/rsa"
 	"net/http"
+	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -96,14 +97,15 @@ type Server struct {
 	// used for an auth decision.
 	AppSlug string
 
-	// AdminLogins are GitHub logins with instance-wide admin. Approving
-	// an installed repository into LaForge's own tracking
-	// (installations.go) is the one action with no repository yet to
-	// check repository_access against, so it needs a floor that isn't
-	// scoped to any one repo. Deliberately narrow: this grants nothing
-	// else. Every other admin action stays the existing per-repository
-	// levelAdmin.
+	// AdminLogins are GitHub logins with instance-wide admin: full access
+	// to every repository, plus the actions that aren't scoped to one
+	// (approving an installed repository, builders, registry credentials,
+	// and this list itself). It is the in-memory copy of the
+	// instance_admin table, loaded by SeedInstanceAdmins at startup and
+	// re-read after every change made through the API (admins.go); read
+	// it through isAdminLogin, which takes adminMu.
 	AdminLogins []string
+	adminMu     sync.RWMutex
 
 	// CACertPath/ServerCertPath are the agent mTLS CA and gateway server
 	// certificate files (the same ones the gateway/runner use), read only to
@@ -191,6 +193,10 @@ func (s *Server) routes() {
 	mux.HandleFunc("POST /builder-configs/{name}/image-builds", s.handleRebuildBuilderImage)
 	mux.HandleFunc("GET /builder-configs/{name}/image-builds", s.handleListBuilderImageBuilds)
 	mux.HandleFunc("GET /image-builds/{id}/log", s.handleImageBuildLog)
+
+	mux.HandleFunc("GET /instance-admins", s.handleListInstanceAdmins)
+	mux.HandleFunc("POST /instance-admins", s.handleAddInstanceAdmin)
+	mux.HandleFunc("DELETE /instance-admins/{login}", s.handleDeleteInstanceAdmin)
 
 	mux.HandleFunc("GET /registry-credentials", s.handleListRegistryCredentials)
 	mux.HandleFunc("PUT /registry-credentials", s.handleUpsertRegistryCredential)

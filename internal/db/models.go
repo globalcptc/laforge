@@ -308,6 +308,12 @@ type InstallationRepository struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
+type InstanceAdmin struct {
+	GithubLogin string             `json:"github_login"`
+	AddedBy     *string            `json:"added_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
 type Network struct {
 	ID                pgtype.UUID     `json:"id"`
 	ContentRevisionID pgtype.UUID     `json:"content_revision_id"`

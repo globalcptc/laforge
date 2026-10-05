@@ -28,7 +28,7 @@ export function BuilderConfigs() {
       <div className="mx-auto max-w-2xl p-6">
         <div className="card p-4 text-sm text-fg">
           {forbidden
-            ? "You're not an instance admin (LAFORGE_ADMIN_LOGINS on the server), so you can't see or change builders."
+            ? "You're not an instance admin, so you can't see or change builders."
             : error instanceof ApiError
               ? error.message
               : 'Failed to load builders.'}

@@ -80,3 +80,26 @@ WHERE account_id = $1;
 
 -- name: DeleteRepositoryAccess :exec
 DELETE FROM repository_access WHERE repository_id = $1 AND account_id = $2;
+
+-- name: ListInstanceAdmins :many
+-- avatar_url is only known once the person has signed in at least once.
+SELECT instance_admin.*, account.avatar_url
+FROM instance_admin
+LEFT JOIN account ON lower(account.github_login) = lower(instance_admin.github_login)
+ORDER BY lower(instance_admin.github_login);
+
+-- name: CountInstanceAdmins :one
+SELECT count(*) FROM instance_admin;
+
+-- name: AddInstanceAdmin :execrows
+-- Adding someone who is already an admin changes nothing (0 rows).
+INSERT INTO instance_admin (github_login, added_by)
+VALUES ($1, $2)
+ON CONFLICT (lower(github_login)) DO NOTHING;
+
+-- name: DeleteInstanceAdmin :execrows
+-- Refuses to remove the last admin: with none left nobody could add another
+-- from the UI.
+DELETE FROM instance_admin
+WHERE lower(instance_admin.github_login) = lower(sqlc.arg(github_login)::text)
+  AND (SELECT count(*) FROM instance_admin) > 1;

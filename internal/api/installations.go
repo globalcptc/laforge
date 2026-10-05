@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -22,9 +21,9 @@ import (
 // repository is the one action with no repository row yet to check
 // repository_access against (that's the whole point -- there isn't one
 // until this succeeds), so it needs a floor that isn't scoped to any one
-// repo. AdminLogins is intentionally narrow and explicit (an env-var
-// allowlist, not GitHub org-ownership lookup) rather than growing a
-// second parallel authorization model.
+// repo. The admin list is intentionally narrow and explicit (a managed
+// list of GitHub logins -- see admins.go -- not a GitHub org-ownership
+// lookup) rather than growing a second parallel authorization model.
 func (s *Server) requireInstanceAdmin(ctx context.Context, r *http.Request) (authSession, error) {
 	sess, err := s.sessionFromRequest(r)
 	if err != nil {
@@ -37,12 +36,7 @@ func (s *Server) requireInstanceAdmin(ctx context.Context, r *http.Request) (aut
 }
 
 func (s *Server) isInstanceAdmin(sess authSession) bool {
-	for _, login := range s.AdminLogins {
-		if strings.EqualFold(login, sess.GithubLogin) {
-			return true
-		}
-	}
-	return false
+	return s.isAdminLogin(sess.GithubLogin)
 }
 
 // installedRepoView is one repository an installation covers, with its
