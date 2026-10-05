@@ -123,6 +123,20 @@ func TestResolveComputesAddressAndPeers(t *testing.T) {
 		if p.As == "db01" {
 			t.Error("a copy should not appear in its own peer list")
 		}
+		if !strings.HasPrefix(p.Address, "10.0.1.") || p.Address == ctx.Address {
+			t.Errorf("peer %s: address = %q, want its own address on prod (10.0.1.0/24)", p.As, p.Address)
+		}
+	}
+
+	// The same addresses are what a template's peer loop sees.
+	out, err := render.RenderString("t", `{{ range .network.hosts }}{{ .as }}={{ .address }} {{ end }}`, ctx, c)
+	if err != nil {
+		t.Fatalf("RenderString: %v", err)
+	}
+	for _, p := range ctx.Peers {
+		if want := p.As + "=" + p.Address + " "; !strings.Contains(out, want) {
+			t.Errorf("peer loop rendered %q, missing %q", out, want)
+		}
 	}
 }
 
