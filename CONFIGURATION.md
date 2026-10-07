@@ -174,9 +174,10 @@ environment:
       webserver:
         - as: web01
           last_octet: 10
-          public:
-            tcp: ["443"]
 ```
+
+(`web01` exposes a port externally — but that's declared with `public:` on the
+webserver **host definition**, not here in the topology; see [Host](#host).)
 
 | Field | What it is |
 | --- | --- |
@@ -191,7 +192,7 @@ environment:
 | `vars` | Key/value data cascaded down to every network, host, and container. Available in scripts as `{{ vars.company }}`. |
 | `tags` | Labels for searching, grouping, and ad-hoc targeting. |
 | `findings` | Findings that belong to the environment as a whole (see [Findings](#findings)). |
-| `networks` | **The topology.** For each network, which hosts/containers are placed on it, how many copies, and their addresses/public ports. The only place hosts, containers, and networks are connected. |
+| `networks` | **The topology.** For each network, which hosts/containers are placed on it, how many copies, and their addresses. The only place hosts, containers, and networks are connected. |
 | `extends` | Inherit from another environment (see [`extends`](#extends)). |
 
 ### The topology (`networks:`)
@@ -203,7 +204,6 @@ running instance of that host/container:
 | --- | --- |
 | `as` | The hostname this copy gets. Also what `depends_on` and generated DNS records resolve it by. |
 | `last_octet` | The last octet of this copy's address on the network's CIDR (0–255). With `cidr: 10.0.1.0/24` and `last_octet: 10`, the address is `10.0.1.10`. |
-| `public` | (Optional) TCP/UDP ports on this copy to expose outside the competition network. |
 
 Placing the same object twice (two `as` entries) gives a team two copies of it.
 
@@ -290,6 +290,8 @@ host:
   disk: 60
   ports:
     tcp: ["3389"]
+  public:
+    tcp: ["3389"]
   depends_on: [domain-controller]
   vars:
     role: workstation
@@ -321,6 +323,7 @@ host:
 | `size` | Abstract size name (`small`, `medium`, `large`). Mapped to concrete CPU/memory per builder. |
 | `disk` | Disk size in GB. |
 | `ports` | TCP/UDP ports this host listens on — the ingress firewall allowlist (see [Ports](#ports)). |
+| `public` | (Optional) The subset of `ports` to expose **outside** the competition network (e.g. RDP for direct access). A property of the host, so it lives here — not on the topology placement. Every port listed must also appear in `ports`. Omit, or set to `false`, to keep the host private. The builder realizes it (a public IP, or a port-NAT on a shared external IP) and the assigned address:port shows in the build's external access view (`laforge access`). |
 | `depends_on` | Other hosts, containers, or networks that must be up before this host builds — e.g. a workstation waiting on its domain controller. Names the **object**, not one copy: every copy of that object in the same team is waited on. This host's own network is always waited on implicitly. |
 | `steps` | The ordered setup steps, run once after provisioning (see [Steps](#steps-the-action-kinds)). |
 | `schedule` | Recurring or anchor-relative triggers, independent of `steps:` order — each fires on its own clock (see [Schedules](#schedules)). |
@@ -361,6 +364,7 @@ container:
 | `env` | Environment variables passed to the container (`docker -e`). Not with `compose`. |
 | `command` | Overrides the image's default command arguments. Not with `compose`. |
 | `ports` | TCP/UDP ports this container listens on. |
+| `public` | (Optional) The subset of `ports` to expose outside the competition network — same meaning and rules as a host's (see [Host](#host)). |
 | `depends_on` | Same as a host's. |
 | `steps` / `schedule` | Same as a host's — a container runs the LaForge agent as its entrypoint, so it configures and reports exactly like a host. Steps and validators run **inside** the container, so they describe the application (`process_running: nginx`, `port_listening: 80`), never the container runtime underneath it (`process_running: dockerd` is wrong, and fails on every builder). |
 | `vars` / `tags` / `findings` / `people` / `extends` | Same as a host's. |

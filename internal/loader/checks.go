@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/globalcptc/laforge/internal/schedule"
@@ -221,37 +223,101 @@ func (c *Content) checkEnvironmentTopology() {
 	}
 }
 
-func portSet(p Ports) map[string]bool {
-	s := make(map[string]bool, len(p.TCP)+len(p.UDP))
-	for _, t := range p.TCP {
-		s["tcp/"+t] = true
+// portInterval parses one port token -- a single port ("80") or an inclusive
+// range ("1-65535") -- into [lo, hi]. ok is false when it is not a valid port
+// or range (non-numeric, outside 1-65535, or reversed). A port list and a
+// public list use the SAME token format (see common.schema.json portsBlock), so
+// both are parsed through here.
+func portInterval(tok string) (lo, hi int, ok bool) {
+	tok = strings.TrimSpace(tok)
+	a, b, isRange := strings.Cut(tok, "-")
+	if !isRange {
+		n, err := strconv.Atoi(tok)
+		if err != nil || n < 1 || n > 65535 {
+			return 0, 0, false
+		}
+		return n, n, true
 	}
-	for _, u := range p.UDP {
-		s["udp/"+u] = true
+	lo, err1 := strconv.Atoi(strings.TrimSpace(a))
+	hi, err2 := strconv.Atoi(strings.TrimSpace(b))
+	if err1 != nil || err2 != nil || lo < 1 || hi > 65535 || lo > hi {
+		return 0, 0, false
 	}
-	return s
+	return lo, hi, true
+}
+
+// mergePortIntervals sorts and coalesces overlapping or adjacent intervals so a
+// public port can be tested against a single contiguous span. Unparseable
+// declared tokens are dropped by the caller before this, so they simply provide
+// no coverage (a public port they were meant to cover is then flagged).
+func mergePortIntervals(ivs [][2]int) [][2]int {
+	if len(ivs) == 0 {
+		return nil
+	}
+	sort.Slice(ivs, func(i, j int) bool { return ivs[i][0] < ivs[j][0] })
+	out := [][2]int{ivs[0]}
+	for _, iv := range ivs[1:] {
+		last := &out[len(out)-1]
+		if iv[0] <= last[1]+1 { // overlapping or touching -- extend
+			if iv[1] > last[1] {
+				last[1] = iv[1]
+			}
+		} else {
+			out = append(out, iv)
+		}
+	}
+	return out
+}
+
+// declaredIntervals turns a protocol's declared port tokens into merged
+// intervals, skipping any that don't parse.
+func declaredIntervals(tokens []string) [][2]int {
+	var ivs [][2]int
+	for _, t := range tokens {
+		if lo, hi, ok := portInterval(t); ok {
+			ivs = append(ivs, [2]int{lo, hi})
+		}
+	}
+	return mergePortIntervals(ivs)
+}
+
+// covers reports whether [lo,hi] fits entirely within one of the merged spans.
+func covers(spans [][2]int, lo, hi int) bool {
+	for _, s := range spans {
+		if s[0] <= lo && hi <= s[1] {
+			return true
+		}
+	}
+	return false
 }
 
 // checkPublicPorts validates that every host/container's `public:` ports are a
 // subset of its own declared `ports` -- you can only expose a port the host
-// actually serves. `public:` is a property of the host (it lives in the host
-// file), so this is checked per definition, not per environment placement.
+// actually serves. Both lists allow ranges ("1-65535"), so the check is on port
+// INTERVALS, not literal token strings: `public: ["3389"]` is correctly a
+// subset of `ports: ["1-65535"]`. `public:` is a property of the host (it lives
+// in the host file), so this is checked per definition, not per environment
+// placement.
 func (c *Content) checkPublicPorts() {
 	check := func(file, name string, declared Ports, public *Ports) {
 		if public == nil {
 			return
 		}
-		set := portSet(declared)
-		for _, t := range public.TCP {
-			if !set["tcp/"+t] {
-				c.addf(file, 0, "%q publishes tcp port %s in `public`, which is not in its own `ports`", name, t)
+		checkProto := func(proto string, declaredTokens, publicTokens []string) {
+			spans := declaredIntervals(declaredTokens)
+			for _, p := range publicTokens {
+				lo, hi, ok := portInterval(p)
+				if !ok {
+					c.addf(file, 0, "%q lists %q in `public` %s, which is not a valid port or range", name, p, proto)
+					continue
+				}
+				if !covers(spans, lo, hi) {
+					c.addf(file, 0, "%q publishes %s port %s in `public`, which is not in its own `ports`", name, proto, p)
+				}
 			}
 		}
-		for _, u := range public.UDP {
-			if !set["udp/"+u] {
-				c.addf(file, 0, "%q publishes udp port %s in `public`, which is not in its own `ports`", name, u)
-			}
-		}
+		checkProto("tcp", declared.TCP, public.TCP)
+		checkProto("udp", declared.UDP, public.UDP)
 	}
 	for _, h := range c.Hosts {
 		check(h.SourceFile, h.Name, h.Ports, h.Public)
