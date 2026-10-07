@@ -126,6 +126,106 @@ func TestBearerTokenAuth(t *testing.T) {
 	}
 }
 
+// harborLike builds a Harbor-style bearer-auth registry: /v2/ and the catalog
+// work for the authenticated account, but tags/list succeeds only when
+// allowPull is true. When false it always answers 401 (even after a token is
+// issued) -- exactly Harbor's "robot authenticates but was never granted Pull"
+// behavior, where the token server hands back a token with no repo access.
+func harborLike(t *testing.T, allowPull bool, repos []string) string {
+	t.Helper()
+	var auth *httptest.Server
+	const issued = "tok"
+	registry := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authed := r.Header.Get("Authorization") == "Bearer "+issued
+		switch {
+		case r.URL.Path == "/v2/":
+			if !authed {
+				w.Header().Set("WWW-Authenticate", `Bearer realm="`+auth.URL+`/token",service="harbor"`)
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		case r.URL.Path == "/v2/_catalog":
+			if !authed {
+				w.Header().Set("WWW-Authenticate", `Bearer realm="`+auth.URL+`/token",service="harbor",scope="registry:catalog:*"`)
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			json.NewEncoder(w).Encode(catalogResponse{Repositories: repos})
+		case strings.HasSuffix(r.URL.Path, "/tags/list"):
+			repo := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/v2/"), "/tags/list")
+			if allowPull && authed {
+				json.NewEncoder(w).Encode(tagsResponse{Tags: []string{"latest"}})
+				return
+			}
+			// Not authorized to pull: challenge, and stay 401 even once a token
+			// is presented (the token carries no pull access).
+			w.Header().Set("WWW-Authenticate", `Bearer realm="`+auth.URL+`/token",service="harbor",scope="repository:`+repo+`:pull"`)
+			w.WriteHeader(http.StatusUnauthorized)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	t.Cleanup(registry.Close)
+	auth = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// The robot authenticates fine -- a token is always issued. Whether it
+		// grants pull is the registry's call above.
+		if u, p, has := r.BasicAuth(); !has || u != testUser || p != testSecret {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]string{"token": issued})
+	}))
+	t.Cleanup(auth.Close)
+	return httpHost(registry.URL)
+}
+
+func TestVerifyPullDenied(t *testing.T) {
+	host := harborLike(t, false, []string{"cptc12/base/debian"})
+	repo, err := New().VerifyPull(context.Background(), host, testUser, testSecret)
+	if !errors.Is(err, ErrPullDenied) {
+		t.Fatalf("VerifyPull err = %v, want ErrPullDenied", err)
+	}
+	if repo != "cptc12/base/debian" {
+		t.Fatalf("VerifyPull probed repo = %q, want cptc12/base/debian", repo)
+	}
+}
+
+func TestVerifyPullAllowed(t *testing.T) {
+	host := harborLike(t, true, []string{"cptc12/base/debian"})
+	repo, err := New().VerifyPull(context.Background(), host, testUser, testSecret)
+	if err != nil {
+		t.Fatalf("VerifyPull = %v, want success", err)
+	}
+	if repo != "cptc12/base/debian" {
+		t.Fatalf("probed repo = %q", repo)
+	}
+}
+
+func TestVerifyPullUnverifiableWithoutCatalog(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v2/" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound) // no catalog -> nothing to probe
+	}))
+	defer srv.Close()
+	if _, err := New().VerifyPull(context.Background(), httpHost(srv.URL), "", ""); !errors.Is(err, ErrPullUnverifiable) {
+		t.Fatalf("VerifyPull without a catalog = %v, want ErrPullUnverifiable", err)
+	}
+}
+
+// TestTagsDeniedIsTyped confirms a 401 on tags/list surfaces as ErrPullDenied
+// (so the Images view and VerifyPull both read it), not a bare HTTP-code string.
+func TestTagsDeniedIsTyped(t *testing.T) {
+	host := harborLike(t, false, []string{"cptc12/base/debian"})
+	_, err := New().Tags(context.Background(), host, testUser, testSecret, "cptc12/base/debian")
+	if !errors.Is(err, ErrPullDenied) {
+		t.Fatalf("Tags on a denied repo = %v, want ErrPullDenied", err)
+	}
+}
+
 func TestCatalogUnsupported(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v2/" {

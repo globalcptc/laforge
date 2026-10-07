@@ -563,7 +563,8 @@ export function useTestRegistryCredential() {
 
 export interface RegistryImage {
   repository: string
-  tags: string[]
+  tags: string[] // the newest few; see tag_count for the total
+  tag_count: number
   error?: string
 }
 export interface RegistryImagesView {
