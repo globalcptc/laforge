@@ -43,16 +43,19 @@ func (q *Queries) CountInstanceAdmins(ctx context.Context) (int64, error) {
 }
 
 const createSession = `-- name: CreateSession :one
-INSERT INTO session (account_id, token_hash, github_token, expires_at)
-VALUES ($1, $2, $3, $4)
-RETURNING id, account_id, token_hash, github_token, created_at, expires_at
+INSERT INTO session (account_id, token_hash, github_token, expires_at, github_token_expires_at, github_refresh_token, github_refresh_expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, account_id, token_hash, github_token, created_at, expires_at, github_token_expires_at, github_refresh_token, github_refresh_expires_at
 `
 
 type CreateSessionParams struct {
-	AccountID   pgtype.UUID        `json:"account_id"`
-	TokenHash   string             `json:"token_hash"`
-	GithubToken string             `json:"github_token"`
-	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	AccountID              pgtype.UUID        `json:"account_id"`
+	TokenHash              string             `json:"token_hash"`
+	GithubToken            string             `json:"github_token"`
+	ExpiresAt              pgtype.Timestamptz `json:"expires_at"`
+	GithubTokenExpiresAt   pgtype.Timestamptz `json:"github_token_expires_at"`
+	GithubRefreshToken     string             `json:"github_refresh_token"`
+	GithubRefreshExpiresAt pgtype.Timestamptz `json:"github_refresh_expires_at"`
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
@@ -61,6 +64,9 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		arg.TokenHash,
 		arg.GithubToken,
 		arg.ExpiresAt,
+		arg.GithubTokenExpiresAt,
+		arg.GithubRefreshToken,
+		arg.GithubRefreshExpiresAt,
 	)
 	var i Session
 	err := row.Scan(
@@ -70,6 +76,9 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		&i.GithubToken,
 		&i.CreatedAt,
 		&i.ExpiresAt,
+		&i.GithubTokenExpiresAt,
+		&i.GithubRefreshToken,
+		&i.GithubRefreshExpiresAt,
 	)
 	return i, err
 }
@@ -198,23 +207,26 @@ func (q *Queries) GetRepositoryAccess(ctx context.Context, arg GetRepositoryAcce
 }
 
 const getSessionByTokenHash = `-- name: GetSessionByTokenHash :one
-SELECT session.id, session.account_id, session.token_hash, session.github_token, session.created_at, session.expires_at, account.github_id, account.github_login, account.avatar_url, account.timezone
+SELECT session.id, session.account_id, session.token_hash, session.github_token, session.created_at, session.expires_at, session.github_token_expires_at, session.github_refresh_token, session.github_refresh_expires_at, account.github_id, account.github_login, account.avatar_url, account.timezone
 FROM session
 JOIN account ON account.id = session.account_id
 WHERE session.token_hash = $1 AND session.expires_at > now()
 `
 
 type GetSessionByTokenHashRow struct {
-	ID          pgtype.UUID        `json:"id"`
-	AccountID   pgtype.UUID        `json:"account_id"`
-	TokenHash   string             `json:"token_hash"`
-	GithubToken string             `json:"github_token"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
-	GithubID    int64              `json:"github_id"`
-	GithubLogin string             `json:"github_login"`
-	AvatarUrl   *string            `json:"avatar_url"`
-	Timezone    string             `json:"timezone"`
+	ID                     pgtype.UUID        `json:"id"`
+	AccountID              pgtype.UUID        `json:"account_id"`
+	TokenHash              string             `json:"token_hash"`
+	GithubToken            string             `json:"github_token"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt              pgtype.Timestamptz `json:"expires_at"`
+	GithubTokenExpiresAt   pgtype.Timestamptz `json:"github_token_expires_at"`
+	GithubRefreshToken     string             `json:"github_refresh_token"`
+	GithubRefreshExpiresAt pgtype.Timestamptz `json:"github_refresh_expires_at"`
+	GithubID               int64              `json:"github_id"`
+	GithubLogin            string             `json:"github_login"`
+	AvatarUrl              *string            `json:"avatar_url"`
+	Timezone               string             `json:"timezone"`
 }
 
 // The join is the whole point: one round trip from "cookie value" to
@@ -230,6 +242,9 @@ func (q *Queries) GetSessionByTokenHash(ctx context.Context, tokenHash string) (
 		&i.GithubToken,
 		&i.CreatedAt,
 		&i.ExpiresAt,
+		&i.GithubTokenExpiresAt,
+		&i.GithubRefreshToken,
+		&i.GithubRefreshExpiresAt,
 		&i.GithubID,
 		&i.GithubLogin,
 		&i.AvatarUrl,
@@ -390,6 +405,33 @@ type SetAccountTimezoneParams struct {
 // it gets here; "" is allowed and means "follow the viewer's browser."
 func (q *Queries) SetAccountTimezone(ctx context.Context, arg SetAccountTimezoneParams) error {
 	_, err := q.db.Exec(ctx, setAccountTimezone, arg.ID, arg.Timezone)
+	return err
+}
+
+const updateSessionGithubToken = `-- name: UpdateSessionGithubToken :exec
+UPDATE session
+SET github_token = $2, github_token_expires_at = $3, github_refresh_token = $4, github_refresh_expires_at = $5
+WHERE id = $1
+`
+
+type UpdateSessionGithubTokenParams struct {
+	ID                     pgtype.UUID        `json:"id"`
+	GithubToken            string             `json:"github_token"`
+	GithubTokenExpiresAt   pgtype.Timestamptz `json:"github_token_expires_at"`
+	GithubRefreshToken     string             `json:"github_refresh_token"`
+	GithubRefreshExpiresAt pgtype.Timestamptz `json:"github_refresh_expires_at"`
+}
+
+// Store a freshly-refreshed GitHub access token (and the rotated refresh token
+// + new expiries) on a session, so subsequent requests use the live token.
+func (q *Queries) UpdateSessionGithubToken(ctx context.Context, arg UpdateSessionGithubTokenParams) error {
+	_, err := q.db.Exec(ctx, updateSessionGithubToken,
+		arg.ID,
+		arg.GithubToken,
+		arg.GithubTokenExpiresAt,
+		arg.GithubRefreshToken,
+		arg.GithubRefreshExpiresAt,
+	)
 	return err
 }
 

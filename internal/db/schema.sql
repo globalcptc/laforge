@@ -533,7 +533,10 @@ CREATE TABLE public.session (
     token_hash text NOT NULL,
     github_token text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    expires_at timestamp with time zone NOT NULL
+    expires_at timestamp with time zone NOT NULL,
+    github_token_expires_at timestamp with time zone,
+    github_refresh_token text DEFAULT ''::text NOT NULL,
+    github_refresh_expires_at timestamp with time zone
 );
 --
 -- Name: task; Type: TABLE; Schema: public; Owner: -

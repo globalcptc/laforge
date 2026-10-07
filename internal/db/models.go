@@ -415,12 +415,15 @@ type Script struct {
 }
 
 type Session struct {
-	ID          pgtype.UUID        `json:"id"`
-	AccountID   pgtype.UUID        `json:"account_id"`
-	TokenHash   string             `json:"token_hash"`
-	GithubToken string             `json:"github_token"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	ID                     pgtype.UUID        `json:"id"`
+	AccountID              pgtype.UUID        `json:"account_id"`
+	TokenHash              string             `json:"token_hash"`
+	GithubToken            string             `json:"github_token"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt              pgtype.Timestamptz `json:"expires_at"`
+	GithubTokenExpiresAt   pgtype.Timestamptz `json:"github_token_expires_at"`
+	GithubRefreshToken     string             `json:"github_refresh_token"`
+	GithubRefreshExpiresAt pgtype.Timestamptz `json:"github_refresh_expires_at"`
 }
 
 type ShellSession struct {
