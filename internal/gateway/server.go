@@ -193,7 +193,10 @@ func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtyp
 	}); err != nil {
 		log.Printf("gateway: heartbeat: logging history: %v", err)
 	}
-	body, _ := json.Marshal(agentproto.HeartbeatResponsePayload{NextPollMS: next})
+	// PendingSessions is what actually tells the agent to open its shell half --
+	// without it the agent only polls faster and never learns which session to
+	// join, so every shell times out with "agent never attached".
+	body, _ := json.Marshal(agentproto.HeartbeatResponsePayload{NextPollMS: next, PendingSessions: pending})
 	if err := agentproto.WriteFrame(conn, agentproto.HeartbeatResponse, body); err != nil {
 		log.Printf("gateway: heartbeat: writing response: %v", err)
 	}

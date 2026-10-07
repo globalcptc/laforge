@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal } from 'lucide-react'
 import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
 import type { RenderedStep, StepStatus, ObjectKind, DeployedObject } from '../api/types'
 import { EmptyState } from './EmptyState'
-import { Badge, Button, cn, InspectorPanel, Spinner } from '../ui'
+import { Badge, Button, buttonClass, cn, InspectorPanel, Spinner } from '../ui'
 import { StatusBadge, PowerBadge, GONE_STATES } from './StatusBadge'
 
 type Tab = 'info' | 'events' | 'steps' | 'heartbeats' | 'render'
@@ -38,6 +39,7 @@ function bps(v: number | null): string {
 // "rules checking" signal: an address change mid-competition is
 // actionable, not just an oddity).
 export function ObjectLogPanel({
+  repoId,
   buildId,
   objectId,
   label,
@@ -46,6 +48,7 @@ export function ObjectLogPanel({
   teamNumber,
   onClose,
 }: {
+  repoId: string
   buildId: string
   objectId: string
   label: string
@@ -83,15 +86,30 @@ export function ObjectLogPanel({
       subtitle={kind}
       width={wide ? 'min(80vw, 60rem)' : 'min(92vw, 28rem)'}
       headerAction={
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setWide((v) => !v)}
-          aria-label={wide ? 'Collapse panel' : 'Expand panel'}
-          title={wide ? 'Collapse' : 'Expand'}
-        >
-          {wide ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-        </Button>
+        <div className="flex items-center gap-1.5">
+          {/* A root/admin shell on this host, the natural place to launch it:
+              the panel you open to work on a host. Hosts and containers only,
+              and not once the instance is gone. */}
+          {!isNetwork && (!object || !GONE_STATES.has(object.status)) && (
+            <Link
+              to="/repos/$repoId/builds/$buildId/hosts/$objectId/terminal"
+              params={{ repoId, buildId, objectId }}
+              className={buttonClass({ variant: 'secondary', size: 'sm' })}
+              title="Open an interactive root/admin shell on this host"
+            >
+              <Terminal size={14} /> Open Terminal
+            </Link>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setWide((v) => !v)}
+            aria-label={wide ? 'Collapse panel' : 'Expand panel'}
+            title={wide ? 'Collapse' : 'Expand'}
+          >
+            {wide ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </Button>
+        </div>
       }
     >
       <div className="-mx-4 -mt-3 mb-3 flex flex-wrap gap-1 border-b border-border px-4 pb-2">
