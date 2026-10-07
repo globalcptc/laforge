@@ -113,14 +113,18 @@ pub struct HeartbeatResponsePayload {
     pub pending_sessions: Vec<String>,
 }
 
-/// The first frame on a shell-relay connection the agent opens: which session
-/// and that this is the agent (PTY-holding) half. Mirrors
-/// internal/agentproto.ShellAttachPayload (the agent only ever sends the agent
-/// role, so object_id/cols/rows -- client-only fields -- are omitted).
+/// The first frame on a shell-relay connection the agent opens: which session,
+/// that this is the agent (PTY-holding) half, and which direction THIS
+/// connection carries. Mirrors internal/agentproto.ShellAttachPayload (the
+/// agent only ever sends the agent role, so object_id/cols/rows -- client-only
+/// fields -- are omitted). The agent opens one connection per direction; see
+/// SHELL_DIR_OUT / SHELL_DIR_IN.
 #[derive(serde::Serialize, Debug)]
 pub struct ShellAttachPayload {
     pub session_id: String,
     pub role: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub dir: String,
 }
 
 /// A terminal-size change the agent receives from the client half.
@@ -140,6 +144,14 @@ pub struct ShellClosePayload {
 
 /// The agent role string for ShellAttachPayload.role.
 pub const SHELL_ROLE_AGENT: &str = "agent";
+
+/// ShellAttachPayload.dir values for the agent's two per-session connections:
+/// Out carries PTY output (agent writes), In carries client input (agent
+/// reads). Two strictly one-directional connections avoid read/write interleave
+/// on one rustls state machine -- which behaved differently on Windows. Mirror
+/// of internal/agentproto.ShellDir{Out,In}.
+pub const SHELL_DIR_OUT: &str = "out";
+pub const SHELL_DIR_IN: &str = "in";
 
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct Task {

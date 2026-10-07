@@ -188,6 +188,22 @@ const (
 	ShellRoleClient = "client"
 )
 
+// ShellDir is set on the AGENT half only, and splits it into two strictly
+// one-directional connections. rustls (the agent's TLS) is a single state
+// machine that cannot be read and written from two threads at once, and a
+// single-connection read/write interleave via a socket read timeout behaved
+// differently on Windows (keystrokes never arrived). So the agent opens TWO
+// mTLS connections per session -- one it only writes PTY output on (Out) and
+// one it only reads client input on (In) -- each owned by one thread doing
+// pure blocking reads XOR writes, identical on Linux and Windows. The gateway
+// pairs both against the single (duplex) client connection. The client half
+// leaves ShellDir empty; Go's crypto/tls allows one concurrent reader and one
+// writer, so the client side stays a single connection.
+const (
+	ShellDirOut = "out" // agent -> client: PTY stdout/stderr
+	ShellDirIn  = "in"  // client -> agent: stdin / resize / close
+)
+
 // ShellAttachPayload is the first frame on a shell-relay connection: which
 // session, which half, and the client's initial terminal size (so the PTY is
 // opened at the right dimensions). Cols/Rows are only meaningful from the
@@ -195,6 +211,10 @@ const (
 type ShellAttachPayload struct {
 	SessionID string `json:"session_id"`
 	Role      string `json:"role"` // ShellRoleAgent | ShellRoleClient
+	// Dir is set only on the agent half: ShellDirOut or ShellDirIn (see
+	// ShellDir). The agent opens one connection per direction; the gateway pairs
+	// both with the single client connection. Empty on the client half.
+	Dir string `json:"dir,omitempty"`
 	// ObjectID is set only by the client (api) half: the deployed_object whose
 	// agent is allowed to attach to this session. The gateway records it from
 	// the trusted client attach and then admits the agent half only if the
