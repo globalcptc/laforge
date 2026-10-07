@@ -174,6 +174,11 @@ func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtyp
 	pending := s.pendingSessionsForObject(objID)
 	if len(pending) > 0 {
 		next = 250
+		// Diagnostic: proves this (fixed) gateway is telling the agent to open
+		// the shell. If you see this but the agent never logs "opening shell",
+		// the agent on that host is stale (predates the shell feature) and the
+		// host needs redeploying.
+		log.Printf("gateway: heartbeat %s: signaling agent of pending shell session(s) %v", uuidString(objID), pending)
 	}
 	// The append-only log, alongside (never instead of) the upsert above
 	// -- "log as much data as we can to help with live troubleshooting

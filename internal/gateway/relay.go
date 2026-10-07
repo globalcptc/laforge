@@ -154,6 +154,7 @@ func (s *Server) handleShellAgent(conn net.Conn, objID pgtype.UUID, payload []by
 	rs.agent = conn
 	s.relayMu.Unlock()
 
+	log.Printf("gateway: shell %s: agent %s attached, relaying", att.SessionID, uuidString(objID))
 	close(rs.ready)
 	<-rs.done // hold the connection open until the pipe tears down
 }

@@ -46,6 +46,10 @@ pub fn maybe_spawn(pending: &[String], handled: &Arc<Mutex<HashSet<String>>>, ad
             set.insert(id.clone());
         }
         let (id, addr, host_only, tls_config) = (id.clone(), addr.to_string(), host_only.to_string(), tls_config.clone());
+        // Diagnostic: if the gateway logs "signaling agent" but you never see
+        // this line on the host, this agent is a stale build without shell
+        // support -- redeploy the host.
+        eprintln!("laforge-agent: gateway requested shell session {id}; opening a connection");
         std::thread::spawn(move || {
             if let Err(e) = run_session(&id, &addr, &host_only, tls_config) {
                 eprintln!("laforge-agent: shell session {id} ended: {e}");
