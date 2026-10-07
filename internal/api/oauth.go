@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -203,10 +202,8 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 // handleCallback, not after: an unauthorized identity gets no account
 // row and no session, not a session immediately torn back down.
 func (s *Server) signInAuthorized(ctx context.Context, ghToken string, ghUser *ghclient.User) (bool, error) {
-	for _, login := range s.AdminLogins {
-		if strings.EqualFold(login, ghUser.Login) {
-			return true, nil
-		}
+	if s.isAdminLogin(ghUser.Login) {
+		return true, nil
 	}
 
 	// Repositories an admin has explicitly shut this person out of don't

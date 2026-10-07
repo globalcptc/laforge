@@ -52,9 +52,10 @@ export function BuilderImageConsole({ name, onClose }: { name: string; onClose: 
       </div>
 
       <p className="mb-2 text-xs text-fg-muted">
-        Builds the docker-ready base image on this cluster — imports an Ubuntu container base, installs Docker, and
-        publishes it as <code className="rounded bg-surface-sunken px-1">laforge-docker-base</code>. LaForge containers
-        boot from it.
+        Builds the docker-ready base image on this builder — starts from an Ubuntu container base, installs Docker Engine
+        and the compose plugin from Docker's own repository, and publishes it as{' '}
+        <code className="rounded bg-surface-sunken px-1">laforge-docker-base</code> (on every host of an Incus pool).
+        Every container on MicroCloud boots from it; on Incus, only containers that run a Docker Compose project do.
       </p>
 
       {log?.error && (

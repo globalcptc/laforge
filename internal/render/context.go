@@ -51,6 +51,7 @@ type Context struct {
 	ObjectKind  string // "host" or "container"
 	OS          string // set when ObjectKind == "host"
 	Image       string // set when ObjectKind == "container"
+	Compose     string // a compose container's compose file, repo-relative; "" otherwise
 	Size        string
 	Address     string
 	NetworkName string
@@ -144,6 +145,7 @@ func Resolve(c *loader.Content, envName, as string, team int) (*Context, error) 
 	} else if ct := findContainer(c, objName); ct != nil {
 		ctx.ObjectKind = "container"
 		ctx.Image = ct.Image
+		ctx.Compose = ct.ComposeFile
 		ctx.Size = ct.Size
 		ctx.Steps = ct.Steps
 		ctx.Schedule = ct.Schedule
@@ -153,7 +155,10 @@ func Resolve(c *loader.Content, envName, as string, team int) (*Context, error) 
 		return nil, fmt.Errorf("environment %q places %q, which is not a defined host or container", envName, objName)
 	}
 
-	ctx.Peers = findPeers(c, env, netName, as)
+	ctx.Peers, err = findPeers(c, env, netName, network.CIDR, as)
+	if err != nil {
+		return nil, err
+	}
 	ctx.Vars = mergeVars(env.Vars, network.Vars, objVars)
 	ctx.People = peopleSummaries(c)
 	ctx.ObjectPeople = resolveObjectPeople(c, objPeople)
@@ -231,7 +236,7 @@ func findCopy(env *loader.Environment, as string) (netName, objName string, copy
 	return "", "", loader.Copy{}, false
 }
 
-func findPeers(c *loader.Content, env *loader.Environment, netName, excludeAs string) []NetworkPeer {
+func findPeers(c *loader.Content, env *loader.Environment, netName, cidr, excludeAs string) ([]NetworkPeer, error) {
 	var peers []NetworkPeer
 	objs := env.Networks[netName]
 	var names []string
@@ -248,10 +253,14 @@ func findPeers(c *loader.Content, env *loader.Environment, netName, excludeAs st
 			if cp.As == excludeAs {
 				continue
 			}
-			peers = append(peers, NetworkPeer{As: cp.As, Kind: kind})
+			addr, err := Address(cidr, cp.LastOctet)
+			if err != nil {
+				return nil, fmt.Errorf("computing address for peer %q: %w", cp.As, err)
+			}
+			peers = append(peers, NetworkPeer{As: cp.As, Kind: kind, Address: addr})
 		}
 	}
-	return peers
+	return peers, nil
 }
 
 // mergeVars implements "environment < network < host/container" --

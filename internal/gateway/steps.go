@@ -17,6 +17,28 @@ import (
 	"github.com/globalcptc/laforge/internal/render"
 )
 
+// RegistryAuth is a stored login for one image registry.
+type RegistryAuth struct {
+	Username string
+	Secret   string
+}
+
+// Option adjusts how steps expand. The zero set is right for anything that
+// only needs the shape of the commands (a preview, a check).
+type Option func(*expandOptions)
+
+type expandOptions struct {
+	registryAuth func(host string) (RegistryAuth, bool)
+}
+
+// WithRegistryAuth supplies stored registry credentials, looked up by host
+// ("docker.io" for Docker Hub). A compose container uses them to `docker login`
+// before pulling; without this option it pulls unauthenticated. Only the real
+// materializer passes it, so credentials never reach a preview.
+func WithRegistryAuth(lookup func(host string) (RegistryAuth, bool)) Option {
+	return func(o *expandOptions) { o.registryAuth = lookup }
+}
+
 // PlannedCommand is one command ExpandSteps produced, ready to become an
 // agent_task row (command + JSON payload) at the next sequential
 // step_index. Group/GroupLabel record which authored step it came from, so
@@ -83,7 +105,7 @@ func scriptFile(i int, name, lang string) (path, mode string) {
 // appears here -- a schedule entry's own translation goes through
 // ExpandOneStep directly (internal/orchestrator's schedule materializer),
 // since it dispatches independently, not as part of this ordered list.
-func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, team int) ([]PlannedCommand, []string, error) {
+func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, team int, opts ...Option) ([]PlannedCommand, []string, error) {
 	ctx, err := render.Resolve(c, envName, asName, team)
 	if err != nil {
 		return nil, nil, fmt.Errorf("resolving %s: %w", asName, err)
@@ -91,8 +113,26 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 
 	var out []PlannedCommand
 	var notes []string
+	// A compose container's project comes up first, as its own group, so the
+	// container's authored steps (and their validators) run against a live stack.
+	first := 0
+	if ctx.Compose != "" {
+		var o expandOptions
+		for _, opt := range opts {
+			opt(&o)
+		}
+		cmds, err := expandCompose(repoRoot, ctx.Compose, ctx.ObjectName, o)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%s: %w", asName, err)
+		}
+		for k := range cmds {
+			cmds[k].GroupLabel = ComposeGroupLabel
+		}
+		out = append(out, cmds...)
+		first = 1
+	}
 	for i, step := range ctx.Steps {
-		cmds, ns, err := ExpandOneStep(repoRoot, c, ctx, i, step)
+		cmds, ns, err := ExpandOneStep(repoRoot, c, ctx, i, step, opts...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -100,7 +140,7 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		// group, so its sub-commands stay visually together under one heading.
 		label := StepGroupLabel(step)
 		for k := range cmds {
-			cmds[k].Group = i
+			cmds[k].Group = first + i
 			cmds[k].GroupLabel = label
 		}
 		out = append(out, cmds...)
@@ -108,6 +148,9 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 	}
 	return out, notes, nil
 }
+
+// ComposeGroupLabel heads the commands that start a compose container's project.
+const ComposeGroupLabel = "Start Compose project"
 
 // StepGroupLabel is the human heading for one authored step -- the name a UI
 // shows above the sub-commands it expands into. Scripts carry their own name;
@@ -173,7 +216,11 @@ func withArg(base string, m map[string]interface{}, key string) string {
 // per-action payload shapes -- rather than a second, partial
 // reimplementation that would silently support fewer action kinds than
 // steps: does.
-func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i int, step loader.Step) ([]PlannedCommand, []string, error) {
+func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i int, step loader.Step, opts ...Option) ([]PlannedCommand, []string, error) {
+	var o expandOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
 	var out []PlannedCommand
 	var notes []string
 	// ignoreErrors is set by an action whose failure the author chose to

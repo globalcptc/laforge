@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { GitBranchPlus, House, ServerCog } from 'lucide-react'
+import { GitBranchPlus, House, ServerCog, ShieldCheck } from 'lucide-react'
 import { AppShell, BrandMark, cn, type NavSection } from '../ui'
 import { RepoNav } from './RepoNav'
 import { UserMenu } from './UserMenu'
@@ -17,6 +17,7 @@ const sections: NavSection[] = [
     items: [
       { href: '/admin/installations', label: 'GitHub Connections', icon: <GitBranchPlus className="size-4" /> },
       { href: '/admin/infrastructure', label: 'Infrastructure', icon: <ServerCog className="size-4" /> },
+      { href: '/admin/admins', label: 'Admins', icon: <ShieldCheck className="size-4" /> },
     ],
   },
 ]

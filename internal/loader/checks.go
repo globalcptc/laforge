@@ -2,6 +2,8 @@ package loader
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/globalcptc/laforge/internal/schedule"
@@ -27,6 +29,7 @@ func (c *Content) crossCheck() {
 	c.checkPeopleReferences()
 	c.checkNetworkVisibility()
 	c.checkScriptReferences()
+	c.checkComposeContainers()
 	c.checkScheduleExpressions()
 	c.checkValidatorPlatforms()
 	c.checkExtends()
@@ -555,8 +558,8 @@ func (c *Content) checkResolvedRequired() {
 		if ct.Extends == "" {
 			continue
 		}
-		if ct.Image == "" {
-			c.addf(ct.SourceFile, 0, "container %q extends %q but still has no image (its extends chain provides none)", ct.Name, ct.Extends)
+		if ct.Image == "" && ct.Compose == "" {
+			c.addf(ct.SourceFile, 0, "container %q extends %q but still has no image or compose (its extends chain provides none)", ct.Name, ct.Extends)
 		}
 		if ct.Size == "" {
 			c.addf(ct.SourceFile, 0, "container %q extends %q but still has no size (its extends chain provides none)", ct.Name, ct.Extends)
@@ -604,4 +607,43 @@ func (c *Content) Summary() string {
 		"%d environment(s), %d network(s), %d host(s), %d container(s), %d script(s), %d people source(s), %d error(s)",
 		len(c.Environments), len(c.Networks), len(c.Hosts), len(c.Containers), len(c.Scripts), len(c.People), len(c.Errors),
 	)
+}
+
+// checkComposeContainers covers what the schema can't say about a container
+// that runs a Compose project: the path stays inside the repo, the fields that
+// only mean something for a single image aren't set, and the project's own
+// files aren't being read as LaForge content.
+func (c *Content) checkComposeContainers() {
+	for _, ct := range c.Containers {
+		if ct.Compose == "" {
+			if ct.Disk != 0 {
+				c.addf(ct.SourceFile, 0, "container %q sets disk, which only applies with compose", ct.Name)
+			}
+			continue
+		}
+		if ct.Image != "" {
+			c.addf(ct.SourceFile, 0, "container %q sets both image and compose; it runs one or the other", ct.Name)
+		}
+		if len(ct.Env) > 0 || len(ct.Command) > 0 {
+			c.addf(ct.SourceFile, 0, "container %q sets env/command, which apply to a single image; with compose, put them in the compose file", ct.Name)
+		}
+		if path.IsAbs(ct.Compose) || ct.ComposeFile == ".." || strings.HasPrefix(ct.ComposeFile, "../") {
+			c.addf(ct.SourceFile, 0, "container %q: compose %q must be a path inside the content repo, relative to this file", ct.Name, ct.Compose)
+			continue
+		}
+		// The compose project's YAML is Compose's, not LaForge's. If any of it
+		// was read as content, say how to fix it rather than leaving the author
+		// with a bare "no type header" on a file that is perfectly valid.
+		dir := path.Dir(ct.ComposeFile)
+		if dir == "." || dir == path.Dir(filepath.ToSlash(ct.SourceFile)) {
+			c.addf(ct.SourceFile, 0, "container %q: compose file %q must be in its own directory (the whole directory is shipped with it), not alongside LaForge content", ct.Name, ct.Compose)
+			continue
+		}
+		for _, e := range c.Errors {
+			if strings.HasPrefix(filepath.ToSlash(e.File), dir+"/") {
+				c.addf(ct.SourceFile, 0, "container %q: %s/ is a Compose project, not LaForge content -- add \"%s/\" to %s at the repo root", ct.Name, dir, dir, IgnoreFile)
+				break
+			}
+		}
+	}
 }

@@ -266,6 +266,27 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, spec.CloudInitUserData, spec.CloudInitViaISO)
 }
 
+// deployComposeHost deploys the machine a compose container's project runs on:
+// a nesting system container booted from this builder's docker base image
+// (Docker and the compose plugin already installed), with the agent delivered
+// by cloud-init like a host's. A builder image named builder.ComposeHostImage
+// overrides that -- an operator's own image, VM or container, deployed exactly
+// as a host would be. The base is named by alias, not
+// fingerprint: each host in a pool built its own copy.
+func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerSpec) (string, error) {
+	if _, ok := b.Config.Images[builder.ComposeHostImage]; ok {
+		return b.DeployHost(ctx, spec.ComposeHostSpec())
+	}
+	if b.Config.DockerBaseFingerprint == "" {
+		return "", fmt.Errorf("this builder has no docker base image yet -- build it first (Infrastructure → Base image), or add an image named %q", builder.ComposeHostImage)
+	}
+	size, ok := b.Config.Sizes[spec.Size]
+	if !ok {
+		return "", fmt.Errorf("no size configured for %q", spec.Size)
+	}
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Alias: builder.DockerBaseAlias}, size, spec.DiskGB, true, spec.CloudInitUserData, false)
+}
+
 // laforgeAgentPath is where the LaForge agent is planted inside a native OCI
 // container and made its entrypoint (see installAgentSupervisor).
 const laforgeAgentPath = "/usr/local/bin/laforge-agent"
@@ -284,6 +305,11 @@ const laforgeAgentPath = "/usr/local/bin/laforge-agent"
 // container runs its `steps:`/validators exactly like a host (see the Rust
 // agent's supervisor mode). Verified against a real Incus 7.5.1 daemon.
 func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpec) (string, error) {
+	// A compose container is a Docker-capable machine the agent starts the
+	// project on -- deployed, and later destroyed, like any other instance.
+	if spec.ComposeHost {
+		return b.deployComposeHost(ctx, spec)
+	}
 	name := instanceName(spec.DisplayName, spec.ExternalName)
 	size, ok := b.Config.Sizes[spec.Size]
 	if !ok {

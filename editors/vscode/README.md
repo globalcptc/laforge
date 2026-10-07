@@ -42,7 +42,10 @@ If `laforge-lsp` isn't on `PATH`, set `laforge.serverPath` in VS Code settings t
   everything real is server-side (`internal/lsp`). None of these need a host picked first:
   diagnostics reuse the same validation `laforge check` runs (including unknown script/host/
   network references), schema completion/hover come from the JSON Schema alone, and completion/
-  hover inside a script offer the union of every host that script could run on.
+  hover inside a script offer the union of every host that script could run on. Because the
+  validation is the loader's, a content repo's `.laforgeignore` applies here too: YAML under an
+  ignored path (a container's Docker Compose project, another tool's configuration) gets no
+  LaForge diagnostics.
 - **LaForge: example render** (status bar item, optional): populates its choices from the real,
   current workspace topology (`laforge/pickerOptions`), not a hardcoded list. Always previews
   team 1 -- every team is identical by design, so there's no real choice to make there.

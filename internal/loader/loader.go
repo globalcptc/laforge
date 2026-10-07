@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -65,14 +66,22 @@ func Load(root string) (*Content, error) {
 	}
 
 	c := &Content{}
+	ignore, ignoreErrs := loadIgnore(root)
+	c.Errors = append(c.Errors, ignoreErrs...)
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
+		rel, _ := filepath.Rel(root, path)
+		if rel != "." && ignore.match(filepath.ToSlash(rel), d.IsDir()) {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
 		if d.IsDir() {
 			return nil
 		}
-		rel, _ := filepath.Rel(root, path)
 		switch {
 		case strings.HasSuffix(path, ".yaml"), strings.HasSuffix(path, ".yml"):
 			c.loadYAMLFile(compiled, rel, path)
@@ -218,6 +227,9 @@ func (c *Content) loadDocument(compiled *schema.Compiled, rel string, root *yaml
 		}
 		root.Decode(&wrapper)
 		wrapper.Container.SourceFile = rel
+		if wrapper.Container.Compose != "" {
+			wrapper.Container.ComposeFile = path.Join(path.Dir(filepath.ToSlash(rel)), filepath.ToSlash(wrapper.Container.Compose))
+		}
 		c.Containers = append(c.Containers, wrapper.Container)
 	case schema.KindScript:
 		var wrapper struct {

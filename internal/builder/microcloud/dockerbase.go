@@ -7,6 +7,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/globalcptc/laforge/internal/builder"
 )
 
 // This file is the engine behind the per-builder "docker base image" build
@@ -26,7 +28,7 @@ import (
 // (see TestDockerInLXDSpike and TestBuildDockerBaseLive).
 
 // DockerBaseAlias is the published image the container runtime boots from.
-const DockerBaseAlias = "laforge-docker-base"
+const DockerBaseAlias = builder.DockerBaseAlias
 
 // tempBuildInstance is the throwaway container the base is built in. Fixed
 // name so a re-run adopts/cleans a leftover from an interrupted build.
@@ -80,28 +82,18 @@ func BuildDockerBase(ctx context.Context, c *Client, src BaseImageSource, log fu
 		log("Build container started (no IPv4 yet; continuing)")
 	}
 
-	log("Installing Docker (apt-get install docker.io) …")
-	rc, out, err := c.execRecord(ctx, tempBuildInstance, "export DEBIAN_FRONTEND=noninteractive; apt-get update && apt-get install -y docker.io")
+	log("Installing Docker and the compose plugin …")
+	_, out, err := c.execRecord(ctx, tempBuildInstance, builder.DockerBaseInstallScript)
 	logLines(log, out)
 	if err != nil {
 		return "", fmt.Errorf("installing docker: %w", err)
 	}
-	if rc != 0 {
-		return "", fmt.Errorf("docker install exited %d", rc)
-	}
-
-	log("Enabling and verifying dockerd under nesting …")
-	rc, out, err = c.execRecord(ctx, tempBuildInstance, "systemctl enable --now docker; sleep 3; docker info >/dev/null 2>&1 && echo DOCKER_OK || echo DOCKER_BAD")
-	logLines(log, out)
-	if err != nil {
-		return "", fmt.Errorf("verifying docker: %w", err)
-	}
 	if !strings.Contains(out, "DOCKER_OK") {
-		return "", fmt.Errorf("dockerd did not come up under nesting")
+		return "", fmt.Errorf("docker and the compose plugin did not come up under nesting")
 	}
 
-	// Trim apt caches so the published image stays thin.
-	_, _, _ = c.execRecord(ctx, tempBuildInstance, "apt-get clean; rm -rf /var/lib/apt/lists/*")
+	// Trim what shouldn't ship in the image.
+	_, _, _ = c.execRecord(ctx, tempBuildInstance, builder.DockerBaseCleanupScript)
 
 	log("Stopping build container to publish …")
 	if _, err := c.put(ctx, "/1.0/instances/"+tempBuildInstance+"/state", map[string]any{"action": "stop", "timeout": 30}); err != nil {

@@ -507,7 +507,17 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			CloudInitUserData: del.UserData, CloudInitViaISO: del.Platform == agentdelivery.Windows,
 			AgentBinary: del.Binary, AgentDownloadURL: del.DownloadURL,
 		}
-		if cred := r.registryCredFor(ctx, q, ct.Image); cred != nil {
+		if ct.Compose != "" {
+			// A Compose project: the builder provides the machine, and the
+			// agent on it pulls and starts the project (registry logins
+			// included) as the container's first commands.
+			cspec.ComposeHost = true
+			cspec.DiskGB = ct.Disk
+			if cspec.DiskGB == 0 {
+				cspec.DiskGB = builder.DefaultComposeDiskGB
+			}
+			cspec.AgentBinary, cspec.AgentDownloadURL = nil, ""
+		} else if cred := r.registryCredFor(ctx, q, ct.Image); cred != nil {
 			cspec.RegistryHost, cspec.RegistryUser, cspec.RegistrySecret = cred.RegistryHost, cred.Username, cred.Secret
 		}
 		externalRef, err = b.DeployContainer(ctx, cspec)

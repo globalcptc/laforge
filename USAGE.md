@@ -11,6 +11,7 @@ connecting it to GitHub, and installing the VS Code authoring extension. For wha
 - [Addressing (the URLs, explained)](#addressing-the-urls-explained)
 - [Certificates](#certificates)
 - [The `laforge` CLI](#the-laforge-cli)
+- [Compose containers (builder setup)](#compose-containers-builder-setup)
 - [Connecting GitHub (the GitHub App)](#connecting-github-the-github-app)
 - [The VS Code extension](#the-vs-code-extension)
 - [Running services directly (without Compose)](#running-services-directly)
@@ -74,9 +75,10 @@ and addressing. The file is fully commented; the important groups:
   `GITHUB_APP_SLUG`. See [Connecting GitHub](#connecting-github-the-github-app). A
   deployment can run with no App configured at all, falling back to
   `GITHUB_SERVICE_TOKEN`.
-- **Admins** — `LAFORGE_ADMIN_LOGINS`: comma-separated GitHub logins with instance-wide
-  admin (needed to approve a repository into LaForge). Empty means nobody can approve
-  anything yet — a safe default.
+- **Admins** — `LAFORGE_ADMIN_LOGINS`: comma-separated GitHub logins that become the
+  first instance admins (needed to approve a repository into LaForge). It is only read
+  the first time the API starts with no admins recorded; after that, add and remove
+  admins in the UI under **Admin → Admins**, and this value is ignored.
 - **Addressing** — the URLs and gateway address the deployment answers on. This is the
   easiest thing to get wrong, so it has its own section: **[Addressing](#addressing-the-urls-explained)**.
 - **Certificates** — the mTLS cert paths (`GATEWAY_CA_CERT`, `GATEWAY_SERVER_CERT`,
@@ -276,6 +278,48 @@ laforge check ./path/to/your-content-repo
 cross-file checks, and a full render of every script for every host in every team — and
 touches no hoster. A clean run means the content will build.
 
+It reads every `.yaml`/`.yml` file in the repository except the paths listed in a
+`.laforgeignore` file at its root (a subset of `.gitignore` syntax — see
+[CONFIGURATION.md](CONFIGURATION.md#how-content-is-organized)). A container that runs a
+Docker Compose project has its project loaded too: a missing compose file, a service with
+no `image:`, or a bind mount outside the project's directory is an error here, not at
+deploy time.
+
+---
+
+## Compose containers (builder setup)
+
+A `container:` can run a Docker Compose project instead of one image (see
+[Compose projects](CONFIGURATION.md#compose-projects)). Content authors need nothing from
+you beyond this one-time builder setup:
+
+- **Build the builder's docker base image** (Admin → Infrastructure → the builder's
+  **Base image** → Rebuild). LaForge starts an Ubuntu container on the hoster, installs
+  Docker Engine and the compose plugin from Docker's own apt repository
+  (`download.docker.com`, not Ubuntu's older `docker.io` package), and publishes it as
+  `laforge-docker-base` — on every host of an Incus pool, since they share no image
+  store. Each compose container then boots from it as a nesting system container, with
+  Docker already installed. While it builds, the hoster needs to reach the image server,
+  Ubuntu's archive, `download.docker.com`, and Docker Hub (the build runs `hello-world`
+  to prove Docker works under nesting); nothing is installed at deploy time. A MicroCloud builder
+  already has this image (every container there boots from it) — **rebuild it once** after
+  upgrading, since older builds used Ubuntu's `docker.io` and have no compose plugin. A build that has a compose
+  container fails validation up front if the builder's image hasn't been built.
+- **Or bring your own image.** A builder image named `compose-host` takes precedence:
+  the compose container's machine is deployed from it exactly like a host (VM or
+  container, whatever the image is). It needs cloud-init; if it lacks Docker or the
+  compose plugin they are installed on first boot, which needs internet access from the
+  team network.
+- **Store registry credentials** (Admin → Infrastructure → Docker Registry Credentials)
+  for any private registry the projects pull from. The machine logs in before pulling.
+  Images are pulled, never built.
+- **Supported builders:** Incus and MicroCloud. AWS and OpenStack reject a compose
+  container at deploy time.
+
+A project's files — its `.env`, any certificates — live in the content repo and are
+copied to the machine over the agent's mTLS channel; they are also held in the LaForge
+database as part of the queued command. Treat the content repo's read access accordingly.
+
 ---
 
 ## Connecting GitHub (the GitHub App)
@@ -344,7 +388,7 @@ with `repo` scope).
 
 From the App's page (`https://github.com/apps/<your-app-slug>`), click **Install**, choose
 your org, and select the repositories to install it on. Then sign in to the LaForge UI as
-a `LAFORGE_ADMIN_LOGINS` account, open **Installations**, and **Approve** each repository
+an instance admin, open **Installations**, and **Approve** each repository
 you want to build from. Installing makes a repo reachable; approving is what makes LaForge
 track it.
 
@@ -403,7 +447,8 @@ code --install-extension laforge-*.vsix
 ```
 
 Reload VS Code. Open any content repository's `.yaml` files and you'll get completion,
-hover docs, and diagnostics. If the extension can't find `laforge-lsp`, it offers to run
+hover docs, and diagnostics. Paths listed in the repository's `.laforgeignore` (a Compose
+project's directory, another tool's YAML) are left alone. If the extension can't find `laforge-lsp`, it offers to run
 `go install ./cmd/laforge-lsp` for you and tells you to reload.
 
 ---

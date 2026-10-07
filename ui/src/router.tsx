@@ -18,6 +18,7 @@ import { RepoPeople } from './routes/RepoPeople'
 import { RepoAccess } from './routes/RepoAccess'
 import { InstalledRepositories } from './routes/InstalledRepositories'
 import { BuilderConfigs } from './routes/BuilderConfigs'
+import { InstanceAdmins } from './routes/InstanceAdmins'
 import { BuilderWizard } from './routes/BuilderWizard'
 import { useMe } from './api/hooks'
 import { Spinner } from './ui'
@@ -128,6 +129,16 @@ const installedRepositoriesRoute = createRoute({
   ),
 })
 
+const instanceAdminsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/admins',
+  component: () => (
+    <RequireAuth>
+      <InstanceAdmins />
+    </RequireAuth>
+  ),
+})
+
 const builderConfigsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/infrastructure',
@@ -175,6 +186,7 @@ const routeTree = rootRoute.addChildren([
   repoRoute,
   repoPeopleRoute,
   installedRepositoriesRoute,
+  instanceAdminsRoute,
   builderConfigsRoute,
   newBuilderRoute,
   editBuilderRoute,

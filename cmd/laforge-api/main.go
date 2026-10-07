@@ -97,12 +97,12 @@ func main() {
 		appPrivateKey = key
 	}
 
-	// LAFORGE_ADMIN_LOGINS is instance-wide admin, for the one action
-	// that has no repository yet to check per-repository access
-	// against: approving an installed repository into LaForge's own
-	// tracking (internal/api/installations.go). Comma-separated GitHub
-	// logins; empty means nobody can approve anything yet, which is a
-	// safe, honest default over silently allowing everyone.
+	// LAFORGE_ADMIN_LOGINS only bootstraps the instance admin list: the
+	// comma-separated GitHub logins are written to the database the first
+	// time the API starts with no admins recorded, and ignored on every
+	// start after that -- the list is managed in the UI (Admin -> Admins)
+	// from then on. Empty on a fresh database means nobody is an admin
+	// yet, which is a safe, honest default over silently allowing everyone.
 	var adminLogins []string
 	for _, login := range strings.Split(os.Getenv("LAFORGE_ADMIN_LOGINS"), ",") {
 		if login = strings.TrimSpace(login); login != "" {
@@ -137,7 +137,9 @@ func main() {
 	server.AppID = appID
 	server.AppPrivateKey = appPrivateKey
 	server.AppSlug = appSlug
-	server.AdminLogins = adminLogins
+	if err := server.SeedInstanceAdmins(ctx, adminLogins); err != nil {
+		log.Fatalf("loading instance admins: %v", err)
+	}
 	// The agent mTLS CA and gateway server cert, read only to report expiry via
 	// GET /cert-status (the same files the gateway/runner use; mounted read-only
 	// into this service). Optional -- unset means the endpoint reports them as

@@ -72,7 +72,15 @@ func materializeStepsIfReady(ctx context.Context, q *db.Queries, repoRoot string
 // commands. New rows start at NextStepIndexForHost so they never collide with
 // an ad-hoc/scheduled command that happened to land first.
 func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, buildID pgtype.UUID, obj db.DeployedObject, teamNum int, asName string) error {
-	authored, notes, err := gateway.ExpandSteps(repoRoot, c, envName, asName, teamNum)
+	// Stored registry credentials, for a `compose:` step's `docker login`.
+	registryAuth := gateway.WithRegistryAuth(func(host string) (gateway.RegistryAuth, bool) {
+		cred, err := q.GetRegistryCredentialByHost(ctx, host)
+		if err != nil {
+			return gateway.RegistryAuth{}, false
+		}
+		return gateway.RegistryAuth{Username: cred.Username, Secret: cred.Secret}, true
+	})
+	authored, notes, err := gateway.ExpandSteps(repoRoot, c, envName, asName, teamNum, registryAuth)
 	if err != nil {
 		return fmt.Errorf("expanding steps: %w", err)
 	}

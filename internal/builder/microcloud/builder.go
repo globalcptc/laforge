@@ -306,6 +306,11 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 // steps from inside the app on MicroCloud exactly as it does on a native-OCI
 // builder -- the Docker runtime never leaks into content.
 func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpec) (string, error) {
+	// A compose container is a Docker-capable machine the agent starts the
+	// project on -- deployed, and later destroyed, like any other instance.
+	if spec.ComposeHost {
+		return b.deployComposeHost(ctx, spec)
+	}
 	if b.Config.DockerBaseFingerprint == "" {
 		return "", fmt.Errorf("this builder has no docker base image yet -- build it first (Infrastructure → Base image)")
 	}
@@ -324,6 +329,26 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 		return name, err
 	}
 	return name, nil
+}
+
+// deployComposeHost deploys the machine a compose container's project runs on:
+// a nesting system container booted from this builder's docker base image
+// (Docker and the compose plugin already installed), with the agent delivered
+// by cloud-init like a host's. A builder image named builder.ComposeHostImage
+// overrides that -- an operator's own image, VM or container, deployed exactly
+// as a host would be.
+func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerSpec) (string, error) {
+	if _, ok := b.Config.Images[builder.ComposeHostImage]; ok {
+		return b.DeployHost(ctx, spec.ComposeHostSpec())
+	}
+	if b.Config.DockerBaseFingerprint == "" {
+		return "", fmt.Errorf("this builder has no docker base image yet -- build it first (Infrastructure → Base image), or add an image named %q", builder.ComposeHostImage)
+	}
+	size, ok := b.Config.Sizes[spec.Size]
+	if !ok {
+		return "", fmt.Errorf("no size configured for %q", spec.Size)
+	}
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Fingerprint: b.Config.DockerBaseFingerprint}, size, spec.DiskGB, true, spec.CloudInitUserData, false)
 }
 
 // teamConfigKey is the Incus instance config key OpenAccess/CloseAccess

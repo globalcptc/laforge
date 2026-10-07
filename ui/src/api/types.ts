@@ -546,6 +546,15 @@ export interface IncusHostConfig {
 // "incus" is a POOL of independent, non-clustered hosts (incus_hosts,
 // one entry per host, team-assigned round-robin -- see
 // internal/builder/incuspool's own doc comment).
+export interface InstanceAdmin {
+  github_login: string
+  /** Who added them; null when seeded from LAFORGE_ADMIN_LOGINS on first startup. */
+  added_by: string | null
+  created_at: string
+  /** Only known once they have signed in. */
+  avatar_url: string | null
+}
+
 export interface RegistryCredential {
   id: string
   registry_host: string

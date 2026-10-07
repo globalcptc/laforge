@@ -123,6 +123,20 @@ func TestResolveComputesAddressAndPeers(t *testing.T) {
 		if p.As == "db01" {
 			t.Error("a copy should not appear in its own peer list")
 		}
+		if !strings.HasPrefix(p.Address, "10.0.1.") || p.Address == ctx.Address {
+			t.Errorf("peer %s: address = %q, want its own address on prod (10.0.1.0/24)", p.As, p.Address)
+		}
+	}
+
+	// The same addresses are what a template's peer loop sees.
+	out, err := render.RenderString("t", `{{ range .network.hosts }}{{ .as }}={{ .address }} {{ end }}`, ctx, c)
+	if err != nil {
+		t.Fatalf("RenderString: %v", err)
+	}
+	for _, p := range ctx.Peers {
+		if want := p.As + "=" + p.Address + " "; !strings.Contains(out, want) {
+			t.Errorf("peer loop rendered %q, missing %q", out, want)
+		}
 	}
 }
 
@@ -350,5 +364,40 @@ func TestCheckAllCatchesABrokenTemplate(t *testing.T) {
 	errs := render.CheckAll(".", c)
 	if len(errs) == 0 {
 		t.Fatal("expected CheckAll to catch the broken template reference")
+	}
+}
+
+// TestCheckAllCatchesABrokenComposeProject: `laforge check` loads a compose
+// container's project the way deploying it would.
+func TestCheckAllCatchesABrokenComposeProject(t *testing.T) {
+	files := map[string]string{
+		".laforgeignore":        "containers/flaky/\n",
+		"env.yaml":              "environment:\n  name: e\n  teams: 1\n  networks:\n    lan:\n      flaky:\n        - as: flaky01\n          last_octet: 10\n",
+		"networks/lan.yaml":     "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"containers/flaky.yaml": "container:\n  name: flaky\n  compose: flaky/compose.yaml\n  size: small\n",
+	}
+	check := func(composeFile string) []render.RenderError {
+		t.Helper()
+		root := t.TempDir()
+		files["containers/flaky/compose.yaml"] = composeFile
+		for rel, content := range files {
+			p := filepath.Join(root, rel)
+			os.MkdirAll(filepath.Dir(p), 0o755)
+			if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		c, err := loader.Load(root)
+		if err != nil || len(c.Errors) > 0 {
+			t.Fatalf("fixture should load clean: %v %+v", err, c.Errors)
+		}
+		return render.CheckAll(root, c)
+	}
+	if errs := check("services:\n  web:\n    image: nginx:alpine\n"); len(errs) != 0 {
+		t.Errorf("a good project should check clean, got: %+v", errs)
+	}
+	errs := check("services:\n  web:\n    build: .\n")
+	if len(errs) != 1 || !strings.Contains(errs[0].Message, "does not build images") {
+		t.Errorf("expected one error about build: without image:, got: %+v", errs)
 	}
 }

@@ -43,6 +43,9 @@ const (
 // DeployContainer runs a LaForge `container:` as an ECS/Fargate task. externalRef
 // is the task ARN. DRAFT -- see the file header.
 func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpec) (string, error) {
+	if spec.ComposeHost {
+		return "", fmt.Errorf("compose containers are not supported on this builder yet")
+	}
 	if b.cfg.ExecutionRoleARN == "" {
 		return "", fmt.Errorf("AWS Fargate needs an ECS task execution role -- set AWS_ECS_EXECUTION_ROLE_ARN")
 	}

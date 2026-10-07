@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/globalcptc/laforge/internal/compose"
 	"github.com/globalcptc/laforge/internal/loader"
 	"github.com/globalcptc/laforge/internal/render"
 )
@@ -47,6 +48,16 @@ func Fingerprint(repoRoot string, c *loader.Content, ctx *render.Context, disk i
 	h := sha256.New()
 
 	fmt.Fprintf(h, "os=%s\nimage=%s\nsize=%s\ndisk=%d\n", ctx.OS, ctx.Image, ctx.Size, disk)
+
+	// A compose container is its project: editing the compose file, or any file
+	// shipped with it, rebuilds it.
+	if ctx.Compose != "" {
+		b, err := compose.Load(repoRoot, ctx.Compose)
+		if err != nil {
+			return "", fmt.Errorf("loading compose project for fingerprint: %w", err)
+		}
+		fmt.Fprintf(h, "compose=%s:%x\n", ctx.Compose, sha256.Sum256(b.Archive))
+	}
 
 	tcp := append([]string(nil), ports.TCP...)
 	udp := append([]string(nil), ports.UDP...)

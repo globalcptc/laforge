@@ -101,6 +101,30 @@ type Builder interface {
     visibility, that is a *separate* identity/object — it never carries the
     container's identity or its steps.
 
+- `DeployContainer` with **`spec.ComposeHost` set** is a different job: the container
+  runs a Docker Compose project, not one image. The builder provides a Docker-capable
+  Linux machine and nothing else -- `spec.ComposeHostSpec()` is that machine as a
+  `HostSpec` (same network and address, `OS: builder.ComposeHostImage`, `spec.DiskGB`,
+  the agent in `CloudInitUserData`). Incus and MicroCloud boot it as a nesting system
+  container from the builder's docker base image (`builder.DockerBaseAlias`, built by
+  the per-builder image-build job with Docker and the compose plugin installed -- see
+  each package's `BuildDockerBase` and `deployComposeHost`); an operator's image named
+  `builder.ComposeHostImage` overrides that and is deployed with
+  `b.DeployHost(ctx, spec.ComposeHostSpec())`. Either works there because
+  `DestroyContainer` and `DestroyHost` remove the same kind of thing. `Image`, `Env`, `Command`,
+  `AgentBinary` and the registry fields are empty. The agent on that machine unpacks the
+  project and runs `docker compose up` as the container's first commands
+  (`gateway.expandCompose`), then the container's own steps.
+  - This is the one deliberate exception to "the agent runs inside the application
+    container": a compose project is several containers, so the agent runs beside them,
+    on the machine, and content's steps and validators see that machine.
+  - It is also, today, an exception to "every builder implements the whole contract":
+    the AWS and OpenStack builders return a clear error for `ComposeHost`. Their
+    `DestroyContainer` removes a Fargate task / Zun capsule, so they can't simply
+    delegate to `DeployHost` -- implementing it there means tracking that the
+    container is really an instance, or mapping the project onto a multi-container
+    task.
+
 ### Destroy\* — idempotent, takes `team`
 
 `team` is passed because a *pool* builder (`incuspool`: many independent hosts, no

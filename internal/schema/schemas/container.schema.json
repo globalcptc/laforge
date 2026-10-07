@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://laforge.dev/schema/container.json",
-  "$comment": "See host.schema.json's own $comment for why every field lives inside the `container:` object, name included. image/size are required only when there is no `extends`.",
+  "$comment": "See host.schema.json's own $comment for why every field lives inside the `container:` object, name included. size and one of image/compose are required only when there is no `extends`.",
   "type": "object",
   "required": ["container"],
   "additionalProperties": false,
@@ -11,7 +11,10 @@
       "description": "A container: the same idea as a host, but deployed as a container instead of a VM. Every builder supports this -- natively where the hoster has a container primitive, by running the image on a small host otherwise -- and an author never chooses which. Lives in `hosts/` alongside hosts, sharing one name namespace with them.",
       "required": ["name"],
       "if": { "not": { "required": ["extends"] } },
-      "then": { "required": ["image", "size"] },
+      "then": { "required": ["size"], "oneOf": [{ "required": ["image"] }, { "required": ["compose"] }] },
+      "allOf": [
+        { "$comment": "disk sizes the machine a compose project runs on; a single image has no disk to size.", "if": { "required": ["image"] }, "then": { "not": { "required": ["disk"] } } }
+      ],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -24,6 +27,18 @@
           "minLength": 1,
           "description": "The OCI image ref to run, e.g. \"nginx:alpine\" or \"registry.internal/team/scoreboard:latest\". Pulled from Docker Hub, or from a configured private registry when the ref names one. Run as a container by whatever primitive the builder has (native OCI, or a nested runtime) -- you never pick the runtime.",
           "example": "image: registry.internal/cptc/scoreboard:latest"
+        },
+        "compose": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Runs a Docker Compose project instead of a single image: the path to its compose file, relative to this file (like a script's `source:`). The compose file's whole directory is shipped and run with real `docker compose` on one machine with one address, reached through the ports the compose file publishes -- list the same ports in `ports:`. Images are pulled, never built: a service may keep `build:` for local use but must name an `image:`. Set either `image` or `compose`, not both; `env` and `command` belong in the compose file. Add the project's directory to `.laforgeignore` so its YAML isn't read as LaForge content.",
+          "example": "compose: flakyframes/compose.yaml"
+        },
+        "disk": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Root disk in GB for the machine a `compose` container runs on (default 40) -- room for its images and volumes. Not used with `image`.",
+          "example": "disk: 60"
         },
         "size": {
           "type": "string",

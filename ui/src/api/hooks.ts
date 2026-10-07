@@ -16,6 +16,7 @@ import type {
   BuilderImageBuild,
   ImageBuildLogResponse,
   RegistryCredential,
+  InstanceAdmin,
   BuilderConnection,
   BuilderSummary,
   ConfiguredBuild,
@@ -418,8 +419,8 @@ export function useObjectInfra(buildId: string | undefined, objectId: string | u
 // know about" -- every real installation (GET /installations,
 // internal/api/installations.go's handleListInstallations), each with
 // every repo it covers and that repo's real approved/pending state, not
-// just the ones still pending. 403s for anyone not in the server's
-// LAFORGE_ADMIN_LOGINS -- same reasoning as useUnapprovedInstalledRepositories
+// just the ones still pending. 403s for anyone who isn't an
+// instance admin -- same reasoning as useUnapprovedInstalledRepositories
 // below, which this one is meant to fully replace on the Installations
 // screen (kept, still used by Home.tsx's own pending-approval banner).
 export function useInstallations() {
@@ -434,8 +435,8 @@ export function useInstallations() {
 // useUnapprovedInstalledRepositories is "install on GitHub, approve in
 // LaForge"'s own list:
 // every repository some installation currently covers that LaForge
-// isn't tracking yet. 403s for anyone not in the server's
-// LAFORGE_ADMIN_LOGINS -- surfaced by the page itself, not hidden, same
+// isn't tracking yet. 403s for anyone who isn't an
+// instance admin -- surfaced by the page itself, not hidden, same
 // as every other access error in this app.
 export function useUnapprovedInstalledRepositories() {
   return useQuery<UnapprovedInstalledRepository[]>({
@@ -523,6 +524,35 @@ export function useRebuildBuilderImage(name: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['builder-image-builds', name] })
       qc.invalidateQueries({ queryKey: ['builder-configs'] })
+    },
+  })
+}
+
+// Instance admins (Admin → Admins). A change also refreshes `me`, since the
+// signed-in person may have just removed themselves.
+export function useInstanceAdmins() {
+  return useQuery<InstanceAdmin[]>({
+    queryKey: ['instance-admins'],
+    queryFn: () => api.get('/instance-admins'),
+    retry: false,
+  })
+}
+
+export function useAddInstanceAdmin() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (login: string) => api.post<{ github_login: string }>('/instance-admins', { login }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['instance-admins'] }),
+  })
+}
+
+export function useRemoveInstanceAdmin() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (login: string) => api.delete(`/instance-admins/${encodeURIComponent(login)}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['instance-admins'] })
+      qc.invalidateQueries({ queryKey: ['me'] })
     },
   })
 }

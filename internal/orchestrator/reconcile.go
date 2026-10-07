@@ -309,7 +309,7 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 		if ct == nil {
 			return fmt.Errorf("container %q not found in content", objectName)
 		}
-		ports, dependsOn, ownTags, steps, sched = ct.Ports, ct.DependsOn, ct.Tags, ct.Steps, ct.Schedule
+		disk, ports, dependsOn, ownTags, steps, sched = ct.Disk, ct.Ports, ct.DependsOn, ct.Tags, ct.Steps, ct.Schedule
 	}
 	// Tags carried onto the runtime row cascade from least to most specific
 	// (most specific wins): environment -> network -> the scripts this object

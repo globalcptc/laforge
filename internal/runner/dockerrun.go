@@ -2,25 +2,15 @@ package runner
 
 import (
 	"context"
-	"strings"
 
+	"github.com/globalcptc/laforge/internal/compose"
 	"github.com/globalcptc/laforge/internal/db"
 )
 
 // registryHost extracts the registry host from an OCI image ref, or "" for a
-// Docker Hub ref. A first path segment counts as a host only if it looks like
-// one (has a "." or ":", or is "localhost"); otherwise it's a Docker Hub
-// namespace ("library/nginx", "myuser/app").
+// Docker Hub ref (see compose.RegistryHost, shared with `compose:` steps).
 func registryHost(image string) string {
-	slash := strings.IndexByte(image, '/')
-	if slash < 0 {
-		return "" // "nginx", "nginx:alpine"
-	}
-	first := image[:slash]
-	if strings.ContainsAny(first, ".:") || first == "localhost" {
-		return first
-	}
-	return ""
+	return compose.RegistryHost(image)
 }
 
 // registryCredFor returns the stored credential for an image's registry, or

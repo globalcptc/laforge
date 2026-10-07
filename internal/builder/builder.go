@@ -100,10 +100,10 @@ type HostSpec struct {
 	NetworkDisplayName string
 	Address            string
 	OS                 string
-	Size        string
-	DiskGB      int
-	TCPPorts    []string
-	UDPPorts    []string
+	Size               string
+	DiskGB             int
+	TCPPorts           []string
+	UDPPorts           []string
 	// CloudInitUserData, when set, is delivered to the instance at
 	// create time (Incus: the cloud-init.user-data config key). Agents
 	// aren't baked into images -- this is how a fresh host installs and
@@ -113,6 +113,58 @@ type HostSpec struct {
 	CloudInitViaISO   bool
 }
 
+// DockerBaseAlias is the image alias a builder's "docker base image" job
+// publishes on the hoster: an Ubuntu system container image with Docker Engine
+// and the compose plugin installed from Docker's own repository. MicroCloud boots every `container:` from it (LXD
+// has no OCI runtime); both MicroCloud and Incus boot a compose container's
+// machine from it.
+const DockerBaseAlias = "laforge-docker-base"
+
+// DockerBaseInstallScript is what the docker-base job runs inside its build
+// container: Docker Engine and the compose plugin from Docker's own apt
+// repository (download.docker.com) rather than the distribution's packages,
+// which trail it by a long way. It then checks that the daemon came up under
+// nesting and can actually run a container, and prints DOCKER_OK on success.
+const DockerBaseInstallScript = `export DEBIAN_FRONTEND=noninteractive
+apt-get update && apt-get install -y ca-certificates curl || exit 1
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc || exit 1
+chmod a+r /etc/apt/keyrings/docker.asc
+. /etc/os-release
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${UBUNTU_CODENAME:-$VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list
+apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || exit 1
+systemctl enable --now docker
+sleep 3
+docker --version
+docker info >/dev/null 2>&1 && docker compose version && docker run --rm hello-world >/dev/null 2>&1 && docker image rm hello-world >/dev/null 2>&1 && echo DOCKER_OK || echo DOCKER_BAD`
+
+// DockerBaseCleanupScript trims the build container before it is published:
+// apt caches, and cloud-init's record of having run, so an instance created
+// from the image runs its own user-data (the agent install) on first boot.
+const DockerBaseCleanupScript = `apt-get clean; rm -rf /var/lib/apt/lists/*; cloud-init clean --logs >/dev/null 2>&1; true`
+
+// ComposeHostSpec is the machine a compose container runs on, as the host a
+// builder deploys for it (see ContainerSpec.ComposeHost).
+func (s ContainerSpec) ComposeHostSpec() HostSpec {
+	return HostSpec{
+		ExternalName: s.ExternalName, DisplayName: s.DisplayName, Team: s.Team,
+		Network: s.Network, NetworkDisplayName: s.NetworkDisplayName, Address: s.Address,
+		OS: ComposeHostImage, Size: s.Size, DiskGB: s.DiskGB,
+		TCPPorts: s.TCPPorts, UDPPorts: s.UDPPorts,
+		CloudInitUserData: s.CloudInitUserData, CloudInitViaISO: s.CloudInitViaISO,
+	}
+}
+
+// ComposeHostImage is the name, in a builder's image map, of the image a
+// compose container's machine boots from: any Linux image, ideally one with
+// Docker and the compose plugin already installed (it is installed on first
+// boot otherwise). Configured per builder, like a host's `os` images; content
+// never names it.
+const ComposeHostImage = "compose-host"
+
+// DefaultComposeDiskGB is a compose container's root disk when it sets none.
+const DefaultComposeDiskGB = 40
+
 type ContainerSpec struct {
 	ExternalName       string
 	DisplayName        string // see HostSpec.DisplayName
@@ -120,6 +172,14 @@ type ContainerSpec struct {
 	Network            string
 	NetworkDisplayName string // see HostSpec.NetworkDisplayName
 	Address            string
+	// ComposeHost marks a container that runs a Docker Compose project rather
+	// than one image. The builder gives it a Docker-capable Linux machine --
+	// booted from its ComposeHostImage, with DiskGB of disk and the agent
+	// delivered by CloudInitUserData like any host -- and nothing else: the
+	// project is unpacked and started by the agent, as the container's first
+	// commands. Image, Env, Command and the registry fields are empty.
+	ComposeHost bool
+	DiskGB      int
 	// Image is the OCI image ref the container runs (e.g. "nginx:alpine").
 	// It is NOT an entry in a builder's LXD image map -- a container always
 	// boots the builder's docker base image and `docker run`s this ref.

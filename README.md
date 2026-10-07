@@ -162,7 +162,9 @@ agent carries its own identity, connects out to the gateway over mTLS, pulls its
 ordered steps, runs them (installing packages, writing files, creating users, running
 scripts, rebooting), and heartbeats. It's built as a static binary and cross-compiled
 for Linux and Windows targets; a container gets the same agent as its supervising
-entrypoint, so containers configure and report exactly like hosts.
+entrypoint, so containers configure and report exactly like hosts. A container that runs
+a Docker Compose project gets a machine of its own, and the agent on it starts the
+project before running the container's steps.
 
 ---
 
@@ -176,15 +178,23 @@ your-content-repo/
   <environment>.yaml     # the game: teams, schedule, and the network topology
   networks/*.yaml        # a CIDR shared identically by every team
   hosts/*.yaml           # a VM: os, size, disk, ports, setup steps
-  containers/*.yaml      # the same idea, deployed as a container
+  containers/*.yaml      # the same idea, deployed as a container: one image,
+                         #   or a whole Docker Compose project (compose: app/compose.yaml)
   scripts/*.yaml         # a templated script + its source file
   people/*.csv           # rosters (users/accounts) referenced by hosts and scripts
+  .laforgeignore         # optional: paths whose YAML isn't LaForge content
 ```
 
 An **environment** wires them together: it declares how many teams there are, the
 access schedule, and — in its `networks:` topology — which hosts and containers sit on
 which networks, how many copies, and at which addresses. Hosts and scripts are reusable
 across environments; the environment is the only place they're connected.
+
+A container can run a single image or a **Docker Compose project** kept next to it in the
+repo — the same compose file developers run locally, deployed on one machine with one
+address. Every `.yaml` in the repo is read as LaForge content, so a compose project's
+directory (or any other tool's YAML) is listed in **`.laforgeignore`**, which
+`laforge check`, the server, and the editor all honor.
 
 See **[CONFIGURATION.md](CONFIGURATION.md)** for the full YAML reference, with worked
 examples from a one-host environment to a complete multi-network game.
