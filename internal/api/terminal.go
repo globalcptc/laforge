@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/coder/websocket"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -25,6 +26,19 @@ import (
 // internal plumbing over the docker network (plaintext, like the DB
 // connection), not a configurable knob.
 const gatewayRelayAddr = "gateway:8445"
+
+// An interactive shell can sit idle indefinitely (someone reading output, or
+// just leaving the window open), during which the PTY sends no bytes. A proxy
+// in front of the api closes a WebSocket that has been silent too long, which
+// is what was killing idle sessions. A periodic ping keeps the
+// connection alive for as long as the window is open, and doubles as dead-peer
+// detection: if the window is gone the ping (really its pong) fails and the
+// session tears down promptly instead of lingering. The interval is well under
+// the ~60s idle timeout common to such proxies.
+const (
+	keepaliveInterval = 20 * time.Second
+	keepaliveTimeout  = 10 * time.Second
+)
 
 // handleTerminal opens an interactive root/admin shell on a host/container. It
 // is the GET /builds/{id}/objects/{objectId}/terminal WebSocket endpoint. The
@@ -135,6 +149,28 @@ func (s *Server) pumpTerminal(c *websocket.Conn, raw net.Conn) {
 		<-ctx.Done()
 		raw.Close()
 		c.CloseNow()
+	}()
+
+	// Keepalive pings so an idle session survives for as long as the window is
+	// open (see keepaliveInterval). Safe alongside the Read loop below -- the
+	// pong is read there -- and alongside the relay->WS writes.
+	go func() {
+		t := time.NewTicker(keepaliveInterval)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				pctx, pcancel := context.WithTimeout(ctx, keepaliveTimeout)
+				err := c.Ping(pctx)
+				pcancel()
+				if err != nil {
+					cancel()
+					return
+				}
+			}
+		}
 	}()
 
 	// WebSocket -> relay: binary is stdin, a text control message is a resize.
