@@ -515,3 +515,67 @@ func TestRuntimeTablesRoundTrip(t *testing.T) {
 		t.Fatal("expected pgx.ErrNoRows destroying a ref that was never ensured")
 	}
 }
+
+// TestEnvironmentAgentDebugForObject exercises the object -> team -> build ->
+// environment join the runner uses to decide whether to bake the agent-debug
+// flag into a host's agent binary. It builds the full chain with agent_debug
+// on, and confirms a deployed object in that build resolves to true.
+func TestEnvironmentAgentDebugForObject(t *testing.T) {
+	conn := dbTestConnString()
+	if conn == "" {
+		t.Skip("no local Postgres available (set LAFORGE_TEST_DATABASE_URL to point at one)")
+	}
+	ctx := context.Background()
+	q, pool, err := Open(ctx, conn)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { pool.Close() })
+
+	repo, err := q.CreateRepository(ctx, CreateRepositoryParams{
+		GithubOwner: "laforge-test-owner", GithubRepo: "laforge-test-repo-agentdebug",
+	})
+	if err != nil {
+		t.Fatalf("CreateRepository: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := pool.Exec(ctx, "DELETE FROM repository WHERE id = $1", repo.ID); err != nil {
+			t.Errorf("cleanup: delete repository: %v", err)
+		}
+	})
+	rev, err := q.CreateContentRevision(ctx, CreateContentRevisionParams{
+		RepositoryID: repo.ID, CommitSha: "agentdebug-test-sha",
+	})
+	if err != nil {
+		t.Fatalf("CreateContentRevision: %v", err)
+	}
+	if _, err := q.CreateEnvironment(ctx, CreateEnvironmentParams{
+		ContentRevisionID: rev.ID, Path: "dbg.yaml", Name: "dbg", Teams: 1,
+		Access: []byte(`[]`), Vars: []byte(`{}`), Tags: []byte(`{}`), Findings: []byte(`[]`),
+		AgentDebug: true,
+	}); err != nil {
+		t.Fatalf("CreateEnvironment: %v", err)
+	}
+	build, err := q.CreateBuild(ctx, CreateBuildParams{ContentRevisionID: rev.ID, EnvironmentName: "dbg"})
+	if err != nil {
+		t.Fatalf("CreateBuild: %v", err)
+	}
+	team, err := q.EnsureTeam(ctx, EnsureTeamParams{BuildID: build.ID, TeamNumber: 1})
+	if err != nil {
+		t.Fatalf("EnsureTeam: %v", err)
+	}
+	obj, err := q.EnsureDeployedObject(ctx, EnsureDeployedObjectParams{
+		TeamID: team.ID, Kind: "host", ObjectName: "box", AsName: strPtr("box01"), NetworkName: strPtr("lan"),
+	})
+	if err != nil {
+		t.Fatalf("EnsureDeployedObject: %v", err)
+	}
+
+	debug, err := q.GetEnvironmentAgentDebugForObject(ctx, obj.ID)
+	if err != nil {
+		t.Fatalf("GetEnvironmentAgentDebugForObject: %v", err)
+	}
+	if !debug {
+		t.Fatal("agent_debug = false, want true -- the flag did not flow object -> team -> build -> environment")
+	}
+}

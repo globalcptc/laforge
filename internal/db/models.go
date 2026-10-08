@@ -220,6 +220,7 @@ type Environment struct {
 	Tags              json.RawMessage    `json:"tags"`
 	Findings          json.RawMessage    `json:"findings"`
 	Extends           *string            `json:"extends"`
+	AgentDebug        bool               `json:"agent_debug"`
 }
 
 type Event struct {

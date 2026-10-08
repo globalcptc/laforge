@@ -142,6 +142,41 @@ func TestPublicPortThatIsDeclaredPasses(t *testing.T) {
 	}
 }
 
+// agent-debug on the environment parses into Environment.AgentDebug (default
+// false when omitted). It rides to the DB and is baked into each agent binary.
+func TestEnvironmentAgentDebugParses(t *testing.T) {
+	root := writeRepo(t, map[string]string{
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"env-on.yaml": `environment:
+  name: on
+  teams: 1
+  agent-debug: true
+  networks:
+    lan: {}
+`,
+		"env-off.yaml": `environment:
+  name: off
+  teams: 1
+  networks:
+    lan: {}
+`,
+	})
+	c, _ := loader.Load(root)
+	if len(c.Errors) != 0 {
+		t.Fatalf("unexpected load errors: %v", errorMessages(c))
+	}
+	got := map[string]bool{}
+	for _, e := range c.Environments {
+		got[e.Name] = e.AgentDebug
+	}
+	if !got["on"] {
+		t.Error("agent-debug: true did not parse into AgentDebug")
+	}
+	if got["off"] {
+		t.Error("an environment without agent-debug should default to false")
+	}
+}
+
 // A single public port that falls inside a declared RANGE is a subset -- the
 // check compares intervals, not literal token strings. Regression for a bug
 // where `ports: ["1-65535"]` + `public: ["3389"]` was wrongly rejected because

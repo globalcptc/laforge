@@ -228,9 +228,11 @@ real command), so the agent also sees the application's console output. When you
 `LOG_SINK_URL`, each agent streams that output (stdout and stderr) to the gateway over
 the mTLS connection it already holds; the gateway tags every line with its build, team,
 object and stream and forwards batches as newline-delimited JSON (`application/x-ndjson`)
-to the endpoint you named. A line still reaches the container's own console too (`docker
-logs` / `incus console` keep working), and a backend that's slow or down drops lines
-rather than ever stalling a host.
+to the endpoint you named. The agent does **not** echo the application's output to the
+container's own console — the agent is silent on the box by default (see
+[Agent local footprint](#agent-local-footprint) below), so `docker logs` / `incus console`
+show nothing from the app; it reaches you only through this forwarding. A backend that's
+slow or down drops lines rather than ever stalling a host.
 
 ```bash
 # Gateway .env — all optional; unset LOG_SINK_URL disables forwarding entirely.
@@ -252,6 +254,25 @@ format), point `LOG_SINK_URL` at a **Vector / Fluent Bit / Promtail** receiver a
 reshape and route; `LOG_SINK_HEADERS` carries any auth token, `LOG_SINK_LABELS` adds
 static fields to every record. Host logs (journald/services) are not forwarded yet — this
 is container application output only.
+
+---
+
+## Agent local footprint
+
+The LaForge agent runs on boxes inside the competition network, which is hostile. By
+default it leaves **no local trace**: it writes nothing to stdout, stderr, or any file on
+the box. The only thing that ever leaves the agent is what it reports to the LaForge
+servers over its mTLS connection (heartbeats, task results, and — for containers — the
+forwarded application output above). Even a captured, reverse-engineered box yields no
+agent logs.
+
+To debug the agent itself, set `agent-debug: true` on the **environment** (see
+[CONFIGURATION.md](CONFIGURATION.md)). Every agent in that environment then writes a
+`laforge-agent.log` file next to its binary (e.g. `/usr/local/bin/laforge-agent.log` on
+Linux, `C:\laforge-agent.log` on Windows) — and still nothing to the console. The flag is
+baked into each agent binary at deploy time, so a competitor **cannot** turn logging on by
+editing a box's service unit or scheduled task. Leave it off for a real event; turn it on
+only while diagnosing the agent.
 
 ---
 

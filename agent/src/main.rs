@@ -9,6 +9,7 @@ mod antitamper;
 mod applog;
 mod chaff;
 mod commands;
+mod diag;
 mod identity;
 mod metrics;
 mod obfuscate;
@@ -33,12 +34,25 @@ const LOG_BUFFER_CAP: usize = 10_000;
 const LOG_BATCH_MAX: usize = 500;
 
 fn main() {
+    // Decide where our own diagnostics go BEFORE emitting a single line. A real
+    // (patched) build is SILENT by default -- nothing to stdout/stderr, so a
+    // captured box leaks nothing locally; only what the agent sends the servers
+    // ever leaves it. A dev build (unpatched identity, `cargo run`) logs to
+    // stderr so it's usable while iterating. A patched build whose baked
+    // identity carries agent-debug upgrades to a file beside the binary once the
+    // identity is loaded (see load_agent). See diag.rs.
+    if identity::is_dev_build() {
+        diag::init_stderr();
+    } else {
+        diag::init_silent();
+    }
+
     // Basic anti-debug/anti-tamper self-checks -- see antitamper.rs's own
     // doc comment for exactly what's real here and what's scoped out.
     // Deliberately non-load-bearing: log and
     // continue, never refuse to start or change behavior on a finding.
     for finding in antitamper::self_check() {
-        eprintln!("laforge-agent: self-check: {finding}");
+        dlog!("laforge-agent: self-check: {finding}");
     }
 
     // Native OCI container supervisor mode: when LAFORGE_SUPERVISE is set, the
@@ -91,14 +105,20 @@ fn load_agent() -> Option<(identity::Identity, Arc<ClientConfig>, String)> {
     let identity = match identity::load() {
         Some(id) => id,
         None => {
-            eprintln!("laforge-agent: no identity available (binary is unpatched and no LAFORGE_DEV_* env vars set)");
+            dlog!("laforge-agent: no identity available (binary is unpatched and no LAFORGE_DEV_* env vars set)");
             return None;
         }
     };
+    // A real build with agent-debug baked in upgrades the diagnostic sink from
+    // silent to a file beside the binary, now that we know the flag. Done here
+    // (before TLS setup) so even a TLS-config failure is captured in debug mode.
+    if identity.debug {
+        diag::init_file_next_to_binary();
+    }
     let tls_config = match build_tls_config(&identity) {
         Ok(cfg) => Arc::new(cfg),
         Err(e) => {
-            eprintln!("laforge-agent: building TLS config: {e}");
+            dlog!("laforge-agent: building TLS config: {e}");
             return None;
         }
     };
@@ -133,7 +153,7 @@ fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<Cl
         let started = Instant::now();
         match run_session(&identity.gateway_addr, host_only, tls_config.clone(), logq.as_ref(), &mut metrics, &shell_handled) {
             Ok(()) => {}
-            Err(e) => eprintln!("laforge-agent: session ended: {e}"),
+            Err(e) => dlog!("laforge-agent: session ended: {e}"),
         }
         if started.elapsed() >= RESET_AFTER {
             backoff = BASE; // it was really connected; next reconnect starts fast again
@@ -175,7 +195,7 @@ fn supervise_app(cmd: String, logq: Arc<applog::LogQueue>) -> ! {
     {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("laforge-agent: supervisor: failed to start app command {cmd:?}: {e}");
+            dlog!("laforge-agent: supervisor: failed to start app command {cmd:?}: {e}");
             std::process::exit(1);
         }
     };
@@ -188,11 +208,11 @@ fn supervise_app(cmd: String, logq: Arc<applog::LogQueue>) -> ! {
         std::thread::spawn(move || tee_stream(err, "stderr", q));
     }
     let status = child.wait().unwrap_or_else(|e| {
-        eprintln!("laforge-agent: supervisor: waiting on app: {e}");
+        dlog!("laforge-agent: supervisor: waiting on app: {e}");
         std::process::exit(1);
     });
     let code = status.code().unwrap_or(1);
-    eprintln!("laforge-agent: supervised app exited (code {code}); stopping container");
+    dlog!("laforge-agent: supervised app exited (code {code}); stopping container");
     std::process::exit(code);
 }
 
@@ -209,11 +229,11 @@ fn tee_stream<R: Read>(r: R, stream: &'static str, logq: Arc<applog::LogQueue>) 
             Ok(l) => l,
             Err(_) => break,
         };
-        if stream == "stdout" {
-            println!("{line}");
-        } else {
-            eprintln!("{line}");
-        }
+        // The app's own line is shipped to the gateway via the log queue (the
+        // only place it goes by default). It is NOT echoed to the agent's
+        // console -- that would be a local trace on the box; it only appears in
+        // the debug log when agent-debug is on.
+        dlog!("[{stream}] {line}");
         logq.push(stream, line);
     }
 }
@@ -280,13 +300,13 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
         flush_logs(&mut tls, logq)?;
 
         if let Some(task) = gt.task {
-            eprintln!("laforge-agent: running task {} ({})", task.id, task.command);
+            dlog!("laforge-agent: running task {} ({})", task.id, task.command);
             let outcome = if task.command == "validate" {
                 validators::run(&task.payload)
             } else {
                 commands::run(&task.command, &task.payload)
             };
-            eprintln!("laforge-agent: task {} -> {}", task.id, outcome.status);
+            dlog!("laforge-agent: task {} -> {}", task.id, outcome.status);
 
             let report = ReportStatusRequestPayload {
                 task_id: task.id,

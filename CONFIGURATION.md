@@ -186,6 +186,7 @@ webserver **host definition**, not here in the topology; see [Host](#host).)
 | `description` | Human-readable description of the game. |
 | `teams` | Number of teams. Every team gets an identical copy of the topology — nothing is ever templated per team. |
 | `root_password` | A password stored in the clear **on purpose** — content credentials exist to be found during the competition, not to be real secrets. |
+| `agent-debug` | (Optional, default `false`) Turn on the agent's local debug log — a file next to the agent binary on every host/container in this environment. Off by default, the agent writes **nothing** locally (no stdout/stderr) and only reports to the LaForge servers. The flag is baked into each agent binary at deploy time, so it can't be switched on by editing a box's launcher. Leave off in a real competition (the boxes are in a hostile network); turn on only to debug the agent itself. |
 | `start` / `stop` | When the event starts and ends. Used by schedules ("45 minutes after competition start"). |
 | `dns` | DNS settings (see [DNS](#dns)). A records for every host/container are generated automatically; this adds anything else. LaForge doesn't run DNS itself — the records are handed to a host (a domain controller or Bind server) to serve. |
 | `access` | The planned access schedule — e.g. closing overnight on a multi-day event. Per-team overrides during a live event happen from the UI/API, not here. Each entry has an `open:` and `close:` time. |

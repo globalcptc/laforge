@@ -28,6 +28,7 @@ use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use rustls::pki_types::ServerName;
 use rustls::{ClientConfig, ClientConnection, StreamOwned};
 
+use crate::dlog;
 use crate::protocol::{
     self, MessageType, ShellAttachPayload, ShellClosePayload, ShellResizePayload, SHELL_DIR_IN, SHELL_DIR_OUT, SHELL_ROLE_AGENT,
 };
@@ -52,10 +53,10 @@ pub fn maybe_spawn(pending: &[String], handled: &Arc<Mutex<HashSet<String>>>, ad
         // Diagnostic: if the gateway logs "signaling agent" but you never see
         // this line on the host, this agent is a stale build without shell
         // support -- redeploy the host.
-        eprintln!("laforge-agent: gateway requested shell session {id}; opening connections");
+        dlog!("laforge-agent: gateway requested shell session {id}; opening connections");
         std::thread::spawn(move || {
             if let Err(e) = run_session(&id, &addr, &host_only, tls_config) {
-                eprintln!("laforge-agent: shell session {id} ended: {e}");
+                dlog!("laforge-agent: shell session {id} ended: {e}");
             }
         });
     }
@@ -127,7 +128,7 @@ fn run_session(session_id: &str, addr: &str, host_only: &str, tls_config: Arc<Cl
         };
         let body = serde_json::to_vec(&ShellClosePayload { reason: reason.to_string() }).unwrap_or_default();
         let _ = protocol::write_frame(&mut tls_out, MessageType::ShellClose, &body);
-        eprintln!("laforge-agent: shell {out_sid}: output side ended ({reason})");
+        dlog!("laforge-agent: shell {out_sid}: output side ended ({reason})");
         let _ = out_child.lock().unwrap().kill();
         let _ = in_sd.shutdown(Shutdown::Both);
     });
@@ -153,7 +154,7 @@ fn run_session(session_id: &str, addr: &str, host_only: &str, tls_config: Arc<Cl
             Err(_) => break "client disconnected",
         }
     };
-    eprintln!("laforge-agent: shell {session_id}: input side ended ({in_reason})");
+    dlog!("laforge-agent: shell {session_id}: input side ended ({in_reason})");
     let _ = child.lock().unwrap().kill();
     let _ = out_sd.shutdown(Shutdown::Both);
     out_thread.join().ok();

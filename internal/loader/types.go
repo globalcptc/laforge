@@ -201,6 +201,13 @@ type Environment struct {
 	Vars        map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
 	Tags        map[string]string `yaml:"tags,omitempty" json:"tags,omitempty"`
 	Findings    []Finding         `yaml:"findings,omitempty" json:"findings,omitempty"`
+	// AgentDebug turns on the agent's local debug log (a file beside the agent
+	// binary) for every host/container in this environment. Off by default, and
+	// baked into each agent binary at deploy time so it can't be flipped on the
+	// box -- see internal/agentdelivery and agent/src/diag.rs. Default (false)
+	// means the agent is silent locally; only what it sends the servers leaves
+	// it.
+	AgentDebug bool `yaml:"agent-debug,omitempty" json:"agent-debug,omitempty"`
 	// Networks: network name -> object name (host or container) -> copies
 	Networks map[string]map[string][]Copy `yaml:"networks,omitempty" json:"networks,omitempty"`
 	Extends  string                       `yaml:"extends,omitempty" json:"extends,omitempty"`

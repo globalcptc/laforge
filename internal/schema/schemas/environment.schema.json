@@ -36,6 +36,11 @@
           "type": "string",
           "description": "A password stored in the clear on purpose -- content credentials exist to be found during the competition, not to be real secrets."
         },
+        "agent-debug": {
+          "type": "boolean",
+          "description": "Turn on the agent's local debug log for every host/container in this environment: a file next to the agent binary on each box. Off by default -- the agent is otherwise silent locally and only reports to the LaForge servers. The flag is baked into each agent binary at deploy time, so it can't be switched on by editing a box's launcher. Leave off in a real competition (the boxes are in a hostile network); turn on only to debug the agent itself.",
+          "example": "agent-debug: true"
+        },
         "start": {
           "type": "string",
           "format": "date-time",

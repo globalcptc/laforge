@@ -112,6 +112,11 @@ This note covers the whole 3.0 line.
 - Runs as PID 1 inside application containers on every builder, so containers check in and
   run steps exactly like hosts.
 - Basic **anti-tamper / anti-debug self-checks** and per-build chaff.
+- **Silent on the box by default**: the agent writes nothing to stdout, stderr, or disk —
+  only what it reports to the servers over mTLS ever leaves it, so a captured box yields no
+  local agent logs. An environment can set `agent-debug: true` to get a local log file next
+  to the binary for debugging; the flag is baked into the binary, so it can't be switched on
+  by editing a box's launcher.
 
 ## Access & Scheduling
 

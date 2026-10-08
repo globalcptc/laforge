@@ -309,7 +309,8 @@ CREATE TABLE public.environment (
     vars jsonb DEFAULT '{}'::jsonb NOT NULL,
     tags jsonb DEFAULT '{}'::jsonb NOT NULL,
     findings jsonb DEFAULT '[]'::jsonb NOT NULL,
-    extends text
+    extends text,
+    agent_debug boolean DEFAULT false NOT NULL
 );
 --
 -- Name: event; Type: TABLE; Schema: public; Owner: -

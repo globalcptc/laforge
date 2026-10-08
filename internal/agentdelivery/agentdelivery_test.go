@@ -57,7 +57,7 @@ func TestBuildIssuesAChainedCertAndRealUserData(t *testing.T) {
 	}
 
 	objID := "11111111-2222-3333-4444-555555555555"
-	del, err := cfg.Build(objID, "tok-abc", "ubuntu22")
+	del, err := cfg.Build(objID, "tok-abc", "ubuntu22", false)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

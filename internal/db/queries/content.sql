@@ -28,10 +28,23 @@ RETURNING *;
 INSERT INTO environment (
   content_revision_id, path, name, schema_version, description, teams,
   root_password, start_at, stop_at, dns, access,
-  vars, tags, findings, extends
+  vars, tags, findings, extends, agent_debug
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
 ) RETURNING *;
+
+-- name: GetEnvironmentAgentDebugForObject :one
+-- The agent-debug flag for the environment a deployed object belongs to, found
+-- by walking object -> team -> build -> environment (build keys the environment
+-- by content_revision_id + name). Used by the runner when it plants an agent,
+-- so the flag is baked into that host's binary. Defaults are such that any gap
+-- in the chain simply yields no row (treated as debug off).
+SELECT e.agent_debug
+FROM deployed_object o
+JOIN team t ON t.id = o.team_id
+JOIN build b ON b.id = t.build_id
+JOIN environment e ON e.content_revision_id = b.content_revision_id AND e.name = b.environment_name
+WHERE o.id = $1;
 
 -- name: ListEnvironmentsByRevision :many
 SELECT * FROM environment WHERE content_revision_id = $1 ORDER BY name;

@@ -51,10 +51,11 @@ func usage() {
       behaves exactly as before (a fixed dev salt agent/build.rs falls
       back to), for every existing caller that never passes it.
 
-  laforge-agent-factory patch --base <path> --out <path> --gateway-addr <host:port> --ca-cert <path> --client-cert <path> --client-key <path>
+  laforge-agent-factory patch --base <path> --out <path> --gateway-addr <host:port> --ca-cert <path> --client-cert <path> --client-key <path> [--debug true]
       Patch a per-host identity into a copy of a compiled agent binary.
       Milliseconds: no recompilation, just an in-memory byte region
-      overwrite.`)
+      overwrite. --debug true bakes in the agent-debug flag (a local debug
+      log beside the binary); default/omitted leaves the agent silent.`)
 }
 
 func runBuild(args []string) error {
@@ -120,12 +121,13 @@ func runBuild(args []string) error {
 }
 
 func runPatch(args []string) error {
-	fs := newFlagSet(args, "patch", []string{"base", "out", "gateway-addr", "ca-cert", "client-cert", "client-key"})
+	fs := newFlagSet(args, "patch", []string{"base", "out", "gateway-addr", "ca-cert", "client-cert", "client-key", "debug"})
 	base, out := fs["base"], fs["out"]
 	gatewayAddr := fs["gateway-addr"]
 	caCertPath, clientCertPath, clientKeyPath := fs["ca-cert"], fs["client-cert"], fs["client-key"]
+	debug := fs["debug"] == "true" // optional: bake in the agent-debug flag (local debug log)
 	if base == "" || out == "" || gatewayAddr == "" || caCertPath == "" || clientCertPath == "" || clientKeyPath == "" {
-		return fmt.Errorf("usage: laforge-agent-factory patch --base <path> --out <path> --gateway-addr <host:port> --ca-cert <path> --client-cert <path> --client-key <path>")
+		return fmt.Errorf("usage: laforge-agent-factory patch --base <path> --out <path> --gateway-addr <host:port> --ca-cert <path> --client-cert <path> --client-key <path> [--debug true]")
 	}
 
 	baseData, err := os.ReadFile(base)
@@ -145,7 +147,7 @@ func runPatch(args []string) error {
 		return fmt.Errorf("reading client-key %s: %w", clientKeyPath, err)
 	}
 
-	patched, err := agentfactory.PatchBinary(baseData, gatewayAddr, caPEM, certPEM, keyPEM)
+	patched, err := agentfactory.PatchBinary(baseData, gatewayAddr, caPEM, certPEM, keyPEM, debug)
 	if err != nil {
 		return fmt.Errorf("patching: %w", err)
 	}

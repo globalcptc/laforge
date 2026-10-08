@@ -578,7 +578,15 @@ func (r *Runner) deliverAgent(ctx context.Context, q *db.Queries, obj db.Deploye
 		return agentdelivery.Delivery{}, fmt.Errorf("generating agent download token: %w", err)
 	}
 	token := hex.EncodeToString(tokenBytes)
-	del, err := r.Delivery.Build(obj.ID.String(), token, osName)
+	// agent-debug (environment YAML) bakes a local debug log into the binary;
+	// off (the default, and on any lookup miss) means the agent is silent on the
+	// box and only reports to the servers. A missing row -- no environment yet,
+	// or a chain gap -- is simply "off", never a deploy failure.
+	debug, err := q.GetEnvironmentAgentDebugForObject(ctx, obj.ID)
+	if err != nil {
+		debug = false
+	}
+	del, err := r.Delivery.Build(obj.ID.String(), token, osName, debug)
 	if err != nil {
 		return agentdelivery.Delivery{}, fmt.Errorf("building agent delivery: %w", err)
 	}

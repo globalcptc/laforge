@@ -300,6 +300,7 @@ func persistContent(ctx context.Context, q *db.Queries, revID pgtype.UUID, c *lo
 			RootPassword: strPtrOrNil(e.RootPass),
 			StartAt:      timestamptzOrZero(e.Start), StopAt: timestamptzOrZero(e.Stop),
 			Dns: dnsJSON, Access: access, Vars: vars, Tags: tags, Findings: findings, Extends: strPtrOrNil(e.Extends),
+			AgentDebug: e.AgentDebug,
 		})
 		if err != nil {
 			return fmt.Errorf("environment %q: %w", e.Name, err)

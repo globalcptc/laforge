@@ -118,10 +118,10 @@ const createEnvironment = `-- name: CreateEnvironment :one
 INSERT INTO environment (
   content_revision_id, path, name, schema_version, description, teams,
   root_password, start_at, stop_at, dns, access,
-  vars, tags, findings, extends
+  vars, tags, findings, extends, agent_debug
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
-) RETURNING id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+) RETURNING id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug
 `
 
 type CreateEnvironmentParams struct {
@@ -140,6 +140,7 @@ type CreateEnvironmentParams struct {
 	Tags              json.RawMessage    `json:"tags"`
 	Findings          json.RawMessage    `json:"findings"`
 	Extends           *string            `json:"extends"`
+	AgentDebug        bool               `json:"agent_debug"`
 }
 
 func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (Environment, error) {
@@ -159,6 +160,7 @@ func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentPa
 		arg.Tags,
 		arg.Findings,
 		arg.Extends,
+		arg.AgentDebug,
 	)
 	var i Environment
 	err := row.Scan(
@@ -178,6 +180,7 @@ func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentPa
 		&i.Tags,
 		&i.Findings,
 		&i.Extends,
+		&i.AgentDebug,
 	)
 	return i, err
 }
@@ -521,8 +524,29 @@ func (q *Queries) GetContentRevisionByRepoAndSHA(ctx context.Context, arg GetCon
 	return i, err
 }
 
+const getEnvironmentAgentDebugForObject = `-- name: GetEnvironmentAgentDebugForObject :one
+SELECT e.agent_debug
+FROM deployed_object o
+JOIN team t ON t.id = o.team_id
+JOIN build b ON b.id = t.build_id
+JOIN environment e ON e.content_revision_id = b.content_revision_id AND e.name = b.environment_name
+WHERE o.id = $1
+`
+
+// The agent-debug flag for the environment a deployed object belongs to, found
+// by walking object -> team -> build -> environment (build keys the environment
+// by content_revision_id + name). Used by the runner when it plants an agent,
+// so the flag is baked into that host's binary. Defaults are such that any gap
+// in the chain simply yields no row (treated as debug off).
+func (q *Queries) GetEnvironmentAgentDebugForObject(ctx context.Context, id pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, getEnvironmentAgentDebugForObject, id)
+	var agent_debug bool
+	err := row.Scan(&agent_debug)
+	return agent_debug, err
+}
+
 const getEnvironmentByRevisionAndName = `-- name: GetEnvironmentByRevisionAndName :one
-SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends FROM environment WHERE content_revision_id = $1 AND name = $2
+SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug FROM environment WHERE content_revision_id = $1 AND name = $2
 `
 
 type GetEnvironmentByRevisionAndNameParams struct {
@@ -550,12 +574,13 @@ func (q *Queries) GetEnvironmentByRevisionAndName(ctx context.Context, arg GetEn
 		&i.Tags,
 		&i.Findings,
 		&i.Extends,
+		&i.AgentDebug,
 	)
 	return i, err
 }
 
 const getEnvironmentByRevisionAndPath = `-- name: GetEnvironmentByRevisionAndPath :one
-SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends FROM environment WHERE content_revision_id = $1 AND path = $2
+SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug FROM environment WHERE content_revision_id = $1 AND path = $2
 `
 
 type GetEnvironmentByRevisionAndPathParams struct {
@@ -588,6 +613,7 @@ func (q *Queries) GetEnvironmentByRevisionAndPath(ctx context.Context, arg GetEn
 		&i.Tags,
 		&i.Findings,
 		&i.Extends,
+		&i.AgentDebug,
 	)
 	return i, err
 }
@@ -713,7 +739,7 @@ func (q *Queries) GetScriptByRevisionAndName(ctx context.Context, arg GetScriptB
 }
 
 const listEnvironmentsByRevision = `-- name: ListEnvironmentsByRevision :many
-SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends FROM environment WHERE content_revision_id = $1 ORDER BY name
+SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug FROM environment WHERE content_revision_id = $1 ORDER BY name
 `
 
 func (q *Queries) ListEnvironmentsByRevision(ctx context.Context, contentRevisionID pgtype.UUID) ([]Environment, error) {
@@ -742,6 +768,7 @@ func (q *Queries) ListEnvironmentsByRevision(ctx context.Context, contentRevisio
 			&i.Tags,
 			&i.Findings,
 			&i.Extends,
+			&i.AgentDebug,
 		); err != nil {
 			return nil, err
 		}
