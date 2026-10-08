@@ -180,10 +180,18 @@ export function FailuresByCause({ data }: { data: DashboardData }) {
 export function AgentActivity({ data }: { data: DashboardData }) {
   const fmt = useTimeFormat()
   const buckets = data.agent_activity
-  if (buckets.length === 0) return null
+  const height = 80
+  if (buckets.length === 0) {
+    return (
+      <ChartCard title="Agent Activity (Distinct Check-Ins)">
+        <div className="flex items-center justify-center text-xs text-fg-subtle" style={{ height }}>
+          No heartbeats yet
+        </div>
+      </ChartCard>
+    )
+  }
 
   const width = 400
-  const height = 80
   const maxActive = Math.max(1, ...buckets.map((b) => b.active))
   const stepX = buckets.length > 1 ? width / (buckets.length - 1) : 0
 
@@ -248,10 +256,20 @@ function ResourceLineChart({
   fmtValue: (n: number) => string
 }) {
   const fmt = useTimeFormat()
-  if (buckets.length === 0) return null
+  const height = 72
+  // Keep the card present before any heartbeats arrive, so the row doesn't look
+  // broken mid-build -- just say there's no data yet.
+  if (buckets.length === 0) {
+    return (
+      <ChartCard title={title}>
+        <div className="flex items-center justify-center text-xs text-fg-subtle" style={{ height }}>
+          No heartbeats yet
+        </div>
+      </ChartCard>
+    )
+  }
 
   const width = 400
-  const height = 72
   const max = Math.max(yMax, 1)
   const stepX = buckets.length > 1 ? width / (buckets.length - 1) : 0
   const midY = height / 2
