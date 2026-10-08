@@ -41,6 +41,21 @@
           "description": "Turn on the agent's local debug log for every host/container in this environment: a file next to the agent binary on each box. Off by default -- the agent is otherwise silent locally and only reports to the LaForge servers. The flag is baked into each agent binary at deploy time, so it can't be switched on by editing a box's launcher. Leave off in a real competition (the boxes are in a hostile network); turn on only to debug the agent itself.",
           "example": "agent-debug: true"
         },
+        "container_logs": {
+          "type": "object",
+          "description": "Forward every CONTAINER's console output to an external log collector (Splunk, Loki, ...) using each builder's native logging. LaForge does not ship the logs itself: an image container gets the driver on its `docker run` (or the Fargate task's logConfiguration); a compose project gets it as the Docker daemon default before `docker compose up`, so every service inherits it. Container-only -- hosts are VMs with their own logging. Omit to disable.",
+          "required": ["driver"],
+          "additionalProperties": false,
+          "properties": {
+            "driver": { "type": "string", "minLength": 1, "description": "The log driver name, as the platform knows it: \"splunk\", \"fluentd\", \"awslogs\", \"gelf\", \"syslog\", ...", "example": "driver: splunk" },
+            "options": {
+              "type": "object",
+              "description": "Driver-specific options, passed straight through as the driver's own keys (e.g. splunk-url, splunk-token, splunk-index for \"splunk\"; the ingestion token lives here). Values are strings.",
+              "additionalProperties": { "type": "string" },
+              "example": "options:\n  splunk-url: https://splunk:8088\n  splunk-token: <token>"
+            }
+          }
+        },
         "start": {
           "type": "string",
           "format": "date-time",

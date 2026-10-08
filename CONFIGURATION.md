@@ -187,6 +187,7 @@ webserver **host definition**, not here in the topology; see [Host](#host).)
 | `teams` | Number of teams. Every team gets an identical copy of the topology — nothing is ever templated per team. |
 | `root_password` | A password stored in the clear **on purpose** — content credentials exist to be found during the competition, not to be real secrets. |
 | `agent-debug` | (Optional, default `false`) Turn on the agent's local debug log — a file next to the agent binary on every host/container in this environment. Off by default, the agent writes **nothing** locally (no stdout/stderr) and only reports to the LaForge servers. The flag is baked into each agent binary at deploy time, so it can't be switched on by editing a box's launcher. Leave off in a real competition (the boxes are in a hostile network); turn on only to debug the agent itself. |
+| `container_logs` | (Optional) Forward every **container's** console output to an external collector (Splunk, …) using each builder's native logging — see [Container logs](#container-log-forwarding). Omit to disable. Container-only; hosts are VMs with their own logging. |
 | `start` / `stop` | When the event starts and ends. Used by schedules ("45 minutes after competition start"). |
 | `dns` | DNS settings (see [DNS](#dns)). A records for every host/container are generated automatically; this adds anything else. LaForge doesn't run DNS itself — the records are handed to a host (a domain controller or Bind server) to serve. |
 | `access` | The planned access schedule — e.g. closing overnight on a multi-day event. Per-team overrides during a live event happen from the UI/API, not here. Each entry has an `open:` and `close:` time. |
@@ -707,6 +708,47 @@ ports:
 
 Combined with a network's [`visible_from`](#network) (which *networks* may reach it),
 this is the complete reachability model.
+
+---
+
+## Container log forwarding
+
+Set `container_logs` on the **environment** to forward every container's console output to
+an external collector. It's one block for the whole environment — you don't annotate
+individual containers, and it covers both single-image and compose containers identically:
+
+```yaml
+environment:
+  name: allports
+  container_logs:
+    driver: splunk
+    options:
+      splunk-url: https://splunk.example:8088
+      splunk-token: 00000000-0000-0000-0000-000000000000
+      splunk-index: cptc
+```
+
+- `driver` is the log driver name as the platform knows it (`splunk`, `fluentd`, `awslogs`, …).
+- `options` are that driver's own keys, passed straight through (the Splunk ingestion token
+  lives here — it's a write-only HEC token, and content isn't shared).
+
+**How it's delivered (native-first).** LaForge doesn't ship the bytes itself where the
+platform can — each builder uses its own native logging, so a large number of containers
+never funnels through LaForge:
+
+| Where the container runs | How `container_logs` is applied |
+| --- | --- |
+| MicroCloud (nested docker) | `docker run --log-driver …` |
+| AWS Fargate | the task's `logConfiguration` |
+| A compose project (any builder) | the Docker **daemon default** on its host, before `docker compose up`, so every service inherits it |
+| Incus (native OCI) / OpenStack Zun | **fallback:** the agent forwards to the gateway, which ships to the collector |
+
+The fallback (Incus/Zun, which have no native driver) currently supports the **`splunk`**
+driver only; other drivers on those two builders aren't forwarded. A compose service that
+declares its own `logging:` block still overrides the daemon default.
+
+This is container-only — hosts are full VMs with their own logging. Omit `container_logs`
+to forward nothing.
 
 ---
 

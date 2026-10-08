@@ -83,12 +83,10 @@ and addressing. The file is fully commented; the important groups:
   easiest thing to get wrong, so it has its own section: **[Addressing](#addressing-the-urls-explained)**.
 - **Certificates** — the mTLS cert paths (`GATEWAY_CA_CERT`, `GATEWAY_SERVER_CERT`,
   `GATEWAY_SERVER_KEY`); see [Certificates](#certificates).
-- **Container logs** (optional) — `LOG_SINK_URL`, `LOG_SINK_HEADERS`, `LOG_SINK_LABELS`.
-  When set, each container's agent streams its application's console output (stdout/stderr)
-  to the gateway, which forwards it as newline-delimited JSON (NDJSON) to this HTTP
-  endpoint. Leave unset to disable. The format is deliberately generic — point it at a
-  collector (Vector, Fluent Bit, Splunk HEC, …) and shape/route from there. See
-  [Container logs](#container-logs).
+- **Container logs** — not a gateway env setting. Forwarding container output to an
+  external collector (Splunk, …) is configured per environment with `container_logs` in
+  content, and each builder ships it natively (see [Container logs](#container-logs) and
+  CONFIGURATION.md).
 
 Under Compose, the database connection and gateway CA paths are set by Compose itself;
 you mainly touch `.env` for the GitHub App values, admin logins, and the addresses below.
@@ -223,63 +221,48 @@ Then wire the runner for agent delivery (see the [`.env`](#the-env-file) variabl
 
 ## Container logs
 
-Every container runs the LaForge agent as its entrypoint (it supervises the image's
-real command), so the agent captures the application's stdout and stderr line by line
-into a bounded in-memory buffer and ships them to the gateway over the mTLS connection it
-already holds — batched, and dropping the oldest lines (with a counted marker) rather than
-ever stalling the container if the buffer fills. The gateway tags every line with its
-build, team, object and stream, and — when you set `LOG_SINK_URL` — forwards the lines as
-newline-delimited JSON (`application/x-ndjson`), one record per line, to the endpoint you
-name.
+Container console output is forwarded to an external collector (Splunk, Loki, …) when the
+environment sets `container_logs` — see [CONFIGURATION.md](CONFIGURATION.md#container-log-forwarding)
+for the config block. There is **no gateway env setting** for this; it's content, and it's
+container-only (hosts are VMs with their own logging).
 
-The agent does **not** echo the application's output to the container's own console — it is
-silent on the box by default (see [Agent local footprint](#agent-local-footprint) below),
-so `docker logs` / `incus console` show nothing from the app; it reaches you only through
-this forwarding. A sink that's slow or down drops lines rather than ever stalling a host.
+Forwarding is **native-first**: LaForge uses each builder's own log mechanism so the log
+volume of a large build never funnels through a single LaForge process.
 
-```bash
-# Gateway .env — all optional; unset LOG_SINK_URL disables forwarding entirely.
-LOG_SINK_URL=http://vector:9000/laforge-logs
-LOG_SINK_HEADERS=Authorization: Splunk 00000000-0000-0000-0000-000000000000
-LOG_SINK_LABELS=env=cptc2026,source=laforge
-```
+- **MicroCloud** (nested docker): the container's `docker run` gets `--log-driver` / `--log-opt`.
+- **AWS Fargate**: the task's `logConfiguration` carries the driver and options.
+- **Compose project** (any builder): the driver is written as the Docker **daemon default**
+  on the project's host before `docker compose up`, so every service inherits it.
+- **Incus** (native OCI) and **OpenStack Zun**: no native driver, so these **fall back** to
+  the agent — it captures the container's output and ships it to the gateway over its mTLS
+  connection, and the gateway forwards to the collector. The fallback supports the
+  **`splunk`** driver (its HEC raw endpoint); other drivers on these two builders aren't
+  forwarded.
 
-Each record looks like:
-
-```json
-{"ts":"2026-10-01T18:04:11.000Z","build_id":"…","team":3,"object":"scoreboard",
- "object_id":"…","kind":"container","stream":"stdout","line":"…"}
-```
-
-The format is deliberately generic — any collector that accepts newline JSON. For a
-backend that speaks its own wire format (Splunk HEC, Loki's push API, Elastic's bulk
-format), point `LOG_SINK_URL` at a **Vector / Fluent Bit / Promtail** receiver and let it
-reshape and route; `LOG_SINK_HEADERS` carries any auth token, `LOG_SINK_LABELS` adds
-static fields to every record. Host logs (journald/services) are not forwarded yet — this
-is container application output only.
+In the native cases the gateway never touches the log bytes at all. In every case the
+agent's own diagnostics stay silent on the box (see
+[Agent local footprint](#agent-local-footprint)); the container's **application** output,
+however, is visible in the container's normal log stream so the platform driver can ship
+it — e.g. with the `splunk` driver it goes to Splunk, not to `docker logs`.
 
 ### Sending to Splunk
 
-The gateway posts generic NDJSON, not Splunk's `{"event": …}` envelope, so there are two
-ways in:
+Use the `splunk` driver in `container_logs`; its options are the driver's own keys:
 
-- **Straight to HEC (simplest):** point `LOG_SINK_URL` at the HTTP Event Collector's
-  **raw** endpoint and pass the token in `LOG_SINK_HEADERS`. Each NDJSON line is ingested
-  as one raw event; the `build_id` / `team` / `object` / `stream` fields are right there in
-  the JSON for search-time field extraction.
+```yaml
+environment:
+  container_logs:
+    driver: splunk
+    options:
+      splunk-url: https://splunk.example:8088
+      splunk-token: 00000000-0000-0000-0000-000000000000   # a write-only HEC token
+      splunk-index: cptc
+```
 
-  ```bash
-  LOG_SINK_URL=https://splunk.example:8088/services/collector/raw
-  LOG_SINK_HEADERS=Authorization: Splunk 00000000-0000-0000-0000-000000000000
-  LOG_SINK_LABELS=env=cptc2026,source=laforge
-  ```
-
-- **Via a collector (richer indexing):** point `LOG_SINK_URL` at a **Vector / Fluent Bit**
-  receiver and have it wrap each line in the HEC event envelope (setting `sourcetype`,
-  `index`, timestamp from `ts`, etc.) before forwarding to `/services/collector`. Use this
-  when you want Splunk-side sourcetypes/indexes rather than raw events.
-
-Either way, nothing about the backend is compiled in — it's all `.env` on the gateway.
+On the native builders Docker/Fargate talk to Splunk HEC directly with these options. On
+the Incus/Zun fallback the gateway posts the lines to the HEC **raw** endpoint
+(`<splunk-url>/services/collector/raw`) with the token as an `Authorization: Splunk <token>`
+header, so the same `splunk-url`/`splunk-token` work for both paths.
 
 ---
 

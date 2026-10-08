@@ -219,6 +219,16 @@ type ContainerSpec struct {
 	RegistryHost   string
 	RegistryUser   string
 	RegistrySecret string
+	// LogDriver/LogOptions are the environment's container_logs config (a log
+	// driver name and its driver-specific options). When LogDriver is non-empty
+	// the builder forwards this container's console output using its native
+	// mechanism -- a docker `--log-driver`/`--log-opt` on the run, an ECS task
+	// logConfiguration, etc. Empty means no forwarding. A ComposeHost ignores
+	// these: a compose project's logging is set as the Docker daemon default on
+	// its host before `docker compose up` (see internal/gateway/compose.go), so
+	// every service inherits it.
+	LogDriver  string
+	LogOptions map[string]string
 }
 
 // Resource is one thing Inspect finds already existing at the hoster,

@@ -326,6 +326,14 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 	for k, v := range spec.Env {
 		config["environment."+k] = v
 	}
+	// Incus runs the OCI image directly under LXD -- no Docker daemon, so no
+	// native log driver. When the environment set container_logs, the agent
+	// instead forwards this container's output to the gateway; LAFORGE_LOG_FORWARD
+	// turns that on (see run_container in the agent). Native-driver builders
+	// (MicroCloud, Fargate) never set this.
+	if spec.LogDriver != "" {
+		config["environment.LAFORGE_LOG_FORWARD"] = "1"
+	}
 	// Without the agent, a Command override is the container's entrypoint
 	// directly. With the agent (below), the agent supervises that command
 	// instead, so it isn't set here.

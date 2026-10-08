@@ -507,6 +507,19 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			CloudInitUserData: del.UserData, CloudInitViaISO: del.Platform == agentdelivery.Windows,
 			AgentBinary: del.Binary, AgentDownloadURL: del.DownloadURL,
 		}
+		// Native container-log forwarding (environment container_logs): the
+		// builder applies this as its platform's log driver on the container. A
+		// ComposeHost ignores it -- a compose project's logging is set as the
+		// Docker daemon default on its host before `docker compose up` (gateway).
+		if raw, lerr := q.GetEnvironmentContainerLogsForObject(ctx, obj.ID); lerr == nil && len(raw) > 0 {
+			var cl struct {
+				Driver  string            `json:"driver"`
+				Options map[string]string `json:"options"`
+			}
+			if json.Unmarshal(raw, &cl) == nil {
+				cspec.LogDriver, cspec.LogOptions = cl.Driver, cl.Options
+			}
+		}
 		if ct.Compose != "" {
 			// A Compose project: the builder provides the machine, and the
 			// agent on it pulls and starts the project (registry logins

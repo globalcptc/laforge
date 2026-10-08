@@ -85,13 +85,22 @@ fn run_host() -> ! {
 // management can't connect -- so a broken/absent identity never takes the
 // service down, it only means no check-in. load_agent logs why, if it can't.
 fn run_container(cmd: String) -> ! {
-    // One buffer shared between the app's output readers (push) and the gateway
-    // loop (drain + ship). Created even if the agent can't connect, so capture
-    // is independent of gateway health.
-    let logq = Arc::new(applog::LogQueue::new(LOG_BUFFER_CAP));
+    // Container log forwarding is NATIVE-FIRST: by default the platform ships
+    // the container's logs (a docker log driver, a Fargate logConfiguration,
+    // ...), so the agent just supervises and lets the app's stdout/stderr pass
+    // straight through -- it captures NOTHING and sends the gateway no log
+    // traffic. That keeps the gateway out of the data path even at thousands of
+    // containers.
+    //
+    // Only when the builder sets LAFORGE_LOG_FORWARD (the fallback builders that
+    // have no native driver -- Incus native-OCI, OpenStack Zun) does the agent
+    // capture the app's output and ship it to the gateway, which forwards it to
+    // the environment's container_logs sink.
+    let forward = std::env::var("LAFORGE_LOG_FORWARD").ok().filter(|s| !s.trim().is_empty()).is_some();
+    let logq = if forward { Some(Arc::new(applog::LogQueue::new(LOG_BUFFER_CAP))) } else { None };
     if let Some((identity, tls_config, host_only)) = load_agent() {
         let lq = logq.clone();
-        std::thread::spawn(move || agent_loop(&identity, &host_only, tls_config, Some(lq)));
+        std::thread::spawn(move || agent_loop(&identity, &host_only, tls_config, lq));
     }
     supervise_app(cmd, logq)
 }
@@ -184,28 +193,35 @@ fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<Cl
 // console` still work live) AND pushed onto the bounded queue the gateway loop
 // ships. Capture is best-effort: a read error on a stream just ends that
 // stream's tee, never the app.
-fn supervise_app(cmd: String, logq: Arc<applog::LogQueue>) -> ! {
+fn supervise_app(cmd: String, logq: Option<Arc<applog::LogQueue>>) -> ! {
     use std::process::Stdio;
-    let mut child = match std::process::Command::new("sh")
-        .arg("-c")
-        .arg(&cmd)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
+    let mut command = std::process::Command::new("sh");
+    command.arg("-c").arg(&cmd);
+    // Forward mode captures the app's output (piped) to ship to the gateway.
+    // Native mode inherits the container's stdio so the app writes straight to
+    // the container's own console, where the platform's log driver collects it
+    // -- the agent never touches the bytes.
+    if logq.is_some() {
+        command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    } else {
+        command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    }
+    let mut child = match command.spawn() {
         Ok(c) => c,
         Err(e) => {
             dlog!("laforge-agent: supervisor: failed to start app command {cmd:?}: {e}");
             std::process::exit(1);
         }
     };
-    if let Some(out) = child.stdout.take() {
-        let q = logq.clone();
-        std::thread::spawn(move || tee_stream(out, "stdout", q));
-    }
-    if let Some(err) = child.stderr.take() {
-        let q = logq.clone();
-        std::thread::spawn(move || tee_stream(err, "stderr", q));
+    if let Some(logq) = &logq {
+        if let Some(out) = child.stdout.take() {
+            let q = logq.clone();
+            std::thread::spawn(move || tee_stream(out, "stdout", q));
+        }
+        if let Some(err) = child.stderr.take() {
+            let q = logq.clone();
+            std::thread::spawn(move || tee_stream(err, "stderr", q));
+        }
     }
     let status = child.wait().unwrap_or_else(|e| {
         dlog!("laforge-agent: supervisor: waiting on app: {e}");

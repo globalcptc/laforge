@@ -75,6 +75,12 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 	for k, v := range spec.Env {
 		env[k] = v
 	}
+	// Zun has no native log driver, so when the environment set container_logs
+	// the agent forwards this container's output to the gateway instead;
+	// LAFORGE_LOG_FORWARD turns that on (see run_container in the agent).
+	if spec.LogDriver != "" {
+		env["LAFORGE_LOG_FORWARD"] = "1"
+	}
 
 	container := map[string]any{
 		"image":           spec.Image,

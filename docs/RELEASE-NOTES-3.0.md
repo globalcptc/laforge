@@ -109,11 +109,11 @@ This note covers the whole 3.0 line.
 - **Cross-platform**: static musl Linux builds and Windows builds (cross-compiled), with
   real step actions (scripts, users, services, file write, **direct** download, extract).
 - **Host metrics on every heartbeat** (CPU, memory, disk, network) and **container
-  console-log forwarding** to a generic JSONL sink (Splunk/Vector/Loki/Elastic-friendly).
-  The agent captures the containerized app's stdout/stderr and ships it to the sink *only* —
-  it no longer echoes it to the container's own console, so `docker logs` / `incus console`
-  stay empty (keeping with the silent-on-the-box posture below); the forwarded stream is
-  where that output lives now.
+  log forwarding** to an external collector (Splunk, …), configured per environment with
+  `container_logs` in content. It's **native-first** — each builder uses its own log
+  mechanism (a docker `--log-driver`, a Fargate `logConfiguration`, the Docker daemon
+  default for a compose project) so a large build's log volume never funnels through one
+  LaForge process; Incus (native-OCI) and Zun fall back to the agent → gateway.
 - Runs as PID 1 inside application containers on every builder, so containers check in and
   run steps exactly like hosts.
 - Basic **anti-tamper / anti-debug self-checks** and per-build chaff.

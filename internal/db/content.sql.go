@@ -118,10 +118,10 @@ const createEnvironment = `-- name: CreateEnvironment :one
 INSERT INTO environment (
   content_revision_id, path, name, schema_version, description, teams,
   root_password, start_at, stop_at, dns, access,
-  vars, tags, findings, extends, agent_debug
+  vars, tags, findings, extends, agent_debug, container_logs
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
-) RETURNING id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+) RETURNING id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs
 `
 
 type CreateEnvironmentParams struct {
@@ -141,6 +141,7 @@ type CreateEnvironmentParams struct {
 	Findings          json.RawMessage    `json:"findings"`
 	Extends           *string            `json:"extends"`
 	AgentDebug        bool               `json:"agent_debug"`
+	ContainerLogs     json.RawMessage    `json:"container_logs"`
 }
 
 func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (Environment, error) {
@@ -161,6 +162,7 @@ func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentPa
 		arg.Findings,
 		arg.Extends,
 		arg.AgentDebug,
+		arg.ContainerLogs,
 	)
 	var i Environment
 	err := row.Scan(
@@ -181,6 +183,7 @@ func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentPa
 		&i.Findings,
 		&i.Extends,
 		&i.AgentDebug,
+		&i.ContainerLogs,
 	)
 	return i, err
 }
@@ -546,7 +549,7 @@ func (q *Queries) GetEnvironmentAgentDebugForObject(ctx context.Context, id pgty
 }
 
 const getEnvironmentByRevisionAndName = `-- name: GetEnvironmentByRevisionAndName :one
-SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug FROM environment WHERE content_revision_id = $1 AND name = $2
+SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs FROM environment WHERE content_revision_id = $1 AND name = $2
 `
 
 type GetEnvironmentByRevisionAndNameParams struct {
@@ -575,12 +578,13 @@ func (q *Queries) GetEnvironmentByRevisionAndName(ctx context.Context, arg GetEn
 		&i.Findings,
 		&i.Extends,
 		&i.AgentDebug,
+		&i.ContainerLogs,
 	)
 	return i, err
 }
 
 const getEnvironmentByRevisionAndPath = `-- name: GetEnvironmentByRevisionAndPath :one
-SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug FROM environment WHERE content_revision_id = $1 AND path = $2
+SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs FROM environment WHERE content_revision_id = $1 AND path = $2
 `
 
 type GetEnvironmentByRevisionAndPathParams struct {
@@ -614,8 +618,30 @@ func (q *Queries) GetEnvironmentByRevisionAndPath(ctx context.Context, arg GetEn
 		&i.Findings,
 		&i.Extends,
 		&i.AgentDebug,
+		&i.ContainerLogs,
 	)
 	return i, err
+}
+
+const getEnvironmentContainerLogsForObject = `-- name: GetEnvironmentContainerLogsForObject :one
+SELECT e.container_logs
+FROM deployed_object o
+JOIN team t ON t.id = o.team_id
+JOIN build b ON b.id = t.build_id
+JOIN environment e ON e.content_revision_id = b.content_revision_id AND e.name = b.environment_name
+WHERE o.id = $1
+`
+
+// The container_logs config (driver + options, as jsonb) for the environment a
+// deployed object belongs to -- object -> team -> build -> environment, same
+// walk as GetEnvironmentAgentDebugForObject. The runner reads it to apply the
+// builder's native log driver to a container. NULL when the environment sets no
+// container_logs.
+func (q *Queries) GetEnvironmentContainerLogsForObject(ctx context.Context, id pgtype.UUID) (json.RawMessage, error) {
+	row := q.db.QueryRow(ctx, getEnvironmentContainerLogsForObject, id)
+	var container_logs json.RawMessage
+	err := row.Scan(&container_logs)
+	return container_logs, err
 }
 
 const getHostByRevisionAndName = `-- name: GetHostByRevisionAndName :one
@@ -739,7 +765,7 @@ func (q *Queries) GetScriptByRevisionAndName(ctx context.Context, arg GetScriptB
 }
 
 const listEnvironmentsByRevision = `-- name: ListEnvironmentsByRevision :many
-SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug FROM environment WHERE content_revision_id = $1 ORDER BY name
+SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs FROM environment WHERE content_revision_id = $1 ORDER BY name
 `
 
 func (q *Queries) ListEnvironmentsByRevision(ctx context.Context, contentRevisionID pgtype.UUID) ([]Environment, error) {
@@ -769,6 +795,7 @@ func (q *Queries) ListEnvironmentsByRevision(ctx context.Context, contentRevisio
 			&i.Findings,
 			&i.Extends,
 			&i.AgentDebug,
+			&i.ContainerLogs,
 		); err != nil {
 			return nil, err
 		}

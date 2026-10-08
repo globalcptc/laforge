@@ -28,10 +28,23 @@ RETURNING *;
 INSERT INTO environment (
   content_revision_id, path, name, schema_version, description, teams,
   root_password, start_at, stop_at, dns, access,
-  vars, tags, findings, extends, agent_debug
+  vars, tags, findings, extends, agent_debug, container_logs
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
 ) RETURNING *;
+
+-- name: GetEnvironmentContainerLogsForObject :one
+-- The container_logs config (driver + options, as jsonb) for the environment a
+-- deployed object belongs to -- object -> team -> build -> environment, same
+-- walk as GetEnvironmentAgentDebugForObject. The runner reads it to apply the
+-- builder's native log driver to a container. NULL when the environment sets no
+-- container_logs.
+SELECT e.container_logs
+FROM deployed_object o
+JOIN team t ON t.id = o.team_id
+JOIN build b ON b.id = t.build_id
+JOIN environment e ON e.content_revision_id = b.content_revision_id AND e.name = b.environment_name
+WHERE o.id = $1;
 
 -- name: GetEnvironmentAgentDebugForObject :one
 -- The agent-debug flag for the environment a deployed object belongs to, found

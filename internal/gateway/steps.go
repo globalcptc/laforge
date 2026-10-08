@@ -30,6 +30,10 @@ type Option func(*expandOptions)
 
 type expandOptions struct {
 	registryAuth func(host string) (RegistryAuth, bool)
+	// containerLogs is the environment's container_logs, applied to a compose
+	// project as the Docker daemon default log driver on its host so every
+	// service inherits it (see expandCompose). Nil disables forwarding.
+	containerLogs *loader.ContainerLogs
 }
 
 // WithRegistryAuth supplies stored registry credentials, looked up by host
@@ -121,6 +125,14 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		var o expandOptions
 		for _, opt := range opts {
 			opt(&o)
+		}
+		// A compose project ships its logs via the Docker daemon default on its
+		// host (expandCompose), set from the environment's container_logs.
+		for i := range c.Environments {
+			if c.Environments[i].Name == envName {
+				o.containerLogs = c.Environments[i].ContainerLogs
+				break
+			}
 		}
 		cmds, err := expandCompose(repoRoot, ctx.Compose, ctx.ObjectName, o)
 		if err != nil {

@@ -87,6 +87,15 @@ func dockerRunScript(spec builder.ContainerSpec) string {
 	}
 	fmt.Fprintf(&b, "docker pull %s && docker rm -f %s >/dev/null 2>&1; docker run -d --restart=always --network host --name %s",
 		img, nestedContainerName, nestedContainerName)
+	// Native container-log forwarding (environment container_logs): point this
+	// container's Docker log driver at the configured collector. Empty driver
+	// leaves Docker's default (json-file), i.e. no forwarding.
+	if spec.LogDriver != "" {
+		fmt.Fprintf(&b, " --log-driver %s", shq(spec.LogDriver))
+		for _, k := range sortedKeys(spec.LogOptions) {
+			fmt.Fprintf(&b, " --log-opt %s", shq(k+"="+spec.LogOptions[k]))
+		}
+	}
 	for _, k := range sortedKeys(spec.Env) {
 		fmt.Fprintf(&b, " -e %s", shq(k+"="+spec.Env[k]))
 	}

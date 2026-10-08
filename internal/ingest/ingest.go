@@ -293,6 +293,13 @@ func persistContent(ctx context.Context, q *db.Queries, revID pgtype.UUID, c *lo
 				return fmt.Errorf("environment %q: %w", e.Name, err)
 			}
 		}
+		var containerLogsJSON []byte
+		if e.ContainerLogs != nil {
+			containerLogsJSON, err = json.Marshal(e.ContainerLogs)
+			if err != nil {
+				return fmt.Errorf("environment %q: %w", e.Name, err)
+			}
+		}
 
 		envRow, err := q.CreateEnvironment(ctx, db.CreateEnvironmentParams{
 			ContentRevisionID: revID, Path: e.SourceFile, Name: e.Name,
@@ -300,7 +307,7 @@ func persistContent(ctx context.Context, q *db.Queries, revID pgtype.UUID, c *lo
 			RootPassword: strPtrOrNil(e.RootPass),
 			StartAt:      timestamptzOrZero(e.Start), StopAt: timestamptzOrZero(e.Stop),
 			Dns: dnsJSON, Access: access, Vars: vars, Tags: tags, Findings: findings, Extends: strPtrOrNil(e.Extends),
-			AgentDebug: e.AgentDebug,
+			AgentDebug: e.AgentDebug, ContainerLogs: containerLogsJSON,
 		})
 		if err != nil {
 			return fmt.Errorf("environment %q: %w", e.Name, err)

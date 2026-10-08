@@ -2,11 +2,13 @@ package gateway
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/globalcptc/laforge/internal/agentproto"
 	"github.com/globalcptc/laforge/internal/compose"
+	"github.com/globalcptc/laforge/internal/loader"
 )
 
 // composeRoot is where a project lives on its machine: /opt/laforge/compose/<name>.
@@ -74,6 +76,15 @@ func expandCompose(repoRoot, file, name string, o expandOptions) ([]PlannedComma
 
 	out = append(out, sh(installDockerScript))
 
+	// Native container-log forwarding for a compose project: set the Docker
+	// daemon's default log driver on this host (from the environment's
+	// container_logs) and restart Docker before `docker compose up`, so every
+	// service inherits it. A service that declares its own `logging:` still
+	// wins. The daemon ships directly -- the gateway never sees these logs.
+	if o.containerLogs != nil && o.containerLogs.Driver != "" {
+		out = append(out, sh(dockerDaemonLogScript(o.containerLogs)))
+	}
+
 	if o.registryAuth != nil {
 		seen := map[string]bool{}
 		for _, image := range b.Images {
@@ -112,6 +123,24 @@ func expandCompose(repoRoot, file, name string, o expandOptions) ([]PlannedComma
 }
 
 // shellQuote single-quotes s for /bin/sh.
+// dockerDaemonLogScript writes /etc/docker/daemon.json with container_logs'
+// driver as the Docker daemon default and restarts Docker, so compose services
+// started afterward inherit it. log-opts values are strings (what the drivers
+// expect), so the options map serializes directly.
+func dockerDaemonLogScript(cl *loader.ContainerLogs) string {
+	daemon := map[string]any{"log-driver": cl.Driver}
+	if len(cl.Options) > 0 {
+		daemon["log-opts"] = cl.Options
+	}
+	b, _ := json.Marshal(daemon)
+	return fmt.Sprintf(`set -e
+mkdir -p /etc/docker
+cat > /etc/docker/daemon.json <<'LAFORGE_EOF'
+%s
+LAFORGE_EOF
+systemctl restart docker 2>/dev/null || service docker restart || true`, string(b))
+}
+
 func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
