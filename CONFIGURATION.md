@@ -420,10 +420,17 @@ What to know:
   Networks inside the compose file stay private to the project.
 - **Images are pulled, never built.** A service can keep `build:` for local development,
   but must also name an `image:` that exists in a registry. Pin a version tag.
-- **The directory is shipped as-is.** Nothing in it is templated, so the same files a
-  developer runs locally run here, the same for every team. It is limited to 1 MiB
-  compressed — configuration, not application code. Bind mounts must be relative and
-  inside it (`./nginx/nginx.conf`).
+- **The compose file is templated; supporting files opt in with `.tmpl`.** The compose
+  file gets LaForge's [template pass](#templating) at deploy — the same `{{ vars.x }}`,
+  `{{ .Team }}`, `{{ .People }}` context a script or `run:` gets — so it can vary per team
+  or object. Quote template values so the file stays valid YAML
+  (`image: "{{ vars.app_image }}"`). A supporting file is templated by naming it with a
+  `.tmpl` suffix: `nginx.conf.tmpl` is rendered and shipped as `nginx.conf` (the suffix is
+  stripped) — so mount the stripped name (`./nginx.conf`). Files without `.tmpl` travel
+  verbatim. Compose's own `${VAR}`/`$host` interpolation is left untouched either way and
+  still resolves at `docker compose` runtime. The directory is limited to 1 MiB compressed
+  — configuration, not application code. Bind mounts must be relative and inside it
+  (`./nginx/nginx.conf`).
 - **Add the directory to `.laforgeignore`**, so its YAML isn't read as LaForge content.
   `laforge check` tells you when you've forgotten.
 - **Volumes last as long as the container.** They survive a restart and are gone on a
@@ -637,8 +644,10 @@ Anchors: `competition start`, `competition end` (each fires once), and `access o
 
 ## Templating
 
-A script's source is rendered with Go templates before it runs, per host per team. What's
-in scope:
+A script's source — and a `run:` command, and a [compose file](#compose-projects) — is
+rendered with Go templates before it's used, per host per team. (In a compose file, quote
+template values so it stays valid YAML, and note compose's own `${VAR}` syntax is left for
+`docker compose` to resolve at runtime.) What's in scope:
 
 | Reference | Value |
 | --- | --- |

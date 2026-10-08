@@ -63,7 +63,7 @@ func checkOneHost(repoRoot string, c *loader.Content, ctx *Context) []RenderErro
 	// missing file, a service with no image, or a bind mount that won't be
 	// shipped is caught here, not on the day.
 	if ctx.Compose != "" {
-		_, err := compose.Load(repoRoot, ctx.Compose)
+		_, err := compose.Load(repoRoot, ctx.Compose, nil)
 		add(err)
 	}
 

@@ -9,6 +9,7 @@ import (
 	"github.com/globalcptc/laforge/internal/agentproto"
 	"github.com/globalcptc/laforge/internal/compose"
 	"github.com/globalcptc/laforge/internal/loader"
+	"github.com/globalcptc/laforge/internal/render"
 )
 
 // composeRoot is where a project lives on its machine: /opt/laforge/compose/<name>.
@@ -49,8 +50,16 @@ docker compose version`
 // log in to any registry there is a stored credential for, pull, and start.
 // Each is its own command so a failure names the stage it happened in. Linux
 // only. file is the compose file's repo-relative path; name is the container's.
-func expandCompose(repoRoot, file, name string, o expandOptions) ([]PlannedCommand, error) {
-	b, err := compose.Load(repoRoot, file)
+func expandCompose(repoRoot string, ctx *render.Context, c *loader.Content, o expandOptions) ([]PlannedCommand, error) {
+	file, name := ctx.Compose, ctx.ObjectName
+	// The compose file gets the same template pass as a `run:`/script, with this
+	// object's context, so it can vary per team/object. compose.Load renders it
+	// before validating and archiving.
+	renderCompose := func(raw []byte) ([]byte, error) {
+		s, err := render.RenderString("compose:"+file, string(raw), ctx, c)
+		return []byte(s), err
+	}
+	b, err := compose.Load(repoRoot, file, renderCompose)
 	if err != nil {
 		return nil, err
 	}

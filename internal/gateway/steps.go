@@ -134,7 +134,7 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 				break
 			}
 		}
-		cmds, err := expandCompose(repoRoot, ctx.Compose, ctx.ObjectName, o)
+		cmds, err := expandCompose(repoRoot, ctx, c, o)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", asName, err)
 		}
