@@ -97,6 +97,9 @@ type buildDetail struct {
 	CommitMessage     string `json:"commit_message,omitempty"`
 	BuilderConfigName string `json:"builder_config_name,omitempty"`
 	BuilderKind       string `json:"builder_kind,omitempty"`
+	// Branch this build's configured build tracks. Empty for an ad-hoc build
+	// with no configured build behind it.
+	Branch string `json:"branch,omitempty"`
 }
 
 func (s *Server) handleGetBuild(w http.ResponseWriter, r *http.Request) {
@@ -147,6 +150,7 @@ func (s *Server) handleGetBuild(w http.ResponseWriter, r *http.Request) {
 	if build.ConfiguredBuildID.Valid {
 		if cb, err := s.Queries.GetConfiguredBuild(r.Context(), build.ConfiguredBuildID); err == nil {
 			detail.BuilderConfigName = cb.BuilderConfigName
+			detail.Branch = cb.Branch
 			if bc, err := s.Queries.GetBuilderConfigByName(r.Context(), cb.BuilderConfigName); err == nil {
 				detail.BuilderKind = bc.Kind
 			}

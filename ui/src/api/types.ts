@@ -153,6 +153,8 @@ export interface BuildDetail extends Build {
   // Commit + builder for the build header (resolved best-effort server-side).
   builder_config_name?: string
   builder_kind?: string
+  // Branch the configured build tracks; empty for an ad-hoc build.
+  branch?: string
 }
 
 export interface LFEvent {
