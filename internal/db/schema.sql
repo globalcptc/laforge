@@ -85,6 +85,7 @@ CREATE TABLE public.agent_task (
     ignore_errors boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    ad_hoc boolean DEFAULT false NOT NULL,
     CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text])))
 );
 --

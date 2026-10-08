@@ -15,7 +15,7 @@ import (
 const completeAgentTask = `-- name: CompleteAgentTask :one
 UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now()
 WHERE id = $1
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at, ad_hoc
 `
 
 type CompleteAgentTaskParams struct {
@@ -40,6 +40,54 @@ func (q *Queries) CompleteAgentTask(ctx context.Context, arg CompleteAgentTaskPa
 		&i.IgnoreErrors,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AdHoc,
+	)
+	return i, err
+}
+
+const createAdHocAgentTask = `-- name: CreateAdHocAgentTask :one
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, ad_hoc)
+VALUES ($1, $2, $3, $4, $5, true)
+ON CONFLICT (deployed_object_id, step_index) DO NOTHING
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at, ad_hoc
+`
+
+type CreateAdHocAgentTaskParams struct {
+	DeployedObjectID pgtype.UUID     `json:"deployed_object_id"`
+	StepIndex        int32           `json:"step_index"`
+	Command          string          `json:"command"`
+	Payload          json.RawMessage `json:"payload"`
+	IgnoreErrors     bool            `json:"ignore_errors"`
+}
+
+// Operator-dispatched tasks (immediate `run` and scheduled dispatch). ad_hoc =
+// true puts them in the always-eligible lane so they run even past a failed
+// authored step -- see NextAgentTaskForHost. Same shape as CreateAgentTask
+// otherwise (step_index still from NextStepIndexForHost, so it's unique).
+func (q *Queries) CreateAdHocAgentTask(ctx context.Context, arg CreateAdHocAgentTaskParams) (AgentTask, error) {
+	row := q.db.QueryRow(ctx, createAdHocAgentTask,
+		arg.DeployedObjectID,
+		arg.StepIndex,
+		arg.Command,
+		arg.Payload,
+		arg.IgnoreErrors,
+	)
+	var i AgentTask
+	err := row.Scan(
+		&i.ID,
+		&i.DeployedObjectID,
+		&i.StepIndex,
+		&i.Command,
+		&i.Payload,
+		&i.Status,
+		&i.LeaseExpiresAt,
+		&i.Attempts,
+		&i.Output,
+		&i.LastError,
+		&i.IgnoreErrors,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AdHoc,
 	)
 	return i, err
 }
@@ -117,7 +165,7 @@ const createAgentTask = `-- name: CreateAgentTask :one
 INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at, ad_hoc
 `
 
 type CreateAgentTaskParams struct {
@@ -128,6 +176,8 @@ type CreateAgentTaskParams struct {
 	IgnoreErrors     bool            `json:"ignore_errors"`
 }
 
+// Authored deploy steps. ad_hoc defaults false (strict ordered, failure-blocking
+// lane). Operator commands use CreateAdHocAgentTask instead.
 func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams) (AgentTask, error) {
 	row := q.db.QueryRow(ctx, createAgentTask,
 		arg.DeployedObjectID,
@@ -151,6 +201,7 @@ func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams
 		&i.IgnoreErrors,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AdHoc,
 	)
 	return i, err
 }
@@ -230,7 +281,7 @@ func (q *Queries) DeleteAgentTasksForObject(ctx context.Context, deployedObjectI
 const failAgentTask = `-- name: FailAgentTask :one
 UPDATE agent_task SET status = $2, last_error = $3, updated_at = now()
 WHERE id = $1
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at, ad_hoc
 `
 
 type FailAgentTaskParams struct {
@@ -256,6 +307,7 @@ func (q *Queries) FailAgentTask(ctx context.Context, arg FailAgentTaskParams) (A
 		&i.IgnoreErrors,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AdHoc,
 	)
 	return i, err
 }
@@ -298,7 +350,7 @@ func (q *Queries) GetAgentSessionByDeployedObject(ctx context.Context, deployedO
 }
 
 const getAgentTask = `-- name: GetAgentTask :one
-SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at FROM agent_task WHERE id = $1
+SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at, ad_hoc FROM agent_task WHERE id = $1
 `
 
 func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, error) {
@@ -318,6 +370,7 @@ func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, 
 		&i.IgnoreErrors,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AdHoc,
 	)
 	return i, err
 }
@@ -481,7 +534,7 @@ func (q *Queries) ListAgentSessionsByBuild(ctx context.Context, buildID pgtype.U
 }
 
 const listAgentTasksByHost = `-- name: ListAgentTasksByHost :many
-SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at FROM agent_task WHERE deployed_object_id = $1 ORDER BY step_index
+SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at, ad_hoc FROM agent_task WHERE deployed_object_id = $1 ORDER BY step_index
 `
 
 func (q *Queries) ListAgentTasksByHost(ctx context.Context, deployedObjectID pgtype.UUID) ([]AgentTask, error) {
@@ -507,6 +560,7 @@ func (q *Queries) ListAgentTasksByHost(ctx context.Context, deployedObjectID pgt
 			&i.IgnoreErrors,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AdHoc,
 		); err != nil {
 			return nil, err
 		}
@@ -623,14 +677,23 @@ UPDATE agent_task
 SET status = 'leased', lease_expires_at = now() + $2::interval,
     attempts = attempts + 1, updated_at = now()
 WHERE id = (
-    SELECT t2.id FROM agent_task t2
-    WHERE t2.deployed_object_id = $1
-      AND t2.status NOT IN ('done', 'ignored')
-    ORDER BY t2.step_index
+    SELECT t.id FROM agent_task t
+    WHERE t.deployed_object_id = $1
+      AND t.status NOT IN ('done', 'ignored')
+      AND (
+        t.ad_hoc
+        OR t.step_index = (
+          SELECT MIN(t2.step_index) FROM agent_task t2
+          WHERE t2.deployed_object_id = $1
+            AND NOT t2.ad_hoc
+            AND t2.status NOT IN ('done', 'ignored')
+        )
+      )
+    ORDER BY t.ad_hoc DESC, t.step_index
     LIMIT 1
 )
 AND (status = 'pending' OR (status = 'leased' AND lease_expires_at < now()))
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at, ad_hoc
 `
 
 type NextAgentTaskForHostParams struct {
@@ -638,30 +701,34 @@ type NextAgentTaskForHostParams struct {
 	Column2          pgtype.Interval `json:"column_2"`
 }
 
-// get-task: the lowest step_index for this host that isn't done or ignored
-// yet (an ignore_errors step that failed terminally is 'ignored' -- terminal,
-// non-blocking, so the sequence steps past it), but
-// ONLY leased if that exact row is actually available -- this has to be
-// two conditions on the SAME row, not "skip it and try the next one."
-// An earlier version of this query filtered pending-or-expired *before*
-// picking the lowest step_index, which meant a step currently leased (an
-// agent genuinely working on it) was invisible to the candidate set
-// entirely, and the query happily leased the NEXT step instead -- a real
-// bug, caught by a real second get-task call while step 0 was still
-// leased returning step 1. The inner subquery here finds the lowest
-// not-done step_index unconditionally; the outer UPDATE then only
-// commits if THAT SPECIFIC row is pending or its lease expired, matching
-// 0 rows (NextAgentTaskForHost returns pgx.ErrNoRows, "nothing to do
-// right now") rather than reaching past it -- exactly "an agent must
-// finish step N before starting N+1."
+// get-task: which task the host should run next. There are two lanes:
 //
-// No FOR UPDATE SKIP LOCKED here, unlike the task table:
-// there's only ever one live candidate row per host (the lowest
-// not-done step_index), not a shared pool of many interchangeable rows
-// to pick among, so plain UPDATE's own row-level locking on the matched
-// id already serializes two concurrent callers correctly -- the second
-// one re-evaluates the WHERE clause after the first's lock releases and
-// sees status is no longer pending/expired.
+//   - Ad-hoc tasks (ad_hoc = true: operator `run` and scheduled dispatch) are
+//     ALWAYS eligible and take priority. They must run even when an authored
+//     step has terminally failed and stopped the deploy -- that is exactly when
+//     an operator needs to run commands on the box to debug why a step failed.
+//     A failed authored step no longer blocks them.
+//
+//   - Authored steps (ad_hoc = false) keep strict ordered semantics: the lowest
+//     not-done/ignored step (an ignore_errors step that failed terminally is
+//     'ignored' -- terminal, non-blocking, so the sequence steps past it), and
+//     the sequence stops on a 'failed' step. This is "finish step N before N+1."
+//
+// The inner subquery picks the single highest-priority runnable candidate:
+// any ad-hoc row, or the lowest not-done AUTHORED step, ordered ad-hoc-first
+// then by step_index. The outer UPDATE then only commits if THAT SPECIFIC row
+// is pending or its lease expired -- the candidate and the lease gate are
+// evaluated on the SAME row (an earlier version filtered pending-or-expired
+// before picking the lowest step_index, so a step an agent was genuinely
+// working on went invisible and the NEXT step got leased instead -- a real bug
+// caught by a second get-task while step 0 was still leased returning step 1).
+// A non-leasable candidate matches 0 rows (ErrNoRows, "nothing to do right
+// now"), so the agent finishes its current task before being handed another,
+// and a failed authored step with no ad-hoc work pending correctly yields
+// nothing.
+//
+// No FOR UPDATE SKIP LOCKED: there's only ever one live candidate row per host,
+// so plain UPDATE's own row-level locking serializes two concurrent callers.
 func (q *Queries) NextAgentTaskForHost(ctx context.Context, arg NextAgentTaskForHostParams) (AgentTask, error) {
 	row := q.db.QueryRow(ctx, nextAgentTaskForHost, arg.DeployedObjectID, arg.Column2)
 	var i AgentTask
@@ -679,6 +746,7 @@ func (q *Queries) NextAgentTaskForHost(ctx context.Context, arg NextAgentTaskFor
 		&i.IgnoreErrors,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AdHoc,
 	)
 	return i, err
 }

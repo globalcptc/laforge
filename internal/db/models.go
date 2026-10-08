@@ -64,6 +64,7 @@ type AgentTask struct {
 	IgnoreErrors     bool               `json:"ignore_errors"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	AdHoc            bool               `json:"ad_hoc"`
 }
 
 type AttentionDismissal struct {

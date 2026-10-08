@@ -25,7 +25,7 @@ use std::collections::HashSet;
 use std::io;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
 
 // Bounds for container console-log forwarding: how many lines the agent buffers
@@ -271,6 +271,13 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
     let conn = ClientConnection::new(tls_config, server_name).map_err(|e| io::Error::other(format!("starting TLS: {e}")))?;
     let mut tls = StreamOwned::new(conn, tcp);
 
+    // The task currently executing on a worker thread, if any. Its result comes
+    // back here over the channel. While this is Some, the loop keeps
+    // heartbeating (so shells still open and the agent stays healthy) but does
+    // NOT ask for another task -- one in flight at a time, preserving the
+    // gateway's ordered lease model.
+    let mut inflight: Option<mpsc::Receiver<ReportStatusRequestPayload>> = None;
+
     loop {
         // Sample basic host metrics and carry them on the heartbeat. Best-effort:
         // if serialization somehow fails, send an empty heartbeat rather than
@@ -283,10 +290,48 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("decoding heartbeat response: {e}")))?;
 
         // Open an interactive shell for any session a client is waiting on. Each
-        // runs on its own thread and its own mTLS connection, so it never blocks
-        // this heartbeat/task loop.
+        // runs on its own thread and its own mTLS connection. We reach this on
+        // every heartbeat -- INCLUDING while a task is running on the worker
+        // thread below -- so a shell can open even during a long or hung step.
         if !hb.pending_sessions.is_empty() {
             shell::maybe_spawn(&hb.pending_sessions, shell_handled, addr, host_only, &shell_tls_config);
+        }
+
+        // Ship any buffered console lines every iteration, task or not, so logs
+        // keep flowing at the poll cadence -- including while a task runs.
+        flush_logs(&mut tls, logq)?;
+
+        // If a task is running on the worker thread, poll (don't block) for its
+        // result. Taking the Result out through `map` drops the borrow of
+        // `inflight` before the match, so the arms can clear it.
+        match inflight.as_ref().map(|rx| rx.try_recv()) {
+            Some(Ok(report)) => {
+                inflight = None;
+                dlog!("laforge-agent: task {} -> {}", report.task_id, report.status);
+                let body = serde_json::to_vec(&report)
+                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding report-status: {e}")))?;
+                protocol::write_frame(&mut tls, MessageType::ReportStatusRequest, &body)?;
+                let (mt, _body) = protocol::read_frame(&mut tls)?;
+                expect(mt, MessageType::ReportStatusResponse)?;
+                // Known work may be queued -- poll again without waiting.
+                continue;
+            }
+            Some(Err(mpsc::TryRecvError::Empty)) => {
+                // Task still running: keep heartbeating at the poll cadence, but
+                // don't ask for another (one in flight at a time).
+                std::thread::sleep(Duration::from_millis(hb.next_poll_ms));
+                continue;
+            }
+            Some(Err(mpsc::TryRecvError::Disconnected)) => {
+                // The worker ended without sending a result (a panic in command
+                // execution -- not expected). Drop it; the gateway's lease expiry
+                // re-leases the task.
+                inflight = None;
+                dlog!("laforge-agent: task worker ended with no result; it will be re-leased on lease expiry");
+                std::thread::sleep(Duration::from_millis(hb.next_poll_ms));
+                continue;
+            }
+            None => {} // nothing in flight -- fall through and ask for work
         }
 
         protocol::write_frame(&mut tls, MessageType::GetTaskRequest, &[])?;
@@ -295,33 +340,33 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
         let gt: GetTaskResponsePayload = serde_json::from_slice(&body)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("decoding get-task response: {e}")))?;
 
-        // Ship any buffered console lines every iteration, task or not, so logs
-        // keep flowing at the poll cadence rather than only when idle.
-        flush_logs(&mut tls, logq)?;
-
         if let Some(task) = gt.task {
+            // Run the task on a WORKER thread, not here, so a slow or hung
+            // command never stops this loop from heartbeating. The worker only
+            // touches the command and the result channel -- this loop stays the
+            // sole owner of the TLS connection.
             dlog!("laforge-agent: running task {} ({})", task.id, task.command);
-            let outcome = if task.command == "validate" {
-                validators::run(&task.payload)
-            } else {
-                commands::run(&task.command, &task.payload)
-            };
-            dlog!("laforge-agent: task {} -> {}", task.id, outcome.status);
-
-            let report = ReportStatusRequestPayload {
-                task_id: task.id,
-                status: outcome.status.to_string(),
-                output: outcome.output,
-                error: outcome.error,
-                validator_results: outcome.validator_results,
-            };
-            let body = serde_json::to_vec(&report)
-                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding report-status: {e}")))?;
-            protocol::write_frame(&mut tls, MessageType::ReportStatusRequest, &body)?;
-            let (mt, _body) = protocol::read_frame(&mut tls)?;
-            expect(mt, MessageType::ReportStatusResponse)?;
-            // Immediately check for the next step -- no reason to wait
-            // out the poll interval while there's known work queued.
+            let (tx, rx) = mpsc::channel();
+            std::thread::spawn(move || {
+                let outcome = if task.command == "validate" {
+                    validators::run(&task.payload)
+                } else {
+                    commands::run(&task.command, &task.payload)
+                };
+                let report = ReportStatusRequestPayload {
+                    task_id: task.id,
+                    status: outcome.status.to_string(),
+                    output: outcome.output,
+                    error: outcome.error,
+                    validator_results: outcome.validator_results,
+                };
+                // A failed send means the loop went away (connection dropped ->
+                // reconnect); the result is simply lost and the task re-leases on
+                // expiry, exactly as a synchronous report that failed would.
+                let _ = tx.send(report);
+            });
+            inflight = Some(rx);
+            // Come back next iteration to heartbeat and poll for the result.
             continue;
         }
 
