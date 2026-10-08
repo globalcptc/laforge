@@ -202,6 +202,7 @@ type DeployedObject struct {
 	PowerStateCheckedAt pgtype.Timestamptz `json:"power_state_checked_at"`
 	Tags                json.RawMessage    `json:"tags"`
 	StepsMaterializedAt pgtype.Timestamptz `json:"steps_materialized_at"`
+	BlockedOn           json.RawMessage    `json:"blocked_on"`
 }
 
 type Environment struct {

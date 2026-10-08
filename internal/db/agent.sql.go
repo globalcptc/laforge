@@ -162,8 +162,12 @@ func (q *Queries) CreateAgentHeartbeat(ctx context.Context, arg CreateAgentHeart
 }
 
 const createAgentTask = `-- name: CreateAgentTask :one
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, status)
+VALUES (
+  $1, $2, $3,
+  $4, $5,
+  COALESCE(NULLIF($6::text, ''), 'pending')
+)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
 RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, ignore_errors, created_at, updated_at, ad_hoc
 `
@@ -174,10 +178,15 @@ type CreateAgentTaskParams struct {
 	Command          string          `json:"command"`
 	Payload          json.RawMessage `json:"payload"`
 	IgnoreErrors     bool            `json:"ignore_errors"`
+	Status           string          `json:"status"`
 }
 
-// Authored deploy steps. ad_hoc defaults false (strict ordered, failure-blocking
-// lane). Operator commands use CreateAdHocAgentTask instead.
+// Authored deploy steps. status is 'pending' normally, or 'blocked' when the
+// object is still waiting on a dependency -- a blocked task is visible and
+// counted as open but never leased, and is flipped to 'pending' by
+// UnblockAgentTasksForObject once the dependency finishes. ad_hoc defaults false
+// (strict ordered, failure-blocking lane); operator commands use
+// CreateAdHocAgentTask instead.
 func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams) (AgentTask, error) {
 	row := q.db.QueryRow(ctx, createAgentTask,
 		arg.DeployedObjectID,
@@ -185,6 +194,7 @@ func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams
 		arg.Command,
 		arg.Payload,
 		arg.IgnoreErrors,
+		arg.Status,
 	)
 	var i AgentTask
 	err := row.Scan(
@@ -869,7 +879,7 @@ func (q *Queries) SumStepOutputStorageByBuild(ctx context.Context, buildID pgtyp
 const summarizeAgentTasksByObjectForBuild = `-- name: SummarizeAgentTasksByObjectForBuild :many
 SELECT deployed_object.id AS deployed_object_id,
        count(*)::bigint AS total,
-       count(*) FILTER (WHERE agent_task.status IN ('pending', 'leased'))::bigint AS open,
+       count(*) FILTER (WHERE agent_task.status IN ('pending', 'leased', 'blocked'))::bigint AS open,
        count(*) FILTER (WHERE agent_task.status = 'failed')::bigint AS failed
 FROM agent_task
 JOIN deployed_object ON deployed_object.id = agent_task.deployed_object_id
@@ -914,6 +924,18 @@ func (q *Queries) SummarizeAgentTasksByObjectForBuild(ctx context.Context, build
 		return nil, err
 	}
 	return items, nil
+}
+
+const unblockAgentTasksForObject = `-- name: UnblockAgentTasksForObject :exec
+UPDATE agent_task SET status = 'pending', updated_at = now()
+WHERE deployed_object_id = $1 AND status = 'blocked'
+`
+
+// Release an object's steps once its dependencies have finished: flip every
+// 'blocked' task to 'pending' so the agent can lease them in order.
+func (q *Queries) UnblockAgentTasksForObject(ctx context.Context, deployedObjectID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, unblockAgentTasksForObject, deployedObjectID)
+	return err
 }
 
 const upsertAgentSession = `-- name: UpsertAgentSession :one

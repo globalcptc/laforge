@@ -78,12 +78,26 @@ JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1;
 
 -- name: CreateAgentTask :one
--- Authored deploy steps. ad_hoc defaults false (strict ordered, failure-blocking
--- lane). Operator commands use CreateAdHocAgentTask instead.
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors)
-VALUES ($1, $2, $3, $4, $5)
+-- Authored deploy steps. status is 'pending' normally, or 'blocked' when the
+-- object is still waiting on a dependency -- a blocked task is visible and
+-- counted as open but never leased, and is flipped to 'pending' by
+-- UnblockAgentTasksForObject once the dependency finishes. ad_hoc defaults false
+-- (strict ordered, failure-blocking lane); operator commands use
+-- CreateAdHocAgentTask instead.
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, status)
+VALUES (
+  sqlc.arg(deployed_object_id), sqlc.arg(step_index), sqlc.arg(command),
+  sqlc.arg(payload), sqlc.arg(ignore_errors),
+  COALESCE(NULLIF(sqlc.arg(status)::text, ''), 'pending')
+)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
 RETURNING *;
+
+-- name: UnblockAgentTasksForObject :exec
+-- Release an object's steps once its dependencies have finished: flip every
+-- 'blocked' task to 'pending' so the agent can lease them in order.
+UPDATE agent_task SET status = 'pending', updated_at = now()
+WHERE deployed_object_id = $1 AND status = 'blocked';
 
 -- name: CreateAdHocAgentTask :one
 -- Operator-dispatched tasks (immediate `run` and scheduled dispatch). ad_hoc =
@@ -199,7 +213,7 @@ WHERE team.build_id = $1 AND agent_task.status = 'failed';
 -- steps, i.e. nothing left to build).
 SELECT deployed_object.id AS deployed_object_id,
        count(*)::bigint AS total,
-       count(*) FILTER (WHERE agent_task.status IN ('pending', 'leased'))::bigint AS open,
+       count(*) FILTER (WHERE agent_task.status IN ('pending', 'leased', 'blocked'))::bigint AS open,
        count(*) FILTER (WHERE agent_task.status = 'failed')::bigint AS failed
 FROM agent_task
 JOIN deployed_object ON deployed_object.id = agent_task.deployed_object_id

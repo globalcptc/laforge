@@ -86,7 +86,7 @@ CREATE TABLE public.agent_task (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     ad_hoc boolean DEFAULT false NOT NULL,
-    CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text])))
+    CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text, 'blocked'::text])))
 );
 --
 -- Name: build; Type: TABLE; Schema: public; Owner: -
@@ -288,6 +288,7 @@ CREATE TABLE public.deployed_object (
     power_state_checked_at timestamp with time zone,
     tags jsonb DEFAULT '{}'::jsonb NOT NULL,
     steps_materialized_at timestamp with time zone,
+    blocked_on jsonb,
     CONSTRAINT deployed_object_kind_check CHECK ((kind = ANY (ARRAY['network'::text, 'host'::text, 'container'::text, 'dns'::text]))),
     CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroying'::text, 'destroyed'::text])))
 );

@@ -136,6 +136,10 @@ export interface DeployedObject {
   power_state?: PowerState
   power_state_checked_at?: string | null
   agent?: AgentHealth
+  // Dependencies this object's steps are waiting on (its `depends_on` that
+  // haven't finished yet). Set while its steps are materialized but blocked;
+  // null/empty once released. Drives the "Dependency Blocked" state.
+  blocked_on?: string[] | null
 }
 
 export interface TeamSummary extends Team {

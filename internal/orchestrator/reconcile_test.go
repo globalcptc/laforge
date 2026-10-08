@@ -386,6 +386,36 @@ func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 		}
 		return total
 	}
+	// counts of webserver steps by status (blocked vs leasable pending)
+	webserverStepStatuses := func() (blocked, pending int) {
+		for _, id := range webserverIDs() {
+			rows, err := q.ListAgentTasksByHost(ctx, id)
+			if err != nil {
+				t.Fatalf("ListAgentTasksByHost: %v", err)
+			}
+			for _, r := range rows {
+				switch r.Status {
+				case "blocked":
+					blocked++
+				case "pending":
+					pending++
+				}
+			}
+		}
+		return
+	}
+	webserverBlockedOnSet := func() bool {
+		for _, id := range webserverIDs() {
+			o, err := q.GetDeployedObject(ctx, id)
+			if err != nil {
+				t.Fatalf("GetDeployedObject: %v", err)
+			}
+			if len(o.BlockedOn) == 0 || string(o.BlockedOn) == "null" {
+				return false
+			}
+		}
+		return true
+	}
 
 	// First pass: the box deploys ahead of time, so webserver gets its deploy
 	// task immediately even though database hasn't finished.
@@ -406,12 +436,21 @@ func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
 		t.Fatalf("Reconcile (boxes up): %v", err)
 	}
-	if got := webserverSteps(); got != 0 {
-		t.Fatalf("webserver steps materialized = %d while database only 'running', want 0 (steps wait for the dependency to FINISH)", got)
+	// Steps now materialize eagerly (so the UI can show them) -- but while the
+	// dependency is only 'running', they are 'blocked': visible, not leasable,
+	// and the object records what it's waiting on.
+	if got := webserverSteps(); got != 5*6 {
+		t.Fatalf("webserver steps while database only 'running' = %d, want %d (materialized eagerly as blocked)", got, 5*6)
+	}
+	if blocked, pending := webserverStepStatuses(); blocked != 5*6 || pending != 0 {
+		t.Fatalf("webserver steps while waiting: blocked=%d pending=%d, want all %d blocked (none leasable)", blocked, pending, 5*6)
+	}
+	if !webserverBlockedOnSet() {
+		t.Fatal("webserver blocked_on not recorded while waiting on database")
 	}
 
-	// Finish every team's database copy, then reconcile: now webserver's steps
-	// materialize. webserver.yaml expands to 6 commands per copy x 5 teams.
+	// Finish every team's database copy, then reconcile: webserver's steps are
+	// released -- flipped blocked -> pending -- and blocked_on cleared.
 	if _, err := pool.Exec(ctx,
 		"UPDATE deployed_object SET status='finished' WHERE object_name='database' AND team_id IN (SELECT id FROM team WHERE build_id=$1)",
 		build.ID); err != nil {
@@ -421,6 +460,12 @@ func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 		t.Fatalf("Reconcile (database finished): %v", err)
 	}
 	if got := webserverSteps(); got != 5*6 {
-		t.Fatalf("webserver steps materialized after database finished = %d, want %d (6 commands x 5 teams)", got, 5*6)
+		t.Fatalf("webserver steps after database finished = %d, want %d (6 commands x 5 teams)", got, 5*6)
+	}
+	if blocked, pending := webserverStepStatuses(); blocked != 0 || pending != 5*6 {
+		t.Fatalf("after database finished: blocked=%d pending=%d, want all %d pending (released)", blocked, pending, 5*6)
+	}
+	if webserverBlockedOnSet() {
+		t.Fatal("webserver blocked_on should be cleared after the dependency finished")
 	}
 }

@@ -531,7 +531,7 @@ export function BuildHosts() {
                                       )}
                                     </Td>
                                     <Td>
-                                      <StatusBadge status={h.status} kind={h.kind} />
+                                      <StatusBadge status={h.status} kind={h.kind} blockedOn={h.blocked_on} />
                                     </Td>
                                     <Td>
                                       <InfraCell

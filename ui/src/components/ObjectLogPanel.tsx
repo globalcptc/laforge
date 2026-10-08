@@ -252,6 +252,8 @@ const STEP_STYLE: Record<string, { icon: typeof CircleCheck; tone: 'neutral' | '
   leased: { icon: Loader, tone: 'info', label: 'Running', spin: true },
   done: { icon: CircleCheck, tone: 'success', label: 'Done' },
   failed: { icon: CircleX, tone: 'danger', label: 'Failed' },
+  // Queued but held until this host's dependencies finish -- visible, not yet run.
+  blocked: { icon: CircleDashed, tone: 'neutral', label: 'Blocked' },
 }
 
 function StepBadge({ status }: { status: string }) {
@@ -396,7 +398,7 @@ function InfoTab({
         <InfoRow label="Kind" value={kind} />
         {object?.network_name && <InfoRow label="Network" value={object.network_name} mono />}
         {object && (
-          <InfoRow label="State" valueNode={<StatusBadge status={object.status} kind={kind} />} />
+          <InfoRow label="State" valueNode={<StatusBadge status={object.status} kind={kind} blockedOn={object.blocked_on} />} />
         )}
         {object?.power_state && !GONE_STATES.has(object.status) ? <InfoRow label="Infra" valueNode={<PowerBadge state={object.power_state} />} /> : null}
         {object?.agent && (
