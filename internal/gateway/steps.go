@@ -11,6 +11,7 @@ package gateway
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/globalcptc/laforge/internal/agentproto"
 	"github.com/globalcptc/laforge/internal/loader"
@@ -342,7 +343,11 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 		}})
 
 	case "reboot":
-		out = append(out, PlannedCommand{Command: agentproto.CmdReboot, Payload: agentproto.RebootPayload{}})
+		delaySec, err := rebootDelaySec(step)
+		if err != nil {
+			return nil, nil, fmt.Errorf("step %d (reboot): %w", i, err)
+		}
+		out = append(out, PlannedCommand{Command: agentproto.CmdReboot, Payload: agentproto.RebootPayload{DelaySec: delaySec}})
 
 	case "download":
 		// A real HTTP(S) GET the agent performs directly (host -> the URL's
@@ -452,20 +457,78 @@ func renderValidateChecks(raw []interface{}) ([]agentproto.ValidateCheck, error)
 	var out []agentproto.ValidateCheck
 	for _, r := range raw {
 		m := asMap(r)
-		if m == nil || len(m) != 1 {
+		if m == nil {
 			b, _ := json.Marshal(r)
 			return nil, fmt.Errorf("malformed validate entry: %s", b)
 		}
-		for kind, args := range m {
-			argMap := asMap(args)
-			if argMap == nil {
-				// A bare-value check, e.g. `- user_exists: dbadmin` --
-				// normalize to {"value": "dbadmin"} so the agent always
-				// sees a map.
-				argMap = map[string]interface{}{"value": args}
+		// An optional `delay:` sibling waits before the check runs. Pull it out
+		// (without mutating the shared loaded map -- ExpandSteps runs on it more
+		// than once), then require exactly one remaining key: the check itself.
+		var delayMs int64
+		var kind string
+		var args interface{}
+		checks := 0
+		for k, v := range m {
+			if k == "delay" {
+				ms, err := parseDelayMs(v)
+				if err != nil {
+					return nil, fmt.Errorf("validate entry delay: %w", err)
+				}
+				delayMs = ms
+				continue
 			}
-			out = append(out, agentproto.ValidateCheck{Kind: kind, Args: argMap})
+			kind, args = k, v
+			checks++
 		}
+		if checks != 1 {
+			b, _ := json.Marshal(r)
+			return nil, fmt.Errorf("validate entry must have exactly one check (plus an optional delay): %s", b)
+		}
+		argMap := asMap(args)
+		if argMap == nil {
+			// A bare-value check, e.g. `- user_exists: dbadmin` -- normalize to
+			// {"value": "dbadmin"} so the agent always sees a map.
+			argMap = map[string]interface{}{"value": args}
+		}
+		out = append(out, agentproto.ValidateCheck{Kind: kind, Args: argMap, DelayMs: delayMs})
 	}
 	return out, nil
+}
+
+// rebootDelaySec reads a reboot step's optional `delay:` -- a duration string
+// ("30s"), the same format as a validator's delay -- and returns whole seconds
+// for the agent's shutdown scheduler (which rounds to whole minutes anyway). No
+// delay, or a bare `reboot: {}`, means reboot now.
+func rebootDelaySec(step loader.Step) (int, error) {
+	m := asMap(step["reboot"])
+	if m == nil {
+		return 0, nil
+	}
+	d, ok := m["delay"]
+	if !ok {
+		return 0, nil
+	}
+	ms, err := parseDelayMs(d)
+	if err != nil {
+		return 0, err
+	}
+	return int(ms / 1000), nil
+}
+
+// parseDelayMs turns a validator's `delay:` value into milliseconds. Like
+// reboot's `delay`, it is a duration STRING ("10s", "500ms", "1m") -- the schema
+// allows only a string, and this agrees. Negative is rejected.
+func parseDelayMs(v interface{}) (int64, error) {
+	s, ok := v.(string)
+	if !ok {
+		return 0, fmt.Errorf("must be a duration string like \"10s\", got %T", v)
+	}
+	dur, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("%q is not a duration (try \"10s\"): %w", s, err)
+	}
+	if dur < 0 {
+		return 0, fmt.Errorf("%q is negative", s)
+	}
+	return dur.Milliseconds(), nil
 }

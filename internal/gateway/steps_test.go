@@ -148,6 +148,77 @@ func TestExpandStepsRendersValidateBlock(t *testing.T) {
 	}
 }
 
+// TestRenderValidateChecksDelay covers the optional `delay:` sub-item on a
+// validator: a duration string becomes delay_ms, a bare number is seconds, a
+// check without delay is 0, and the malformed cases are rejected.
+func TestRenderValidateChecksDelay(t *testing.T) {
+	raw := []interface{}{
+		map[string]interface{}{"service_running": "nginx", "delay": "10s"},
+		map[string]interface{}{"user_exists": "dbadmin"},
+		map[string]interface{}{"port_listening": map[string]interface{}{"port": 80}, "delay": "1500ms"},
+	}
+	checks, err := renderValidateChecks(raw)
+	if err != nil {
+		t.Fatalf("renderValidateChecks: %v", err)
+	}
+	want := map[string]int64{"service_running": 10000, "user_exists": 0, "port_listening": 1500}
+	if len(checks) != len(want) {
+		t.Fatalf("got %d checks, want %d: %+v", len(checks), len(want), checks)
+	}
+	for _, c := range checks {
+		if c.DelayMs != want[c.Kind] {
+			t.Errorf("%s: delay_ms = %d, want %d", c.Kind, c.DelayMs, want[c.Kind])
+		}
+	}
+
+	bad := []struct {
+		name  string
+		entry map[string]interface{}
+	}{
+		{"delay only, no check", map[string]interface{}{"delay": "5s"}},
+		{"unparseable delay", map[string]interface{}{"service_running": "nginx", "delay": "soon"}},
+		{"negative delay", map[string]interface{}{"service_running": "nginx", "delay": "-5s"}},
+		{"bare number rejected (string only, like reboot)", map[string]interface{}{"service_running": "nginx", "delay": 3}},
+		{"two checks", map[string]interface{}{"service_running": "nginx", "user_exists": "x"}},
+	}
+	for _, b := range bad {
+		if _, err := renderValidateChecks([]interface{}{b.entry}); err == nil {
+			t.Errorf("%s: expected an error, got none", b.name)
+		}
+	}
+}
+
+// TestRebootDelayIsWired proves a reboot step's `delay:` reaches the agent as
+// delay_sec (it used to be dropped -- an empty RebootPayload).
+func TestRebootDelayIsWired(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatalf("loader.Load: %v", err)
+	}
+	for i := range c.Hosts {
+		if c.Hosts[i].Name == "database" {
+			c.Hosts[i].Steps = append(c.Hosts[i].Steps, loader.Step{"reboot": map[string]interface{}{"delay": "30s"}})
+		}
+	}
+	cmds, _, err := ExpandSteps("../../examples/lm-test", c, "lm-test", "db01", 1)
+	if err != nil {
+		t.Fatalf("ExpandSteps: %v", err)
+	}
+	found := false
+	for _, cmd := range cmds {
+		if cmd.Command == agentproto.CmdReboot {
+			p := cmd.Payload.(agentproto.RebootPayload)
+			if p.DelaySec != 30 {
+				t.Fatalf("reboot DelaySec = %d, want 30", p.DelaySec)
+			}
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("no reboot command was produced")
+	}
+}
+
 // TestScriptArgsAndValidateAreWired proves a script's own `args:` reach the
 // execute command and its own `validate:` block becomes a trailing validate,
 // grafted onto a real script the webserver already runs.

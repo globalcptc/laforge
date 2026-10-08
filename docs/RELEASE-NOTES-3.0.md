@@ -44,6 +44,7 @@ This note covers the whole 3.0 line.
   script rendered against every host in every team.
 - **Rich authored surface**: per-host/container `steps:` (install software, create
   users, write files, download/extract, run scripts) with per-step `validate:` checks
+  (each with an optional `delay:` to let a service settle before it's checked)
   and `ignore_errors`; a top-level `schedule:` array with **natural-language timing**
   ("every 30 minutes", "45 minutes after competition start"); `depends_on` ordering;
   `tags:` that cascade from environment → network → script → object; `ports:` firewalls;

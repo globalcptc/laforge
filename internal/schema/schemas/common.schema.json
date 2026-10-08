@@ -52,13 +52,25 @@
     },
 
     "validatorItem": {
-      "$comment": "Exactly one key, enforced by minProperties/maxProperties rather than a verbose oneOf — every known key's shape is checked when present, additionalProperties:false rejects anything else.",
+      "$comment": "Exactly one check key, enforced by the oneOf-on-required below (one branch per check key; delay is in no branch, so it is optional and never satisfies 'exactly one check'). additionalProperties:false rejects anything else, and each key's own shape is checked when present.",
       "type": "object",
-      "description": "One read-only check, run after the step (or every step of the script) it's attached to. A failed check fails its step, unless the step sets `ignore_errors`.",
-      "minProperties": 1,
-      "maxProperties": 1,
+      "description": "One read-only check, run after the step (or every step of the script) it's attached to. A failed check fails its step, unless the step sets `ignore_errors`. An optional `delay` waits before the check runs, to let the thing it checks settle.",
       "additionalProperties": false,
+      "oneOf": [
+        { "required": ["file_exists"] },
+        { "required": ["file_absent"] },
+        { "required": ["file_hash"] },
+        { "required": ["file_contains"] },
+        { "required": ["user_exists"] },
+        { "required": ["group_exists"] },
+        { "required": ["user_in_group"] },
+        { "required": ["service_running"] },
+        { "required": ["port_listening"] },
+        { "required": ["process_running"] },
+        { "required": ["registry"] }
+      ],
       "properties": {
+        "delay": { "type": "string", "description": "Optional wait before this check runs, so a service/port has time to settle after the step. A duration string: \"5s\", \"10s\", \"500ms\", \"1m\". Applies only to this check.", "example": "delay: \"10s\"" },
         "file_exists": { "type": "string", "minLength": 1, "description": "A path that must exist on the host after the step runs." },
         "file_absent": { "type": "string", "minLength": 1, "description": "A path that must NOT exist on the host after the step runs." },
         "file_hash": {

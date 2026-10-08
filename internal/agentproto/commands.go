@@ -89,6 +89,11 @@ type RebootPayload struct {
 type ValidateCheck struct {
 	Kind string                 `json:"kind"`
 	Args map[string]interface{} `json:"args"`
+	// DelayMs is an optional wait (milliseconds) before this check runs, from a
+	// validator's `delay:` sub-item ("10s"), so a service/port has time to
+	// settle. 0/omitted means run immediately. The agent sleeps on its task
+	// worker thread, so this never blocks heartbeats.
+	DelayMs int64 `json:"delay_ms,omitempty"`
 }
 
 type ValidatePayload struct {

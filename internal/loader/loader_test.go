@@ -142,6 +142,49 @@ func TestPublicPortThatIsDeclaredPasses(t *testing.T) {
 	}
 }
 
+// A validator may carry an optional `delay:` sibling (the schema's oneOf still
+// requires exactly one check), but a delay with no check is rejected.
+func TestValidatorDelayIsAcceptedButDelayOnlyIsRejected(t *testing.T) {
+	ok := writeRepo(t, map[string]string{
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"hosts/web.yaml": `host:
+  name: web
+  os: ubuntu22
+  size: small
+  disk: 20
+  ports: { tcp: ["80"] }
+  steps:
+    - run: "true"
+      validate:
+        - service_running: nginx
+          delay: "10s"
+`,
+		"env.yaml": "environment:\n  name: e\n  teams: 1\n  networks:\n    lan: {}\n",
+	})
+	if c, _ := loader.Load(ok); len(c.Errors) != 0 {
+		t.Fatalf("a validator with a delay should load clean, got: %v", errorMessages(c))
+	}
+
+	bad := writeRepo(t, map[string]string{
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"hosts/web.yaml": `host:
+  name: web
+  os: ubuntu22
+  size: small
+  disk: 20
+  ports: { tcp: ["80"] }
+  steps:
+    - run: "true"
+      validate:
+        - delay: "10s"
+`,
+		"env.yaml": "environment:\n  name: e\n  teams: 1\n  networks:\n    lan: {}\n",
+	})
+	if c, _ := loader.Load(bad); len(c.Errors) == 0 {
+		t.Fatal("a validator entry with only a delay and no check must be a schema error")
+	}
+}
+
 // agent-debug on the environment parses into Environment.AgentDebug (default
 // false when omitted). It rides to the DB and is baked into each agent binary.
 func TestEnvironmentAgentDebugParses(t *testing.T) {

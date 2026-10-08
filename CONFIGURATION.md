@@ -546,7 +546,7 @@ recurring work, use [`schedule:`](#schedules) instead.)
 | `set_password` | Rotates an existing user's password (separate from `create_user` so a later step can change it). |
 | `add_to_group` | Adds an existing user to a group. |
 | `service` | Starts, stops, or manages a systemd (Linux) or Windows service. |
-| `reboot` | Reboots the host. The agent reports success first, then re-registers once it's back. |
+| `reboot` | Reboots the host. The agent reports success first, then re-registers once it's back. Takes an optional `delay:` (a duration string like `"30s"`) to wait before rebooting; `reboot: {}` reboots immediately. |
 
 Any step can carry a `validate:` block that runs after it (see below).
 
@@ -563,6 +563,7 @@ steps:
     validate:
       - service_running: mysql
       - port_listening: { port: 3306 }
+        delay: "10s"          # wait 10s before this check, to let mysql finish starting
       - user_exists: dbadmin
 ```
 
@@ -579,6 +580,26 @@ steps:
 | `port_listening` | A port that must be listening. |
 | `process_running` | A process name that must be running. |
 | `registry` | A Windows registry value that must match exactly (Windows hosts only). |
+
+### Delaying a check
+
+Any check can carry an optional **`delay`** — a duration string the agent waits *before*
+running that one check, so a service or port has time to settle after the step. It's a
+sibling of the check key:
+
+```yaml
+validate:
+  - service_running: nginx
+    delay: "5s"
+  - port_listening: { port: 443 }
+    delay: "15s"
+```
+
+The value is a duration string like `"5s"`, `"10s"`, `"500ms"`, or `"1m"` — the same
+format as `reboot`'s `delay:`. The delay applies only to the check it's on; checks without
+a `delay` run immediately. Because the agent runs tasks on a background worker, a delay
+never stops the host from checking in or from accepting an interactive shell while it
+waits.
 
 ---
 
