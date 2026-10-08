@@ -1,7 +1,16 @@
 import { useParams } from '@tanstack/react-router'
 import { AlertTriangle } from 'lucide-react'
 import { useBuild, useDashboard, useUpcomingChanges } from '../api/hooks'
-import { ProvisioningProgress, StateByTeam, FailuresByCause, AgentActivity } from '../components/DashboardCharts'
+import {
+  ProvisioningProgress,
+  StateByTeam,
+  FailuresByCause,
+  AgentActivity,
+  ResourceCpu,
+  ResourceMem,
+  ResourceDisk,
+  ResourceNet,
+} from '../components/DashboardCharts'
 import { StatusBadge } from '../components/StatusBadge'
 import { UpcomingChangesPanel } from '../components/UpcomingChangesPanel'
 import { Card, Spinner } from '../ui'
@@ -58,6 +67,13 @@ export function BuildOverview() {
           </ul>
         </Card>
       )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ResourceCpu data={dash} />
+        <ResourceMem data={dash} />
+        <ResourceDisk data={dash} />
+        <ResourceNet data={dash} />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ProvisioningProgress data={dash} />

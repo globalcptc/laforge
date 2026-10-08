@@ -131,11 +131,26 @@ type activityBucket struct {
 	Active int    `json:"active"`
 }
 
+// resourceBucket is the build-wide AVERAGE of each host metric over one time
+// bucket, across every heartbeat in it -- the data behind the CPU / memory /
+// disk / network graphs. Percentages are 0-100; network is bytes/sec (rx =
+// download, tx = upload). A metric missing from a heartbeat (older agent, or a
+// metric it couldn't sample) is left out of its own average, not counted as 0.
+type resourceBucket struct {
+	At    string  `json:"at"` // bucket start, RFC3339
+	Cpu   float64 `json:"cpu"`
+	Mem   float64 `json:"mem"`
+	Disk  float64 `json:"disk"`
+	NetRx float64 `json:"net_rx"`
+	NetTx float64 `json:"net_tx"`
+}
+
 type dashboardData struct {
 	ProvisioningByStatus map[string]int    `json:"provisioning_by_status"`
 	ByTeam               []teamStateCounts `json:"by_team"`
 	FailuresByCause      []failureGroup    `json:"failures_by_cause"`
 	AgentActivity        []activityBucket  `json:"agent_activity"`
+	ResourceUsage        []resourceBucket  `json:"resource_usage"`
 }
 
 // bucketHeartbeats turns a build's raw heartbeat log into a fixed number
@@ -146,10 +161,11 @@ type dashboardData struct {
 // -- and because raw per-heartbeat rows could be very
 // large at real scale (no retention policy exists yet on agent_heartbeat,
 // see migrations/00007's own note).
-func bucketHeartbeats(heartbeats []db.AgentHeartbeat) []activityBucket {
-	if len(heartbeats) == 0 {
-		return []activityBucket{}
-	}
+// bucketBounds derives the even time buckets the heartbeat series is summarized
+// into: the earliest timestamp, the width of each bucket, and how many there
+// are (capped). Shared by the activity and resource-usage summaries so both
+// charts line up on the same x-axis.
+func bucketBounds(heartbeats []db.AgentHeartbeat) (minT time.Time, width time.Duration, count int) {
 	minT, maxT := heartbeats[0].CreatedAt.Time, heartbeats[0].CreatedAt.Time
 	for _, h := range heartbeats {
 		t := h.CreatedAt.Time
@@ -165,14 +181,83 @@ func bucketHeartbeats(heartbeats []db.AgentHeartbeat) []activityBucket {
 	if span <= 0 {
 		span = time.Second
 	}
-	width := span / maxBuckets
+	width = span / maxBuckets
 	if width <= 0 {
 		width = time.Second
 	}
-	bucketCount := int(span/width) + 1
-	if bucketCount > maxBuckets {
-		bucketCount = maxBuckets
+	count = int(span/width) + 1
+	if count > maxBuckets {
+		count = maxBuckets
 	}
+	return minT, width, count
+}
+
+// bucketResourceUsage averages CPU/memory/disk/network across every heartbeat
+// in each time bucket, for the resource graphs. A nil metric (older agent, or
+// one that couldn't sample it) is skipped so it doesn't drag the average to 0.
+func bucketResourceUsage(heartbeats []db.AgentHeartbeat) []resourceBucket {
+	if len(heartbeats) == 0 {
+		return []resourceBucket{}
+	}
+	minT, width, count := bucketBounds(heartbeats)
+	type acc struct {
+		cpuS, memS, diskS, rxS, txS float64
+		cpuN, memN, diskN, rxN, txN int
+	}
+	accs := make([]acc, count)
+	for _, h := range heartbeats {
+		idx := int(h.CreatedAt.Time.Sub(minT) / width)
+		if idx >= count {
+			idx = count - 1
+		}
+		a := &accs[idx]
+		if h.CpuPct != nil {
+			a.cpuS += *h.CpuPct
+			a.cpuN++
+		}
+		if h.MemPct != nil {
+			a.memS += *h.MemPct
+			a.memN++
+		}
+		if h.DiskPct != nil {
+			a.diskS += *h.DiskPct
+			a.diskN++
+		}
+		if h.NetRxBps != nil {
+			a.rxS += *h.NetRxBps
+			a.rxN++
+		}
+		if h.NetTxBps != nil {
+			a.txS += *h.NetTxBps
+			a.txN++
+		}
+	}
+	avg := func(sum float64, n int) float64 {
+		if n == 0 {
+			return 0
+		}
+		return sum / float64(n)
+	}
+	out := make([]resourceBucket, count)
+	for i := range out {
+		a := accs[i]
+		out[i] = resourceBucket{
+			At:    minT.Add(time.Duration(i) * width).Format(time.RFC3339),
+			Cpu:   avg(a.cpuS, a.cpuN),
+			Mem:   avg(a.memS, a.memN),
+			Disk:  avg(a.diskS, a.diskN),
+			NetRx: avg(a.rxS, a.rxN),
+			NetTx: avg(a.txS, a.txN),
+		}
+	}
+	return out
+}
+
+func bucketHeartbeats(heartbeats []db.AgentHeartbeat) []activityBucket {
+	if len(heartbeats) == 0 {
+		return []activityBucket{}
+	}
+	minT, width, bucketCount := bucketBounds(heartbeats)
 
 	seenPerBucket := make([]map[string]bool, bucketCount)
 	for i := range seenPerBucket {
@@ -246,6 +331,7 @@ func (s *Server) handleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		ByTeam:               []teamStateCounts{},
 		FailuresByCause:      []failureGroup{},
 		AgentActivity:        []activityBucket{},
+		ResourceUsage:        []resourceBucket{},
 	}
 	byTeam := map[int32]map[string]int{}
 	byTeamHealth := map[int32]map[string]int{}
@@ -299,6 +385,7 @@ func (s *Server) handleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data.AgentActivity = bucketHeartbeats(heartbeats)
+	data.ResourceUsage = bucketResourceUsage(heartbeats)
 
 	writeJSON(w, http.StatusOK, data)
 }

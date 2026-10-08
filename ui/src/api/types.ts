@@ -321,6 +321,19 @@ export interface DashboardData {
   by_team: TeamStateCounts[]
   failures_by_cause: FailureGroup[]
   agent_activity: ActivityBucket[]
+  resource_usage: ResourceBucket[]
+}
+
+// Build-wide average of each host metric over one time bucket (across every
+// heartbeat in it). cpu/mem/disk are percentages (0-100); net_rx/net_tx are
+// bytes/sec (download / upload).
+export interface ResourceBucket {
+  at: string
+  cpu: number
+  mem: number
+  disk: number
+  net_rx: number
+  net_tx: number
 }
 
 export interface UpcomingChange {
