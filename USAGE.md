@@ -224,15 +224,18 @@ Then wire the runner for agent delivery (see the [`.env`](#the-env-file) variabl
 ## Container logs
 
 Every container runs the LaForge agent as its entrypoint (it supervises the image's
-real command), so the agent also sees the application's console output. When you set
-`LOG_SINK_URL`, each agent streams that output (stdout and stderr) to the gateway over
-the mTLS connection it already holds; the gateway tags every line with its build, team,
-object and stream and forwards batches as newline-delimited JSON (`application/x-ndjson`)
-to the endpoint you named. The agent does **not** echo the application's output to the
-container's own console — the agent is silent on the box by default (see
-[Agent local footprint](#agent-local-footprint) below), so `docker logs` / `incus console`
-show nothing from the app; it reaches you only through this forwarding. A backend that's
-slow or down drops lines rather than ever stalling a host.
+real command), so the agent captures the application's stdout and stderr line by line
+into a bounded in-memory buffer and ships them to the gateway over the mTLS connection it
+already holds — batched, and dropping the oldest lines (with a counted marker) rather than
+ever stalling the container if the buffer fills. The gateway tags every line with its
+build, team, object and stream, and — when you set `LOG_SINK_URL` — forwards the lines as
+newline-delimited JSON (`application/x-ndjson`), one record per line, to the endpoint you
+name.
+
+The agent does **not** echo the application's output to the container's own console — it is
+silent on the box by default (see [Agent local footprint](#agent-local-footprint) below),
+so `docker logs` / `incus console` show nothing from the app; it reaches you only through
+this forwarding. A sink that's slow or down drops lines rather than ever stalling a host.
 
 ```bash
 # Gateway .env — all optional; unset LOG_SINK_URL disables forwarding entirely.
@@ -255,6 +258,29 @@ reshape and route; `LOG_SINK_HEADERS` carries any auth token, `LOG_SINK_LABELS` 
 static fields to every record. Host logs (journald/services) are not forwarded yet — this
 is container application output only.
 
+### Sending to Splunk
+
+The gateway posts generic NDJSON, not Splunk's `{"event": …}` envelope, so there are two
+ways in:
+
+- **Straight to HEC (simplest):** point `LOG_SINK_URL` at the HTTP Event Collector's
+  **raw** endpoint and pass the token in `LOG_SINK_HEADERS`. Each NDJSON line is ingested
+  as one raw event; the `build_id` / `team` / `object` / `stream` fields are right there in
+  the JSON for search-time field extraction.
+
+  ```bash
+  LOG_SINK_URL=https://splunk.example:8088/services/collector/raw
+  LOG_SINK_HEADERS=Authorization: Splunk 00000000-0000-0000-0000-000000000000
+  LOG_SINK_LABELS=env=cptc2026,source=laforge
+  ```
+
+- **Via a collector (richer indexing):** point `LOG_SINK_URL` at a **Vector / Fluent Bit**
+  receiver and have it wrap each line in the HEC event envelope (setting `sourcetype`,
+  `index`, timestamp from `ts`, etc.) before forwarding to `/services/collector`. Use this
+  when you want Splunk-side sourcetypes/indexes rather than raw events.
+
+Either way, nothing about the backend is compiled in — it's all `.env` on the gateway.
+
 ---
 
 ## Agent local footprint
@@ -268,8 +294,9 @@ agent logs.
 
 To debug the agent itself, set `agent-debug: true` on the **environment** (see
 [CONFIGURATION.md](CONFIGURATION.md)). Every agent in that environment then writes a
-`laforge-agent.log` file next to its binary (e.g. `/usr/local/bin/laforge-agent.log` on
-Linux, `C:\laforge-agent.log` on Windows) — and still nothing to the console. The flag is
+`laforge-agent.log` file next to its binary (e.g. `/usr/local/bin/laforge-agent.log` on a
+Linux host, `C:\laforge-agent.log` on Windows, `/laforge-agent.log` inside a container) —
+and still nothing to the console, so `docker logs` stays empty either way. The flag is
 baked into each agent binary at deploy time, so a competitor **cannot** turn logging on by
 editing a box's service unit or scheduled task. Leave it off for a real event; turn it on
 only while diagnosing the agent.

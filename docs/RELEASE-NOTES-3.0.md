@@ -110,6 +110,10 @@ This note covers the whole 3.0 line.
   real step actions (scripts, users, services, file write, **direct** download, extract).
 - **Host metrics on every heartbeat** (CPU, memory, disk, network) and **container
   console-log forwarding** to a generic JSONL sink (Splunk/Vector/Loki/Elastic-friendly).
+  The agent captures the containerized app's stdout/stderr and ships it to the sink *only* —
+  it no longer echoes it to the container's own console, so `docker logs` / `incus console`
+  stay empty (keeping with the silent-on-the-box posture below); the forwarded stream is
+  where that output lives now.
 - Runs as PID 1 inside application containers on every builder, so containers check in and
   run steps exactly like hosts.
 - Basic **anti-tamper / anti-debug self-checks** and per-build chaff.
