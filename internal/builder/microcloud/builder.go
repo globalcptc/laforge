@@ -428,6 +428,11 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		// own tests never had, since neither TestContainerDeployAdoptDestroy
 		// nor TestDeployHostVMSurfacesRealKVMError sets a disk size).
 		devices["root"] = map[string]string{"type": "disk", "path": "/", "pool": b.Config.storagePoolOrDefault(), "size": fmt.Sprintf("%dGB", diskGB)}
+	} else if b.Client.Project != "" {
+		// A project other than `default` often has its own, empty default
+		// profile (features.profiles), so it can't be relied on for a root
+		// disk. In `default` the profile's root disk is left alone, as before.
+		devices["root"] = map[string]string{"type": "disk", "path": "/", "pool": b.Config.storagePoolOrDefault()}
 	}
 
 	if cloudInit != "" && cloudInitViaISO {

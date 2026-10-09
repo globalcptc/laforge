@@ -29,7 +29,7 @@ func (onboarder) Onboard(ctx context.Context, req builder.OnboardRequest) (*buil
 	if err != nil {
 		return nil, err
 	}
-	disc, err := discoverResources(ctx, client)
+	disc, err := discoverResources(ctx, client, "")
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (onboarder) Rediscover(ctx context.Context, conn builder.Connection) (*buil
 	if err != nil {
 		return nil, err
 	}
-	disc, err := discoverResources(ctx, client)
+	disc, err := discoverResources(ctx, client, conn.Project)
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +55,12 @@ func (onboarder) Rediscover(ctx context.Context, conn builder.Connection) (*buil
 }
 
 // discoverResources reads a cluster's pickable resources, never returning nil
-// slices so the API always ships JSON arrays.
-func discoverResources(ctx context.Context, c *Client) (builder.Discovery, error) {
+// slices so the API always ships JSON arrays. c is unscoped: storage pools are
+// server-wide and uplink networks always live in `default`. Images are read in
+// project, which has its own when its features.images is on. The project list
+// is best effort -- an identity allowed only some projects may not be able to
+// list them, and that mustn't stop it being connected.
+func discoverResources(ctx context.Context, c *Client, project string) (builder.Discovery, error) {
 	pools, err := c.ListStoragePools(ctx)
 	if err != nil {
 		return builder.Discovery{}, fmt.Errorf("listing storage pools: %w", err)
@@ -65,9 +69,15 @@ func discoverResources(ctx context.Context, c *Client) (builder.Discovery, error
 	if err != nil {
 		return builder.Discovery{}, fmt.Errorf("listing networks: %w", err)
 	}
-	images, err := c.ListImages(ctx)
+	scoped := *c
+	scoped.Project = project
+	images, err := scoped.ListImages(ctx)
 	if err != nil {
-		return builder.Discovery{}, fmt.Errorf("listing images: %w", err)
+		return builder.Discovery{}, fmt.Errorf("listing images in project %q: %w", projectOrDefault(project), err)
+	}
+	projects, err := c.ListProjects(ctx)
+	if err != nil || projects == nil {
+		projects = []builder.ProjectInfo{}
 	}
 	if pools == nil {
 		pools = []builder.StoragePoolInfo{}
@@ -78,5 +88,12 @@ func discoverResources(ctx context.Context, c *Client) (builder.Discovery, error
 	if images == nil {
 		images = []builder.ImageInfo{}
 	}
-	return builder.Discovery{StoragePools: pools, Networks: networks, Images: images}, nil
+	return builder.Discovery{StoragePools: pools, Networks: networks, Images: images, Projects: projects}, nil
+}
+
+func projectOrDefault(p string) string {
+	if p == "" {
+		return "default"
+	}
+	return p
 }

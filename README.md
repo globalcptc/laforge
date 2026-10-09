@@ -196,6 +196,10 @@ address. Every `.yaml` in the repo is read as LaForge content, so a compose proj
 directory (or any other tool's YAML) is listed in **`.laforgeignore`**, which
 `laforge check`, the server, and the editor all honor.
 
+Builder setup and the permissions LaForge needs on your hoster are in
+**[docs/builders/](docs/builders/)** ([Incus](docs/builders/incus.md),
+[MicroCloud](docs/builders/microcloud.md)).
+
 See **[CONFIGURATION.md](CONFIGURATION.md)** for the full YAML reference, with worked
 examples from a one-host environment to a complete multi-network game.
 

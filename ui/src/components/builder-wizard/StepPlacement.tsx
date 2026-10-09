@@ -1,5 +1,9 @@
-import { Globe, HardDrive, Network, Server } from 'lucide-react'
-import { Field, Input, Select } from '../../ui'
+import { useState } from 'react'
+import { FolderTree, Globe, HardDrive, Network, Server } from 'lucide-react'
+import { api, ApiError } from '../../api/client'
+import { builderConnectionPath } from '../../api/hooks'
+import type { BuilderConnection, ProjectInfo } from '../../api/types'
+import { Field, Input, Select, Spinner } from '../../ui'
 import { TIMEOUT_OPTIONS, uplinkCandidates, type HostDraft, type Kind } from './model'
 
 export function StepPlacement({
@@ -32,6 +36,10 @@ export function StepPlacement({
             {kind === 'incus' ? `Host ${i + 1}` : 'Cluster'}
             {h.connection && <span className="font-normal text-fg-muted">· {h.connection.credential.server_name || h.connection.credential.api_url}</span>}
           </div>
+
+          {kind === 'microcloud' && h.connection && h.credentialId && (
+            <ProjectPicker host={h} onChange={(patch) => update(i, patch)} />
+          )}
 
           {h.connection ? (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -119,5 +127,82 @@ export function StepPlacement({
         </div>
       </div>
     </div>
+  )
+}
+
+// ProjectPicker chooses the LXD project a MicroCloud builder creates everything
+// in. Images can differ per project, so choosing one re-reads the cluster's
+// images in it. When LaForge can't list projects (an identity allowed only some),
+// the name is typed instead.
+function ProjectPicker({ host, onChange }: { host: HostDraft; onChange: (patch: Partial<HostDraft>) => void }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const projects = host.connection?.discovery.projects ?? []
+  const current = host.project || 'default'
+  const info = projects.find((p) => p.name === current)
+
+  async function choose(name: string) {
+    const project = name === 'default' ? '' : name
+    onChange({ project })
+    if (!host.credentialId) return
+    setLoading(true)
+    setError(null)
+    try {
+      const connection = await api.get<BuilderConnection>(builderConnectionPath(host.credentialId, 'microcloud', project))
+      onChange({ project, connection })
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not read that project')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="mb-4">
+      <Field
+        label={
+          <span className="flex items-center gap-1.5">
+            <FolderTree size={12} /> Project {loading && <Spinner />}
+          </span>
+        }
+        hint="The LXD project every instance, team network, network ACL, image and volume is created in."
+        className="mb-0 max-w-sm"
+      >
+        {projects.length > 0 ? (
+          <Select value={current} onChange={(e) => choose(e.target.value)} disabled={loading}>
+            {projects.map((p) => (
+              <option key={p.name} value={p.name}>
+                {p.name}
+                {p.description ? ` — ${p.description}` : ''}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Input value={host.project ?? ''} placeholder="default" onChange={(e) => onChange({ project: e.target.value.trim() })} onBlur={(e) => choose(e.target.value.trim() || 'default')} />
+        )}
+      </Field>
+      {error && <div className="mt-1 text-xs text-danger">{error}</div>}
+      {info && <ProjectNotes project={info} />}
+    </div>
+  )
+}
+
+function ProjectNotes({ project }: { project: ProjectInfo }) {
+  const notes: { tone: 'warn' | 'info'; text: string }[] = []
+  if (project.name !== 'default' && !project.features_networks)
+    notes.push({ tone: 'warn', text: "This project shares the default project's networks (features.networks is off), so team networks and network ACLs would still be created in default." })
+  if (project.name !== 'default' && project.features_profiles)
+    notes.push({ tone: 'info', text: "This project has its own profiles. LaForge gives every instance a root disk on the storage pool below, but the docker base image build also needs this project's default profile to have a network device with internet access." })
+  if (project.restricted)
+    notes.push({ tone: 'info', text: 'This project is restricted. It must allow nested containers, the uplink below, proxy devices, and low-level VM settings -- see the MicroCloud builder guide.' })
+  if (notes.length === 0) return null
+  return (
+    <ul className="mt-2 flex flex-col gap-1 text-xs">
+      {notes.map((n) => (
+        <li key={n.text} className={n.tone === 'warn' ? 'text-warning' : 'text-fg-muted'}>
+          {n.text}
+        </li>
+      ))}
+    </ul>
   )
 }

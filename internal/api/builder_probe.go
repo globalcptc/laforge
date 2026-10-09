@@ -126,6 +126,8 @@ func (s *Server) handleGetBuilderConnection(w http.ResponseWriter, r *http.Reque
 	disc, err := onb.Rediscover(r.Context(), builder.Connection{
 		APIURL: cred.ApiUrl, ServerName: cred.ServerName, ServerFingerprint: cred.ServerFingerprint,
 		ServerCertPEM: []byte(cred.ServerCertPem), ClientCertPEM: []byte(cred.ClientCertPem), ClientKeyPEM: []byte(cred.ClientKeyPem),
+		// ?project= scopes the images to the project the builder will use.
+		Project: r.URL.Query().Get("project"),
 	})
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err)
@@ -172,6 +174,7 @@ func (s *Server) handleListBuilderConfigImages(w http.ResponseWriter, r *http.Re
 	disc, err := onb.Rediscover(r.Context(), builder.Connection{
 		APIURL: cred.ApiUrl, ServerName: cred.ServerName, ServerFingerprint: cred.ServerFingerprint,
 		ServerCertPEM: []byte(cred.ServerCertPem), ClientCertPEM: []byte(cred.ClientCertPem), ClientKeyPEM: []byte(cred.ClientKeyPem),
+		Project: db.StrOrEmpty(cfg.IncusProject),
 	})
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err)

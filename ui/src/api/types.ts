@@ -596,6 +596,8 @@ export interface BuilderConfig {
   incus_server_cert_pem: string | null
   incus_ovn_uplink_network: string | null
   incus_storage_pool: string | null
+  /** MicroCloud only: the LXD project everything is created in; null/empty is `default`. */
+  incus_project?: string | null
   incus_operation_timeout_seconds: number | null
   incus_images: Record<string, IncusImageRef>
   incus_sizes: Record<string, IncusSizeSpec>
@@ -618,6 +620,7 @@ export interface BuilderConfigRequest {
   incus_server_cert_pem?: string
   incus_ovn_uplink_network?: string
   incus_storage_pool?: string
+  incus_project?: string
   incus_operation_timeout_seconds?: number
   incus_images?: Record<string, IncusImageRef>
   incus_sizes?: Record<string, IncusSizeSpec>
@@ -660,6 +663,20 @@ export interface Discovery {
   storage_pools: StoragePoolInfo[]
   networks: NetworkInfo[]
   images: ImageInfo[]
+  /** MicroCloud only: the projects the server lets LaForge see. */
+  projects?: ProjectInfo[]
+}
+
+// ProjectInfo is one Incus/LXD project and which resources it keeps separate
+// from `default` -- mirrors internal/builder.ProjectInfo.
+export interface ProjectInfo {
+  name: string
+  description: string
+  features_networks: boolean
+  features_images: boolean
+  features_profiles: boolean
+  features_storage_volumes: boolean
+  restricted: boolean
 }
 
 // BuilderConnection mirrors internal/api/builder_probe.go's connectionView:

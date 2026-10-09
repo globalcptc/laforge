@@ -160,6 +160,7 @@ func ResolveMicrocloudClient(pool *pgxpool.Pool, row db.BuilderConfig) (*microcl
 		if err != nil {
 			return nil, fmt.Errorf("builder config %q: %w", row.Name, err)
 		}
+		ep.project = db.StrOrEmpty(row.IncusProject)
 		client, err := ep.microcloudClient()
 		if err != nil {
 			return nil, fmt.Errorf("builder config %q: constructing client: %w", row.Name, err)
@@ -231,10 +232,13 @@ func ResolveIncusHosts(pool *pgxpool.Pool, row db.BuilderConfig) ([]IncusHost, e
 type endpoint struct {
 	apiURL                         string
 	certPEM, keyPEM, serverCertPEM []byte
+	// project is the Incus/LXD project every call is scoped to; "" is
+	// `default`. Set from a MicroCloud builder's incus_project.
+	project string
 }
 
 func (e endpoint) client() (*incus.Client, error) {
-	return incus.NewClient(e.apiURL, e.certPEM, e.keyPEM, e.serverCertPEM, "")
+	return incus.NewClient(e.apiURL, e.certPEM, e.keyPEM, e.serverCertPEM, e.project)
 }
 
 func loadCredential(pool *pgxpool.Pool, id pgtype.UUID) (endpoint, error) {
@@ -312,6 +316,7 @@ func resolveMicrocloud(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builde
 	if err != nil {
 		return nil, fmt.Errorf("builder config %q: %w", row.Name, err)
 	}
+	ep.project = db.StrOrEmpty(row.IncusProject)
 	client, err := ep.microcloudClient()
 	if err != nil {
 		return nil, fmt.Errorf("builder config %q: constructing client: %w", row.Name, err)
@@ -360,7 +365,7 @@ func decodeMicrocloudImagesAndSizes(row db.BuilderConfig) (map[string]microcloud
 // connection material -- the LXD-based sibling of client() (which serves the
 // Incus pool).
 func (e endpoint) microcloudClient() (*microcloud.Client, error) {
-	return microcloud.NewClient(e.apiURL, e.certPEM, e.keyPEM, e.serverCertPEM, "")
+	return microcloud.NewClient(e.apiURL, e.certPEM, e.keyPEM, e.serverCertPEM, e.project)
 }
 
 // resolveIncusPool builds one internal/builder/incus.Builder per entry in

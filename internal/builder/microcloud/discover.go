@@ -117,3 +117,34 @@ func (c *Client) ListImages(ctx context.Context) ([]ImageInfo, error) {
 	}
 	return out, nil
 }
+
+// ProjectInfo is one entry of GET /1.0/projects?recursion=1.
+type ProjectInfo = builder.ProjectInfo
+
+// ListProjects lists the projects this client can see -- every project for a
+// fully trusted client, only its allowed ones for a restricted one.
+func (c *Client) ListProjects(ctx context.Context) ([]ProjectInfo, error) {
+	raw, err := c.get(ctx, "/1.0/projects?recursion=1")
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		Name        string            `json:"name"`
+		Description string            `json:"description"`
+		Config      map[string]string `json:"config"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		return nil, err
+	}
+	out := make([]ProjectInfo, 0, len(rows))
+	for _, r := range rows {
+		on := func(key string) bool { return r.Config[key] == "true" }
+		out = append(out, ProjectInfo{
+			Name: r.Name, Description: r.Description,
+			Networks: on("features.networks"), Images: on("features.images"),
+			Profiles: on("features.profiles"), StorageVolumes: on("features.storage.volumes"),
+			Restricted: on("restricted"),
+		})
+	}
+	return out, nil
+}

@@ -45,6 +45,11 @@ export function StepReview({ draft }: { draft: Draft }) {
                   {h.connection?.credential.server_name || h.connection?.credential.api_url || h.legacy?.api_url || 'Saved connection'}
                 </div>
                 <div className="text-xs text-fg-muted">
+                  {draft.kind === 'microcloud' && (
+                    <>
+                      project <span className="font-mono">{h.project || 'default'}</span> ·{' '}
+                    </>
+                  )}
                   pool <span className="font-mono">{h.storagePool || '—'}</span> · uplink <span className="font-mono">{h.uplink || '—'}</span>
                 </div>
               </Row>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
-import { useBuilderConfigs, useCreateBuilderConfig, useUpdateBuilderConfig } from '../api/hooks'
+import { builderConnectionPath, useBuilderConfigs, useCreateBuilderConfig, useUpdateBuilderConfig } from '../api/hooks'
 import { ApiError, api } from '../api/client'
 import type { BuilderConnection } from '../api/types'
 import { Button, PageHeader, Spinner, cn, useToast } from '../ui'
@@ -112,7 +112,7 @@ export function BuilderWizard() {
     try {
       const hosts = await Promise.all(
         draft.hosts.map(async (h) =>
-          h.credentialId ? { ...h, connection: await api.get<BuilderConnection>(`/builder-connections/${h.credentialId}`) } : h,
+          h.credentialId ? { ...h, connection: await api.get<BuilderConnection>(builderConnectionPath(h.credentialId, draft.kind, h.project)) } : h,
         ),
       )
       setDraft((d) => ({ ...d, hosts }))

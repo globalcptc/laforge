@@ -62,8 +62,30 @@ type ImageInfo struct {
 // slices in a value the API returns, so the wire is always a JSON array.
 type Discovery struct {
 	StoragePools []StoragePoolInfo `json:"storage_pools"`
-	Networks     []NetworkInfo     `json:"networks"`
-	Images       []ImageInfo       `json:"images"`
+	// Networks are the server's own (the `default` project's), since uplink
+	// networks always live there whatever project instances go in.
+	Networks []NetworkInfo `json:"networks"`
+	// Images are the chosen project's (Connection.Project), which differ from
+	// `default`'s when that project has features.images on.
+	Images []ImageInfo `json:"images"`
+	// Projects lists the server's projects, for a kind that lets an operator
+	// choose one (MicroCloud); empty for every other kind.
+	Projects []ProjectInfo `json:"projects"`
+}
+
+// ProjectInfo is one Incus/LXD project and the features that decide what it
+// keeps separate from `default`.
+type ProjectInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	// Each is true when the project has its own (rather than sharing
+	// `default`'s): networks and ACLs, images, profiles, storage volumes.
+	Networks       bool `json:"features_networks"`
+	Images         bool `json:"features_images"`
+	Profiles       bool `json:"features_profiles"`
+	StorageVolumes bool `json:"features_storage_volumes"`
+	// Restricted is the project's own `restricted` setting.
+	Restricted bool `json:"restricted"`
 }
 
 // OnboardRequest is the operator's input for connecting a new hoster. Which
@@ -85,6 +107,9 @@ type Connection struct {
 	ServerCertPEM     []byte
 	ClientCertPEM     []byte
 	ClientKeyPEM      []byte
+	// Project scopes Rediscover's project-specific results (images) to an
+	// Incus/LXD project; "" is `default`. Not part of the stored credential.
+	Project string
 }
 
 // HasCredential reports whether this onboarding produced stored credential

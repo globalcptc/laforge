@@ -29,6 +29,8 @@ export interface HostDraft {
   legacy?: IncusHostConfig
   storagePool: string
   uplink: string
+  // MicroCloud only: the LXD project everything is created in; '' is `default`.
+  project?: string
   timeoutSeconds: number
 }
 
@@ -178,6 +180,7 @@ export function draftFromConfig(bc: BuilderConfig): Draft {
       key: newKey(),
       storagePool: bc.incus_storage_pool ?? '',
       uplink: bc.incus_ovn_uplink_network ?? '',
+      project: bc.incus_project ?? '',
       timeoutSeconds: bc.incus_operation_timeout_seconds ?? 120,
     }
     if (bc.incus_credential_id) h.credentialId = bc.incus_credential_id
@@ -252,6 +255,7 @@ export function toRequest(d: Draft): BuilderConfigRequest {
     const placement = {
       incus_storage_pool: h.storagePool,
       incus_ovn_uplink_network: h.uplink,
+      incus_project: h.project || undefined,
       incus_operation_timeout_seconds: h.timeoutSeconds,
     }
     if (h.credentialId) return { kind: 'microcloud', incus_credential_id: h.credentialId, ...placement, ...externalAccess, incus_images, incus_sizes }

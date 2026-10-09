@@ -12,6 +12,10 @@ contract), `internal/builder/onboard.go` (the `Onboarder` contract), and the
 `internal/builder/incus` package (the reference implementation — the most complete
 and the only one verified live with real packets end to end).
 
+For operating the existing builders rather than writing one, see
+[builders/incus.md](builders/incus.md) and [builders/microcloud.md](builders/microcloud.md)
+— setup, the exact API permissions each needs, and troubleshooting.
+
 ---
 
 ## 1. Philosophy: a builder is deliberately dumb

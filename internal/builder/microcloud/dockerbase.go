@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 	"time"
 
@@ -47,7 +48,12 @@ type BaseImageSource struct {
 // cluster and returns its published fingerprint. log receives one
 // human-readable progress line at a time (step markers plus the real command
 // output), for the live console. It always cleans up the temp build instance.
-func BuildDockerBase(ctx context.Context, c *Client, src BaseImageSource, log func(string)) (string, error) {
+//
+// storagePool is the builder's pool. In a project other than `default` the
+// build container gets its root disk there explicitly, since such a project's
+// default profile may have none; it still needs that profile to give it a
+// network with internet access, and fails clearly if it doesn't.
+func BuildDockerBase(ctx context.Context, c *Client, src BaseImageSource, storagePool string, log func(string)) (string, error) {
 	if src.Server == "" || src.Alias == "" {
 		return "", fmt.Errorf("base image source is not configured (server and alias are required)")
 	}
@@ -66,12 +72,22 @@ func BuildDockerBase(ctx context.Context, c *Client, src BaseImageSource, log fu
 	log("Imported base image " + short(baseFP))
 
 	log("Creating nesting-enabled build container …")
-	if _, err := c.post(ctx, "/1.0/instances", map[string]any{
+	create := map[string]any{
 		"name": tempBuildInstance, "type": "container",
 		"source": map[string]any{"type": "image", "fingerprint": baseFP},
 		"config": map[string]any{"security.nesting": "true"},
-	}); err != nil {
+	}
+	if c.Project != "" {
+		if storagePool == "" {
+			storagePool = "default"
+		}
+		create["devices"] = map[string]any{"root": map[string]string{"type": "disk", "path": "/", "pool": storagePool}}
+	}
+	if _, err := c.post(ctx, "/1.0/instances", create); err != nil {
 		return "", fmt.Errorf("creating build container: %w", err)
+	}
+	if !c.hasNIC(ctx, tempBuildInstance) {
+		return "", fmt.Errorf("the build container has no network device: project %q's default profile has no NIC, and the build needs internet access -- add one to that profile (e.g. on the cluster's default OVN network)", c.Project)
 	}
 	if _, err := c.put(ctx, "/1.0/instances/"+tempBuildInstance+"/state", map[string]any{"action": "start", "timeout": 60}); err != nil {
 		return "", fmt.Errorf("starting build container: %w", err)
@@ -212,7 +228,15 @@ func (c *Client) execRecord(ctx context.Context, instance, script string) (int, 
 // rawGet fetches a non-JSON endpoint (an exec log file) directly, bypassing
 // do()'s apiResponse decoding.
 func (c *Client) rawGet(path string) string {
-	resp, err := c.HTTPClient.Get(c.BaseURL + path)
+	u := c.BaseURL + path
+	if c.Project != "" && !strings.Contains(path, "project=") {
+		sep := "?"
+		if strings.Contains(path, "?") {
+			sep = "&"
+		}
+		u += sep + "project=" + url.QueryEscape(c.Project)
+	}
+	resp, err := c.HTTPClient.Get(u)
 	if err != nil {
 		return ""
 	}
@@ -289,4 +313,25 @@ func logLines(log func(string), out string) {
 			log(line)
 		}
 	}
+}
+
+// hasNIC reports whether an instance ends up with any network device once its
+// profiles are applied.
+func (c *Client) hasNIC(ctx context.Context, name string) bool {
+	raw, err := c.get(ctx, "/1.0/instances/"+name)
+	if err != nil {
+		return true // can't tell; let the build itself find out
+	}
+	var inst struct {
+		ExpandedDevices map[string]map[string]string `json:"expanded_devices"`
+	}
+	if json.Unmarshal(raw, &inst) != nil {
+		return true
+	}
+	for _, d := range inst.ExpandedDevices {
+		if d["type"] == "nic" {
+			return true
+		}
+	}
+	return false
 }

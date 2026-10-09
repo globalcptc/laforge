@@ -152,6 +152,7 @@ CREATE TABLE public.builder_config (
     external_access_ip text,
     external_port_min integer,
     external_port_max integer,
+    incus_project text,
     CONSTRAINT builder_config_kind_check CHECK ((kind = ANY (ARRAY['fake'::text, 'incus'::text, 'microcloud'::text, 'aws'::text, 'openstack'::text])))
 );
 

@@ -61,12 +61,12 @@ function HostConnectCard({
 }) {
   // An existing host (editing a saved builder) re-reads what its server has
   // from the stored credential.
-  const existing = useBuilderConnection(host.credentialId && !host.connection ? host.credentialId : undefined, kind)
+  const existing = useBuilderConnection(host.credentialId && !host.connection ? host.credentialId : undefined, kind, host.project)
   useEffect(() => {
     if (existing.data && !host.connection) onChange({ ...host, connection: existing.data })
   }, [existing.data, host, onChange])
 
-  const reset = () => onChange({ key: host.key, storagePool: '', uplink: '', timeoutSeconds: host.timeoutSeconds })
+  const reset = () => onChange({ key: host.key, storagePool: '', uplink: '', project: '', timeoutSeconds: host.timeoutSeconds })
 
   let body
   if (host.connection) {

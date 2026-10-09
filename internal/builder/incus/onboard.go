@@ -80,5 +80,5 @@ func discoverResources(ctx context.Context, c *Client) (builder.Discovery, error
 	if images == nil {
 		images = []builder.ImageInfo{}
 	}
-	return builder.Discovery{StoragePools: pools, Networks: networks, Images: images}, nil
+	return builder.Discovery{StoragePools: pools, Networks: networks, Images: images, Projects: []builder.ProjectInfo{}}, nil
 }

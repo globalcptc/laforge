@@ -679,10 +679,20 @@ export function useConnectBuilder() {
   })
 }
 
-export function useBuilderConnection(credentialId: string | undefined, kind?: string) {
+// builderConnectionPath is the re-discovery URL for a stored connection; project
+// (MicroCloud) scopes the images to the project the builder uses.
+export function builderConnectionPath(credentialId: string, kind?: string, project?: string): string {
+  const q = new URLSearchParams()
+  if (kind) q.set('kind', kind)
+  if (project) q.set('project', project)
+  const qs = q.toString()
+  return `/builder-connections/${credentialId}${qs ? `?${qs}` : ''}`
+}
+
+export function useBuilderConnection(credentialId: string | undefined, kind?: string, project?: string) {
   return useQuery<BuilderConnection>({
-    queryKey: ['builder-connection', credentialId, kind],
-    queryFn: () => api.get(`/builder-connections/${credentialId}${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`),
+    queryKey: ['builder-connection', credentialId, kind, project],
+    queryFn: () => api.get(builderConnectionPath(credentialId!, kind, project)),
     enabled: !!credentialId,
     retry: false,
     staleTime: 60_000,

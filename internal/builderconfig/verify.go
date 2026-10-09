@@ -97,6 +97,8 @@ func hostEndpoints(pool *pgxpool.Pool, row db.BuilderConfig) ([]labeledEndpoint,
 		if err != nil {
 			return nil, err
 		}
+		// Images are per project when the project has features.images on.
+		ep.project = db.StrOrEmpty(row.IncusProject)
 		return []labeledEndpoint{{label: ep.apiURL, ep: ep}}, nil
 	}
 	var hostConfigs []incus.HostConfig

@@ -11,6 +11,7 @@ connecting it to GitHub, and installing the VS Code authoring extension. For wha
 - [Addressing (the URLs, explained)](#addressing-the-urls-explained)
 - [Certificates](#certificates)
 - [The `laforge` CLI](#the-laforge-cli)
+- [Builders](#builders)
 - [Compose containers (builder setup)](#compose-containers-builder-setup)
 - [Connecting GitHub (the GitHub App)](#connecting-github-the-github-app)
 - [The VS Code extension](#the-vs-code-extension)
@@ -284,6 +285,19 @@ It reads every `.yaml`/`.yml` file in the repository except the paths listed in 
 Docker Compose project has its project loaded too: a missing compose file, a service with
 no `image:`, or a bind mount outside the project's directory is an error here, not at
 deploy time.
+
+---
+
+## Builders
+
+LaForge deploys through a **builder**: the configured connection to a hoster, set up
+under **Admin → Infrastructure**. Setup, the exact API permissions LaForge needs, and
+troubleshooting for each:
+
+- [Incus](docs/builders/incus.md) — one or more standalone Incus servers.
+- [MicroCloud](docs/builders/microcloud.md) — a MicroCloud (LXD) cluster.
+
+The AWS and OpenStack builders aren't documented here yet.
 
 ---
 

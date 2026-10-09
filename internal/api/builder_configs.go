@@ -45,6 +45,9 @@ type builderConfigRequest struct {
 	IncusServerCertPem           string                    `json:"incus_server_cert_pem,omitempty"`
 	IncusOvnUplinkNetwork        string                    `json:"incus_ovn_uplink_network,omitempty"`
 	IncusStoragePool             string                    `json:"incus_storage_pool,omitempty"`
+	// IncusProject is the LXD project a kind "microcloud" builder creates
+	// everything in; empty is `default`. Ignored by every other kind.
+	IncusProject string `json:"incus_project,omitempty"`
 	IncusOperationTimeoutSeconds int32                     `json:"incus_operation_timeout_seconds,omitempty"`
 	IncusImages                  map[string]incus.ImageRef `json:"incus_images,omitempty"`
 	IncusSizes                   map[string]incus.SizeSpec `json:"incus_sizes,omitempty"`
@@ -112,6 +115,9 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		IncusHosts:            hosts,
 		ExternalAccessIp:      db.StrPtr(req.ExternalAccessIP),
 	}
+	if req.Kind == "microcloud" && req.IncusProject != "default" {
+		params.IncusProject = db.StrPtr(req.IncusProject)
+	}
 	if req.IncusOperationTimeoutSeconds > 0 {
 		params.IncusOperationTimeoutSeconds = &req.IncusOperationTimeoutSeconds
 	}
@@ -148,6 +154,7 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		IncusOperationTimeoutSeconds: params.IncusOperationTimeoutSeconds,
 		IncusImages:                  params.IncusImages, IncusSizes: params.IncusSizes,
 		IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
+		IncusProject: params.IncusProject,
 	}); err != nil {
 		return db.CreateBuilderConfigParams{}, err
 	}
@@ -165,6 +172,7 @@ func (s *Server) verifyImages(r *http.Request, params db.CreateBuilderConfigPara
 		Kind: params.Kind, IncusApiUrl: params.IncusApiUrl, IncusClientCertPath: params.IncusClientCertPath,
 		IncusClientKeyPath: params.IncusClientKeyPath, IncusServerCertPem: params.IncusServerCertPem,
 		IncusImages: params.IncusImages, IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
+		IncusProject: params.IncusProject,
 	})
 }
 
@@ -326,6 +334,7 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
 		ExternalAccessIp: params.ExternalAccessIp,
 		ExternalPortMin:  params.ExternalPortMin, ExternalPortMax: params.ExternalPortMax,
+		IncusProject: params.IncusProject,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

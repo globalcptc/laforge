@@ -104,7 +104,7 @@ func buildMicrocloudDockerBase(ctx context.Context, pool *pgxpool.Pool, cfg db.B
 		Server:   cfg.ContainerBaseServer,
 		Protocol: "simplestreams",
 		Alias:    cfg.ContainerBaseAlias,
-	}, appendLog)
+	}, db.StrOrEmpty(cfg.IncusStoragePool), appendLog)
 }
 
 // lxdDefaultBaseServer is builder_config.container_base_server's column

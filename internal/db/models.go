@@ -108,6 +108,7 @@ type BuilderConfig struct {
 	ExternalAccessIp             *string            `json:"external_access_ip"`
 	ExternalPortMin              *int32             `json:"external_port_min"`
 	ExternalPortMax              *int32             `json:"external_port_max"`
+	IncusProject                 *string            `json:"incus_project"`
 }
 
 type BuilderCredential struct {
