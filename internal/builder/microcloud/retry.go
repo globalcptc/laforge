@@ -2,6 +2,7 @@ package microcloud
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,6 +21,9 @@ var instanceRetryDelays = [...]time.Duration{15 * time.Second, 30 * time.Second,
 func transientInstanceError(err error) bool {
 	if errors.Is(err, context.Canceled) {
 		return false
+	}
+	if errors.Is(err, errInstanceNotRunning) {
+		return true
 	}
 	var pending *pendingOperationError
 	if errors.As(err, &pending) && errors.Is(pending.Err, errOperationRunning) {
@@ -139,6 +143,8 @@ func (b *Builder) createInstance(ctx context.Context, name string, body interfac
 	})
 }
 
+var errInstanceNotRunning = errors.New("instance is not running after start")
+
 func (b *Builder) startInstance(ctx context.Context, name string) error {
 	var pending *pendingOperationError
 	return b.retryInstanceStep(ctx, name, "starting", func() error {
@@ -153,9 +159,32 @@ func (b *Builder) startInstance(ctx context.Context, name string) error {
 		}
 		errors.As(err, &pending)
 		var apiErr *APIError
-		if pending == nil && errors.As(err, &apiErr) && apiErr.AlreadyRunning() {
+		if errors.As(err, &apiErr) && apiErr.AlreadyRunning() {
+			pending = nil
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
+		// A live cluster reported a successful start while the exact guest
+		// remained Stopped. Confirm power state before declaring deployment
+		// complete, and let the same slow retry policy recover that case.
+		raw, err := b.Client.get(ctx, "/1.0/instances/"+name+"/state")
+		if err != nil {
+			return err
+		}
+		var state struct {
+			Status string `json:"status"`
+		}
+		if err := json.Unmarshal(raw, &state); err != nil {
+			return err
+		}
+		if state.Status == "Running" {
 			return nil
 		}
-		return err
+		if state.Status == "Stopped" || state.Status == "Starting" || state.Status == "Stopping" {
+			return fmt.Errorf("%w: %s", errInstanceNotRunning, state.Status)
+		}
+		return fmt.Errorf("unexpected instance state after start: %q", state.Status)
 	})
 }

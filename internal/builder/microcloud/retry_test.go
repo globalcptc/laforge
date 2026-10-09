@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -153,5 +154,71 @@ func TestInstanceRetryErrorClassification(t *testing.T) {
 	b.retryWait = func(context.Context, time.Duration) error { t.Fatal("retried invalid config"); return nil }
 	if err := b.retryInstanceStep(context.Background(), "box", "test", func() error { return &APIError{HTTPStatus: 400, Message: "invalid device"} }); err == nil {
 		t.Fatal("accepted invalid config")
+	}
+}
+
+func TestStartVerifiesPowerStateAndRetriesStoppedGuest(t *testing.T) {
+	starts, reads := 0, 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/1.0/instances/box/state" {
+			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		metadata := map[string]string{}
+		if r.Method == "PUT" {
+			starts++
+		} else if r.Method == "GET" {
+			reads++
+			metadata["status"] = "Stopped"
+			if starts == 2 {
+				metadata["status"] = "Running"
+			}
+		} else {
+			t.Errorf("unexpected method %s", r.Method)
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "metadata": metadata})
+	}))
+	defer srv.Close()
+	b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client()}, Config{})
+	var delays []time.Duration
+	b.retryWait = func(_ context.Context, d time.Duration) error { delays = append(delays, d); return nil }
+	if err := b.startInstance(context.Background(), "box"); err != nil {
+		t.Fatal(err)
+	}
+	if starts != 2 || reads != 2 || !reflect.DeepEqual(delays, []time.Duration{15 * time.Second}) {
+		t.Fatalf("starts=%d reads=%d delays=%v", starts, reads, delays)
+	}
+}
+
+func TestStartAlreadyRunningStillRequiresStateRead(t *testing.T) {
+	for _, async := range []bool{false, true} {
+		for _, allowed := range []bool{false, true} {
+			t.Run(fmt.Sprintf("async=%t/allowed=%t", async, allowed), func(t *testing.T) {
+				reads := 0
+				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.Method == "PUT" && async {
+						json.NewEncoder(w).Encode(map[string]interface{}{"type": "async", "operation": "/1.0/operations/start"})
+						return
+					}
+					if r.Method == "PUT" || r.URL.Path == "/1.0/operations/start/wait" {
+						json.NewEncoder(w).Encode(map[string]interface{}{"type": "error", "error_code": 500, "error": "The instance is already running"})
+						return
+					}
+					reads++
+					if allowed {
+						json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "metadata": map[string]string{"status": "Running"}})
+					} else {
+						w.WriteHeader(403)
+						json.NewEncoder(w).Encode(map[string]interface{}{"type": "error", "error_code": 403, "error": "not authorized"})
+					}
+				}))
+				defer srv.Close()
+				b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: time.Second}, Config{})
+				b.retryWait = func(context.Context, time.Duration) error { t.Fatal("unexpected retry"); return nil }
+				err := b.startInstance(context.Background(), "box")
+				if (err == nil) != allowed || reads != 1 {
+					t.Fatalf("state read not enforced: reads=%d err=%v", reads, err)
+				}
+			})
+		}
 	}
 }

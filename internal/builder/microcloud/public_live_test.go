@@ -29,7 +29,7 @@ func TestMicrocloudPublicNICLive(t *testing.T) {
 		Run                                                                  string
 		Config                                                               Config
 		LinuxOS, WindowsOS, LinuxUserDataPath, WindowsUserDataPath, JumpHost string
-		Keep                                                                 bool
+		Keep, VerifyGuests, Rebuild                                          bool
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -37,6 +37,9 @@ func TestMicrocloudPublicNICLive(t *testing.T) {
 	}
 	if err = json.Unmarshal(raw, &input); err != nil {
 		t.Fatal(err)
+	}
+	if input.LinuxOS == "" && input.WindowsOS == "" {
+		t.Fatal("configure at least one Linux or Windows test guest")
 	}
 	read := func(path string) []byte {
 		b, err := os.ReadFile(path)
@@ -50,7 +53,7 @@ func TestMicrocloudPublicNICLive(t *testing.T) {
 		t.Fatal(err)
 	}
 	client.OperationTimeout = 10 * time.Minute
-	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Minute)
 	defer cancel()
 	dsn := os.Getenv("LAFORGE_TEST_DATABASE_URL")
 	if dsn == "" {
@@ -104,11 +107,33 @@ func TestMicrocloudPublicNICLive(t *testing.T) {
 		}
 	}()
 	t.Logf("Creating primary OVN %s on %s", netName, b.Config.OVNUplinkNetwork)
-	if _, err := b.DeployNetwork(ctx, netSpec); err != nil {
+	if err := b.retryInstanceStep(ctx, netName, "live test ensuring primary network", func() error {
+		_, err := b.DeployNetwork(ctx, netSpec)
+		return err
+	}); err != nil {
 		t.Fatal(err)
 	}
 	used := map[string]bool{}
+	type guest struct {
+		name, address, marker string
+		spec                  builder.HostSpec
+	}
+	var guests []guest
+	publicAddress := func(name string) string {
+		t.Helper()
+		endpoints, err := b.ConfigureExternalAccess(ctx, run, []builder.ExternalHost{{ExternalRef: name, TCPPorts: []string{"18080"}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(endpoints) != 1 {
+			t.Fatalf("%s: expected one public endpoint, got %v", name, endpoints)
+		}
+		return strings.Split(endpoints[0].PublicAddress, ":")[0]
+	}
 	for index, osName := range []string{input.LinuxOS, input.WindowsOS} {
+		if osName == "" {
+			continue
+		}
 		userPath := input.LinuxUserDataPath
 		if index == 1 {
 			userPath = input.WindowsUserDataPath
@@ -120,30 +145,32 @@ func TestMicrocloudPublicNICLive(t *testing.T) {
 		if _, err := b.DeployHostWithPublicPorts(ctx, spec, []string{"18080"}, nil); err != nil {
 			t.Fatal(err)
 		}
-		endpoints, err := b.ConfigureExternalAccess(ctx, run, []builder.ExternalHost{{ExternalRef: name, TCPPorts: []string{"18080"}}})
-		if err != nil {
-			t.Fatal(err)
-		}
-		address := strings.Split(endpoints[0].PublicAddress, ":")[0]
+		address := publicAddress(name)
 		if used[address] {
 			t.Fatal("duplicate public address")
 		}
 		used[address] = true
+		marker := "laforge-public-nic-smoke linux"
+		if index == 1 {
+			marker = "laforge-public-nic-smoke windows"
+		}
+		guests = append(guests, guest{name: name, address: address, marker: marker, spec: spec})
 		t.Logf("%s public=%s primary=%s", name, address, spec.Address)
 	}
-	if input.Keep {
+	if input.Keep && !input.VerifyGuests && !input.Rebuild {
 		return
 	} // Inspection runs deliberately separate provisioning from guest diagnostics.
-	for address := range used {
+	verifyGuest := func(g guest) {
+		t.Helper()
 		var last string
 		reachable := false
 		for attempt := 0; attempt < 30; attempt++ {
 			probe, stop := context.WithTimeout(ctx, 15*time.Second)
-			out, err := exec.CommandContext(probe, "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", input.JumpHost, "curl --fail --silent --connect-timeout 3 --max-time 5 http://"+address+":18080/").CombinedOutput()
+			out, err := exec.CommandContext(probe, "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", input.JumpHost, "curl --fail --silent --connect-timeout 3 --max-time 5 http://"+g.address+":18080/").CombinedOutput()
 			stop()
 			last = string(out)
-			if err == nil && strings.Contains(last, "laforge-public-nic-smoke") {
-				t.Logf("Guest reachable on %s: %s", address, strings.TrimSpace(last))
+			if err == nil && strings.TrimSpace(last) == g.marker {
+				t.Logf("Guest %s reachable on %s: %s", g.name, g.address, strings.TrimSpace(last))
 				reachable = true
 				break
 			}
@@ -154,7 +181,25 @@ func TestMicrocloudPublicNICLive(t *testing.T) {
 			}
 		}
 		if !reachable {
-			t.Errorf("guest %s did not serve the first-boot marker: %s", address, last)
+			t.Errorf("guest %s (%s) did not serve its first-boot marker: %s", g.name, g.address, last)
+		}
+	}
+	for _, g := range guests {
+		verifyGuest(g)
+	}
+	if input.Rebuild && !t.Failed() {
+		for _, g := range guests {
+			t.Logf("Rebuilding %s while retaining public IP %s", g.name, g.address)
+			if err := b.DestroyHostForDeployment(ctx, run, g.name, g.spec.ExternalName, true); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := b.DeployHostWithPublicPorts(ctx, g.spec, []string{"18080"}, nil); err != nil {
+				t.Fatal(err)
+			}
+			if address := publicAddress(g.name); address != g.address {
+				t.Fatalf("rebuild changed %s public IP: %s -> %s", g.name, g.address, address)
+			}
+			verifyGuest(g)
 		}
 	}
 }

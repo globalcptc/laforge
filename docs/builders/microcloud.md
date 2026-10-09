@@ -296,6 +296,10 @@ metadata with its network configuration plugin enabled. Both NICs are identified
 explicit MAC addresses in version-1 network configuration, with static guest addresses.
 Separate-NIC hosts use explicit devices and no inherited profiles, including snapshot
 copies, so a template/profile cannot add an unintended third NIC.
+Snapshot devices that are not needed are masked in the copy request before LXD
+validates them, then removed from the stopped copy. This also permits snapshots
+whose old NICs reference deleted networks; source templates remain unchanged.
+LXD merges copy devices by name before validation ([implementation](https://github.com/canonical/lxd/blob/lxd-5.21.7/lxd/instances_post.go#L447)).
 Windows uses LXD's native `cloud-init:config` disk, so networking does not depend on a
 Linux-only LXD guest agent. The builder also requests a NIC-level DHCP reservation when
 the public network supports one. On `GUEST_GUAC_WAN`, `ipv4.address=none` disables IPv4
@@ -315,6 +319,11 @@ stops the wait immediately. Invalid settings, missing images, and authorization
 failures are not retried. An unfinished LXD operation is polled by its original ID;
 an ambiguous create is checked by exact instance name before another create is sent.
 Retries retain the same instance identity, public IP, and first-boot metadata.
+The existing **Placement → Advanced → Wait for slow operations up to** setting also
+bounds ordinary MicroCloud API reads; a busy cluster can legitimately need more
+than 30 seconds to return an OVN network. After startup, an exact power-state read
+must confirm Running. A successful operation that leaves the guest Stopped is
+retried, and asynchronous “already running” responses still require that read.
 
 Structured runner logs record allocation/reuse/release, retained rebuild reservations,
 NIC setup, public-port rules, create/start completion, and retries with their delays,
@@ -356,14 +365,27 @@ with race detection; the UI build and migration up/down/up checks pass. The exis
 `TestConnectBuilderEnrollsAndDiscovers` discovery-fixture failure was also reproduced
 on the base branch and is excluded from the otherwise passing API suite.
 
-The opt-in `TestMicrocloudPublicNICLive` was attempted using the existing trusted LXD
-client and pinned server certificate against `CPTC-Comp-Environment`. Creating the
-primary OVN network on `UPLINK` repeatedly failed while notifying `micro-10`, with a
-cluster database transaction timeout. No test VMs were created, and the failed test
-network was deleted and its absence confirmed by an exact read. Linux and Windows
-guest connectivity therefore remains **unverified on the live cluster**. The smoke
-test remains available for another run after cluster recovery; it does not enroll a
-new client or change the trust store.
+The opt-in `TestMicrocloudPublicNICLive` uses the existing trusted LXD client and
+pinned server certificate against `CPTC-Comp-Environment`. After initial cluster
+transaction failures, a primary OVN network was successfully created on `UPLINK`.
+An Ubuntu image-based VM consumed the dual-NIC cloud-init configuration and served
+its first-boot HTTP marker through `10.250.3.240`; its primary address was
+`172.16.231.10`. This first run needed an additional start after LXD reported success
+while the instance remained stopped, which prompted the power-state retry fix.
+
+The Windows test copies `CPTC-Templates/windows-19-base/v03`. Its initial copy failed
+because the snapshot retained a NIC on a deleted network, prompting the copy-time
+device masking fix. Subsequent OVN reads exceeded the previous fixed 30-second
+deadline; a read succeeded in 41 seconds after honoring the configured timeout.
+Windows guest connectivity and live rebuild retention are **not yet verified**.
+Automated retention, API, template, allocation, and
+new live-failure regression tests pass. Source templates and cluster trust are not
+modified. Linux snapshot-based deployment remains unverified.
+
+The live test accepts `VerifyGuests` to probe guests even when `Keep` retains them,
+and `Rebuild` to verify both connectivity and the unchanged public IP after replacing
+each guest. Either OS entry may be omitted to rerun only that guest. Keep its same
+`Run` value and database to reuse existing reservations.
 
 ## Images or snapshots
 
