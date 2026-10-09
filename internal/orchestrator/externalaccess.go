@@ -5,11 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -32,7 +34,13 @@ func ReconcileExternalAccess(ctx context.Context, pool *pgxpool.Pool, repoRoot s
 		return fmt.Errorf("loading content: %w", err)
 	}
 	fp := externalAccessFingerprint(c)
-	if fp == "" {
+	// Separate-NIC MicroCloud access also reconciles removals and newly
+	// deployed copies. Other builders retain their existing behavior.
+	nicMode, err := microcloudPublicNICMode(ctx, q, buildID)
+	if err != nil {
+		return err
+	}
+	if fp == "" && !nicMode {
 		return nil // no host/container declares `public:` ports
 	}
 
@@ -58,9 +66,23 @@ func ReconcileExternalAccess(ctx context.Context, pool *pgxpool.Pool, repoRoot s
 		if !deployed {
 			continue
 		}
+		teamFP := fp
+		if nicMode {
+			lines := []string{"microcloud-public-nic-v1", fp}
+			for _, o := range objs {
+				if (o.Kind == "host" || o.Kind == "container") && db.StrOrEmpty(o.ExternalRef) != "" &&
+					(o.Status == "running" || o.Status == "building" || o.Status == "finished" || o.Status == "deployed") {
+					// Guest step progress doesn't change network permissions.
+					lines = append(lines, o.ID.String()+"|"+db.StrOrEmpty(o.ExternalRef))
+				}
+			}
+			sort.Strings(lines)
+			sum := sha256.Sum256([]byte(strings.Join(lines, "\n")))
+			teamFP = hex.EncodeToString(sum[:])
+		}
 		teamStr := strconv.FormatInt(int64(team.TeamNumber), 10)
 		present, err := q.HasConfigureExternalAccessTask(ctx, db.HasConfigureExternalAccessTaskParams{
-			BuildID: buildID, Team: teamStr, Fingerprint: fp,
+			BuildID: buildID, Team: teamStr, Fingerprint: teamFP,
 		})
 		if err != nil {
 			return fmt.Errorf("team %d: checking for external-access task: %w", team.TeamNumber, err)
@@ -68,7 +90,7 @@ func ReconcileExternalAccess(ctx context.Context, pool *pgxpool.Pool, repoRoot s
 		if present {
 			continue
 		}
-		payload, _ := json.Marshal(map[string]string{"team": teamStr, "fingerprint": fp})
+		payload, _ := json.Marshal(map[string]string{"team": teamStr, "fingerprint": teamFP})
 		task, err := q.CreateTeamTask(ctx, db.CreateTeamTaskParams{BuildID: buildID, Kind: "configure_external_access", Payload: payload})
 		if err != nil {
 			return fmt.Errorf("team %d: creating configure_external_access task: %w", team.TeamNumber, err)
@@ -80,6 +102,36 @@ func ReconcileExternalAccess(ctx context.Context, pool *pgxpool.Pool, repoRoot s
 		})
 	}
 	return nil
+}
+
+func microcloudPublicNICMode(ctx context.Context, q *db.Queries, buildID pgtype.UUID) (bool, error) {
+	b, err := q.GetBuild(ctx, buildID)
+	if err != nil {
+		return false, err
+	}
+	if !b.ConfiguredBuildID.Valid {
+		return false, nil
+	}
+	cb, err := q.GetConfiguredBuild(ctx, b.ConfiguredBuildID)
+	if err != nil {
+		return false, err
+	}
+	cfg, err := q.GetBuilderConfigByName(ctx, cb.BuilderConfigName)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil // a removed/unconfigured builder cannot enable NIC mode
+	}
+	if err != nil {
+		return false, err
+	}
+	var public struct {
+		Type string `json:"type"`
+	}
+	if cfg.Kind == "microcloud" && len(cfg.MicrocloudPublicAccess) > 0 {
+		if err := json.Unmarshal(cfg.MicrocloudPublicAccess, &public); err != nil {
+			return false, err
+		}
+	}
+	return public.Type == "nic", nil
 }
 
 // externalAccessFingerprint hashes every host/container's `public:` (name,

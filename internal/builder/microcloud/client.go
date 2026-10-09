@@ -105,25 +105,22 @@ func NewClient(baseURL string, clientCertPEM, clientKeyPEM, serverCertPEM []byte
 		// Timeout: 30*time.Second right here. do and waitForOperation
 		// each derive their own per-request context deadline instead
 		// (context.WithTimeout), so a genuinely slow operation gets the
-		// time OperationTimeout actually promises it, while an ordinary
-		// call still fails fast on a truly dead connection.
+		// time OperationTimeout actually promises it. Ordinary calls also
+		// honor that budget: cluster reads can exceed 30 seconds under load.
 		HTTPClient: &http.Client{Transport: &http.Transport{TLSClientConfig: tlsCfg}},
 		// 5 minutes: a win2019 VM's first image clone onto network-attached
 		// Ceph RBD genuinely runs past two minutes (found live -- deploys
 		// failed at "context deadline exceeded" with the old 120s default),
-		// and this budget only bounds waitForOperation's long-poll on async
-		// operations, not ordinary calls (those use requestTimeout). A
-		// builder config can raise it further via OperationTimeoutSeconds.
+		// and this budget bounds ordinary API calls as well as asynchronous
+		// operation waits. A builder config can raise it further via
+		// OperationTimeoutSeconds. Caller cancellation always wins.
 		OperationTimeout: 300 * time.Second,
 	}, nil
 }
 
-// requestTimeout is do's own per-request deadline for everything that
-// ISN'T waitForOperation's long-poll -- ordinary GET/POST/PUT/PATCH/DELETE
-// calls, which should still fail fast on a truly dead connection rather
-// than hang indefinitely just because the caller's own ctx has no
-// deadline (context.Background(), the common case throughout this
-// codebase's production callers).
+// requestTimeout is the minimum per-request budget when a client does not
+// configure a longer cluster operation timeout. Every request remains bounded,
+// even when its caller has no deadline.
 const requestTimeout = 30 * time.Second
 
 // FetchServerCertificateInsecure connects without verifying the server's
@@ -234,17 +231,24 @@ func (c *Client) delete(ctx context.Context, path string) (json.RawMessage, erro
 	return c.do(ctx, http.MethodDelete, path, nil)
 }
 
-func (c *Client) do(ctx context.Context, method, path string, body interface{}) (json.RawMessage, error) {
-	// reqCtx, not a reassigned ctx: waitForOperation below needs the
-	// ORIGINAL, undecorated ctx this function was called with, not this
-	// request's own short-lived deadline -- a child context can never
-	// outlive its parent's, so passing reqCtx into waitForOperation would
-	// silently cap its own, much longer c.OperationTimeout+10s deadline
-	// back down to requestTimeout (30s) regardless of what
-	// OperationTimeout is configured to. Found exactly this way, live,
-	// against a real MicroCloud/Ceph cluster -- see NewClient's own doc
-	// comment on this same class of bug.
-	reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+type requestOptions struct {
+	ifMatch string
+	etag    *string
+}
+
+func (c *Client) do(ctx context.Context, method, path string, body interface{}, options ...requestOptions) (json.RawMessage, error) {
+	// Keep the original caller context for waitForOperation. Submission
+	// and waiting each need their own bounded budget; time spent submitting
+	// must not consume the operation wait's budget. Both still obey the
+	// caller's overall deadline and cancellation.
+	timeout := requestTimeout
+	// Cluster reads can also be slow: a live OVN network read succeeded
+	// after the old fixed 30-second deadline had repeatedly cancelled it.
+	// Use the configured budget for reads and synchronous mutations alike.
+	if c.OperationTimeout > timeout {
+		timeout = c.OperationTimeout
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	u := c.BaseURL + path
 	if c.Project != "" {
@@ -271,11 +275,17 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 		req.Header.Set("Content-Type", "application/json")
 	}
 
+	if len(options) > 0 && options[0].ifMatch != "" {
+		req.Header.Set("If-Match", options[0].ifMatch)
+	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%s %s: %w", method, u, err)
 	}
 	defer resp.Body.Close()
+	if len(options) > 0 && options[0].etag != nil {
+		*options[0].etag = resp.Header.Get("ETag")
+	}
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -283,7 +293,13 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 
 	var ar apiResponse
 	if err := json.Unmarshal(data, &ar); err != nil {
+		if resp.StatusCode >= 400 {
+			return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: resp.StatusCode, Message: http.StatusText(resp.StatusCode)}
+		}
 		return nil, fmt.Errorf("decoding response from %s %s: %w (body: %s)", method, u, err, data)
+	}
+	if resp.StatusCode >= 400 {
+		return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: ar.ErrorCode, Message: ar.Error}
 	}
 
 	switch ar.Type {
@@ -334,7 +350,13 @@ type operationResult struct {
 // found" instead of the real, actionable cause. Every caller of do()/
 // post()/put()/patch()/delete() that goes through an async operation
 // (network/instance create, start/stop, ...) was affected equally.
-func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawMessage, error) {
+func (c *Client) waitForOperation(ctx context.Context, opPath string) (result json.RawMessage, resultErr error) {
+	terminal := false
+	defer func() {
+		if resultErr != nil && !terminal {
+			resultErr = &pendingOperationError{Path: opPath, Err: resultErr}
+		}
+	}()
 	// The client's own deadline must be strictly longer than what the
 	// URL's ?timeout=N tells the SERVER to hold the long-poll for --
 	// otherwise the client could give up and tear down the connection
@@ -343,7 +365,18 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 	// this can't just be c.HTTPClient's own Timeout field.
 	ctx, cancel := context.WithTimeout(ctx, c.OperationTimeout+10*time.Second)
 	defer cancel()
-	u := fmt.Sprintf("%s%s/wait?timeout=%d", c.BaseURL, opPath, int(c.OperationTimeout.Seconds()))
+	opURL, err := url.Parse(opPath)
+	if err != nil {
+		return nil, fmt.Errorf("invalid operation URL: %w", err)
+	}
+	opURL.Path = strings.TrimRight(opURL.Path, "/") + "/wait"
+	query := opURL.Query()
+	query.Set("timeout", fmt.Sprint(int(c.OperationTimeout.Seconds())))
+	if query.Get("project") == "" && c.Project != "" {
+		query.Set("project", c.Project)
+	}
+	opURL.RawQuery = query.Encode()
+	u := c.BaseURL + opURL.RequestURI()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
@@ -359,9 +392,12 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 	}
 	var ar apiResponse
 	if err := json.Unmarshal(data, &ar); err != nil {
+		if resp.StatusCode >= 400 {
+			return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: resp.StatusCode, Message: http.StatusText(resp.StatusCode)}
+		}
 		return nil, fmt.Errorf("decoding operation-wait response: %w (body: %s)", err, data)
 	}
-	if ar.Type == "error" {
+	if ar.Type == "error" || resp.StatusCode >= 400 {
 		return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: ar.ErrorCode, Message: ar.Error}
 	}
 	var op operationResult
@@ -372,11 +408,15 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 	// cancelled -- mirrored from a live daemon's real response, not
 	// documentation alone (see this function's own doc comment).
 	if op.StatusCode >= 400 || op.Status == "Failure" || op.Status == "Cancelled" {
+		terminal = true
 		msg := op.Err
 		if msg == "" {
 			msg = op.Status
 		}
 		return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: op.StatusCode, Message: msg}
+	}
+	if op.StatusCode != 200 {
+		return nil, fmt.Errorf("%w: %s (status %s, code %d)", errOperationRunning, opPath, op.Status, op.StatusCode)
 	}
 	return ar.Metadata, nil
 }

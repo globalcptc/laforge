@@ -470,16 +470,28 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		if derr != nil {
 			return derr
 		}
-		externalRef, err = b.DeployHost(ctx, builder.HostSpec{
+		hspec := builder.HostSpec{
 			ExternalName: externalName, DisplayName: displayName, Team: team,
 			Network: networkExternalName(task.BuildID, teamNumber, obj), NetworkDisplayName: networkDisplayName(teamNumber, db.StrOrEmpty(obj.NetworkName)), Address: addr,
 			OS: h.OS, Size: h.Size, DiskGB: h.Disk, TCPPorts: h.Ports.TCP, UDPPorts: h.Ports.UDP,
 			CloudInitUserData: del.UserData, CloudInitViaISO: del.Platform == agentdelivery.Windows,
-		})
+		}
+		// MicroCloud alone implements this: the second NIC and its guest
+		// configuration must exist before the first Linux/Windows boot.
+		if publicBuilder, ok := b.(interface {
+			DeployHostWithPublicPorts(context.Context, builder.HostSpec, []string, []string) (string, error)
+		}); ok && h.Public != nil {
+			externalRef, err = publicBuilder.DeployHostWithPublicPorts(ctx, hspec, h.Public.TCP, h.Public.UDP)
+		} else {
+			externalRef, err = b.DeployHost(ctx, hspec)
+		}
 	case "container":
 		ct := findContainer(c, obj.ObjectName)
 		if ct == nil {
 			return fmt.Errorf("container %q not found in content", obj.ObjectName)
+		}
+		if nic, ok := b.(interface{ PublicNICEnabled() bool }); ok && nic.PublicNICEnabled() && ct.Public != nil && len(ct.Public.TCP)+len(ct.Public.UDP) > 0 {
+			return fmt.Errorf("MicroCloud separate public NICs apply to host instances; container %q declares public ports, which require the shared-IP access type", obj.ObjectName)
 		}
 		addr, addrErr := r.copyAddress(ctx, q, task.BuildID, c, obj, teamNumber)
 		if addrErr != nil {
@@ -549,6 +561,20 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 	if err != nil {
 		return fmt.Errorf("builder deploy: %w", err)
 	}
+	if addressed, ok := b.(interface {
+		HostPublicAddress(context.Context, string) (string, error)
+	}); ok && obj.Kind == "host" {
+		address, addrErr := addressed.HostPublicAddress(ctx, externalRef)
+		if addrErr != nil {
+			return fmt.Errorf("reading public address: %w", addrErr)
+		}
+		if addrErr := q.SetDeployedObjectPublicAddress(ctx, db.SetDeployedObjectPublicAddressParams{ID: obj.ID, PublicAddress: address}); addrErr != nil {
+			return fmt.Errorf("recording public address: %w", addrErr)
+		}
+		if address != "" {
+			r.logEvent(ctx, q, task.BuildID, task.ID, "public_ip.assigned", fmt.Sprintf("%s: public IP %s", externalRef, address))
+		}
+	}
 	if r.AfterBuilderCall != nil {
 		r.AfterBuilderCall()
 	}
@@ -616,6 +642,17 @@ func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task
 	if err != nil {
 		return false, fmt.Errorf("resolving builder: %w", err)
 	}
+	var payload struct {
+		Remove bool `json:"remove"`
+		// Terminal is internal/orchestrator.Teardown's own signal: this
+		// destroy is a deliberate build teardown, not a content-driven
+		// removal (Remove) or a fingerprint-change rebuild (neither set)
+		// -- the object stays destroyed, not deleted and not reset for a
+		// redeploy that a torn-down build will never ask for again.
+		Terminal bool `json:"terminal"`
+	}
+	json.Unmarshal(task.Payload, &payload)
+
 	ref := db.StrOrEmpty(obj.ExternalRef)
 	if ref == "" {
 		// Defensive: a destroy was requested for something never actually
@@ -624,6 +661,9 @@ func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task
 		// builder's destroy is required to be a no-op-safe "ensure" even
 		// for something it never created, exactly like this.
 		ref = externalName
+		if named, ok := b.(interface{ HostReference(string, string) string }); ok && obj.Kind == "host" {
+			ref = named.HostReference(externalName, r.displayNameFor(ctx, q, task.BuildID, teamNumber, obj))
+		}
 	}
 	team := strconv.FormatInt(int64(teamNumber), 10)
 
@@ -637,7 +677,17 @@ func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task
 	case "network":
 		err = b.DestroyNetwork(ctx, team, ref)
 	case "host":
-		err = b.DestroyHost(ctx, team, ref)
+		if owned, ok := b.(interface {
+			DestroyHostForDeployment(context.Context, string, string, string, bool) error
+		}); ok {
+			err = owned.DestroyHostForDeployment(ctx, team, ref, externalName, !payload.Remove && !payload.Terminal)
+		} else if rebuilder, ok := b.(interface {
+			DestroyHostForRebuild(context.Context, string, string) error
+		}); ok && !payload.Remove && !payload.Terminal {
+			err = rebuilder.DestroyHostForRebuild(ctx, team, ref)
+		} else {
+			err = b.DestroyHost(ctx, team, ref)
+		}
 	case "container":
 		err = b.DestroyContainer(ctx, team, ref)
 	default:
@@ -649,17 +699,6 @@ func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task
 	if r.AfterBuilderCall != nil {
 		r.AfterBuilderCall()
 	}
-
-	var payload struct {
-		Remove bool `json:"remove"`
-		// Terminal is internal/orchestrator.Teardown's own signal: this
-		// destroy is a deliberate build teardown, not a content-driven
-		// removal (Remove) or a fingerprint-change rebuild (neither set)
-		// -- the object stays destroyed, not deleted and not reset for a
-		// redeploy that a torn-down build will never ask for again.
-		Terminal bool `json:"terminal"`
-	}
-	json.Unmarshal(task.Payload, &payload)
 
 	if payload.Remove {
 		if err := q.DeleteDeployedObject(ctx, obj.ID); err != nil {
@@ -877,6 +916,10 @@ func (r *Runner) executeConfigureExternalAccess(ctx context.Context, q *db.Queri
 	if err != nil {
 		return fmt.Errorf("loading build for team %s: %w", payload.Team, err)
 	}
+	reconcileEmpty := false
+	if nic, ok := b.(interface{ PublicNICEnabled() bool }); ok {
+		reconcileEmpty = nic.PublicNICEnabled()
+	}
 	refToObjID := map[string]pgtype.UUID{}
 	var hosts []builder.ExternalHost
 	var touched []pgtype.UUID
@@ -892,12 +935,18 @@ func (r *Runner) executeConfigureExternalAccess(ctx context.Context, q *db.Queri
 		} else if ct := findContainer(c, o.ObjectName); ct != nil {
 			pub = ct.Public
 		}
-		if pub == nil || (len(pub.TCP) == 0 && len(pub.UDP) == 0) {
+		if pub == nil {
+			pub = &loader.Ports{}
+		}
+		if !reconcileEmpty && len(pub.TCP)+len(pub.UDP) == 0 {
 			continue
 		}
 		ref := db.StrOrEmpty(o.ExternalRef)
 		if ref == "" {
 			continue // not deployed at the hoster yet
+		}
+		if reconcileEmpty && o.Status != "running" && o.Status != "building" && o.Status != "finished" && o.Status != "deployed" {
+			continue
 		}
 		rctx, err := render.Resolve(c, build.EnvironmentName, db.StrOrEmpty(o.AsName), int(teamNum))
 		if err != nil {

@@ -15,7 +15,7 @@ import (
 const createContainer = `-- name: CreateContainer :one
 INSERT INTO container (content_revision_id, path, name, image, size, ports, depends_on, steps, schedule, vars, tags, findings, people, extends)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-RETURNING id, content_revision_id, path, name, image, size, ports, depends_on, steps, schedule, vars, tags, findings, people, extends
+RETURNING id, content_revision_id, path, name, image, size, ports, depends_on, steps, vars, tags, findings, people, extends, schedule
 `
 
 type CreateContainerParams struct {
@@ -63,12 +63,12 @@ func (q *Queries) CreateContainer(ctx context.Context, arg CreateContainerParams
 		&i.Ports,
 		&i.DependsOn,
 		&i.Steps,
-		&i.Schedule,
 		&i.Vars,
 		&i.Tags,
 		&i.Findings,
 		&i.People,
 		&i.Extends,
+		&i.Schedule,
 	)
 	return i, err
 }
@@ -191,7 +191,7 @@ func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentPa
 const createHost = `-- name: CreateHost :one
 INSERT INTO host (content_revision_id, path, name, os, size, disk_gb, ports, depends_on, steps, schedule, vars, tags, findings, people, extends)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-RETURNING id, content_revision_id, path, name, os, size, disk_gb, ports, depends_on, steps, schedule, vars, tags, findings, people, extends
+RETURNING id, content_revision_id, path, name, os, size, disk_gb, ports, depends_on, steps, vars, tags, findings, people, extends, schedule
 `
 
 type CreateHostParams struct {
@@ -242,12 +242,12 @@ func (q *Queries) CreateHost(ctx context.Context, arg CreateHostParams) (Host, e
 		&i.Ports,
 		&i.DependsOn,
 		&i.Steps,
-		&i.Schedule,
 		&i.Vars,
 		&i.Tags,
 		&i.Findings,
 		&i.People,
 		&i.Extends,
+		&i.Schedule,
 	)
 	return i, err
 }
@@ -255,7 +255,7 @@ func (q *Queries) CreateHost(ctx context.Context, arg CreateHostParams) (Host, e
 const createNetwork = `-- name: CreateNetwork :one
 INSERT INTO network (content_revision_id, path, name, cidr, visible_from, vars, tags, findings, extends)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, content_revision_id, path, name, cidr, visible_from, vars, tags, findings, extends
+RETURNING id, content_revision_id, path, name, cidr, vars, tags, findings, extends, visible_from
 `
 
 type CreateNetworkParams struct {
@@ -289,11 +289,11 @@ func (q *Queries) CreateNetwork(ctx context.Context, arg CreateNetworkParams) (N
 		&i.Path,
 		&i.Name,
 		&i.Cidr,
-		&i.VisibleFrom,
 		&i.Vars,
 		&i.Tags,
 		&i.Findings,
 		&i.Extends,
+		&i.VisibleFrom,
 	)
 	return i, err
 }
@@ -445,7 +445,7 @@ func (q *Queries) CreateScript(ctx context.Context, arg CreateScriptParams) (Scr
 }
 
 const getContainerByRevisionAndName = `-- name: GetContainerByRevisionAndName :one
-SELECT id, content_revision_id, path, name, image, size, ports, depends_on, steps, schedule, vars, tags, findings, people, extends FROM container WHERE content_revision_id = $1 AND name = $2
+SELECT id, content_revision_id, path, name, image, size, ports, depends_on, steps, vars, tags, findings, people, extends, schedule FROM container WHERE content_revision_id = $1 AND name = $2
 `
 
 type GetContainerByRevisionAndNameParams struct {
@@ -466,12 +466,12 @@ func (q *Queries) GetContainerByRevisionAndName(ctx context.Context, arg GetCont
 		&i.Ports,
 		&i.DependsOn,
 		&i.Steps,
-		&i.Schedule,
 		&i.Vars,
 		&i.Tags,
 		&i.Findings,
 		&i.People,
 		&i.Extends,
+		&i.Schedule,
 	)
 	return i, err
 }
@@ -645,7 +645,7 @@ func (q *Queries) GetEnvironmentContainerLogsForObject(ctx context.Context, id p
 }
 
 const getHostByRevisionAndName = `-- name: GetHostByRevisionAndName :one
-SELECT id, content_revision_id, path, name, os, size, disk_gb, ports, depends_on, steps, schedule, vars, tags, findings, people, extends FROM host WHERE content_revision_id = $1 AND name = $2
+SELECT id, content_revision_id, path, name, os, size, disk_gb, ports, depends_on, steps, vars, tags, findings, people, extends, schedule FROM host WHERE content_revision_id = $1 AND name = $2
 `
 
 type GetHostByRevisionAndNameParams struct {
@@ -667,12 +667,12 @@ func (q *Queries) GetHostByRevisionAndName(ctx context.Context, arg GetHostByRev
 		&i.Ports,
 		&i.DependsOn,
 		&i.Steps,
-		&i.Schedule,
 		&i.Vars,
 		&i.Tags,
 		&i.Findings,
 		&i.People,
 		&i.Extends,
+		&i.Schedule,
 	)
 	return i, err
 }
@@ -707,7 +707,7 @@ func (q *Queries) GetLatestContentRevisionByRepository(ctx context.Context, repo
 }
 
 const getNetworkByRevisionAndName = `-- name: GetNetworkByRevisionAndName :one
-SELECT id, content_revision_id, path, name, cidr, visible_from, vars, tags, findings, extends FROM network WHERE content_revision_id = $1 AND name = $2
+SELECT id, content_revision_id, path, name, cidr, vars, tags, findings, extends, visible_from FROM network WHERE content_revision_id = $1 AND name = $2
 `
 
 type GetNetworkByRevisionAndNameParams struct {
@@ -724,11 +724,11 @@ func (q *Queries) GetNetworkByRevisionAndName(ctx context.Context, arg GetNetwor
 		&i.Path,
 		&i.Name,
 		&i.Cidr,
-		&i.VisibleFrom,
 		&i.Vars,
 		&i.Tags,
 		&i.Findings,
 		&i.Extends,
+		&i.VisibleFrom,
 	)
 	return i, err
 }

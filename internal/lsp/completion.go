@@ -467,7 +467,7 @@ func scriptCompletion(content *loader.Content, script *loader.Script, text strin
 		})
 	}
 
-	for _, f := range []string{"host.hostname", "host.address", "host.os", "host.image", "host.size", "host.kind"} {
+	for _, f := range []string{"host.hostname", "host.address", "host.public_address", "host.os", "host.image", "host.size", "host.kind"} {
 		items = append(items, protocol.CompletionItem{Label: f, Kind: protocol.CompletionItemKindField, Detail: protocol.NewOptional("always available")})
 	}
 	for _, f := range []string{"network.name", "network.cidr"} {

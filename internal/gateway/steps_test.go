@@ -273,3 +273,26 @@ func TestScriptArgsAndValidateAreWired(t *testing.T) {
 		t.Fatalf("script's own validate (service_running nginx) was not emitted: %+v", cmds)
 	}
 }
+
+func TestExpandStepsUsesRuntimePublicAddress(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range c.Hosts {
+		if c.Hosts[i].Name == "webserver" {
+			c.Hosts[i].Steps = []loader.Step{{"write_file": map[string]interface{}{"path": "/tmp/public-ip", "content": "{{ .host.public_address }}"}}}
+		}
+	}
+	cmds, _, err := ExpandSteps("../../examples/lm-test", c, "lm-test", "web01", 1, WithPublicAddress("10.250.3.100"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cmds) != 1 {
+		t.Fatalf("commands: %v", cmds)
+	}
+	payload, ok := cmds[0].Payload.(agentproto.WriteFilePayload)
+	if !ok || payload.Content != "10.250.3.100" {
+		t.Fatalf("runtime public IP missing: %+v", cmds[0])
+	}
+}

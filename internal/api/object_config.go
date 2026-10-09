@@ -14,20 +14,21 @@ import (
 // object's full declarative config for the host info panel.
 
 type objectConfig struct {
-	Kind      string            `json:"kind"`
-	Name      string            `json:"name"`
-	OS        string            `json:"os,omitempty"`      // host
-	Image     string            `json:"image,omitempty"`   // container
-	Size      string            `json:"size,omitempty"`
-	Disk      int               `json:"disk,omitempty"`    // host
-	Command   []string          `json:"command,omitempty"` // container
-	TCPPorts  []string          `json:"tcp_ports,omitempty"`
-	UDPPorts  []string          `json:"udp_ports,omitempty"`
-	Env       map[string]string `json:"env,omitempty"` // container
-	Vars      map[string]string `json:"vars,omitempty"`
-	Tags      map[string]string `json:"tags,omitempty"`
-	DependsOn []string          `json:"depends_on,omitempty"`
-	Findings  []loader.Finding  `json:"findings,omitempty"`
+	PublicAddress string            `json:"public_address"`
+	Kind          string            `json:"kind"`
+	Name          string            `json:"name"`
+	OS            string            `json:"os,omitempty"`    // host
+	Image         string            `json:"image,omitempty"` // container
+	Size          string            `json:"size,omitempty"`
+	Disk          int               `json:"disk,omitempty"`    // host
+	Command       []string          `json:"command,omitempty"` // container
+	TCPPorts      []string          `json:"tcp_ports,omitempty"`
+	UDPPorts      []string          `json:"udp_ports,omitempty"`
+	Env           map[string]string `json:"env,omitempty"` // container
+	Vars          map[string]string `json:"vars,omitempty"`
+	Tags          map[string]string `json:"tags,omitempty"`
+	DependsOn     []string          `json:"depends_on,omitempty"`
+	Findings      []loader.Finding  `json:"findings,omitempty"`
 }
 
 // handleObjectConfig returns one host/container's full authored config from the
@@ -63,7 +64,7 @@ func (s *Server) handleObjectConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := objectConfig{Kind: obj.Kind, Name: obj.ObjectName}
+	cfg := objectConfig{Kind: obj.Kind, Name: obj.ObjectName, PublicAddress: obj.PublicAddress}
 	switch obj.Kind {
 	case "host":
 		for i := range content.Hosts {

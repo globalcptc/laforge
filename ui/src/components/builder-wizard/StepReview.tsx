@@ -56,6 +56,18 @@ export function StepReview({ draft }: { draft: Draft }) {
             ))}
           </Section>
 
+          {draft.kind === 'microcloud' && draft.microcloudPublicAccess?.type === 'nic' && (
+            <Section title="Public access — separate NIC">
+              <Row label="Network">{draft.microcloudPublicAccess.network}</Row>
+              <Row label="Subnet">{draft.microcloudPublicAccess.cidr}</Row>
+              <Row label="Address pool">{draft.microcloudPublicAccess.ranges}</Row>
+              <Row label="Default gateway">{draft.microcloudPublicAccess.gateway || 'Primary NIC'}</Row>
+              <Row label="DNS">{draft.microcloudPublicAccess.dns?.join(', ') || 'Primary network'}</Row>
+              <Row label="Guest MTU">{draft.microcloudPublicAccess.mtu || 'Inherited'}</Row>
+              {draft.microcloudPublicAccess.routes?.map((r, i) => <Row key={i} label="Route">{r.to} via {r.via}</Row>)}
+            </Section>
+          )}
+
           <Section title="Images">
             {draft.images.length === 0 && <div className="px-3 py-2 text-fg-muted">None offered.</div>}
             {draft.images.map((i) => (

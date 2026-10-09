@@ -18,10 +18,10 @@ INSERT INTO builder_config (
     incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool,
     incus_operation_timeout_seconds, incus_images, incus_sizes, incus_hosts,
     incus_credential_id, external_access_ip, external_port_min, external_port_max,
-    incus_project
+    incus_project, microcloud_public_access
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
-) RETURNING id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+) RETURNING id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access
 `
 
 type CreateBuilderConfigParams struct {
@@ -42,6 +42,7 @@ type CreateBuilderConfigParams struct {
 	ExternalPortMin              *int32          `json:"external_port_min"`
 	ExternalPortMax              *int32          `json:"external_port_max"`
 	IncusProject                 *string         `json:"incus_project"`
+	MicrocloudPublicAccess       json.RawMessage `json:"microcloud_public_access"`
 }
 
 func (q *Queries) CreateBuilderConfig(ctx context.Context, arg CreateBuilderConfigParams) (BuilderConfig, error) {
@@ -63,6 +64,7 @@ func (q *Queries) CreateBuilderConfig(ctx context.Context, arg CreateBuilderConf
 		arg.ExternalPortMin,
 		arg.ExternalPortMax,
 		arg.IncusProject,
+		arg.MicrocloudPublicAccess,
 	)
 	var i BuilderConfig
 	err := row.Scan(
@@ -89,6 +91,7 @@ func (q *Queries) CreateBuilderConfig(ctx context.Context, arg CreateBuilderConf
 		&i.ExternalPortMin,
 		&i.ExternalPortMax,
 		&i.IncusProject,
+		&i.MicrocloudPublicAccess,
 	)
 	return i, err
 }
@@ -148,7 +151,7 @@ func (q *Queries) DeleteBuilderConfig(ctx context.Context, name string) error {
 }
 
 const getBuilderConfigByName = `-- name: GetBuilderConfigByName :one
-SELECT id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project FROM builder_config WHERE name = $1
+SELECT id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access FROM builder_config WHERE name = $1
 `
 
 func (q *Queries) GetBuilderConfigByName(ctx context.Context, name string) (BuilderConfig, error) {
@@ -178,6 +181,7 @@ func (q *Queries) GetBuilderConfigByName(ctx context.Context, name string) (Buil
 		&i.ExternalPortMin,
 		&i.ExternalPortMax,
 		&i.IncusProject,
+		&i.MicrocloudPublicAccess,
 	)
 	return i, err
 }
@@ -230,7 +234,7 @@ func (q *Queries) GetBuilderCredentialSummary(ctx context.Context, id pgtype.UUI
 }
 
 const listBuilderConfigs = `-- name: ListBuilderConfigs :many
-SELECT id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project FROM builder_config ORDER BY name
+SELECT id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access FROM builder_config ORDER BY name
 `
 
 func (q *Queries) ListBuilderConfigs(ctx context.Context) ([]BuilderConfig, error) {
@@ -266,6 +270,7 @@ func (q *Queries) ListBuilderConfigs(ctx context.Context) ([]BuilderConfig, erro
 			&i.ExternalPortMin,
 			&i.ExternalPortMax,
 			&i.IncusProject,
+			&i.MicrocloudPublicAccess,
 		); err != nil {
 			return nil, err
 		}
@@ -283,9 +288,9 @@ UPDATE builder_config SET
     incus_server_cert_pem = $6, incus_ovn_uplink_network = $7, incus_storage_pool = $8,
     incus_operation_timeout_seconds = $9, incus_images = $10, incus_sizes = $11, incus_hosts = $12,
     incus_credential_id = $13, external_access_ip = $14, external_port_min = $15, external_port_max = $16,
-    incus_project = $17, updated_at = now()
+    incus_project = $17, microcloud_public_access = $18, updated_at = now()
 WHERE name = $1
-RETURNING id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project
+RETURNING id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access
 `
 
 type UpdateBuilderConfigParams struct {
@@ -306,6 +311,7 @@ type UpdateBuilderConfigParams struct {
 	ExternalPortMin              *int32          `json:"external_port_min"`
 	ExternalPortMax              *int32          `json:"external_port_max"`
 	IncusProject                 *string         `json:"incus_project"`
+	MicrocloudPublicAccess       json.RawMessage `json:"microcloud_public_access"`
 }
 
 func (q *Queries) UpdateBuilderConfig(ctx context.Context, arg UpdateBuilderConfigParams) (BuilderConfig, error) {
@@ -327,6 +333,7 @@ func (q *Queries) UpdateBuilderConfig(ctx context.Context, arg UpdateBuilderConf
 		arg.ExternalPortMin,
 		arg.ExternalPortMax,
 		arg.IncusProject,
+		arg.MicrocloudPublicAccess,
 	)
 	var i BuilderConfig
 	err := row.Scan(
@@ -353,6 +360,7 @@ func (q *Queries) UpdateBuilderConfig(ctx context.Context, arg UpdateBuilderConf
 		&i.ExternalPortMin,
 		&i.ExternalPortMax,
 		&i.IncusProject,
+		&i.MicrocloudPublicAccess,
 	)
 	return i, err
 }

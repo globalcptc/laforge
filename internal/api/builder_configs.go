@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/globalcptc/laforge/internal/builder/incus"
+	"github.com/globalcptc/laforge/internal/builder/microcloud"
 	"github.com/globalcptc/laforge/internal/builderconfig"
 	"github.com/globalcptc/laforge/internal/db"
 )
@@ -38,16 +39,17 @@ import (
 // FetchServerCertificateInsecure's own doc comment for how an admin
 // obtains it once, out of band).
 type builderConfigRequest struct {
-	Kind                         string                    `json:"kind"`
-	IncusApiUrl                  string                    `json:"incus_api_url,omitempty"`
-	IncusClientCertPath          string                    `json:"incus_client_cert_path,omitempty"`
-	IncusClientKeyPath           string                    `json:"incus_client_key_path,omitempty"`
-	IncusServerCertPem           string                    `json:"incus_server_cert_pem,omitempty"`
-	IncusOvnUplinkNetwork        string                    `json:"incus_ovn_uplink_network,omitempty"`
-	IncusStoragePool             string                    `json:"incus_storage_pool,omitempty"`
+	MicrocloudPublicAccess *microcloud.PublicAccessConfig `json:"microcloud_public_access,omitempty"`
+	Kind                   string                         `json:"kind"`
+	IncusApiUrl            string                         `json:"incus_api_url,omitempty"`
+	IncusClientCertPath    string                         `json:"incus_client_cert_path,omitempty"`
+	IncusClientKeyPath     string                         `json:"incus_client_key_path,omitempty"`
+	IncusServerCertPem     string                         `json:"incus_server_cert_pem,omitempty"`
+	IncusOvnUplinkNetwork  string                         `json:"incus_ovn_uplink_network,omitempty"`
+	IncusStoragePool       string                         `json:"incus_storage_pool,omitempty"`
 	// IncusProject is the LXD project a kind "microcloud" builder creates
 	// everything in; empty is `default`. Ignored by every other kind.
-	IncusProject string `json:"incus_project,omitempty"`
+	IncusProject                 string                    `json:"incus_project,omitempty"`
 	IncusOperationTimeoutSeconds int32                     `json:"incus_operation_timeout_seconds,omitempty"`
 	IncusImages                  map[string]incus.ImageRef `json:"incus_images,omitempty"`
 	IncusSizes                   map[string]incus.SizeSpec `json:"incus_sizes,omitempty"`
@@ -81,6 +83,16 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 	if req.Kind != "fake" && req.Kind != "incus" && req.Kind != "microcloud" && req.Kind != "aws" && req.Kind != "openstack" {
 		return db.CreateBuilderConfigParams{}, errors.New(`kind must be "fake", "incus", "microcloud", "aws", or "openstack"`)
 	}
+	var publicAccess []byte
+	if req.MicrocloudPublicAccess != nil {
+		if req.Kind != "microcloud" {
+			return db.CreateBuilderConfigParams{}, errors.New("microcloud_public_access is only supported by the MicroCloud builder")
+		}
+		if err := req.MicrocloudPublicAccess.Validate(); err != nil {
+			return db.CreateBuilderConfigParams{}, err
+		}
+		publicAccess, _ = json.Marshal(req.MicrocloudPublicAccess)
+	}
 	images, err := json.Marshal(req.IncusImages)
 	if err != nil {
 		return db.CreateBuilderConfigParams{}, err
@@ -103,17 +115,18 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		hosts = []byte("[]")
 	}
 	params := db.CreateBuilderConfigParams{
-		Kind:                  req.Kind,
-		IncusApiUrl:           db.StrPtr(req.IncusApiUrl),
-		IncusClientCertPath:   db.StrPtr(req.IncusClientCertPath),
-		IncusClientKeyPath:    db.StrPtr(req.IncusClientKeyPath),
-		IncusServerCertPem:    db.StrPtr(req.IncusServerCertPem),
-		IncusOvnUplinkNetwork: db.StrPtr(req.IncusOvnUplinkNetwork),
-		IncusStoragePool:      db.StrPtr(req.IncusStoragePool),
-		IncusImages:           images,
-		IncusSizes:            sizes,
-		IncusHosts:            hosts,
-		ExternalAccessIp:      db.StrPtr(req.ExternalAccessIP),
+		Kind:                   req.Kind,
+		MicrocloudPublicAccess: publicAccess,
+		IncusApiUrl:            db.StrPtr(req.IncusApiUrl),
+		IncusClientCertPath:    db.StrPtr(req.IncusClientCertPath),
+		IncusClientKeyPath:     db.StrPtr(req.IncusClientKeyPath),
+		IncusServerCertPem:     db.StrPtr(req.IncusServerCertPem),
+		IncusOvnUplinkNetwork:  db.StrPtr(req.IncusOvnUplinkNetwork),
+		IncusStoragePool:       db.StrPtr(req.IncusStoragePool),
+		IncusImages:            images,
+		IncusSizes:             sizes,
+		IncusHosts:             hosts,
+		ExternalAccessIp:       db.StrPtr(req.ExternalAccessIP),
 	}
 	if req.Kind == "microcloud" && req.IncusProject != "default" {
 		params.IncusProject = db.StrPtr(req.IncusProject)
@@ -154,7 +167,8 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		IncusOperationTimeoutSeconds: params.IncusOperationTimeoutSeconds,
 		IncusImages:                  params.IncusImages, IncusSizes: params.IncusSizes,
 		IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
-		IncusProject: params.IncusProject,
+		IncusProject:           params.IncusProject,
+		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
 	}); err != nil {
 		return db.CreateBuilderConfigParams{}, err
 	}
@@ -172,7 +186,8 @@ func (s *Server) verifyImages(r *http.Request, params db.CreateBuilderConfigPara
 		Kind: params.Kind, IncusApiUrl: params.IncusApiUrl, IncusClientCertPath: params.IncusClientCertPath,
 		IncusClientKeyPath: params.IncusClientKeyPath, IncusServerCertPem: params.IncusServerCertPem,
 		IncusImages: params.IncusImages, IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
-		IncusProject: params.IncusProject,
+		IncusProject:           params.IncusProject,
+		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
 	})
 }
 
@@ -334,7 +349,8 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
 		ExternalAccessIp: params.ExternalAccessIp,
 		ExternalPortMin:  params.ExternalPortMin, ExternalPortMax: params.ExternalPortMax,
-		IncusProject: params.IncusProject,
+		IncusProject:           params.IncusProject,
+		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

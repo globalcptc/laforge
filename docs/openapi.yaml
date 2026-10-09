@@ -195,12 +195,14 @@ components:
         as_name: { type: string, nullable: true }
         network_name: { type: string, nullable: true }
         status: { type: string }
+        public_address: { type: string, description: "MicroCloud separate-NIC IPv4 address. Empty before allocation or for private hosts; retained during rebuilds." }
         external_ref: { type: string, nullable: true }
         power_state: { type: string, nullable: true }
     ObjectConfig:
       type: object
       description: One host/container's full authored config from the build's content revision.
       properties:
+        public_address: { type: string, description: "Runtime public NIC address, also available as host.public_address in scripts." }
         kind: { type: string }
         name: { type: string }
         os: { type: string }
@@ -253,6 +255,25 @@ components:
         incus_images: { type: object }
         incus_sizes: { type: object }
         docker_base_fingerprint: { type: string }
+        microcloud_public_access:
+          type: object
+          nullable: true
+          description: MicroCloud only. Global public-access mode and separate-NIC settings; unset preserves proxy mode.
+          properties:
+            type: { type: string, enum: [proxy, nic] }
+            network: { type: string }
+            cidr: { type: string }
+            ranges: { type: string }
+            gateway: { type: string }
+            dns: { type: array, items: { type: string } }
+            mtu: { type: integer }
+            routes:
+              type: array
+              items:
+                type: object
+                properties:
+                  to: { type: string }
+                  via: { type: string }
   responses:
     Unauthorized:
       description: Not authenticated.

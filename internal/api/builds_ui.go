@@ -449,7 +449,7 @@ func (s *Server) stepGroups(ctx context.Context, build db.Build, objectID pgtype
 	if err != nil || len(c.Errors) > 0 {
 		return nil
 	}
-	cmds, _, err := gateway.ExpandSteps(repoRoot, c, build.EnvironmentName, *obj.AsName, int(team.TeamNumber))
+	cmds, _, err := gateway.ExpandSteps(repoRoot, c, build.EnvironmentName, *obj.AsName, int(team.TeamNumber), gateway.WithPublicAddress(obj.PublicAddress))
 	if err != nil {
 		return nil
 	}

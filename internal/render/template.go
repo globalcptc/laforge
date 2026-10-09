@@ -56,12 +56,13 @@ func (ctx *Context) TemplateData() map[string]interface{} {
 
 	return map[string]interface{}{
 		"host": map[string]interface{}{
-			"hostname": ctx.As,
-			"address":  ctx.Address,
-			"os":       ctx.OS,
-			"image":    ctx.Image,
-			"size":     ctx.Size,
-			"kind":     ctx.ObjectKind,
+			"hostname":       ctx.As,
+			"address":        ctx.Address,
+			"public_address": ctx.PublicAddress,
+			"os":             ctx.OS,
+			"image":          ctx.Image,
+			"size":           ctx.Size,
+			"kind":           ctx.ObjectKind,
 		},
 		"network": map[string]interface{}{
 			"name":  ctx.NetworkName,

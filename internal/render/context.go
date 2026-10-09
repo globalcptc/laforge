@@ -46,17 +46,19 @@ type Context struct {
 	TeamsTotal      int
 	Start, Stop     string
 
-	As          string // the copy's `as` name -- the hostname
-	ObjectName  string // the underlying host/container definition's name
-	ObjectKind  string // "host" or "container"
-	OS          string // set when ObjectKind == "host"
-	Image       string // set when ObjectKind == "container"
-	Compose     string // a compose container's compose file, repo-relative; "" otherwise
-	Size        string
-	Address     string
-	NetworkName string
-	NetworkCIDR string
-	Peers       []NetworkPeer // other copies on the same network, same team
+	As         string // the copy's `as` name -- the hostname
+	ObjectName string // the underlying host/container definition's name
+	ObjectKind string // "host" or "container"
+	OS         string // set when ObjectKind == "host"
+	Image      string // set when ObjectKind == "container"
+	Compose    string // a compose container's compose file, repo-relative; "" otherwise
+	Size       string
+	Address    string
+	// PublicAddress is runtime-assigned by the MicroCloud public NIC builder; empty before deployment.
+	PublicAddress string
+	NetworkName   string
+	NetworkCIDR   string
+	Peers         []NetworkPeer // other copies on the same network, same team
 
 	Vars   []VarEntry
 	People []PeopleSummary

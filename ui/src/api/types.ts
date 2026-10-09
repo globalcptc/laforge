@@ -122,6 +122,8 @@ export interface AgentHealth {
 export type PowerState = '' | 'running' | 'stopped' | 'other' | 'missing'
 
 export interface DeployedObject {
+  /** Static public NIC address assigned by MicroCloud; retained through rebuilds. */
+  public_address: string
   id: string
   team_id: string
   kind: ObjectKind
@@ -459,6 +461,7 @@ export interface ConfigFinding {
 }
 
 export interface ObjectConfig {
+  public_address: string
   kind: string
   name: string
   os?: string
@@ -608,6 +611,17 @@ export interface ImageBuildLogResponse {
   lines: { seq: number; line: string }[]
 }
 
+export interface MicrocloudPublicAccess {
+  type: 'proxy' | 'nic'
+  network?: string
+  cidr?: string
+  ranges?: string
+  gateway?: string
+  dns?: string[]
+  mtu?: number
+  routes?: { to: string; via: string }[]
+}
+
 export interface BuilderConfig {
   id: string
   name: string
@@ -628,6 +642,7 @@ export interface BuilderConfig {
   incus_sizes: Record<string, IncusSizeSpec>
   incus_hosts: IncusHostConfig[]
   incus_credential_id: string | null
+  microcloud_public_access?: MicrocloudPublicAccess | null
   external_access_ip: string | null
   external_port_min: number | null
   external_port_max: number | null
@@ -651,6 +666,7 @@ export interface BuilderConfigRequest {
   incus_sizes?: Record<string, IncusSizeSpec>
   incus_hosts?: IncusHostConfig[]
   incus_credential_id?: string
+  microcloud_public_access?: MicrocloudPublicAccess
   external_access_ip?: string
   external_port_min?: number
   external_port_max?: number

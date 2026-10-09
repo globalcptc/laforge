@@ -34,7 +34,7 @@ func (q *Queries) ConfiguredBuildHasLiveBuilds(ctx context.Context, configuredBu
 const createConfiguredBuild = `-- name: CreateConfiguredBuild :one
 INSERT INTO configured_build (repository_id, branch, environment_path, builder_config_name)
 VALUES ($1, $2, $3, $4)
-RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, auto_deploy_enabled, current_content_revision_id, created_at
+RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled
 `
 
 type CreateConfiguredBuildParams struct {
@@ -59,9 +59,9 @@ func (q *Queries) CreateConfiguredBuild(ctx context.Context, arg CreateConfigure
 		&i.EnvironmentPath,
 		&i.BuilderConfigName,
 		&i.CompetitionStarted,
-		&i.AutoDeployEnabled,
 		&i.CurrentContentRevisionID,
 		&i.CreatedAt,
+		&i.AutoDeployEnabled,
 	)
 	return i, err
 }
@@ -78,7 +78,7 @@ func (q *Queries) DeleteConfiguredBuild(ctx context.Context, id pgtype.UUID) err
 }
 
 const getConfiguredBuild = `-- name: GetConfiguredBuild :one
-SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, auto_deploy_enabled, current_content_revision_id, created_at FROM configured_build WHERE id = $1
+SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled FROM configured_build WHERE id = $1
 `
 
 func (q *Queries) GetConfiguredBuild(ctx context.Context, id pgtype.UUID) (ConfiguredBuild, error) {
@@ -91,15 +91,15 @@ func (q *Queries) GetConfiguredBuild(ctx context.Context, id pgtype.UUID) (Confi
 		&i.EnvironmentPath,
 		&i.BuilderConfigName,
 		&i.CompetitionStarted,
-		&i.AutoDeployEnabled,
 		&i.CurrentContentRevisionID,
 		&i.CreatedAt,
+		&i.AutoDeployEnabled,
 	)
 	return i, err
 }
 
 const listConfiguredBuildsByRepository = `-- name: ListConfiguredBuildsByRepository :many
-SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, auto_deploy_enabled, current_content_revision_id, created_at FROM configured_build WHERE repository_id = $1 ORDER BY created_at
+SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled FROM configured_build WHERE repository_id = $1 ORDER BY created_at
 `
 
 func (q *Queries) ListConfiguredBuildsByRepository(ctx context.Context, repositoryID pgtype.UUID) ([]ConfiguredBuild, error) {
@@ -118,9 +118,9 @@ func (q *Queries) ListConfiguredBuildsByRepository(ctx context.Context, reposito
 			&i.EnvironmentPath,
 			&i.BuilderConfigName,
 			&i.CompetitionStarted,
-			&i.AutoDeployEnabled,
 			&i.CurrentContentRevisionID,
 			&i.CreatedAt,
+			&i.AutoDeployEnabled,
 		); err != nil {
 			return nil, err
 		}
@@ -133,7 +133,7 @@ func (q *Queries) ListConfiguredBuildsByRepository(ctx context.Context, reposito
 }
 
 const listConfiguredBuildsByRepositoryAndBranch = `-- name: ListConfiguredBuildsByRepositoryAndBranch :many
-SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, auto_deploy_enabled, current_content_revision_id, created_at FROM configured_build WHERE repository_id = $1 AND branch = $2
+SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled FROM configured_build WHERE repository_id = $1 AND branch = $2
 `
 
 type ListConfiguredBuildsByRepositoryAndBranchParams struct {
@@ -161,9 +161,9 @@ func (q *Queries) ListConfiguredBuildsByRepositoryAndBranch(ctx context.Context,
 			&i.EnvironmentPath,
 			&i.BuilderConfigName,
 			&i.CompetitionStarted,
-			&i.AutoDeployEnabled,
 			&i.CurrentContentRevisionID,
 			&i.CreatedAt,
+			&i.AutoDeployEnabled,
 		); err != nil {
 			return nil, err
 		}
@@ -176,7 +176,7 @@ func (q *Queries) ListConfiguredBuildsByRepositoryAndBranch(ctx context.Context,
 }
 
 const setConfiguredBuildAutoDeploy = `-- name: SetConfiguredBuildAutoDeploy :one
-UPDATE configured_build SET auto_deploy_enabled = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, auto_deploy_enabled, current_content_revision_id, created_at
+UPDATE configured_build SET auto_deploy_enabled = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled
 `
 
 type SetConfiguredBuildAutoDeployParams struct {
@@ -197,15 +197,15 @@ func (q *Queries) SetConfiguredBuildAutoDeploy(ctx context.Context, arg SetConfi
 		&i.EnvironmentPath,
 		&i.BuilderConfigName,
 		&i.CompetitionStarted,
-		&i.AutoDeployEnabled,
 		&i.CurrentContentRevisionID,
 		&i.CreatedAt,
+		&i.AutoDeployEnabled,
 	)
 	return i, err
 }
 
 const setConfiguredBuildCompetitionStarted = `-- name: SetConfiguredBuildCompetitionStarted :one
-UPDATE configured_build SET competition_started = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, auto_deploy_enabled, current_content_revision_id, created_at
+UPDATE configured_build SET competition_started = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled
 `
 
 type SetConfiguredBuildCompetitionStartedParams struct {
@@ -227,15 +227,15 @@ func (q *Queries) SetConfiguredBuildCompetitionStarted(ctx context.Context, arg 
 		&i.EnvironmentPath,
 		&i.BuilderConfigName,
 		&i.CompetitionStarted,
-		&i.AutoDeployEnabled,
 		&i.CurrentContentRevisionID,
 		&i.CreatedAt,
+		&i.AutoDeployEnabled,
 	)
 	return i, err
 }
 
 const setConfiguredBuildCurrentRevision = `-- name: SetConfiguredBuildCurrentRevision :one
-UPDATE configured_build SET current_content_revision_id = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, auto_deploy_enabled, current_content_revision_id, created_at
+UPDATE configured_build SET current_content_revision_id = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled
 `
 
 type SetConfiguredBuildCurrentRevisionParams struct {
@@ -253,9 +253,9 @@ func (q *Queries) SetConfiguredBuildCurrentRevision(ctx context.Context, arg Set
 		&i.EnvironmentPath,
 		&i.BuilderConfigName,
 		&i.CompetitionStarted,
-		&i.AutoDeployEnabled,
 		&i.CurrentContentRevisionID,
 		&i.CreatedAt,
+		&i.AutoDeployEnabled,
 	)
 	return i, err
 }

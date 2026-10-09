@@ -6,6 +6,7 @@ package db
 
 import (
 	"encoding/json"
+	"net/netip"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -61,9 +62,9 @@ type AgentTask struct {
 	Attempts         int32              `json:"attempts"`
 	Output           *string            `json:"output"`
 	LastError        *string            `json:"last_error"`
-	IgnoreErrors     bool               `json:"ignore_errors"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	IgnoreErrors     bool               `json:"ignore_errors"`
 	AdHoc            bool               `json:"ad_hoc"`
 }
 
@@ -110,6 +111,7 @@ type BuilderConfig struct {
 	ExternalPortMin              *int32             `json:"external_port_min"`
 	ExternalPortMax              *int32             `json:"external_port_max"`
 	IncusProject                 *string            `json:"incus_project"`
+	MicrocloudPublicAccess       json.RawMessage    `json:"microcloud_public_access"`
 }
 
 type BuilderCredential struct {
@@ -150,9 +152,9 @@ type ConfiguredBuild struct {
 	EnvironmentPath          string             `json:"environment_path"`
 	BuilderConfigName        string             `json:"builder_config_name"`
 	CompetitionStarted       bool               `json:"competition_started"`
-	AutoDeployEnabled        bool               `json:"auto_deploy_enabled"`
 	CurrentContentRevisionID pgtype.UUID        `json:"current_content_revision_id"`
 	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	AutoDeployEnabled        bool               `json:"auto_deploy_enabled"`
 }
 
 type Container struct {
@@ -165,12 +167,12 @@ type Container struct {
 	Ports             json.RawMessage `json:"ports"`
 	DependsOn         json.RawMessage `json:"depends_on"`
 	Steps             json.RawMessage `json:"steps"`
-	Schedule          json.RawMessage `json:"schedule"`
 	Vars              json.RawMessage `json:"vars"`
 	Tags              json.RawMessage `json:"tags"`
 	Findings          json.RawMessage `json:"findings"`
 	People            json.RawMessage `json:"people"`
 	Extends           *string         `json:"extends"`
+	Schedule          json.RawMessage `json:"schedule"`
 }
 
 type ContentRevision struct {
@@ -204,6 +206,7 @@ type DeployedObject struct {
 	Tags                json.RawMessage    `json:"tags"`
 	StepsMaterializedAt pgtype.Timestamptz `json:"steps_materialized_at"`
 	BlockedOn           json.RawMessage    `json:"blocked_on"`
+	PublicAddress       string             `json:"public_address"`
 }
 
 type Environment struct {
@@ -296,12 +299,12 @@ type Host struct {
 	Ports             json.RawMessage `json:"ports"`
 	DependsOn         json.RawMessage `json:"depends_on"`
 	Steps             json.RawMessage `json:"steps"`
-	Schedule          json.RawMessage `json:"schedule"`
 	Vars              json.RawMessage `json:"vars"`
 	Tags              json.RawMessage `json:"tags"`
 	Findings          json.RawMessage `json:"findings"`
 	People            json.RawMessage `json:"people"`
 	Extends           *string         `json:"extends"`
+	Schedule          json.RawMessage `json:"schedule"`
 }
 
 type InstallationRepository struct {
@@ -319,17 +322,28 @@ type InstanceAdmin struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type MicrocloudPublicAddress struct {
+	BuilderID    pgtype.UUID        `json:"builder_id"`
+	Project      string             `json:"project"`
+	InstanceName string             `json:"instance_name"`
+	ExternalName string             `json:"external_name"`
+	Network      string             `json:"network"`
+	Address      netip.Addr         `json:"address"`
+	Settings     json.RawMessage    `json:"settings"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
 type Network struct {
 	ID                pgtype.UUID     `json:"id"`
 	ContentRevisionID pgtype.UUID     `json:"content_revision_id"`
 	Path              string          `json:"path"`
 	Name              string          `json:"name"`
 	Cidr              string          `json:"cidr"`
-	VisibleFrom       json.RawMessage `json:"visible_from"`
 	Vars              json.RawMessage `json:"vars"`
 	Tags              json.RawMessage `json:"tags"`
 	Findings          json.RawMessage `json:"findings"`
 	Extends           *string         `json:"extends"`
+	VisibleFrom       json.RawMessage `json:"visible_from"`
 }
 
 type PeopleSource struct {

@@ -29,7 +29,8 @@ type RegistryAuth struct {
 type Option func(*expandOptions)
 
 type expandOptions struct {
-	registryAuth func(host string) (RegistryAuth, bool)
+	publicAddress string
+	registryAuth  func(host string) (RegistryAuth, bool)
 	// containerLogs is the environment's container_logs, applied to a compose
 	// project as the Docker daemon default log driver on its host so every
 	// service inherits it (see expandCompose). Nil disables forwarding.
@@ -42,6 +43,11 @@ type expandOptions struct {
 // materializer passes it, so credentials never reach a preview.
 func WithRegistryAuth(lookup func(host string) (RegistryAuth, bool)) Option {
 	return func(o *expandOptions) { o.registryAuth = lookup }
+}
+
+// WithPublicAddress supplies the deployed box's public NIC address to templates.
+func WithPublicAddress(address string) Option {
+	return func(o *expandOptions) { o.publicAddress = address }
 }
 
 // PlannedCommand is one command ExpandSteps produced, ready to become an
@@ -115,6 +121,12 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 	if err != nil {
 		return nil, nil, fmt.Errorf("resolving %s: %w", asName, err)
 	}
+
+	var options expandOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
+	ctx.PublicAddress = options.publicAddress
 
 	var out []PlannedCommand
 	var notes []string
