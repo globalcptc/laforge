@@ -136,6 +136,10 @@ export interface DeployedObject {
   power_state?: PowerState
   power_state_checked_at?: string | null
   agent?: AgentHealth
+  // Dependencies this object's steps are waiting on (its `depends_on` that
+  // haven't finished yet). Set while its steps are materialized but blocked;
+  // null/empty once released. Drives the "Dependency Blocked" state.
+  blocked_on?: string[] | null
 }
 
 export interface TeamSummary extends Team {
@@ -153,6 +157,8 @@ export interface BuildDetail extends Build {
   // Commit + builder for the build header (resolved best-effort server-side).
   builder_config_name?: string
   builder_kind?: string
+  // Branch the configured build tracks; empty for an ad-hoc build.
+  branch?: string
 }
 
 export interface LFEvent {
@@ -315,6 +321,19 @@ export interface DashboardData {
   by_team: TeamStateCounts[]
   failures_by_cause: FailureGroup[]
   agent_activity: ActivityBucket[]
+  resource_usage: ResourceBucket[]
+}
+
+// Build-wide average of each host metric over one time bucket (across every
+// heartbeat in it). cpu/mem/disk are percentages (0-100); net_rx/net_tx are
+// bytes/sec (download / upload).
+export interface ResourceBucket {
+  at: string
+  cpu: number
+  mem: number
+  disk: number
+  net_rx: number
+  net_tx: number
 }
 
 export interface UpcomingChange {

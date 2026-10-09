@@ -142,6 +142,144 @@ func TestPublicPortThatIsDeclaredPasses(t *testing.T) {
 	}
 }
 
+// A validator may carry an optional `delay:` sibling (the schema's oneOf still
+// requires exactly one check), but a delay with no check is rejected.
+func TestValidatorDelayIsAcceptedButDelayOnlyIsRejected(t *testing.T) {
+	ok := writeRepo(t, map[string]string{
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"hosts/web.yaml": `host:
+  name: web
+  os: ubuntu22
+  size: small
+  disk: 20
+  ports: { tcp: ["80"] }
+  steps:
+    - run: "true"
+      validate:
+        - service_running: nginx
+          delay: "10s"
+`,
+		"env.yaml": "environment:\n  name: e\n  teams: 1\n  networks:\n    lan: {}\n",
+	})
+	if c, _ := loader.Load(ok); len(c.Errors) != 0 {
+		t.Fatalf("a validator with a delay should load clean, got: %v", errorMessages(c))
+	}
+
+	bad := writeRepo(t, map[string]string{
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"hosts/web.yaml": `host:
+  name: web
+  os: ubuntu22
+  size: small
+  disk: 20
+  ports: { tcp: ["80"] }
+  steps:
+    - run: "true"
+      validate:
+        - delay: "10s"
+`,
+		"env.yaml": "environment:\n  name: e\n  teams: 1\n  networks:\n    lan: {}\n",
+	})
+	if c, _ := loader.Load(bad); len(c.Errors) == 0 {
+		t.Fatal("a validator entry with only a delay and no check must be a schema error")
+	}
+}
+
+// agent-debug on the environment parses into Environment.AgentDebug (default
+// false when omitted). It rides to the DB and is baked into each agent binary.
+func TestEnvironmentAgentDebugParses(t *testing.T) {
+	root := writeRepo(t, map[string]string{
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"env-on.yaml": `environment:
+  name: on
+  teams: 1
+  agent-debug: true
+  networks:
+    lan: {}
+`,
+		"env-off.yaml": `environment:
+  name: off
+  teams: 1
+  networks:
+    lan: {}
+`,
+	})
+	c, _ := loader.Load(root)
+	if len(c.Errors) != 0 {
+		t.Fatalf("unexpected load errors: %v", errorMessages(c))
+	}
+	got := map[string]bool{}
+	for _, e := range c.Environments {
+		got[e.Name] = e.AgentDebug
+	}
+	if !got["on"] {
+		t.Error("agent-debug: true did not parse into AgentDebug")
+	}
+	if got["off"] {
+		t.Error("an environment without agent-debug should default to false")
+	}
+}
+
+// A single public port that falls inside a declared RANGE is a subset -- the
+// check compares intervals, not literal token strings. Regression for a bug
+// where `ports: ["1-65535"]` + `public: ["3389"]` was wrongly rejected because
+// the literal "3389" did not string-match the token "1-65535".
+func TestPublicPortWithinDeclaredRangePasses(t *testing.T) {
+	root := writeRepo(t, map[string]string{
+		"hosts/rdp.yaml": `host:
+  name: jump
+  os: windows-server-2022
+  size: small
+  disk: 20
+  ports: { tcp: ["1-65535"] }
+  public: { tcp: ["3389"] }
+`,
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"env.yaml": `environment:
+  name: e
+  teams: 1
+  networks:
+    lan:
+      jump:
+        - as: j01
+          last_octet: 5
+`,
+	})
+	c, _ := loader.Load(root)
+	if len(c.Errors) != 0 {
+		t.Fatalf("expected no errors for a public port inside a declared range, got: %v", errorMessages(c))
+	}
+}
+
+// A public port OUTSIDE every declared range is still caught, including when the
+// declared ports are themselves ranges.
+func TestPublicPortOutsideDeclaredRangeIsCaught(t *testing.T) {
+	root := writeRepo(t, map[string]string{
+		"hosts/rdp.yaml": `host:
+  name: jump
+  os: windows-server-2022
+  size: small
+  disk: 20
+  ports: { tcp: ["1-3388", "3390-65535"] }
+  public: { tcp: ["3389"] }
+`,
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"env.yaml": `environment:
+  name: e
+  teams: 1
+  networks:
+    lan:
+      jump:
+        - as: j01
+          last_octet: 5
+`,
+	})
+	c, _ := loader.Load(root)
+	if !containsSubstring(errorMessages(c), "not in") {
+		t.Fatalf("expected a public-port-not-subset error for a gap between ranges, got: %v", errorMessages(c))
+	}
+}
+
 func TestEnvironmentTopologyUnknownObjectIsCaught(t *testing.T) {
 	root := writeRepo(t, map[string]string{
 		"networks/prod.yaml": "network:\n  name: prod\n  cidr: 10.0.1.0/24\n",

@@ -37,6 +37,20 @@ var ErrCatalogUnsupported = errors.New("this registry doesn't expose an image ca
 // ErrUnauthorized means the registry rejected the username/secret.
 var ErrUnauthorized = errors.New("the registry rejected the credentials -- check the username and secret")
 
+// ErrPullDenied means the credentials authenticate, but the account is not
+// authorized to pull a given repository -- the registry issued a token with no
+// pull access, so the request still came back 401/403. This is the signature of
+// a valid login that lacks pull permission on the project/namespace (common with
+// a Harbor robot account that was never granted Pull on the project). Distinct
+// from ErrUnauthorized, which is a flat-out bad credential.
+var ErrPullDenied = errors.New("authenticated, but not authorized to pull -- grant this account Pull permission on the registry/project")
+
+// ErrPullUnverifiable means the credentials authenticate but pull access could
+// not be probed automatically, because the registry exposes no catalog to pick
+// a repository to test against (Docker Hub and GHCR, for example). The login is
+// fine; pulls by exact image name may still work.
+var ErrPullUnverifiable = errors.New("authenticated, but pull access couldn't be verified automatically (this registry exposes no catalog to pick a test repository)")
+
 // baseURL turns a stored registry host into its v2 API base. It honors an
 // explicit http:// (a plain-HTTP registry) and maps the Docker Hub aliases to
 // the real endpoint; everything else defaults to HTTPS, matching how the
@@ -107,20 +121,55 @@ type tagsResponse struct {
 	Tags []string `json:"tags"`
 }
 
-// Tags lists the tags of one repository.
+// Tags lists the tags of one repository. Listing tags needs a
+// repository:<repo>:pull token -- the same authorization a real `docker pull`
+// needs -- so a 401/403 here is reported as ErrPullDenied (authenticated but not
+// authorized to pull this repo), distinct from a transport or other HTTP error.
 func (c *Client) Tags(ctx context.Context, host, user, secret, repo string) ([]string, error) {
 	status, body, err := c.get(ctx, host, user, secret, "/v2/"+repo+"/tags/list")
 	if err != nil {
 		return nil, err
 	}
-	if status != http.StatusOK {
+	switch status {
+	case http.StatusOK:
+		var out tagsResponse
+		if err := json.Unmarshal(body, &out); err != nil {
+			return nil, fmt.Errorf("decoding tags: %w", err)
+		}
+		return out.Tags, nil
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return nil, fmt.Errorf("%w (%s)", ErrPullDenied, repo)
+	default:
 		return nil, fmt.Errorf("registry returned HTTP %d listing tags for %s", status, repo)
 	}
-	var out tagsResponse
-	if err := json.Unmarshal(body, &out); err != nil {
-		return nil, fmt.Errorf("decoding tags: %w", err)
+}
+
+// VerifyPull confirms the credentials can actually PULL, not merely
+// authenticate. It pings (to check the login), then picks a repository from the
+// catalog and lists its tags -- which requires a repository:<repo>:pull token,
+// exactly the authorization a deploy-time `docker pull` needs. On success it
+// returns the repository it tested against. It returns ErrPullDenied when the
+// login works but pull is refused, and ErrPullUnverifiable when the login works
+// but there is no catalog (so no repo to probe) -- the caller treats the login
+// as usable in that case, since pulls by exact name may still work.
+func (c *Client) VerifyPull(ctx context.Context, host, user, secret string) (repo string, err error) {
+	if err := c.Ping(ctx, host, user, secret); err != nil {
+		return "", err
 	}
-	return out.Tags, nil
+	repos, err := c.Catalog(ctx, host, user, secret)
+	switch {
+	case errors.Is(err, ErrCatalogUnsupported):
+		return "", ErrPullUnverifiable
+	case err != nil:
+		return "", err
+	case len(repos) == 0:
+		return "", ErrPullUnverifiable
+	}
+	repo = repos[0]
+	if _, err := c.Tags(ctx, host, user, secret, repo); err != nil {
+		return repo, err // ErrPullDenied for a 401/403, else the real error
+	}
+	return repo, nil
 }
 
 // get performs a GET against the registry's v2 API, transparently satisfying

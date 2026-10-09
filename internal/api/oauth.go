@@ -131,11 +131,12 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 	})
 
 	redirectURI := s.PublicBaseURL + "/auth/github/callback"
-	ghToken, err := s.GH.ExchangeCode(ctx, s.GitHubClientID, s.GitHubClientSecret, code, redirectURI)
+	ghOAuth, err := s.GH.ExchangeCode(ctx, s.GitHubClientID, s.GitHubClientSecret, code, redirectURI)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err)
 		return
 	}
+	ghToken := ghOAuth.AccessToken
 	ghUser, err := s.GH.GetAuthenticatedUser(ctx, ghToken)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err)
@@ -173,7 +174,10 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 	expiresAt := time.Now().Add(sessionTTL)
 	if _, err := s.Queries.CreateSession(ctx, db.CreateSessionParams{
 		AccountID: account.ID, TokenHash: hashToken(token), GithubToken: ghToken,
-		ExpiresAt: pgtype.Timestamptz{Time: expiresAt, Valid: true},
+		ExpiresAt:              pgtype.Timestamptz{Time: expiresAt, Valid: true},
+		GithubTokenExpiresAt:   secondsFromNow(ghOAuth.ExpiresIn),
+		GithubRefreshToken:     ghOAuth.RefreshToken,
+		GithubRefreshExpiresAt: secondsFromNow(ghOAuth.RefreshTokenExpiresIn),
 	}); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -183,6 +187,37 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 		SameSite: s.cookieSameSite(), Secure: s.cookieSecure(r), Expires: expiresAt,
 	})
 	http.Redirect(w, r, s.UIBaseURL+"/", http.StatusFound)
+}
+
+// handleGithubRefresh lets the CLI keep its device-flow token alive. The CLI
+// can't refresh against GitHub itself (that needs the App's client secret,
+// which stays server-side), so it POSTs its refresh token here and the api does
+// the exchange. The refresh token IS the credential -- possessing a valid one
+// is exactly what authorizes getting a new access token -- so this needs no
+// session/bearer, same as GitHub's own refresh endpoint plus the secret.
+func (s *Server) handleGithubRefresh(w http.ResponseWriter, r *http.Request) {
+	if s.GitHubClientID == "" || s.GitHubClientSecret == "" {
+		writeError(w, http.StatusServiceUnavailable, errors.New("github sign-in is not configured on this server"))
+		return
+	}
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.RefreshToken == "" {
+		writeError(w, http.StatusBadRequest, errors.New("refresh_token is required"))
+		return
+	}
+	tok, err := s.GH.RefreshUserToken(r.Context(), s.GitHubClientID, s.GitHubClientSecret, req.RefreshToken)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, errors.New("refresh failed -- run `laforge login` again"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"access_token":             tok.AccessToken,
+		"refresh_token":            tok.RefreshToken,
+		"expires_in":               tok.ExpiresIn,
+		"refresh_token_expires_in": tok.RefreshTokenExpiresIn,
+	})
 }
 
 // signInAuthorized is the real sign-in gate handleCallback was missing
@@ -334,7 +369,67 @@ func (s *Server) sessionFromRequest(r *http.Request) (authSession, error) {
 	if err != nil {
 		return authSession{}, errUnauthenticated
 	}
+	row, err = s.refreshGithubToken(r.Context(), row)
+	if err != nil {
+		return authSession{}, err
+	}
 	return authSession{row}, nil
+}
+
+// githubTokenSkew refreshes a GitHub token a minute before it actually expires,
+// so a token that's valid now doesn't lapse mid-request.
+const githubTokenSkew = time.Minute
+
+// refreshGithubToken keeps a session's short-lived GitHub access token alive for
+// the life of the (week-long) LaForge session. The App's user token expires in
+// ~8h; when it's at/near expiry this trades the stored refresh token for a fresh
+// access token (GitHub rotates the refresh token too) and persists it, so every
+// caller of sessionFromRequest gets a live token instead of odd 401s. A session
+// with no expiry recorded (the App doesn't expire user tokens, or it predates
+// this feature) is returned untouched. If the token is expired and can't be
+// refreshed, the caller is treated as unauthenticated -- a clean "sign in
+// again," not a confusing downstream GitHub failure.
+func (s *Server) refreshGithubToken(ctx context.Context, row db.GetSessionByTokenHashRow) (db.GetSessionByTokenHashRow, error) {
+	if !row.GithubTokenExpiresAt.Valid || time.Now().Before(row.GithubTokenExpiresAt.Time.Add(-githubTokenSkew)) {
+		return row, nil // non-expiring, or still comfortably valid
+	}
+	if row.GithubRefreshToken == "" || (row.GithubRefreshExpiresAt.Valid && time.Now().After(row.GithubRefreshExpiresAt.Time)) {
+		return row, errUnauthenticated // nothing to refresh with -> re-login
+	}
+	tok, err := s.GH.RefreshUserToken(ctx, s.GitHubClientID, s.GitHubClientSecret, row.GithubRefreshToken)
+	if err != nil {
+		// A concurrent request may have already refreshed (GitHub rotates the
+		// refresh token, so our in-hand one is now stale). Re-read: if the
+		// stored token is fresh again, use it rather than forcing a re-login.
+		if fresh, e := s.Queries.GetSessionByTokenHash(ctx, row.TokenHash); e == nil &&
+			fresh.GithubTokenExpiresAt.Valid && time.Now().Before(fresh.GithubTokenExpiresAt.Time.Add(-githubTokenSkew)) {
+			return fresh, nil
+		}
+		return row, errUnauthenticated
+	}
+	refreshTok := tok.RefreshToken
+	if refreshTok == "" {
+		refreshTok = row.GithubRefreshToken // keep the old one if GitHub didn't rotate
+	}
+	tokExp, refreshExp := secondsFromNow(tok.ExpiresIn), secondsFromNow(tok.RefreshTokenExpiresIn)
+	if err := s.Queries.UpdateSessionGithubToken(ctx, db.UpdateSessionGithubTokenParams{
+		ID: row.ID, GithubToken: tok.AccessToken, GithubTokenExpiresAt: tokExp,
+		GithubRefreshToken: refreshTok, GithubRefreshExpiresAt: refreshExp,
+	}); err != nil {
+		return row, err
+	}
+	row.GithubToken, row.GithubTokenExpiresAt = tok.AccessToken, tokExp
+	row.GithubRefreshToken, row.GithubRefreshExpiresAt = refreshTok, refreshExp
+	return row, nil
+}
+
+// secondsFromNow is a timestamptz `n` seconds in the future, or NULL when n<=0
+// (GitHub omits the lifetime when the App doesn't expire that kind of token).
+func secondsFromNow(n int) pgtype.Timestamptz {
+	if n <= 0 {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: time.Now().Add(time.Duration(n) * time.Second), Valid: true}
 }
 
 // accessLevel ranks the four levels so "each including the ones before

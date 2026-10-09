@@ -44,6 +44,7 @@ This note covers the whole 3.0 line.
   script rendered against every host in every team.
 - **Rich authored surface**: per-host/container `steps:` (install software, create
   users, write files, download/extract, run scripts) with per-step `validate:` checks
+  (each with an optional `delay:` to let a service settle before it's checked)
   and `ignore_errors`; a top-level `schedule:` array with **natural-language timing**
   ("every 30 minutes", "45 minutes after competition start"); `depends_on` ordering;
   `tags:` that cascade from environment → network → script → object; `ports:` firewalls;
@@ -108,10 +109,19 @@ This note covers the whole 3.0 line.
 - **Cross-platform**: static musl Linux builds and Windows builds (cross-compiled), with
   real step actions (scripts, users, services, file write, **direct** download, extract).
 - **Host metrics on every heartbeat** (CPU, memory, disk, network) and **container
-  console-log forwarding** to a generic JSONL sink (Splunk/Vector/Loki/Elastic-friendly).
+  log forwarding** to an external collector (Splunk, …), configured per environment with
+  `container_logs` in content. It's **native-first** — each builder uses its own log
+  mechanism (a docker `--log-driver`, a Fargate `logConfiguration`, the Docker daemon
+  default for a compose project) so a large build's log volume never funnels through one
+  LaForge process; Incus (native-OCI) and Zun fall back to the agent → gateway.
 - Runs as PID 1 inside application containers on every builder, so containers check in and
   run steps exactly like hosts.
 - Basic **anti-tamper / anti-debug self-checks** and per-build chaff.
+- **Silent on the box by default**: the agent writes nothing to stdout, stderr, or disk —
+  only what it reports to the servers over mTLS ever leaves it, so a captured box yields no
+  local agent logs. An environment can set `agent-debug: true` to get a local log file next
+  to the binary for debugging; the flag is baked into the binary, so it can't be switched on
+  by editing a box's launcher.
 
 ## Access & Scheduling
 

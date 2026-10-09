@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { FolderTree, Globe, HardDrive, Network, Server } from 'lucide-react'
+import { FolderTree, Globe, HardDrive, Network, Plus, Server, X } from 'lucide-react'
 import { api, ApiError } from '../../api/client'
 import { builderConnectionPath } from '../../api/hooks'
 import type { BuilderConnection, ProjectInfo } from '../../api/types'
-import { Field, Input, Select, Spinner } from '../../ui'
+import { Button, Field, Input, Select, Spinner } from '../../ui'
 import { TIMEOUT_OPTIONS, uplinkCandidates, type HostDraft, type Kind } from './model'
 
 export function StepPlacement({
@@ -25,6 +25,24 @@ export function StepPlacement({
 }) {
   const update = (i: number, patch: Partial<HostDraft>) => onChange(hosts.map((h, j) => (j === i ? { ...h, ...patch } : h)))
   const num = (v: string): number | undefined => (v.trim() === '' ? undefined : Number(v))
+
+  // External IPs are stored as one comma-joined string (the builder parses it),
+  // but edited as rows -- each row one IP or range. Local state keeps otherwise
+  // blank rows visible (they are dropped from the stored value until filled).
+  const [ipRows, setIpRows] = useState<string[]>(() => {
+    const parts = externalAccessIp.split(',').map((s) => s.trim()).filter(Boolean)
+    return parts.length > 0 ? parts : ['']
+  })
+  const emitIps = (rows: string[]) => {
+    setIpRows(rows)
+    onExternalChange({ externalAccessIp: rows.map((r) => r.trim()).filter(Boolean).join(', ') })
+  }
+  const setIpRow = (i: number, v: string) => emitIps(ipRows.map((r, j) => (j === i ? v : r)))
+  const addIpRow = () => emitIps([...ipRows, ''])
+  const removeIpRow = (i: number) => {
+    const next = ipRows.filter((_, j) => j !== i)
+    emitIps(next.length > 0 ? next : [''])
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -104,26 +122,45 @@ export function StepPlacement({
         </div>
       ))}
 
-      {/* Builder-level external access -- one shared IP across teams, with a
-          port window; a host's public: ports get NAT'd in on it. */}
+      {/* Builder-level external access -- one or more IPs, assigned one per team
+          round-robin, with a port window; a host's public: ports get NAT'd in. */}
       <div className="card p-4">
         <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg">
           <Globe size={14} className="text-fg-muted" /> External access
         </div>
         <p className="mb-3 text-xs text-fg-muted">
-          The single external IP that hosts' <span className="font-mono">public:</span> ports (e.g. RDP) are NAT'd in on, shared across every team with a
-          distinct external port each. Leave the IP blank to disable external access for this builder.
+          The external IPs that hosts' <span className="font-mono">public:</span> ports (e.g. RDP) are NAT'd in on. Each team is assigned one IP,
+          round-robin, so with enough IPs every team gets its own address; teams that share one get a distinct external port each. Add no IPs to disable
+          external access for this builder.
         </p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="External IP" hint="Shared across all teams." className="mb-0">
-            <Input value={externalAccessIp} onChange={(e) => onExternalChange({ externalAccessIp: e.target.value })} placeholder="203.0.113.10" />
-          </Field>
-          <Field label="Port range start" hint="Default 40000." className="mb-0">
-            <Input type="number" value={externalPortMin ?? ''} onChange={(e) => onExternalChange({ externalPortMin: num(e.target.value) })} placeholder="40000" />
-          </Field>
-          <Field label="Port range end" hint="Default 50000." className="mb-0">
-            <Input type="number" value={externalPortMax ?? ''} onChange={(e) => onExternalChange({ externalPortMax: num(e.target.value) })} placeholder="50000" />
-          </Field>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-fg-muted">External IPs</span>
+            {ipRows.map((row, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Input value={row} onChange={(e) => setIpRow(i, e.target.value)} placeholder="203.0.113.10  or  203.0.113.20-25" />
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => removeIpRow(i)} aria-label="Remove IP" title="Remove">
+                  <X size={14} />
+                </Button>
+              </div>
+            ))}
+            <div>
+              <Button variant="secondary" size="sm" onClick={addIpRow}>
+                <Plus size={14} /> Add IP or Range
+              </Button>
+            </div>
+            <p className="text-xs text-fg-subtle">Each row is one IP or a range — full (203.0.113.20-203.0.113.25) or short (203.0.113.20-25).</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Port range start" hint="Default 40000." className="mb-0">
+              <Input type="number" value={externalPortMin ?? ''} onChange={(e) => onExternalChange({ externalPortMin: num(e.target.value) })} placeholder="40000" />
+            </Field>
+            <Field label="Port range end" hint="Default 50000." className="mb-0">
+              <Input type="number" value={externalPortMax ?? ''} onChange={(e) => onExternalChange({ externalPortMax: num(e.target.value) })} placeholder="50000" />
+            </Field>
+          </div>
         </div>
       </div>
     </div>

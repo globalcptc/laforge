@@ -146,8 +146,9 @@ type Delivery struct {
 // objectID is the deployed object's id (the agent cert's CommonName and
 // the download path); token is the one-time capability the user-data uses
 // to fetch the binary; os is the content OS name, only used to pick a
-// platform.
-func (c *Config) Build(objectID, token, os string) (Delivery, error) {
+// platform; debug is the environment's agent-debug flag, baked into the binary
+// so it can't be flipped on a captured box (off = the agent is silent locally).
+func (c *Config) Build(objectID, token, os string, debug bool) (Delivery, error) {
 	platform := PlatformFor(os)
 	base, err := c.baseBinary(platform)
 	if err != nil {
@@ -166,7 +167,7 @@ func (c *Config) Build(objectID, token, os string) (Delivery, error) {
 	if err != nil {
 		return Delivery{}, fmt.Errorf("issuing agent certificate: %w", err)
 	}
-	patched, err := agentfactory.PatchBinary(base, c.GatewayAddr, c.caPEM, certPEM, keyPEM)
+	patched, err := agentfactory.PatchBinary(base, c.GatewayAddr, c.caPEM, certPEM, keyPEM, debug)
 	if err != nil {
 		return Delivery{}, fmt.Errorf("patching agent identity: %w", err)
 	}

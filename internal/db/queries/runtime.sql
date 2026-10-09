@@ -234,6 +234,12 @@ WHERE id = $1 AND status IN ('running', 'building');
 UPDATE deployed_object SET steps_materialized_at = now()
 WHERE id = $1 AND steps_materialized_at IS NULL;
 
+-- name: SetDeployedObjectBlockedOn :exec
+-- Record which dependencies an object's steps are waiting on (a jsonb array of
+-- names), for the UI to show "Dependency Blocked - waiting on X". Pass NULL to
+-- clear it once released.
+UPDATE deployed_object SET blocked_on = $2 WHERE id = $1;
+
 -- name: SetDeployedObjectExternalRef :exec
 -- Record the hoster ref for an object whose deploy did NOT fully succeed,
 -- so a partially-created instance is still destroyable by teardown. The

@@ -40,6 +40,13 @@ pub fn run(payload: &Value) -> Outcome {
     for check in checks {
         let kind = check.get("kind").and_then(Value::as_str).unwrap_or("");
         let args = check.get("args").cloned().unwrap_or(Value::Null);
+        // Optional per-check delay (validator `delay:` sub-item): wait before
+        // running this check so the thing it checks has time to settle. The
+        // agent runs tasks on a worker thread, so this never blocks heartbeats.
+        let delay_ms = check.get("delay_ms").and_then(Value::as_u64).unwrap_or(0);
+        if delay_ms > 0 {
+            std::thread::sleep(Duration::from_millis(delay_ms));
+        }
         let result = run_one(kind, &args);
         if !result.passed {
             all_passed = false;

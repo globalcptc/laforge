@@ -174,9 +174,10 @@ environment:
       webserver:
         - as: web01
           last_octet: 10
-          public:
-            tcp: ["443"]
 ```
+
+(`web01` exposes a port externally — but that's declared with `public:` on the
+webserver **host definition**, not here in the topology; see [Host](#host).)
 
 | Field | What it is |
 | --- | --- |
@@ -185,13 +186,15 @@ environment:
 | `description` | Human-readable description of the game. |
 | `teams` | Number of teams. Every team gets an identical copy of the topology — nothing is ever templated per team. |
 | `root_password` | A password stored in the clear **on purpose** — content credentials exist to be found during the competition, not to be real secrets. |
+| `agent-debug` | (Optional, default `false`) Turn on the agent's local debug log — a file next to the agent binary on every host/container in this environment. Off by default, the agent writes **nothing** locally (no stdout/stderr) and only reports to the LaForge servers. The flag is baked into each agent binary at deploy time, so it can't be switched on by editing a box's launcher. Leave off in a real competition (the boxes are in a hostile network); turn on only to debug the agent itself. |
+| `container_logs` | (Optional) Forward every **container's** console output to an external collector (Splunk, …) using each builder's native logging — see [Container logs](#container-log-forwarding). Omit to disable. Container-only; hosts are VMs with their own logging. |
 | `start` / `stop` | When the event starts and ends. Used by schedules ("45 minutes after competition start"). |
 | `dns` | DNS settings (see [DNS](#dns)). A records for every host/container are generated automatically; this adds anything else. LaForge doesn't run DNS itself — the records are handed to a host (a domain controller or Bind server) to serve. |
 | `access` | The planned access schedule — e.g. closing overnight on a multi-day event. Per-team overrides during a live event happen from the UI/API, not here. Each entry has an `open:` and `close:` time. |
 | `vars` | Key/value data cascaded down to every network, host, and container. Available in scripts as `{{ vars.company }}`. |
 | `tags` | Labels for searching, grouping, and ad-hoc targeting. |
 | `findings` | Findings that belong to the environment as a whole (see [Findings](#findings)). |
-| `networks` | **The topology.** For each network, which hosts/containers are placed on it, how many copies, and their addresses/public ports. The only place hosts, containers, and networks are connected. |
+| `networks` | **The topology.** For each network, which hosts/containers are placed on it, how many copies, and their addresses. The only place hosts, containers, and networks are connected. |
 | `extends` | Inherit from another environment (see [`extends`](#extends)). |
 
 ### The topology (`networks:`)
@@ -203,7 +206,6 @@ running instance of that host/container:
 | --- | --- |
 | `as` | The hostname this copy gets. Also what `depends_on` and generated DNS records resolve it by. |
 | `last_octet` | The last octet of this copy's address on the network's CIDR (0–255). With `cidr: 10.0.1.0/24` and `last_octet: 10`, the address is `10.0.1.10`. |
-| `public` | (Optional) TCP/UDP ports on this copy to expose outside the competition network. |
 
 Placing the same object twice (two `as` entries) gives a team two copies of it.
 
@@ -290,6 +292,8 @@ host:
   disk: 60
   ports:
     tcp: ["3389"]
+  public:
+    tcp: ["3389"]
   depends_on: [domain-controller]
   vars:
     role: workstation
@@ -321,6 +325,7 @@ host:
 | `size` | Abstract size name (`small`, `medium`, `large`). Mapped to concrete CPU/memory per builder. |
 | `disk` | Disk size in GB. |
 | `ports` | TCP/UDP ports this host listens on — the ingress firewall allowlist (see [Ports](#ports)). |
+| `public` | (Optional) The subset of `ports` to expose **outside** the competition network (e.g. RDP for direct access). A property of the host, so it lives here — not on the topology placement. Every port listed must also appear in `ports`. Omit, or set to `false`, to keep the host private. The builder realizes it (a public IP, or a port-NAT on a shared external IP) and the assigned address:port shows in the build's external access view (`laforge access`). |
 | `depends_on` | Other hosts, containers, or networks that must be up before this host builds — e.g. a workstation waiting on its domain controller. Names the **object**, not one copy: every copy of that object in the same team is waited on. This host's own network is always waited on implicitly. |
 | `steps` | The ordered setup steps, run once after provisioning (see [Steps](#steps-the-action-kinds)). |
 | `schedule` | Recurring or anchor-relative triggers, independent of `steps:` order — each fires on its own clock (see [Schedules](#schedules)). |
@@ -361,6 +366,7 @@ container:
 | `env` | Environment variables passed to the container (`docker -e`). Not with `compose`. |
 | `command` | Overrides the image's default command arguments. Not with `compose`. |
 | `ports` | TCP/UDP ports this container listens on. |
+| `public` | (Optional) The subset of `ports` to expose outside the competition network — same meaning and rules as a host's (see [Host](#host)). |
 | `depends_on` | Same as a host's. |
 | `steps` / `schedule` | Same as a host's — a container runs the LaForge agent as its entrypoint, so it configures and reports exactly like a host. Steps and validators run **inside** the container, so they describe the application (`process_running: nginx`, `port_listening: 80`), never the container runtime underneath it (`process_running: dockerd` is wrong, and fails on every builder). |
 | `vars` / `tags` / `findings` / `people` / `extends` | Same as a host's. |
@@ -414,10 +420,17 @@ What to know:
   Networks inside the compose file stay private to the project.
 - **Images are pulled, never built.** A service can keep `build:` for local development,
   but must also name an `image:` that exists in a registry. Pin a version tag.
-- **The directory is shipped as-is.** Nothing in it is templated, so the same files a
-  developer runs locally run here, the same for every team. It is limited to 1 MiB
-  compressed — configuration, not application code. Bind mounts must be relative and
-  inside it (`./nginx/nginx.conf`).
+- **The compose file is templated; supporting files opt in with `.tmpl`.** The compose
+  file gets LaForge's [template pass](#templating) at deploy — the same `{{ vars.x }}`,
+  `{{ .Team }}`, `{{ .People }}` context a script or `run:` gets — so it can vary per team
+  or object. Quote template values so the file stays valid YAML
+  (`image: "{{ vars.app_image }}"`). A supporting file is templated by naming it with a
+  `.tmpl` suffix: `nginx.conf.tmpl` is rendered and shipped as `nginx.conf` (the suffix is
+  stripped) — so mount the stripped name (`./nginx.conf`). Files without `.tmpl` travel
+  verbatim. Compose's own `${VAR}`/`$host` interpolation is left untouched either way and
+  still resolves at `docker compose` runtime. The directory is limited to 1 MiB compressed
+  — configuration, not application code. Bind mounts must be relative and inside it
+  (`./nginx/nginx.conf`).
 - **Add the directory to `.laforgeignore`**, so its YAML isn't read as LaForge content.
   `laforge check` tells you when you've forgotten.
 - **Volumes last as long as the container.** They survive a restart and are gone on a
@@ -541,7 +554,7 @@ recurring work, use [`schedule:`](#schedules) instead.)
 | `set_password` | Rotates an existing user's password (separate from `create_user` so a later step can change it). |
 | `add_to_group` | Adds an existing user to a group. |
 | `service` | Starts, stops, or manages a systemd (Linux) or Windows service. |
-| `reboot` | Reboots the host. The agent reports success first, then re-registers once it's back. |
+| `reboot` | Reboots the host. The agent reports success first, then re-registers once it's back. Takes an optional `delay:` (a duration string like `"30s"`) to wait before rebooting; `reboot: {}` reboots immediately. |
 
 Any step can carry a `validate:` block that runs after it (see below).
 
@@ -558,6 +571,7 @@ steps:
     validate:
       - service_running: mysql
       - port_listening: { port: 3306 }
+        delay: "10s"          # wait 10s before this check, to let mysql finish starting
       - user_exists: dbadmin
 ```
 
@@ -574,6 +588,26 @@ steps:
 | `port_listening` | A port that must be listening. |
 | `process_running` | A process name that must be running. |
 | `registry` | A Windows registry value that must match exactly (Windows hosts only). |
+
+### Delaying a check
+
+Any check can carry an optional **`delay`** — a duration string the agent waits *before*
+running that one check, so a service or port has time to settle after the step. It's a
+sibling of the check key:
+
+```yaml
+validate:
+  - service_running: nginx
+    delay: "5s"
+  - port_listening: { port: 443 }
+    delay: "15s"
+```
+
+The value is a duration string like `"5s"`, `"10s"`, `"500ms"`, or `"1m"` — the same
+format as `reboot`'s `delay:`. The delay applies only to the check it's on; checks without
+a `delay` run immediately. Because the agent runs tasks on a background worker, a delay
+never stops the host from checking in or from accepting an interactive shell while it
+waits.
 
 ---
 
@@ -610,8 +644,10 @@ Anchors: `competition start`, `competition end` (each fires once), and `access o
 
 ## Templating
 
-A script's source is rendered with Go templates before it runs, per host per team. What's
-in scope:
+A script's source — and a `run:` command, and a [compose file](#compose-projects) — is
+rendered with Go templates before it's used, per host per team. (In a compose file, quote
+template values so it stays valid YAML, and note compose's own `${VAR}` syntax is left for
+`docker compose` to resolve at runtime.) What's in scope:
 
 | Reference | Value |
 | --- | --- |
@@ -681,6 +717,47 @@ ports:
 
 Combined with a network's [`visible_from`](#network) (which *networks* may reach it),
 this is the complete reachability model.
+
+---
+
+## Container log forwarding
+
+Set `container_logs` on the **environment** to forward every container's console output to
+an external collector. It's one block for the whole environment — you don't annotate
+individual containers, and it covers both single-image and compose containers identically:
+
+```yaml
+environment:
+  name: allports
+  container_logs:
+    driver: splunk
+    options:
+      splunk-url: https://splunk.example:8088
+      splunk-token: 00000000-0000-0000-0000-000000000000
+      splunk-index: cptc
+```
+
+- `driver` is the log driver name as the platform knows it (`splunk`, `fluentd`, `awslogs`, …).
+- `options` are that driver's own keys, passed straight through (the Splunk ingestion token
+  lives here — it's a write-only HEC token, and content isn't shared).
+
+**How it's delivered (native-first).** LaForge doesn't ship the bytes itself where the
+platform can — each builder uses its own native logging, so a large number of containers
+never funnels through LaForge:
+
+| Where the container runs | How `container_logs` is applied |
+| --- | --- |
+| MicroCloud (nested docker) | `docker run --log-driver …` |
+| AWS Fargate | the task's `logConfiguration` |
+| A compose project (any builder) | the Docker **daemon default** on its host, before `docker compose up`, so every service inherits it |
+| Incus (native OCI) / OpenStack Zun | **fallback:** the agent forwards to the gateway, which ships to the collector |
+
+The fallback (Incus/Zun, which have no native driver) currently supports the **`splunk`**
+driver only; other drivers on those two builders aren't forwarded. A compose service that
+declares its own `logging:` block still overrides the daemon default.
+
+This is container-only — hosts are full VMs with their own logging. Omit `container_logs`
+to forward nothing.
 
 ---
 

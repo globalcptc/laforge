@@ -85,7 +85,8 @@ CREATE TABLE public.agent_task (
     ignore_errors boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text])))
+    ad_hoc boolean DEFAULT false NOT NULL,
+    CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text, 'blocked'::text])))
 );
 --
 -- Name: build; Type: TABLE; Schema: public; Owner: -
@@ -288,6 +289,7 @@ CREATE TABLE public.deployed_object (
     power_state_checked_at timestamp with time zone,
     tags jsonb DEFAULT '{}'::jsonb NOT NULL,
     steps_materialized_at timestamp with time zone,
+    blocked_on jsonb,
     CONSTRAINT deployed_object_kind_check CHECK ((kind = ANY (ARRAY['network'::text, 'host'::text, 'container'::text, 'dns'::text]))),
     CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroying'::text, 'destroyed'::text])))
 );
@@ -310,7 +312,9 @@ CREATE TABLE public.environment (
     vars jsonb DEFAULT '{}'::jsonb NOT NULL,
     tags jsonb DEFAULT '{}'::jsonb NOT NULL,
     findings jsonb DEFAULT '[]'::jsonb NOT NULL,
-    extends text
+    extends text,
+    agent_debug boolean DEFAULT false NOT NULL,
+    container_logs jsonb
 );
 --
 -- Name: event; Type: TABLE; Schema: public; Owner: -
@@ -534,7 +538,10 @@ CREATE TABLE public.session (
     token_hash text NOT NULL,
     github_token text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    expires_at timestamp with time zone NOT NULL
+    expires_at timestamp with time zone NOT NULL,
+    github_token_expires_at timestamp with time zone,
+    github_refresh_token text DEFAULT ''::text NOT NULL,
+    github_refresh_expires_at timestamp with time zone
 );
 --
 -- Name: task; Type: TABLE; Schema: public; Owner: -

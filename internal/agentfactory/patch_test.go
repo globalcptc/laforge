@@ -144,7 +144,7 @@ func TestPatchRealBinaryAndVerifyNoPlaintextLeak(t *testing.T) {
 	certPEM := []byte("-----BEGIN CERTIFICATE-----\nFAKECLIENTCERTDATAFORTESTONLY\n-----END CERTIFICATE-----\n")
 	keyPEM := []byte("-----BEGIN EC PRIVATE KEY-----\nFAKEPRIVATEKEYDATAFORTESTONLY\n-----END EC PRIVATE KEY-----\n")
 
-	patched, err := PatchBinary(base, gatewayAddr, caPEM, certPEM, keyPEM)
+	patched, err := PatchBinary(base, gatewayAddr, caPEM, certPEM, keyPEM, false)
 	if err != nil {
 		t.Fatalf("PatchBinary: %v", err)
 	}
@@ -204,9 +204,13 @@ func TestPatchedBinaryActuallyRunsWithItsPatchedIdentity(t *testing.T) {
 	certPEM := []byte("-----BEGIN CERTIFICATE-----\nnotreallyacert\n-----END CERTIFICATE-----\n")
 	keyPEM := []byte("-----BEGIN EC PRIVATE KEY-----\nnotreallyakey\n-----END EC PRIVATE KEY-----\n")
 	// Port 1 is never a real listening gateway -- the point is only to
-	// observe the agent try, and fail with a connection error rather than
-	// "no identity available."
-	patched, err := PatchBinary(base, "127.0.0.1:1", caPEM, certPEM, keyPEM)
+	// observe the agent try, and fail at TLS setup rather than report "no
+	// identity available." Patch with agent-debug ON: a real (debug-off)
+	// patched agent is deliberately SILENT (nothing to stdout/stderr), so the
+	// debug log file beside the binary is how we observe what it did. Baking
+	// debug here also proves the Go-encoded 5th blob section is read back as
+	// debug=true by the Rust agent.
+	patched, err := PatchBinary(base, "127.0.0.1:1", caPEM, certPEM, keyPEM, true)
 	if err != nil {
 		t.Fatalf("PatchBinary: %v", err)
 	}
@@ -218,29 +222,32 @@ func TestPatchedBinaryActuallyRunsWithItsPatchedIdentity(t *testing.T) {
 
 	cmd := exec.Command(patchedPath)
 	cmd.Env = []string{} // deliberately no LAFORGE_DEV_* vars -- must use the patched blob
-	out, _ := runWithTimeout(t, cmd)
+	_, _ = runWithTimeout(t, cmd)
 
-	// Deliberately NOT just "out doesn't contain 'no identity available'"
-	// -- an empty `out` (the process silently killed before printing
-	// anything) would pass that check for the wrong reason. This bit a
-	// real run of this exact test on macOS: PatchBinary's byte
-	// overwrite invalidates the Mach-O linker's ad-hoc code signature,
-	// and macOS's AMFI enforcement SIGKILLs the process before main()
-	// ever runs -- zero output, exit 137, and this assertion originally
-	// passed anyway because "no output" trivially doesn't contain the
-	// failure string. resignForMacOSTesting above is the fix; requiring
-	// non-empty output here is what would have caught the bug itself.
-	if len(out) == 0 {
-		t.Fatal("patched binary produced no output at all -- it may have been killed before running (see resignForMacOSTesting's doc comment)")
+	// The agent writes its debug log next to the binary.
+	logPath := filepath.Join(filepath.Dir(patchedPath), "laforge-agent.log")
+	logData, _ := os.ReadFile(logPath)
+
+	// A non-empty debug log is the proof the process actually ran: it loaded
+	// the patched identity and reached TLS setup. An empty/absent log would
+	// mean it never got that far -- e.g. SIGKILLed before main() ran, which
+	// bit a real run of this test on macOS (PatchBinary's byte overwrite
+	// invalidates the Mach-O ad-hoc signature and AMFI kills the process;
+	// resignForMacOSTesting is the fix). Requiring non-empty output is what
+	// catches that, rather than passing for the wrong reason.
+	if len(logData) == 0 {
+		t.Fatalf("patched binary wrote no debug log at %s -- it may have been killed before running (see resignForMacOSTesting's doc comment)", logPath)
 	}
-	if bytes.Contains(out, []byte("no identity available")) {
-		t.Fatalf("patched binary reported no identity available -- it should have loaded the patched blob. Output:\n%s", out)
+	if bytes.Contains(logData, []byte("no identity available")) {
+		t.Fatalf("patched binary reported no identity available -- it should have loaded the patched blob. Log:\n%s", logData)
 	}
-	// A parse failure of the (deliberately fake, non-PEM) cert/key is an
-	// acceptable outcome here (this test's cert/key aren't valid rustls
-	// input, on purpose, to avoid needing a full real CA just to prove
-	// identity loading happened) -- what matters is it got far enough to
-	// try, not "no identity available."
+	// Reaching TLS setup (which fails on the deliberately fake, non-PEM
+	// cert/key -- acceptable here, we don't mint a real CA just to prove the
+	// identity loaded) is exactly the "took the patched path, not the dev
+	// fallback" signal we want.
+	if !bytes.Contains(logData, []byte("building TLS config")) {
+		t.Fatalf("expected the agent to reach TLS setup with the patched identity; log was:\n%s", logData)
+	}
 }
 
 // resignForMacOSTesting re-signs a binary with an ad-hoc signature so it

@@ -20,18 +20,25 @@ import (
 // sub-second open.
 const agentAttachTimeout = 30 * time.Second
 
-// relaySession is one interactive shell's rendezvous inside the gateway: the
-// client half (the api, relaying a UI/CLI user -- duplex) and the agent half
-// (the host's agent, holding the PTY). Both dial IN to the gateway; it pairs
-// them by session id and pipes raw frames between them, understanding nothing
-// about the bytes. objectID is the deployed_object the (trusted) client named;
-// the agent half is admitted only if its own cert CN matches it, so an agent can
+// relaySession is one interactive shell's rendezvous inside the gateway. The
+// client half (the api, relaying a UI/CLI user) is a single DUPLEX connection
+// -- Go's crypto/tls allows one concurrent reader and one writer. The agent
+// half (the host's agent, holding the PTY) is TWO strictly one-directional
+// connections: agentOut carries PTY output (agent->client), agentIn carries
+// client input (client->agent). The agent splits itself this way because
+// rustls cannot be read and written from two threads at once (see
+// agentproto.ShellDir). All three dial IN to the gateway; it pairs them by
+// session id and pipes raw frames, understanding nothing about the bytes.
+// objectID is the deployed_object the (trusted) client named; an agent
+// connection is admitted only if its own cert CN matches it, so an agent can
 // never attach to a shell aimed at a different host.
 type relaySession struct {
 	objectID  string
 	client    net.Conn
-	agent     net.Conn
-	ready     chan struct{} // closed once BOTH halves are present
+	agentOut  net.Conn // agent -> client (PTY stdout/stderr)
+	agentIn   net.Conn // client -> agent (stdin/resize/close)
+	ready     chan struct{} // closed once ALL THREE halves are present
+	readyOnce sync.Once
 	done      chan struct{} // closed once the session tears down
 	closeOnce sync.Once
 }
@@ -41,8 +48,11 @@ func (rs *relaySession) teardown() {
 		if rs.client != nil {
 			rs.client.Close()
 		}
-		if rs.agent != nil {
-			rs.agent.Close()
+		if rs.agentOut != nil {
+			rs.agentOut.Close()
+		}
+		if rs.agentIn != nil {
+			rs.agentIn.Close()
 		}
 		close(rs.done)
 	})
@@ -126,9 +136,11 @@ func (s *Server) handleRelayClient(conn net.Conn, payload []byte) {
 }
 
 // handleShellAgent is called from the agent listener (handleConn) when an agent
-// opens a connection whose first frame is a ShellAttach with role="agent". It
-// authorizes the agent against the session's object, pairs it with the waiting
-// client, and blocks until the session ends (so handleConn does not close this
+// opens a connection whose first frame is a ShellAttach with role="agent". The
+// agent opens ONE such connection per direction (ShellDirOut, ShellDirIn); this
+// authorizes each against the session's object, parks it in the right slot,
+// closes ready once all three halves (client + both agent directions) are
+// present, and blocks until the session ends (so handleConn does not close this
 // connection out from under the pipe).
 func (s *Server) handleShellAgent(conn net.Conn, objID pgtype.UUID, payload []byte) {
 	var att agentproto.ShellAttachPayload
@@ -147,27 +159,46 @@ func (s *Server) handleShellAgent(conn net.Conn, objID pgtype.UUID, payload []by
 		return
 	}
 	s.relayMu.Lock()
-	if rs.agent != nil {
+	switch att.Dir {
+	case agentproto.ShellDirOut:
+		if rs.agentOut != nil {
+			s.relayMu.Unlock()
+			return // already have this direction
+		}
+		rs.agentOut = conn
+	case agentproto.ShellDirIn:
+		if rs.agentIn != nil {
+			s.relayMu.Unlock()
+			return
+		}
+		rs.agentIn = conn
+	default:
 		s.relayMu.Unlock()
-		return // already has an agent half
+		log.Printf("gateway: shell %s: agent %s attached with unknown dir %q", att.SessionID, uuidString(objID), att.Dir)
+		return
 	}
-	rs.agent = conn
+	bothPresent := rs.agentOut != nil && rs.agentIn != nil
 	s.relayMu.Unlock()
 
-	close(rs.ready)
+	log.Printf("gateway: shell %s: agent %s attached (dir=%s)", att.SessionID, uuidString(objID), att.Dir)
+	if bothPresent {
+		log.Printf("gateway: shell %s: both agent directions attached, relaying", att.SessionID)
+		rs.readyOnce.Do(func() { close(rs.ready) })
+	}
 	<-rs.done // hold the connection open until the pipe tears down
 }
 
 // pipe relays frames both ways until either side ends, then tears the session
-// down. Go's crypto/tls allows one concurrent reader and one concurrent writer
-// per connection, so each direction is its own goroutine reading one conn and
-// writing the other.
+// down. Each direction has its own dedicated agent connection, so this is two
+// independent one-way copies: the client connection is read by one goroutine
+// and written by the other (Go's crypto/tls permits one concurrent reader and
+// one writer), while each agent connection is used in a single direction only.
 func pipe(rs *relaySession) {
 	errc := make(chan error, 2)
-	go func() { errc <- copyFrames(rs.client, rs.agent) }() // agent -> client (stdout/stderr)
-	go func() { errc <- copyFrames(rs.agent, rs.client) }() // client -> agent (stdin/resize/close)
+	go func() { errc <- copyFrames(rs.client, rs.agentOut) }() // agent -> client (stdout/stderr)
+	go func() { errc <- copyFrames(rs.agentIn, rs.client) }()  // client -> agent (stdin/resize/close)
 	<-errc
-	rs.teardown()  // closing both conns unblocks the other copyFrames
+	rs.teardown()  // closing the conns unblocks the other copyFrames
 	<-errc         // drain it so neither goroutine leaks
 }
 
@@ -198,7 +229,10 @@ func (s *Server) pendingSessionsForObject(objID pgtype.UUID) []string {
 	defer s.relayMu.Unlock()
 	var out []string
 	for id, rs := range s.relaySessions {
-		if rs.objectID == key && rs.agent == nil {
+		// Advertise the session until BOTH agent directions are attached; the
+		// agent dedupes by id (one spawned worker opens both connections), so
+		// re-advertising while only one has landed is harmless.
+		if rs.objectID == key && (rs.agentOut == nil || rs.agentIn == nil) {
 			out = append(out, id)
 		}
 	}

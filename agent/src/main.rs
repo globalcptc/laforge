@@ -9,6 +9,7 @@ mod antitamper;
 mod applog;
 mod chaff;
 mod commands;
+mod diag;
 mod identity;
 mod metrics;
 mod obfuscate;
@@ -24,7 +25,7 @@ use std::collections::HashSet;
 use std::io;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
 
 // Bounds for container console-log forwarding: how many lines the agent buffers
@@ -33,12 +34,25 @@ const LOG_BUFFER_CAP: usize = 10_000;
 const LOG_BATCH_MAX: usize = 500;
 
 fn main() {
+    // Decide where our own diagnostics go BEFORE emitting a single line. A real
+    // (patched) build is SILENT by default -- nothing to stdout/stderr, so a
+    // captured box leaks nothing locally; only what the agent sends the servers
+    // ever leaves it. A dev build (unpatched identity, `cargo run`) logs to
+    // stderr so it's usable while iterating. A patched build whose baked
+    // identity carries agent-debug upgrades to a file beside the binary once the
+    // identity is loaded (see load_agent). See diag.rs.
+    if identity::is_dev_build() {
+        diag::init_stderr();
+    } else {
+        diag::init_silent();
+    }
+
     // Basic anti-debug/anti-tamper self-checks -- see antitamper.rs's own
     // doc comment for exactly what's real here and what's scoped out.
     // Deliberately non-load-bearing: log and
     // continue, never refuse to start or change behavior on a finding.
     for finding in antitamper::self_check() {
-        eprintln!("laforge-agent: self-check: {finding}");
+        dlog!("laforge-agent: self-check: {finding}");
     }
 
     // Native OCI container supervisor mode: when LAFORGE_SUPERVISE is set, the
@@ -71,13 +85,22 @@ fn run_host() -> ! {
 // management can't connect -- so a broken/absent identity never takes the
 // service down, it only means no check-in. load_agent logs why, if it can't.
 fn run_container(cmd: String) -> ! {
-    // One buffer shared between the app's output readers (push) and the gateway
-    // loop (drain + ship). Created even if the agent can't connect, so capture
-    // is independent of gateway health.
-    let logq = Arc::new(applog::LogQueue::new(LOG_BUFFER_CAP));
+    // Container log forwarding is NATIVE-FIRST: by default the platform ships
+    // the container's logs (a docker log driver, a Fargate logConfiguration,
+    // ...), so the agent just supervises and lets the app's stdout/stderr pass
+    // straight through -- it captures NOTHING and sends the gateway no log
+    // traffic. That keeps the gateway out of the data path even at thousands of
+    // containers.
+    //
+    // Only when the builder sets LAFORGE_LOG_FORWARD (the fallback builders that
+    // have no native driver -- Incus native-OCI, OpenStack Zun) does the agent
+    // capture the app's output and ship it to the gateway, which forwards it to
+    // the environment's container_logs sink.
+    let forward = std::env::var("LAFORGE_LOG_FORWARD").ok().filter(|s| !s.trim().is_empty()).is_some();
+    let logq = if forward { Some(Arc::new(applog::LogQueue::new(LOG_BUFFER_CAP))) } else { None };
     if let Some((identity, tls_config, host_only)) = load_agent() {
         let lq = logq.clone();
-        std::thread::spawn(move || agent_loop(&identity, &host_only, tls_config, Some(lq)));
+        std::thread::spawn(move || agent_loop(&identity, &host_only, tls_config, lq));
     }
     supervise_app(cmd, logq)
 }
@@ -91,14 +114,20 @@ fn load_agent() -> Option<(identity::Identity, Arc<ClientConfig>, String)> {
     let identity = match identity::load() {
         Some(id) => id,
         None => {
-            eprintln!("laforge-agent: no identity available (binary is unpatched and no LAFORGE_DEV_* env vars set)");
+            dlog!("laforge-agent: no identity available (binary is unpatched and no LAFORGE_DEV_* env vars set)");
             return None;
         }
     };
+    // A real build with agent-debug baked in upgrades the diagnostic sink from
+    // silent to a file beside the binary, now that we know the flag. Done here
+    // (before TLS setup) so even a TLS-config failure is captured in debug mode.
+    if identity.debug {
+        diag::init_file_next_to_binary();
+    }
     let tls_config = match build_tls_config(&identity) {
         Ok(cfg) => Arc::new(cfg),
         Err(e) => {
-            eprintln!("laforge-agent: building TLS config: {e}");
+            dlog!("laforge-agent: building TLS config: {e}");
             return None;
         }
     };
@@ -133,7 +162,7 @@ fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<Cl
         let started = Instant::now();
         match run_session(&identity.gateway_addr, host_only, tls_config.clone(), logq.as_ref(), &mut metrics, &shell_handled) {
             Ok(()) => {}
-            Err(e) => eprintln!("laforge-agent: session ended: {e}"),
+            Err(e) => dlog!("laforge-agent: session ended: {e}"),
         }
         if started.elapsed() >= RESET_AFTER {
             backoff = BASE; // it was really connected; next reconnect starts fast again
@@ -164,35 +193,42 @@ fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<Cl
 // console` still work live) AND pushed onto the bounded queue the gateway loop
 // ships. Capture is best-effort: a read error on a stream just ends that
 // stream's tee, never the app.
-fn supervise_app(cmd: String, logq: Arc<applog::LogQueue>) -> ! {
+fn supervise_app(cmd: String, logq: Option<Arc<applog::LogQueue>>) -> ! {
     use std::process::Stdio;
-    let mut child = match std::process::Command::new("sh")
-        .arg("-c")
-        .arg(&cmd)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-    {
+    let mut command = std::process::Command::new("sh");
+    command.arg("-c").arg(&cmd);
+    // Forward mode captures the app's output (piped) to ship to the gateway.
+    // Native mode inherits the container's stdio so the app writes straight to
+    // the container's own console, where the platform's log driver collects it
+    // -- the agent never touches the bytes.
+    if logq.is_some() {
+        command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    } else {
+        command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    }
+    let mut child = match command.spawn() {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("laforge-agent: supervisor: failed to start app command {cmd:?}: {e}");
+            dlog!("laforge-agent: supervisor: failed to start app command {cmd:?}: {e}");
             std::process::exit(1);
         }
     };
-    if let Some(out) = child.stdout.take() {
-        let q = logq.clone();
-        std::thread::spawn(move || tee_stream(out, "stdout", q));
-    }
-    if let Some(err) = child.stderr.take() {
-        let q = logq.clone();
-        std::thread::spawn(move || tee_stream(err, "stderr", q));
+    if let Some(logq) = &logq {
+        if let Some(out) = child.stdout.take() {
+            let q = logq.clone();
+            std::thread::spawn(move || tee_stream(out, "stdout", q));
+        }
+        if let Some(err) = child.stderr.take() {
+            let q = logq.clone();
+            std::thread::spawn(move || tee_stream(err, "stderr", q));
+        }
     }
     let status = child.wait().unwrap_or_else(|e| {
-        eprintln!("laforge-agent: supervisor: waiting on app: {e}");
+        dlog!("laforge-agent: supervisor: waiting on app: {e}");
         std::process::exit(1);
     });
     let code = status.code().unwrap_or(1);
-    eprintln!("laforge-agent: supervised app exited (code {code}); stopping container");
+    dlog!("laforge-agent: supervised app exited (code {code}); stopping container");
     std::process::exit(code);
 }
 
@@ -209,11 +245,11 @@ fn tee_stream<R: Read>(r: R, stream: &'static str, logq: Arc<applog::LogQueue>) 
             Ok(l) => l,
             Err(_) => break,
         };
-        if stream == "stdout" {
-            println!("{line}");
-        } else {
-            eprintln!("{line}");
-        }
+        // The app's own line is shipped to the gateway via the log queue (the
+        // only place it goes by default). It is NOT echoed to the agent's
+        // console -- that would be a local trace on the box; it only appears in
+        // the debug log when agent-debug is on.
+        dlog!("[{stream}] {line}");
         logq.push(stream, line);
     }
 }
@@ -251,6 +287,13 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
     let conn = ClientConnection::new(tls_config, server_name).map_err(|e| io::Error::other(format!("starting TLS: {e}")))?;
     let mut tls = StreamOwned::new(conn, tcp);
 
+    // The task currently executing on a worker thread, if any. Its result comes
+    // back here over the channel. While this is Some, the loop keeps
+    // heartbeating (so shells still open and the agent stays healthy) but does
+    // NOT ask for another task -- one in flight at a time, preserving the
+    // gateway's ordered lease model.
+    let mut inflight: Option<mpsc::Receiver<ReportStatusRequestPayload>> = None;
+
     loop {
         // Sample basic host metrics and carry them on the heartbeat. Best-effort:
         // if serialization somehow fails, send an empty heartbeat rather than
@@ -263,10 +306,48 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("decoding heartbeat response: {e}")))?;
 
         // Open an interactive shell for any session a client is waiting on. Each
-        // runs on its own thread and its own mTLS connection, so it never blocks
-        // this heartbeat/task loop.
+        // runs on its own thread and its own mTLS connection. We reach this on
+        // every heartbeat -- INCLUDING while a task is running on the worker
+        // thread below -- so a shell can open even during a long or hung step.
         if !hb.pending_sessions.is_empty() {
             shell::maybe_spawn(&hb.pending_sessions, shell_handled, addr, host_only, &shell_tls_config);
+        }
+
+        // Ship any buffered console lines every iteration, task or not, so logs
+        // keep flowing at the poll cadence -- including while a task runs.
+        flush_logs(&mut tls, logq)?;
+
+        // If a task is running on the worker thread, poll (don't block) for its
+        // result. Taking the Result out through `map` drops the borrow of
+        // `inflight` before the match, so the arms can clear it.
+        match inflight.as_ref().map(|rx| rx.try_recv()) {
+            Some(Ok(report)) => {
+                inflight = None;
+                dlog!("laforge-agent: task {} -> {}", report.task_id, report.status);
+                let body = serde_json::to_vec(&report)
+                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding report-status: {e}")))?;
+                protocol::write_frame(&mut tls, MessageType::ReportStatusRequest, &body)?;
+                let (mt, _body) = protocol::read_frame(&mut tls)?;
+                expect(mt, MessageType::ReportStatusResponse)?;
+                // Known work may be queued -- poll again without waiting.
+                continue;
+            }
+            Some(Err(mpsc::TryRecvError::Empty)) => {
+                // Task still running: keep heartbeating at the poll cadence, but
+                // don't ask for another (one in flight at a time).
+                std::thread::sleep(Duration::from_millis(hb.next_poll_ms));
+                continue;
+            }
+            Some(Err(mpsc::TryRecvError::Disconnected)) => {
+                // The worker ended without sending a result (a panic in command
+                // execution -- not expected). Drop it; the gateway's lease expiry
+                // re-leases the task.
+                inflight = None;
+                dlog!("laforge-agent: task worker ended with no result; it will be re-leased on lease expiry");
+                std::thread::sleep(Duration::from_millis(hb.next_poll_ms));
+                continue;
+            }
+            None => {} // nothing in flight -- fall through and ask for work
         }
 
         protocol::write_frame(&mut tls, MessageType::GetTaskRequest, &[])?;
@@ -275,33 +356,33 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
         let gt: GetTaskResponsePayload = serde_json::from_slice(&body)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("decoding get-task response: {e}")))?;
 
-        // Ship any buffered console lines every iteration, task or not, so logs
-        // keep flowing at the poll cadence rather than only when idle.
-        flush_logs(&mut tls, logq)?;
-
         if let Some(task) = gt.task {
-            eprintln!("laforge-agent: running task {} ({})", task.id, task.command);
-            let outcome = if task.command == "validate" {
-                validators::run(&task.payload)
-            } else {
-                commands::run(&task.command, &task.payload)
-            };
-            eprintln!("laforge-agent: task {} -> {}", task.id, outcome.status);
-
-            let report = ReportStatusRequestPayload {
-                task_id: task.id,
-                status: outcome.status.to_string(),
-                output: outcome.output,
-                error: outcome.error,
-                validator_results: outcome.validator_results,
-            };
-            let body = serde_json::to_vec(&report)
-                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding report-status: {e}")))?;
-            protocol::write_frame(&mut tls, MessageType::ReportStatusRequest, &body)?;
-            let (mt, _body) = protocol::read_frame(&mut tls)?;
-            expect(mt, MessageType::ReportStatusResponse)?;
-            // Immediately check for the next step -- no reason to wait
-            // out the poll interval while there's known work queued.
+            // Run the task on a WORKER thread, not here, so a slow or hung
+            // command never stops this loop from heartbeating. The worker only
+            // touches the command and the result channel -- this loop stays the
+            // sole owner of the TLS connection.
+            dlog!("laforge-agent: running task {} ({})", task.id, task.command);
+            let (tx, rx) = mpsc::channel();
+            std::thread::spawn(move || {
+                let outcome = if task.command == "validate" {
+                    validators::run(&task.payload)
+                } else {
+                    commands::run(&task.command, &task.payload)
+                };
+                let report = ReportStatusRequestPayload {
+                    task_id: task.id,
+                    status: outcome.status.to_string(),
+                    output: outcome.output,
+                    error: outcome.error,
+                    validator_results: outcome.validator_results,
+                };
+                // A failed send means the loop went away (connection dropped ->
+                // reconnect); the result is simply lost and the task re-leases on
+                // expiry, exactly as a synchronous report that failed would.
+                let _ = tx.send(report);
+            });
+            inflight = Some(rx);
+            // Come back next iteration to heartbeat and poll for the result.
             continue;
         }
 

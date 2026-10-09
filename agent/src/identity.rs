@@ -49,10 +49,24 @@ pub struct Identity {
     pub ca_pem: Vec<u8>,
     pub cert_pem: Vec<u8>,
     pub key_pem: Vec<u8>,
+    // debug is the baked-in agent-debug flag (environment YAML `agent-debug`).
+    // false (the default, and absent in an older 4-section blob) means the
+    // agent stays silent; true turns on the local debug log file. Baked into
+    // the binary on purpose -- see diag.rs -- so it can't be flipped by editing
+    // the launcher on a captured box.
+    pub debug: bool,
 }
 
 fn is_unpatched(data: &[u8]) -> bool {
     data.chunks(4).all(|c| c == MARKER)
+}
+
+/// is_dev_build reports whether this binary still carries the raw marker (never
+/// patched by the factory) -- i.e. a `cargo run`/`cargo test` build, not a real
+/// deployed agent. main() uses it to pick the default diagnostic sink (stderr
+/// for dev, silent for real).
+pub fn is_dev_build() -> bool {
+    is_unpatched(&IDENTITY_BLOB)
 }
 
 fn deobfuscate(data: &[u8]) -> Vec<u8> {
@@ -80,12 +94,17 @@ fn parse_blob(deobfuscated: &[u8]) -> Option<Identity> {
     let (gw, pos) = read_section(deobfuscated, 0)?;
     let (ca, pos) = read_section(deobfuscated, pos)?;
     let (cert, pos) = read_section(deobfuscated, pos)?;
-    let (key, _pos) = read_section(deobfuscated, pos)?;
+    let (key, pos) = read_section(deobfuscated, pos)?;
+    // Optional 5th section: the agent-debug flag (1 byte, 1 = on). An older
+    // 4-section blob has none; the zero padding there reads as a zero-length
+    // section, and both cases mean debug off.
+    let debug = matches!(read_section(deobfuscated, pos), Some((b, _)) if b.first() == Some(&1));
     Some(Identity {
         gateway_addr: String::from_utf8(gw).ok()?,
         ca_pem: ca,
         cert_pem: cert,
         key_pem: key,
+        debug,
     })
 }
 
@@ -99,9 +118,10 @@ fn parse_blob(deobfuscated: &[u8]) -> Option<Identity> {
 /// binary rather than trusting the two implementations agree in the
 /// abstract.
 #[allow(dead_code)]
-pub fn encode_blob(gateway_addr: &str, ca_pem: &[u8], cert_pem: &[u8], key_pem: &[u8]) -> Result<[u8; BLOB_SIZE], String> {
+pub fn encode_blob(gateway_addr: &str, ca_pem: &[u8], cert_pem: &[u8], key_pem: &[u8], debug: bool) -> Result<[u8; BLOB_SIZE], String> {
     let mut out = Vec::with_capacity(BLOB_SIZE);
-    for section in [gateway_addr.as_bytes(), ca_pem, cert_pem, key_pem] {
+    let debug_byte = [u8::from(debug)];
+    for section in [gateway_addr.as_bytes(), ca_pem, cert_pem, key_pem, &debug_byte[..]] {
         out.extend_from_slice(&(section.len() as u32).to_be_bytes());
         out.extend_from_slice(section);
     }
@@ -126,7 +146,7 @@ pub fn load() -> Option<Identity> {
         if let Some(id) = parse_blob(&deob) {
             return Some(id);
         }
-        eprintln!("identity: IDENTITY_BLOB is patched but failed to parse -- refusing to fall back to dev env vars for a build that was clearly meant to carry a real identity");
+        crate::dlog!("identity: IDENTITY_BLOB is patched but failed to parse -- refusing to fall back to dev env vars for a build that was clearly meant to carry a real identity");
         return None;
     }
     load_dev_fallback()
@@ -137,12 +157,15 @@ fn load_dev_fallback() -> Option<Identity> {
     let ca_path = env::var("LAFORGE_DEV_CA_CERT").ok()?;
     let cert_path = env::var("LAFORGE_DEV_CLIENT_CERT").ok()?;
     let key_path = env::var("LAFORGE_DEV_CLIENT_KEY").ok()?;
-    eprintln!("identity: IDENTITY_BLOB is unpatched -- using LAFORGE_DEV_* env vars (dev-only fallback, never how a real deployed agent starts)");
+    crate::dlog!("identity: IDENTITY_BLOB is unpatched -- using LAFORGE_DEV_* env vars (dev-only fallback, never how a real deployed agent starts)");
     Some(Identity {
         gateway_addr,
         ca_pem: fs::read(ca_path).ok()?,
         cert_pem: fs::read(cert_path).ok()?,
         key_pem: fs::read(key_path).ok()?,
+        // Dev builds log to stderr regardless (see diag.rs), so the baked debug
+        // flag is irrelevant here.
+        debug: false,
     })
 }
 
@@ -152,14 +175,17 @@ mod tests {
 
     #[test]
     fn encode_then_parse_round_trip() {
-        let blob = encode_blob("gw.example:8443", b"CA_PEM_BYTES", b"CERT_PEM_BYTES", b"KEY_PEM_BYTES").unwrap();
-        assert!(!is_unpatched(&blob), "a real encoded blob must not look like the unpatched marker");
-        let deob = deobfuscate(&blob);
-        let id = parse_blob(&deob).expect("parse_blob should succeed on a freshly encoded blob");
-        assert_eq!(id.gateway_addr, "gw.example:8443");
-        assert_eq!(id.ca_pem, b"CA_PEM_BYTES");
-        assert_eq!(id.cert_pem, b"CERT_PEM_BYTES");
-        assert_eq!(id.key_pem, b"KEY_PEM_BYTES");
+        for debug in [false, true] {
+            let blob = encode_blob("gw.example:8443", b"CA_PEM_BYTES", b"CERT_PEM_BYTES", b"KEY_PEM_BYTES", debug).unwrap();
+            assert!(!is_unpatched(&blob), "a real encoded blob must not look like the unpatched marker");
+            let deob = deobfuscate(&blob);
+            let id = parse_blob(&deob).expect("parse_blob should succeed on a freshly encoded blob");
+            assert_eq!(id.gateway_addr, "gw.example:8443");
+            assert_eq!(id.ca_pem, b"CA_PEM_BYTES");
+            assert_eq!(id.cert_pem, b"CERT_PEM_BYTES");
+            assert_eq!(id.key_pem, b"KEY_PEM_BYTES");
+            assert_eq!(id.debug, debug, "the agent-debug flag must survive the round trip");
+        }
     }
 
     #[test]
@@ -170,7 +196,7 @@ mod tests {
     #[test]
     fn oversized_identity_is_rejected_not_truncated_silently() {
         let huge = vec![b'x'; BLOB_SIZE]; // way over budget once length-prefixed
-        let err = encode_blob("gw:1", &huge, &huge, &huge);
+        let err = encode_blob("gw:1", &huge, &huge, &huge, false);
         assert!(err.is_err());
     }
 }

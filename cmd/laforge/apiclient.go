@@ -26,8 +26,9 @@ func newAPIClient() *apiClient {
 	if base == "" {
 		base = "http://localhost:8080"
 	}
-	tok, _ := readStoredToken()
-	return &apiClient{baseURL: base, token: tok}
+	// resolveToken refreshes the GitHub token through the api if it has expired
+	// (see credentials.go), so a long-lived login keeps working.
+	return &apiClient{baseURL: base, token: resolveToken(base)}
 }
 
 // apiError is a decoded {"error": "..."} body from internal/api's own

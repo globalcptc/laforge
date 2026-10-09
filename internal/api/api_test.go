@@ -181,11 +181,26 @@ func (f *fakeGitHub) handler() http.HandlerFunc {
 			login := strings.TrimPrefix(r.URL.Path, "/users/")
 			json.NewEncoder(w).Encode(ghclient.User{ID: f.idForLogin(login), Login: login, AvatarURL: "https://avatars.example/" + login})
 		case r.URL.Path == "/login/oauth/access_token":
-			// ExchangeCode -- the web flow's code-for-token swap. The
-			// fake "code" this test suite uses IS the token it wants
-			// back, so a test can assert on a value it chose itself.
+			// The web flow's code-for-token swap AND the refresh-token grant
+			// share this endpoint. The fake "code" this suite uses IS the token
+			// it wants back, so a test can assert on a value it chose itself.
+			// Expiring tokens are modeled so the refresh path (oauth.go's
+			// refreshGithubToken) can be tested; an 8h expiry means ordinary
+			// tests never actually refresh.
 			r.ParseForm()
-			json.NewEncoder(w).Encode(map[string]string{"access_token": "exchanged-" + r.PostForm.Get("code")})
+			if r.PostForm.Get("grant_type") == "refresh_token" {
+				rt := r.PostForm.Get("refresh_token")
+				json.NewEncoder(w).Encode(map[string]any{
+					"access_token": "refreshed-" + rt, "refresh_token": "rotated-" + rt,
+					"expires_in": 28800, "refresh_token_expires_in": 15897600,
+				})
+				return
+			}
+			code := r.PostForm.Get("code")
+			json.NewEncoder(w).Encode(map[string]any{
+				"access_token": "exchanged-" + code, "refresh_token": "refresh-" + code,
+				"expires_in": 28800, "refresh_token_expires_in": 15897600,
+			})
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}

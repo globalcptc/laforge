@@ -84,12 +84,10 @@ and addressing. The file is fully commented; the important groups:
   easiest thing to get wrong, so it has its own section: **[Addressing](#addressing-the-urls-explained)**.
 - **Certificates** — the mTLS cert paths (`GATEWAY_CA_CERT`, `GATEWAY_SERVER_CERT`,
   `GATEWAY_SERVER_KEY`); see [Certificates](#certificates).
-- **Container logs** (optional) — `LOG_SINK_URL`, `LOG_SINK_HEADERS`, `LOG_SINK_LABELS`.
-  When set, each container's agent streams its application's console output (stdout/stderr)
-  to the gateway, which forwards it as newline-delimited JSON (NDJSON) to this HTTP
-  endpoint. Leave unset to disable. The format is deliberately generic — point it at a
-  collector (Vector, Fluent Bit, Splunk HEC, …) and shape/route from there. See
-  [Container logs](#container-logs).
+- **Container logs** — not a gateway env setting. Forwarding container output to an
+  external collector (Splunk, …) is configured per environment with `container_logs` in
+  content, and each builder ships it natively (see [Container logs](#container-logs) and
+  CONFIGURATION.md).
 
 Under Compose, the database connection and gateway CA paths are set by Compose itself;
 you mainly touch `.env` for the GitHub App values, admin logins, and the addresses below.
@@ -224,35 +222,68 @@ Then wire the runner for agent delivery (see the [`.env`](#the-env-file) variabl
 
 ## Container logs
 
-Every container runs the LaForge agent as its entrypoint (it supervises the image's
-real command), so the agent also sees the application's console output. When you set
-`LOG_SINK_URL`, each agent streams that output (stdout and stderr) to the gateway over
-the mTLS connection it already holds; the gateway tags every line with its build, team,
-object and stream and forwards batches as newline-delimited JSON (`application/x-ndjson`)
-to the endpoint you named. A line still reaches the container's own console too (`docker
-logs` / `incus console` keep working), and a backend that's slow or down drops lines
-rather than ever stalling a host.
+Container console output is forwarded to an external collector (Splunk, Loki, …) when the
+environment sets `container_logs` — see [CONFIGURATION.md](CONFIGURATION.md#container-log-forwarding)
+for the config block. There is **no gateway env setting** for this; it's content, and it's
+container-only (hosts are VMs with their own logging).
 
-```bash
-# Gateway .env — all optional; unset LOG_SINK_URL disables forwarding entirely.
-LOG_SINK_URL=http://vector:9000/laforge-logs
-LOG_SINK_HEADERS=Authorization: Splunk 00000000-0000-0000-0000-000000000000
-LOG_SINK_LABELS=env=cptc2026,source=laforge
+Forwarding is **native-first**: LaForge uses each builder's own log mechanism so the log
+volume of a large build never funnels through a single LaForge process.
+
+- **MicroCloud** (nested docker): the container's `docker run` gets `--log-driver` / `--log-opt`.
+- **AWS Fargate**: the task's `logConfiguration` carries the driver and options.
+- **Compose project** (any builder): the driver is written as the Docker **daemon default**
+  on the project's host before `docker compose up`, so every service inherits it.
+- **Incus** (native OCI) and **OpenStack Zun**: no native driver, so these **fall back** to
+  the agent — it captures the container's output and ships it to the gateway over its mTLS
+  connection, and the gateway forwards to the collector. The fallback supports the
+  **`splunk`** driver (its HEC raw endpoint); other drivers on these two builders aren't
+  forwarded.
+
+In the native cases the gateway never touches the log bytes at all. In every case the
+agent's own diagnostics stay silent on the box (see
+[Agent local footprint](#agent-local-footprint)); the container's **application** output,
+however, is visible in the container's normal log stream so the platform driver can ship
+it — e.g. with the `splunk` driver it goes to Splunk, not to `docker logs`.
+
+### Sending to Splunk
+
+Use the `splunk` driver in `container_logs`; its options are the driver's own keys:
+
+```yaml
+environment:
+  container_logs:
+    driver: splunk
+    options:
+      splunk-url: https://splunk.example:8088
+      splunk-token: 00000000-0000-0000-0000-000000000000   # a write-only HEC token
+      splunk-index: cptc
 ```
 
-Each record looks like:
+On the native builders Docker/Fargate talk to Splunk HEC directly with these options. On
+the Incus/Zun fallback the gateway posts the lines to the HEC **raw** endpoint
+(`<splunk-url>/services/collector/raw`) with the token as an `Authorization: Splunk <token>`
+header, so the same `splunk-url`/`splunk-token` work for both paths.
 
-```json
-{"ts":"2026-10-01T18:04:11.000Z","build_id":"…","team":3,"object":"scoreboard",
- "object_id":"…","kind":"container","stream":"stdout","line":"…"}
-```
+---
 
-The format is deliberately generic — any collector that accepts newline JSON. For a
-backend that speaks its own wire format (Splunk HEC, Loki's push API, Elastic's bulk
-format), point `LOG_SINK_URL` at a **Vector / Fluent Bit / Promtail** receiver and let it
-reshape and route; `LOG_SINK_HEADERS` carries any auth token, `LOG_SINK_LABELS` adds
-static fields to every record. Host logs (journald/services) are not forwarded yet — this
-is container application output only.
+## Agent local footprint
+
+The LaForge agent runs on boxes inside the competition network, which is hostile. By
+default it leaves **no local trace**: it writes nothing to stdout, stderr, or any file on
+the box. The only thing that ever leaves the agent is what it reports to the LaForge
+servers over its mTLS connection (heartbeats, task results, and — for containers — the
+forwarded application output above). Even a captured, reverse-engineered box yields no
+agent logs.
+
+To debug the agent itself, set `agent-debug: true` on the **environment** (see
+[CONFIGURATION.md](CONFIGURATION.md)). Every agent in that environment then writes a
+`laforge-agent.log` file next to its binary (e.g. `/usr/local/bin/laforge-agent.log` on a
+Linux host, `C:\laforge-agent.log` on Windows, `/laforge-agent.log` inside a container) —
+and still nothing to the console, so `docker logs` stays empty either way. The flag is
+baked into each agent binary at deploy time, so a competitor **cannot** turn logging on by
+editing a box's service unit or scheduled task. Leave it off for a real event; turn it on
+only while diagnosing the agent.
 
 ---
 

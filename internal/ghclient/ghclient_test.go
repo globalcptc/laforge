@@ -160,8 +160,8 @@ func TestDeviceFlowHappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PollForToken: %v", err)
 	}
-	if tok != "gho_realtoken" {
-		t.Fatalf("token = %q, want gho_realtoken", tok)
+	if tok.AccessToken != "gho_realtoken" {
+		t.Fatalf("token = %+v, want access gho_realtoken", tok)
 	}
 	if pollCount != 3 {
 		t.Fatalf("polled %d times, want exactly 3 (2 pending + 1 success)", pollCount)
@@ -187,8 +187,8 @@ func TestDeviceFlowSlowDownThenSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PollForToken: %v", err)
 	}
-	if tok != "gho_final" {
-		t.Fatalf("token = %q, want gho_final", tok)
+	if tok.AccessToken != "gho_final" {
+		t.Fatalf("token = %+v, want access gho_final", tok)
 	}
 }
 
@@ -251,15 +251,15 @@ func TestExchangeCodeHappyPath(t *testing.T) {
 		}
 		r.ParseForm()
 		gotForm = r.PostForm
-		json.NewEncoder(w).Encode(deviceTokenResponse{AccessToken: "gho_webtoken"})
+		json.NewEncoder(w).Encode(deviceTokenResponse{AccessToken: "gho_webtoken", RefreshToken: "ghr_refresh", ExpiresIn: 28800, RefreshTokenExpiresIn: 15897600})
 	}))
 
 	tok, err := c.ExchangeCode(context.Background(), "client-id", "client-secret", "the-code", "https://laforge.example/callback")
 	if err != nil {
 		t.Fatalf("ExchangeCode: %v", err)
 	}
-	if tok != "gho_webtoken" {
-		t.Fatalf("token = %q, want gho_webtoken", tok)
+	if tok.AccessToken != "gho_webtoken" || tok.RefreshToken != "ghr_refresh" || tok.ExpiresIn != 28800 {
+		t.Fatalf("token = %+v, want access gho_webtoken + refresh ghr_refresh + expires 28800", tok)
 	}
 	if gotForm.Get("client_id") != "client-id" || gotForm.Get("client_secret") != "client-secret" ||
 		gotForm.Get("code") != "the-code" || gotForm.Get("redirect_uri") != "https://laforge.example/callback" {
@@ -275,6 +275,29 @@ func TestExchangeCodeRejected(t *testing.T) {
 	_, err := c.ExchangeCode(context.Background(), "client-id", "client-secret", "wrong-code", "https://laforge.example/callback")
 	if err == nil {
 		t.Fatal("ExchangeCode: expected an error for a rejected code, got nil")
+	}
+}
+
+func TestRefreshUserToken(t *testing.T) {
+	var gotForm url.Values
+	c := testClient(t, nil, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/login/oauth/access_token" {
+			t.Errorf("unexpected auth path %q", r.URL.Path)
+		}
+		r.ParseForm()
+		gotForm = r.PostForm
+		json.NewEncoder(w).Encode(deviceTokenResponse{AccessToken: "gho_new", RefreshToken: "ghr_rotated", ExpiresIn: 28800, RefreshTokenExpiresIn: 15897600})
+	}))
+
+	tok, err := c.RefreshUserToken(context.Background(), "client-id", "client-secret", "ghr_old")
+	if err != nil {
+		t.Fatalf("RefreshUserToken: %v", err)
+	}
+	if tok.AccessToken != "gho_new" || tok.RefreshToken != "ghr_rotated" {
+		t.Fatalf("token = %+v, want a rotated gho_new/ghr_rotated", tok)
+	}
+	if gotForm.Get("grant_type") != "refresh_token" || gotForm.Get("refresh_token") != "ghr_old" {
+		t.Fatalf("posted form = %+v, want grant_type=refresh_token & refresh_token=ghr_old", gotForm)
 	}
 }
 

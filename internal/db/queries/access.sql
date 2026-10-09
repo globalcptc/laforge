@@ -28,9 +28,16 @@ UPDATE account SET timezone = $2, updated_at = now() WHERE id = $1;
 SELECT * FROM account WHERE github_login = $1;
 
 -- name: CreateSession :one
-INSERT INTO session (account_id, token_hash, github_token, expires_at)
-VALUES ($1, $2, $3, $4)
+INSERT INTO session (account_id, token_hash, github_token, expires_at, github_token_expires_at, github_refresh_token, github_refresh_expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
+
+-- name: UpdateSessionGithubToken :exec
+-- Store a freshly-refreshed GitHub access token (and the rotated refresh token
+-- + new expiries) on a session, so subsequent requests use the live token.
+UPDATE session
+SET github_token = $2, github_token_expires_at = $3, github_refresh_token = $4, github_refresh_expires_at = $5
+WHERE id = $1;
 
 -- name: GetSessionByTokenHash :one
 -- The join is the whole point: one round trip from "cookie value" to

@@ -44,11 +44,20 @@ func runLogin(args []string) error {
 	if err != nil {
 		return fmt.Errorf("waiting for authorization: %w", err)
 	}
-	if err := writeStoredToken(tok); err != nil {
-		return fmt.Errorf("saving token: %w", err)
+	// Store the refresh token + expiries too (not just the access token), so the
+	// CLI can keep itself signed in past the ~8h access-token lifetime -- see
+	// credentials.go. Falls back to a plain access token if the App doesn't
+	// issue a refresh token.
+	if err := saveCreds(storedCreds{
+		AccessToken:      tok.AccessToken,
+		RefreshToken:     tok.RefreshToken,
+		AccessExpiresAt:  expiryFromSeconds(tok.ExpiresIn),
+		RefreshExpiresAt: expiryFromSeconds(tok.RefreshTokenExpiresIn),
+	}); err != nil {
+		return fmt.Errorf("saving credentials: %w", err)
 	}
 
-	if user, err := gh.GetAuthenticatedUser(ctx, tok); err == nil {
+	if user, err := gh.GetAuthenticatedUser(ctx, tok.AccessToken); err == nil {
 		fmt.Printf("Logged in as %s.\n", user.Login)
 	} else {
 		fmt.Println("Logged in.")

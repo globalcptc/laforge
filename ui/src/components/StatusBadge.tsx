@@ -1,6 +1,7 @@
 import {
   CircleDashed,
   CircleHelp,
+  Hourglass,
   Loader,
   CircleCheck,
   CircleX,
@@ -179,6 +180,7 @@ export function StatusBadge({
   kind,
   className,
   tooltip = true,
+  blockedOn,
 }: {
   status: string
   kind?: string
@@ -186,10 +188,20 @@ export function StatusBadge({
   // A hover tooltip explaining the state fades in after ~1s. Off where the
   // explanation is already on screen (the legend).
   tooltip?: boolean
+  // When set and non-empty on a 'building' object, the badge reads "Dependency
+  // Blocked" instead of "Running Steps": the steps are queued but held until
+  // these dependencies finish.
+  blockedOn?: string[] | null
 }) {
-  const style = STYLES[status as Kind] ?? { icon: CircleHelp, tone: 'neutral' as const, label: status }
-  const label = (kind && KIND_LABELS[kind]?.[status as Kind]) ?? style.label
-  const desc = statusDescription(status, kind)
+  const isBlocked = status === 'building' && !!blockedOn && blockedOn.length > 0
+  let style = STYLES[status as Kind] ?? { icon: CircleHelp, tone: 'neutral' as const, label: status }
+  let label = (kind && KIND_LABELS[kind]?.[status as Kind]) ?? style.label
+  let desc = statusDescription(status, kind)
+  if (isBlocked) {
+    style = { icon: Hourglass, tone: 'warning', label: 'Dependency Blocked' }
+    label = 'Dependency Blocked'
+    desc = `Waiting on ${blockedOn!.join(', ')} to finish before this host’s steps run.`
+  }
   const Icon = style.icon
   const animClass = style.anim === 'spin' ? 'animate-spin' : style.anim === 'pulse' ? 'animate-pulse' : undefined
   const badge = (

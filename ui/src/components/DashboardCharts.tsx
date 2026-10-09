@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import type { DashboardData } from '../api/types'
+import type { DashboardData, ResourceBucket } from '../api/types'
 import { useTimeFormat } from '../lib/time'
 import { StatusBadge, statusFillClass, statusLabel } from './StatusBadge'
 import { Card, CardHeader, cn } from '../ui'
@@ -180,10 +180,18 @@ export function FailuresByCause({ data }: { data: DashboardData }) {
 export function AgentActivity({ data }: { data: DashboardData }) {
   const fmt = useTimeFormat()
   const buckets = data.agent_activity
-  if (buckets.length === 0) return null
+  const height = 80
+  if (buckets.length === 0) {
+    return (
+      <ChartCard title="Agent Activity (Distinct Check-Ins)">
+        <div className="flex items-center justify-center text-xs text-fg-subtle" style={{ height }}>
+          No heartbeats yet
+        </div>
+      </ChartCard>
+    )
+  }
 
   const width = 400
-  const height = 80
   const maxActive = Math.max(1, ...buckets.map((b) => b.active))
   const stepX = buckets.length > 1 ? width / (buckets.length - 1) : 0
 
@@ -227,5 +235,118 @@ export function AgentActivity({ data }: { data: DashboardData }) {
         {droppedFromPeak > 0 && <span className="text-warning"> — {droppedFromPeak} fewer than peak</span>}
       </div>
     </ChartCard>
+  )
+}
+
+// Build-wide average host metrics over time: one small line graph per resource,
+// fed by GET /builds/{id}/dashboard's resource_usage buckets. Percentages
+// (CPU/mem/disk) scale 0-100; the network graph auto-scales to its own peak and
+// draws download and upload as two lines.
+function ResourceLineChart({
+  title,
+  buckets,
+  series,
+  yMax,
+  fmtValue,
+}: {
+  title: string
+  buckets: ResourceBucket[]
+  series: { values: number[]; color: string; label: string }[]
+  yMax: number
+  fmtValue: (n: number) => string
+}) {
+  const fmt = useTimeFormat()
+  const height = 72
+  // Keep the card present before any heartbeats arrive, so the row doesn't look
+  // broken mid-build -- just say there's no data yet.
+  if (buckets.length === 0) {
+    return (
+      <ChartCard title={title}>
+        <div className="flex items-center justify-center text-xs text-fg-subtle" style={{ height }}>
+          No heartbeats yet
+        </div>
+      </ChartCard>
+    )
+  }
+
+  const width = 400
+  const max = Math.max(yMax, 1)
+  const stepX = buckets.length > 1 ? width / (buckets.length - 1) : 0
+  const midY = height / 2
+  const pathFor = (values: number[]) =>
+    values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${i * stepX} ${height - (Math.min(v, max) / max) * height}`).join(' ')
+  const last = buckets[buckets.length - 1]
+
+  return (
+    <ChartCard title={title}>
+      <div className="flex gap-2">
+        <div className="flex shrink-0 flex-col justify-between text-right text-[10px] text-fg-subtle" style={{ height }}>
+          <span>{fmtValue(max)}</span>
+          <span>{fmtValue(max / 2)}</span>
+          <span>{fmtValue(0)}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full" style={{ height }}>
+            <line x1={0} y1={height} x2={width} y2={height} stroke="var(--color-border)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            <line x1={0} y1={midY} x2={width} y2={midY} stroke="var(--color-border)" strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+            {series.map((s) => (
+              <path key={s.label} d={pathFor(s.values)} fill="none" stroke={s.color} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+            ))}
+          </svg>
+          <div className="mt-1 flex justify-between text-[10px] text-fg-subtle">
+            <span>{fmt.timeShort(buckets[0].at)}</span>
+            <span>{fmt.timeShort(last.at)}</span>
+          </div>
+        </div>
+      </div>
+      <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-fg-muted">
+        {series.map((s) => (
+          <span key={s.label} className="inline-flex items-center gap-1">
+            <span className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
+            {s.label} {fmtValue(s.values[s.values.length - 1] ?? 0)}
+          </span>
+        ))}
+      </div>
+    </ChartCard>
+  )
+}
+
+const pct = (n: number) => `${Math.round(n)}%`
+
+function fmtBps(n: number): string {
+  if (n < 1024) return `${Math.round(n)} B/s`
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB/s`
+  return `${(n / (1024 * 1024)).toFixed(1)} MB/s`
+}
+
+export function ResourceCpu({ data }: { data: DashboardData }) {
+  const b = data.resource_usage
+  return <ResourceLineChart title="Average CPU" buckets={b} yMax={100} fmtValue={pct} series={[{ values: b.map((x) => x.cpu), color: 'var(--color-accent)', label: 'CPU' }]} />
+}
+
+export function ResourceMem({ data }: { data: DashboardData }) {
+  const b = data.resource_usage
+  return <ResourceLineChart title="Average Memory" buckets={b} yMax={100} fmtValue={pct} series={[{ values: b.map((x) => x.mem), color: 'var(--color-purple)', label: 'Memory' }]} />
+}
+
+export function ResourceDisk({ data }: { data: DashboardData }) {
+  const b = data.resource_usage
+  return <ResourceLineChart title="Average Disk" buckets={b} yMax={100} fmtValue={pct} series={[{ values: b.map((x) => x.disk), color: 'var(--color-warning)', label: 'Disk' }]} />
+}
+
+export function ResourceNet({ data }: { data: DashboardData }) {
+  const b = data.resource_usage
+  const yMax = Math.max(1, ...b.map((x) => Math.max(x.net_rx, x.net_tx)))
+  return (
+    <ResourceLineChart
+      title="Average Network"
+      buckets={b}
+      yMax={yMax}
+      fmtValue={fmtBps}
+      series={[
+        { values: b.map((x) => x.net_rx), color: 'var(--color-success)', label: 'Down' },
+        { values: b.map((x) => x.net_tx), color: 'var(--color-sky)', label: 'Up' },
+      ]}
+    />
   )
 }

@@ -157,11 +157,16 @@ function RegistryImages({ host }: { host: string }) {
             ) : img.tags.length === 0 ? (
               <span className="text-xs text-fg-subtle">no tags</span>
             ) : (
-              img.tags.map((t) => (
-                <Badge key={t} tone="info">
-                  {t}
-                </Badge>
-              ))
+              <>
+                {img.tags.map((t) => (
+                  <Badge key={t} tone="info">
+                    {t}
+                  </Badge>
+                ))}
+                {img.tag_count > img.tags.length && (
+                  <span className="text-xs text-fg-subtle">+{img.tag_count - img.tags.length} more</span>
+                )}
+              </>
             )}
           </li>
         ))}

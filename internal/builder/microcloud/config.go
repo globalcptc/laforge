@@ -36,14 +36,17 @@ type Config struct {
 	// that cluster with "Failed loading storage pool: Storage pool not
 	// found." Per-cluster, like OVNUplinkNetwork above, not a constant.
 	StoragePool string
-	// ExternalAccessIP is the single external IP content's `public:` ports are
-	// NAT'd in on -- shared across every team (one external address, a distinct
-	// external port per (team, host, port)). Empty means external access isn't
-	// configured; ConfigureExternalAccess then errors clearly. Per-cluster
-	// builder config, like OVNUplinkNetwork.
+	// ExternalAccessIP is the external IP (or IPs) content's `public:` ports are
+	// NAT'd in on. It may be a single address, a comma-separated list, or a
+	// dashed IPv4 range ("192.0.2.10-192.0.2.20" or the short "192.0.2.10-20"),
+	// or a mix -- see parseExternalIPs. Each team is assigned one of them,
+	// round-robin by team number, so with enough IPs every team gets its own
+	// public address; teams that share an IP get distinct external ports.
+	// Empty means external access isn't configured; ConfigureExternalAccess then
+	// errors clearly. Per-cluster builder config, like OVNUplinkNetwork.
 	ExternalAccessIP string
-	// ExternalPortMin/Max bound the external ports allocated on ExternalAccessIP;
-	// defaults apply when unset (see externalPortRange).
+	// ExternalPortMin/Max bound the external ports allocated per team on its
+	// assigned IP; defaults apply when unset (see externalPortRange).
 	ExternalPortMin int
 	ExternalPortMax int
 	// DockerBaseFingerprint is the fingerprint of this builder's published

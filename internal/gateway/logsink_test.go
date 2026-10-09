@@ -97,3 +97,30 @@ func TestHTTPSinkEnqueueNeverBlocks(t *testing.T) {
 		t.Fatal("Enqueue blocked under a full buffer / failing backend")
 	}
 }
+
+// TestFallbackTarget covers the container_logs -> gateway-fallback mapping: the
+// splunk driver maps to the HEC raw endpoint with the token as an auth header,
+// a missing url is rejected, and any non-splunk driver is unsupported.
+func TestFallbackTarget(t *testing.T) {
+	url, headers, ok := fallbackTarget("splunk", map[string]string{
+		"splunk-url":   "https://splunk.example:8088/",
+		"splunk-token": "tok-123",
+		"splunk-index": "cptc",
+	})
+	if !ok {
+		t.Fatal("splunk driver should be supported")
+	}
+	if url != "https://splunk.example:8088/services/collector/raw" {
+		t.Fatalf("url = %q, want the HEC raw endpoint (trailing slash trimmed)", url)
+	}
+	if headers["Authorization"] != "Splunk tok-123" {
+		t.Fatalf("Authorization = %q, want \"Splunk tok-123\"", headers["Authorization"])
+	}
+
+	if _, _, ok := fallbackTarget("splunk", map[string]string{"splunk-token": "x"}); ok {
+		t.Error("splunk without splunk-url must be unsupported")
+	}
+	if _, _, ok := fallbackTarget("fluentd", map[string]string{"fluentd-address": "x:24224"}); ok {
+		t.Error("a non-splunk driver must be unsupported on the gateway fallback")
+	}
+}

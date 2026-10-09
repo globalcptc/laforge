@@ -84,7 +84,7 @@ func TestRealRustAgentEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading agent binary: %v", err)
 	}
-	patched, err := agentfactory.PatchBinary(baseData, addr, ca.CertPEM, clientCert, clientKey)
+	patched, err := agentfactory.PatchBinary(baseData, addr, ca.CertPEM, clientCert, clientKey, false)
 	if err != nil {
 		t.Fatalf("PatchBinary: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestRealRustAgentSupervisorEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading agent binary: %v", err)
 	}
-	patched, err := agentfactory.PatchBinary(baseData, addr, ca.CertPEM, clientCert, clientKey)
+	patched, err := agentfactory.PatchBinary(baseData, addr, ca.CertPEM, clientCert, clientKey, false)
 	if err != nil {
 		t.Fatalf("PatchBinary: %v", err)
 	}

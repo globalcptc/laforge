@@ -11,6 +11,7 @@ import (
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/orchestrator"
 	"github.com/globalcptc/laforge/internal/runner"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // TestDashboardAggregatesRealData drives the real task queue (the actual
@@ -183,5 +184,34 @@ func TestDashboardRequiresAtLeastRead(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401", resp.StatusCode)
+	}
+}
+
+// TestBucketResourceUsageAveragesAndSkipsNil pins the resource-graph math: a
+// metric present on some heartbeats is averaged over just those, and a nil
+// metric is skipped (not counted as 0).
+func TestBucketResourceUsageAveragesAndSkipsNil(t *testing.T) {
+	ts := func(s int) pgtype.Timestamptz { return pgtype.Timestamptz{Time: time.Unix(int64(s), 0), Valid: true} }
+	f := func(v float64) *float64 { return &v }
+	hbs := []db.AgentHeartbeat{
+		{CreatedAt: ts(0), CpuPct: f(10), MemPct: f(50), NetRxBps: f(100), NetTxBps: f(200)},
+		{CreatedAt: ts(0), CpuPct: f(30), MemPct: nil, NetRxBps: f(300), NetTxBps: f(400)},
+	}
+	out := bucketResourceUsage(hbs)
+	if len(out) == 0 {
+		t.Fatal("no buckets produced")
+	}
+	b := out[0] // both heartbeats share the first bucket (same instant)
+	if b.Cpu != 20 {
+		t.Errorf("cpu avg = %v, want 20", b.Cpu)
+	}
+	if b.Mem != 50 {
+		t.Errorf("mem avg = %v, want 50 (the one nil is skipped, not averaged as 0)", b.Mem)
+	}
+	if b.NetRx != 200 || b.NetTx != 300 {
+		t.Errorf("net avg = rx %v tx %v, want 200 / 300", b.NetRx, b.NetTx)
+	}
+	if got := bucketResourceUsage(nil); got == nil || len(got) != 0 {
+		t.Errorf("empty input = %v, want an empty (non-nil) slice", got)
 	}
 }

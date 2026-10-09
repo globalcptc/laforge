@@ -64,6 +64,7 @@ type AgentTask struct {
 	IgnoreErrors     bool               `json:"ignore_errors"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	AdHoc            bool               `json:"ad_hoc"`
 }
 
 type AttentionDismissal struct {
@@ -202,6 +203,7 @@ type DeployedObject struct {
 	PowerStateCheckedAt pgtype.Timestamptz `json:"power_state_checked_at"`
 	Tags                json.RawMessage    `json:"tags"`
 	StepsMaterializedAt pgtype.Timestamptz `json:"steps_materialized_at"`
+	BlockedOn           json.RawMessage    `json:"blocked_on"`
 }
 
 type Environment struct {
@@ -221,6 +223,8 @@ type Environment struct {
 	Tags              json.RawMessage    `json:"tags"`
 	Findings          json.RawMessage    `json:"findings"`
 	Extends           *string            `json:"extends"`
+	AgentDebug        bool               `json:"agent_debug"`
+	ContainerLogs     json.RawMessage    `json:"container_logs"`
 }
 
 type Event struct {
@@ -416,12 +420,15 @@ type Script struct {
 }
 
 type Session struct {
-	ID          pgtype.UUID        `json:"id"`
-	AccountID   pgtype.UUID        `json:"account_id"`
-	TokenHash   string             `json:"token_hash"`
-	GithubToken string             `json:"github_token"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	ID                     pgtype.UUID        `json:"id"`
+	AccountID              pgtype.UUID        `json:"account_id"`
+	TokenHash              string             `json:"token_hash"`
+	GithubToken            string             `json:"github_token"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt              pgtype.Timestamptz `json:"expires_at"`
+	GithubTokenExpiresAt   pgtype.Timestamptz `json:"github_token_expires_at"`
+	GithubRefreshToken     string             `json:"github_refresh_token"`
+	GithubRefreshExpiresAt pgtype.Timestamptz `json:"github_refresh_expires_at"`
 }
 
 type ShellSession struct {

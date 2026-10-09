@@ -201,9 +201,33 @@ type Environment struct {
 	Vars        map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
 	Tags        map[string]string `yaml:"tags,omitempty" json:"tags,omitempty"`
 	Findings    []Finding         `yaml:"findings,omitempty" json:"findings,omitempty"`
+	// AgentDebug turns on the agent's local debug log (a file beside the agent
+	// binary) for every host/container in this environment. Off by default, and
+	// baked into each agent binary at deploy time so it can't be flipped on the
+	// box -- see internal/agentdelivery and agent/src/diag.rs. Default (false)
+	// means the agent is silent locally; only what it sends the servers leaves
+	// it.
+	AgentDebug bool `yaml:"agent-debug,omitempty" json:"agent-debug,omitempty"`
+	// ContainerLogs, when set, forwards every container's console output to an
+	// external log collector using each builder's NATIVE mechanism (a docker
+	// log driver on Incus/MicroCloud, the Docker daemon default before
+	// `docker compose up` for a compose project, a task logConfiguration on AWS
+	// Fargate, ...) -- LaForge never ships the bytes itself. driver + options
+	// pass straight through to that mechanism. Container-only (hosts are VMs
+	// with their own logging); nil disables it.
+	ContainerLogs *ContainerLogs `yaml:"container_logs,omitempty" json:"container_logs,omitempty"`
 	// Networks: network name -> object name (host or container) -> copies
 	Networks map[string]map[string][]Copy `yaml:"networks,omitempty" json:"networks,omitempty"`
 	Extends  string                       `yaml:"extends,omitempty" json:"extends,omitempty"`
+}
+
+// ContainerLogs is the environment's container log-forwarding config: a log
+// driver name and its driver-specific options (the exact keys the driver
+// expects, e.g. splunk-url/splunk-token for the "splunk" driver). Applied per
+// builder with that platform's native logging; see Environment.ContainerLogs.
+type ContainerLogs struct {
+	Driver  string            `yaml:"driver" json:"driver"`
+	Options map[string]string `yaml:"options,omitempty" json:"options,omitempty"`
 }
 
 // Person is one row of a people/*.csv file. Columns beyond username are

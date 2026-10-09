@@ -52,7 +52,7 @@ func Fingerprint(repoRoot string, c *loader.Content, ctx *render.Context, disk i
 	// A compose container is its project: editing the compose file, or any file
 	// shipped with it, rebuilds it.
 	if ctx.Compose != "" {
-		b, err := compose.Load(repoRoot, ctx.Compose)
+		b, err := compose.Load(repoRoot, ctx.Compose, nil)
 		if err != nil {
 			return "", fmt.Errorf("loading compose project for fingerprint: %w", err)
 		}

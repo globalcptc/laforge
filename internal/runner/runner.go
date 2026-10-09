@@ -507,6 +507,19 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			CloudInitUserData: del.UserData, CloudInitViaISO: del.Platform == agentdelivery.Windows,
 			AgentBinary: del.Binary, AgentDownloadURL: del.DownloadURL,
 		}
+		// Native container-log forwarding (environment container_logs): the
+		// builder applies this as its platform's log driver on the container. A
+		// ComposeHost ignores it -- a compose project's logging is set as the
+		// Docker daemon default on its host before `docker compose up` (gateway).
+		if raw, lerr := q.GetEnvironmentContainerLogsForObject(ctx, obj.ID); lerr == nil && len(raw) > 0 {
+			var cl struct {
+				Driver  string            `json:"driver"`
+				Options map[string]string `json:"options"`
+			}
+			if json.Unmarshal(raw, &cl) == nil {
+				cspec.LogDriver, cspec.LogOptions = cl.Driver, cl.Options
+			}
+		}
 		if ct.Compose != "" {
 			// A Compose project: the builder provides the machine, and the
 			// agent on it pulls and starts the project (registry logins
@@ -578,7 +591,15 @@ func (r *Runner) deliverAgent(ctx context.Context, q *db.Queries, obj db.Deploye
 		return agentdelivery.Delivery{}, fmt.Errorf("generating agent download token: %w", err)
 	}
 	token := hex.EncodeToString(tokenBytes)
-	del, err := r.Delivery.Build(obj.ID.String(), token, osName)
+	// agent-debug (environment YAML) bakes a local debug log into the binary;
+	// off (the default, and on any lookup miss) means the agent is silent on the
+	// box and only reports to the servers. A missing row -- no environment yet,
+	// or a chain gap -- is simply "off", never a deploy failure.
+	debug, err := q.GetEnvironmentAgentDebugForObject(ctx, obj.ID)
+	if err != nil {
+		debug = false
+	}
+	del, err := r.Delivery.Build(obj.ID.String(), token, osName, debug)
 	if err != nil {
 		return agentdelivery.Delivery{}, fmt.Errorf("building agent delivery: %w", err)
 	}

@@ -160,7 +160,7 @@ func (s *Server) handleCreateAdHocTask(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		task, err := s.Queries.CreateAgentTask(r.Context(), db.CreateAgentTaskParams{
+		task, err := s.Queries.CreateAdHocAgentTask(r.Context(), db.CreateAdHocAgentTaskParams{
 			DeployedObjectID: o.ID, StepIndex: next, Command: req.Command, Payload: req.Payload,
 		})
 		if err != nil {

@@ -82,13 +82,19 @@ func isFullMarkerRun(region, marker []byte) bool {
 	return true
 }
 
-// EncodeBlob builds the same [len][bytes] x4, XOR'd layout
+// EncodeBlob builds the same [len][bytes] x5, XOR'd layout
 // agent/src/identity.rs's parse_blob expects: gateway address, CA cert
-// PEM, this host's client cert PEM, this host's client key PEM, in that
-// order.
-func EncodeBlob(gatewayAddr string, caPEM, certPEM, keyPEM []byte) ([]byte, error) {
+// PEM, this host's client cert PEM, this host's client key PEM, and the
+// agent-debug flag (one byte, 1 = on), in that order. The 5th section is new;
+// an agent built before it reads the zero padding as a zero-length section,
+// which it (correctly) treats as debug off.
+func EncodeBlob(gatewayAddr string, caPEM, certPEM, keyPEM []byte, debug bool) ([]byte, error) {
 	var buf bytes.Buffer
-	for _, section := range [][]byte{[]byte(gatewayAddr), caPEM, certPEM, keyPEM} {
+	debugByte := []byte{0}
+	if debug {
+		debugByte[0] = 1
+	}
+	for _, section := range [][]byte{[]byte(gatewayAddr), caPEM, certPEM, keyPEM, debugByte} {
 		var lenBuf [4]byte
 		binary.BigEndian.PutUint32(lenBuf[:], uint32(len(section)))
 		buf.Write(lenBuf[:])
@@ -109,12 +115,12 @@ func EncodeBlob(gatewayAddr string, caPEM, certPEM, keyPEM []byte) ([]byte, erro
 // region overwritten with gatewayAddr/caPEM/certPEM/keyPEM, encoded and
 // obfuscated exactly as the agent expects to read them back. baseBinary
 // itself is never modified.
-func PatchBinary(baseBinary []byte, gatewayAddr string, caPEM, certPEM, keyPEM []byte) ([]byte, error) {
+func PatchBinary(baseBinary []byte, gatewayAddr string, caPEM, certPEM, keyPEM []byte, debug bool) ([]byte, error) {
 	offset, err := FindMarkerRegion(baseBinary)
 	if err != nil {
 		return nil, err
 	}
-	blob, err := EncodeBlob(gatewayAddr, caPEM, certPEM, keyPEM)
+	blob, err := EncodeBlob(gatewayAddr, caPEM, certPEM, keyPEM, debug)
 	if err != nil {
 		return nil, err
 	}

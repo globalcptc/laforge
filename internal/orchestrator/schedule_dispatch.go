@@ -334,7 +334,7 @@ func dispatchCommand(ctx context.Context, q *db.Queries, objID pgtype.UUID, comm
 		log.Printf("next step index for %s: %v", objID, err)
 		return false
 	}
-	if _, err := q.CreateAgentTask(ctx, db.CreateAgentTaskParams{
+	if _, err := q.CreateAdHocAgentTask(ctx, db.CreateAdHocAgentTaskParams{
 		DeployedObjectID: objID, StepIndex: next, Command: command, Payload: payload,
 	}); err != nil {
 		log.Printf("creating agent task for %s: %v", objID, err)

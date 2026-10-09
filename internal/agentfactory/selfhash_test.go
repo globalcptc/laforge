@@ -80,7 +80,7 @@ func TestSelfHashSealRoundTrips(t *testing.T) {
 	caPEM := []byte("-----BEGIN CERTIFICATE-----\nnotreallyacert\n-----END CERTIFICATE-----\n")
 	certPEM := caPEM
 	keyPEM := []byte("-----BEGIN EC PRIVATE KEY-----\nnotreallyakey\n-----END EC PRIVATE KEY-----\n")
-	patched, err := PatchBinary(sealed, "127.0.0.1:1", caPEM, certPEM, keyPEM)
+	patched, err := PatchBinary(sealed, "127.0.0.1:1", caPEM, certPEM, keyPEM, false)
 	if err != nil {
 		t.Fatalf("PatchBinary: %v", err)
 	}
@@ -175,7 +175,7 @@ func sealedPatchedAgent(t *testing.T) string {
 	}
 	caPEM := []byte("-----BEGIN CERTIFICATE-----\nnotreallyacert\n-----END CERTIFICATE-----\n")
 	keyPEM := []byte("-----BEGIN EC PRIVATE KEY-----\nnotreallyakey\n-----END EC PRIVATE KEY-----\n")
-	patched, err := PatchBinary(sealed, "127.0.0.1:1", caPEM, caPEM, keyPEM)
+	patched, err := PatchBinary(sealed, "127.0.0.1:1", caPEM, caPEM, keyPEM, false)
 	if err != nil {
 		t.Fatalf("PatchBinary: %v", err)
 	}

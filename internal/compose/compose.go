@@ -6,9 +6,12 @@
 //
 // The whole directory travels to that machine as one archive, so anything the
 // compose file refers to by relative path is there, unchanged, on every
-// builder. Nothing in it is templated: a compose project is full of `${VAR}`
-// and `$host`-style syntax of its own, and the files are meant to be the same
-// ones a developer runs locally.
+// builder. The compose FILE itself gets LaForge's template pass at deploy
+// (`{{ vars.x }}`, `{{ .Team }}`, ...), so it can vary per team/object; the
+// caller supplies the renderer (see Load's renderCompose). Compose's own
+// `${VAR}`/`$host` interpolation is left untouched -- it isn't `{{ }}` -- so it
+// still resolves at `docker compose` runtime as usual. The other files in the
+// directory travel verbatim.
 //
 // Images are never built there. A service keeps its `build:` for local
 // development, but must also name the `image:` LaForge pulls.
@@ -69,18 +72,32 @@ type Bundle struct {
 // machine exists: the compose file parses, every service names an image, every
 // relative bind mount is inside the directory, and the directory is small
 // enough to ship.
-func Load(repoRoot, file string) (*Bundle, error) {
+// renderTemplate, when non-nil, is the LaForge template pass (`{{ vars.x }}`,
+// `{{ .Team }}`, ...). It is applied to the compose file, and to any supporting
+// file whose name ends in `.tmpl` (which then ships with the `.tmpl` stripped --
+// `nginx.conf.tmpl` -> `nginx.conf`). The caller supplies it with the object's
+// render context; compose itself stays render-agnostic. nil (the
+// load/check/fingerprint paths, which have no per-object context) ships every
+// file verbatim, `.tmpl` names and all.
+func Load(repoRoot, file string, renderTemplate func([]byte) ([]byte, error)) (*Bundle, error) {
 	full := filepath.Join(repoRoot, filepath.FromSlash(file))
 	data, err := os.ReadFile(full)
 	if err != nil {
 		return nil, fmt.Errorf("compose file %s: not found in the content repo", file)
+	}
+	if renderTemplate != nil {
+		if data, err = renderTemplate(data); err != nil {
+			return nil, fmt.Errorf("compose file %s: rendering templates: %w", file, err)
+		}
 	}
 	dir := filepath.Dir(full)
 	b := &Bundle{File: filepath.Base(full)}
 	if b.Images, err = checkFile(dir, data); err != nil {
 		return nil, fmt.Errorf("%s: %w", file, err)
 	}
-	if b.Archive, err = archive(dir); err != nil {
+	// Ship the (possibly rendered) compose file, not the raw on-disk one; `.tmpl`
+	// supporting files are rendered and renamed by archive.
+	if b.Archive, err = archive(dir, renderTemplate, map[string][]byte{b.File: data}); err != nil {
 		return nil, fmt.Errorf("%s: %w", file, err)
 	}
 	if len(b.Archive) > MaxArchiveBytes {
@@ -121,20 +138,27 @@ func checkFile(dir string, data []byte) ([]string, error) {
 			}
 			return nil, fmt.Errorf("service %q has no image:", n)
 		}
-		if !strings.Contains(svc.Image, "$") && !seen[svc.Image] {
+		// Skip refs/paths that aren't resolvable at load time: compose's own
+		// `${VAR}` interpolation, and LaForge `{{ ... }}` templates (resolved
+		// per object at deploy, not here).
+		if !unresolved(svc.Image) && !seen[svc.Image] {
 			seen[svc.Image] = true
 			images = append(images, svc.Image)
 		}
 		for _, v := range svc.Volumes {
 			src := bindSource(v)
-			if src == "" {
+			if src == "" || unresolved(src) {
 				continue
 			}
 			if rel := filepath.Clean(src); rel == ".." || strings.HasPrefix(rel, "../") {
 				return nil, fmt.Errorf("service %q mounts %q, which is outside the compose file's directory and won't be shipped", n, src)
 			}
+			// The mounted file may be produced by a `.tmpl` at render time, so a
+			// `foo.conf` mount is satisfied by `foo.conf` OR `foo.conf.tmpl`.
 			if _, err := os.Stat(filepath.Join(dir, src)); err != nil {
-				return nil, fmt.Errorf("service %q mounts %q, which does not exist next to the compose file", n, src)
+				if _, err2 := os.Stat(filepath.Join(dir, src+".tmpl")); err2 != nil {
+					return nil, fmt.Errorf("service %q mounts %q, which does not exist next to the compose file", n, src)
+				}
 			}
 		}
 	}
@@ -165,7 +189,14 @@ func bindSource(v interface{}) string {
 
 // archive packs dir as a gzipped tar with sorted entries and no timestamps or
 // owners, so the same content always produces the same bytes.
-func archive(dir string) ([]byte, error) {
+// unresolved reports whether a value still carries syntax that isn't resolvable
+// at load/check time: compose's own `${VAR}`/`$VAR` interpolation, or a LaForge
+// `{{ ... }}` template (resolved per object at deploy).
+func unresolved(s string) bool {
+	return strings.Contains(s, "$") || strings.Contains(s, "{{")
+}
+
+func archive(dir string, renderTemplate func([]byte) ([]byte, error), override map[string][]byte) ([]byte, error) {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
@@ -193,11 +224,23 @@ func archive(dir string) ([]byte, error) {
 		if info.Mode()&0o111 != 0 {
 			mode = 0o755
 		}
-		if err := tw.WriteHeader(&tar.Header{Typeflag: tar.TypeReg, Name: rel, Mode: mode, Size: info.Size()}); err != nil {
-			return err
+		// The compose file was rendered by the caller and passed in override; a
+		// `.tmpl` supporting file is rendered here and ships with the suffix
+		// stripped; everything else is verbatim.
+		name := rel
+		data, ok := override[rel]
+		if !ok {
+			if data, err = os.ReadFile(path); err != nil {
+				return err
+			}
+			if renderTemplate != nil && strings.HasSuffix(rel, ".tmpl") {
+				if data, err = renderTemplate(data); err != nil {
+					return fmt.Errorf("rendering %s: %w", rel, err)
+				}
+				name = strings.TrimSuffix(rel, ".tmpl")
+			}
 		}
-		data, err := os.ReadFile(path)
-		if err != nil {
+		if err := tw.WriteHeader(&tar.Header{Typeflag: tar.TypeReg, Name: name, Mode: mode, Size: int64(len(data))}); err != nil {
 			return err
 		}
 		_, err = tw.Write(data)

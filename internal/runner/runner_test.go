@@ -169,21 +169,22 @@ func TestFullBuildConverges(t *testing.T) {
 		t.Fatalf("saw %d distinct external_refs, want 65", len(seenRefs))
 	}
 
-	// Step execution is now gated on depends_on being FINISHED, not merely on
-	// the box being up: the box deploys ahead of time, but a host's authored
-	// `steps:` are materialized only once every dependency has finished
-	// configuring. The convergence loop above returns the moment every box is
-	// "running" (nothing is materialized during deploy anymore), so run one
-	// more Reconcile -- what the orchestrator's poll loop does continuously --
-	// to let roots materialize now that their boxes are up.
+	// Step execution is gated on depends_on being FINISHED, not merely on the
+	// box being up: the box deploys ahead of time, and its authored `steps:`
+	// are queued as soon as it is up -- but while a dependency is unfinished
+	// they are queued 'blocked' (visible, never leased) and the object records
+	// what it is blocked_on (migration 00047). The convergence loop above
+	// returns the moment every box is "running", so run one more Reconcile --
+	// what the orchestrator's poll loop does continuously -- to queue steps now
+	// that the boxes are up.
 	if err := orchestrator.Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
 		t.Fatalf("Reconcile (post-deploy, to materialize roots): %v", err)
 	}
 	// webserver.yaml declares `depends_on: [database]`, and this harness never
 	// advances the lifecycle, so team 1's database stays "running" (never
-	// "finished") -- team 1's web01 must therefore have NO agent_task rows yet,
-	// while a root like database (no depends_on) must have materialized its
-	// steps as soon as its box came up.
+	// "finished") -- team 1's web01 must therefore have its steps queued but
+	// every one of them blocked on database, while a root like database (no
+	// depends_on) must have materialized its steps as soon as its box came up.
 	team1, err := q.GetTeamByNumber(ctx, db.GetTeamByNumberParams{BuildID: build.ID, TeamNumber: 1})
 	if err != nil {
 		t.Fatalf("GetTeamByNumber: %v", err)
@@ -212,20 +213,32 @@ func TestFullBuildConverges(t *testing.T) {
 			t.Errorf("database copy %s (a root, no depends_on) should have materialized its steps once its box was up", db.StrOrEmpty(dbCopy.AsName))
 		}
 	}
-	if web01.StepsMaterializedAt.Valid {
-		t.Error("web01 steps must NOT be materialized while its dependency (database) has not finished")
+	if !web01.StepsMaterializedAt.Valid {
+		t.Error("web01 steps should be queued (blocked) as soon as its box is up, even while its dependency (database) has not finished")
 	}
+	var blockedOn []string
+	if err := json.Unmarshal(web01.BlockedOn, &blockedOn); err != nil || len(blockedOn) != 1 || blockedOn[0] != "database" {
+		t.Errorf("web01 blocked_on = %s, want [\"database\"]", web01.BlockedOn)
+	}
+	// script: expands to two commands each (write_file the rendered script,
+	// then execute it) -- see internal/gateway/steps.go's own "script" case --
+	// so webserver.yaml's base + download + extract + vuln-sqli is 6 real
+	// commands, not 4.
 	if gated, err := q.ListAgentTasksByHost(ctx, web01.ID); err != nil {
 		t.Fatalf("ListAgentTasksByHost(web01): %v", err)
-	} else if len(gated) != 0 {
-		t.Fatalf("web01 agent_task rows = %d while gated on database, want 0", len(gated))
+	} else if len(gated) != 6 {
+		t.Fatalf("web01 agent_task rows = %d while gated on database, want 6 queued and blocked", len(gated))
+	} else {
+		for i, at := range gated {
+			if at.Status != "blocked" {
+				t.Errorf("web01 agent_task[%d] status = %q while gated on database, want blocked", i, at.Status)
+			}
+		}
 	}
 
-	// Now let every database copy finish, then reconcile once: web01's steps
-	// must materialize. script: expands to two commands each (write_file the
-	// rendered script, then execute it) -- see internal/gateway/steps.go's own
-	// "script" case -- so webserver.yaml's base + download + extract +
-	// vuln-sqli is 6 real commands, not 4.
+	// Now let every database copy finish, then reconcile once: web01's queued
+	// steps must be released (blocked -> pending) and its blocked_on cleared,
+	// with no new rows -- the same 6 commands, now runnable.
 	for _, dbCopy := range databaseCopies {
 		if err := q.SetDeployedObjectFinished(ctx, dbCopy.ID); err != nil {
 			t.Fatalf("SetDeployedObjectFinished(%s): %v", db.StrOrEmpty(dbCopy.AsName), err)
@@ -246,9 +259,18 @@ func TestFullBuildConverges(t *testing.T) {
 		if at.Command != wantCommands[i] {
 			t.Errorf("web01 agent_task[%d].Command = %q, want %q", i, at.Command, wantCommands[i])
 		}
+		if at.Status != "pending" {
+			t.Errorf("web01 agent_task[%d] status = %q after database finished, want pending", i, at.Status)
+		}
 		if int(at.StepIndex) != i {
 			t.Errorf("web01 agent_task[%d].StepIndex = %d, want %d", i, at.StepIndex, i)
 		}
+	}
+
+	if released, err := q.GetDeployedObject(ctx, web01.ID); err != nil {
+		t.Fatalf("GetDeployedObject(web01): %v", err)
+	} else if len(released.BlockedOn) != 0 && string(released.BlockedOn) != "null" {
+		t.Errorf("web01 blocked_on = %s after database finished, want cleared", released.BlockedOn)
 	}
 
 	// A second Reconcile pass over an already-fully-deployed build must

@@ -80,7 +80,12 @@ export function BuildLayout() {
             )}
           </span>
         }
-        breadcrumbs={[{ label: 'Repositories', href: '/repos' }, { label: 'Repository', href: `/repos/${repoId}` }, { label: build?.environment_name ?? '…' }]}
+        breadcrumbs={[
+          { label: 'Repositories', href: '/repos' },
+          { label: 'Repository', href: `/repos/${repoId}` },
+          ...(build?.branch ? [{ label: build.branch }] : []),
+          { label: build?.environment_name ?? '…' },
+        ]}
         actions={
           <>
             {build?.status === 'planned' && (

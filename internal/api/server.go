@@ -208,6 +208,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /auth/client-id", s.handleClientID)
 	mux.HandleFunc("GET /auth/github/login", s.handleLoginStart)
 	mux.HandleFunc("GET /auth/github/callback", s.handleCallback)
+	mux.HandleFunc("POST /auth/github/refresh", s.handleGithubRefresh)
 	mux.HandleFunc("POST /auth/logout", s.handleLogout)
 	mux.HandleFunc("GET /auth/me", s.handleMe)
 	mux.HandleFunc("POST /auth/me/timezone", s.handleSetTimezone)

@@ -12,10 +12,11 @@ import (
 )
 
 // TestRelayBridgesClientAndAgent drives the in-memory relay end to end: a client
-// half and an agent half attach for the same session, a data frame flows each
-// way, a mismatched-object agent is rejected, and a ShellClose tears the whole
-// thing down and de-registers it. No DB and no TLS -- the relay is a pure
-// in-memory byte pipe.
+// half and both agent directions attach for the same session, a data frame flows
+// each way (client input over the IN connection, PTY output over the OUT one), a
+// mismatched-object agent is rejected, and a ShellClose tears the whole thing
+// down and de-registers it. No DB and no TLS -- the relay is a pure in-memory
+// byte pipe.
 func TestRelayBridgesClientAndAgent(t *testing.T) {
 	s := &Server{}
 
@@ -23,7 +24,8 @@ func TestRelayBridgesClientAndAgent(t *testing.T) {
 	objStr := uuidString(objID)
 
 	clientGW, clientUser := net.Pipe()
-	agentGW, agentHost := net.Pipe()
+	agentOutGW, agentOutHost := net.Pipe()
+	agentInGW, agentInHost := net.Pipe()
 
 	clientAttach, _ := json.Marshal(agentproto.ShellAttachPayload{SessionID: "s1", Role: agentproto.ShellRoleClient, ObjectID: objStr})
 	go s.handleRelayClient(clientGW, clientAttach)
@@ -39,35 +41,38 @@ func TestRelayBridgesClientAndAgent(t *testing.T) {
 	// pairing). Use a different uuid.
 	wrong := pgtype.UUID{Bytes: [16]byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}, Valid: true}
 	badGW, _ := net.Pipe()
-	agentAttach, _ := json.Marshal(agentproto.ShellAttachPayload{SessionID: "s1", Role: agentproto.ShellRoleAgent})
+	outAttach, _ := json.Marshal(agentproto.ShellAttachPayload{SessionID: "s1", Role: agentproto.ShellRoleAgent, Dir: agentproto.ShellDirOut})
+	inAttach, _ := json.Marshal(agentproto.ShellAttachPayload{SessionID: "s1", Role: agentproto.ShellRoleAgent, Dir: agentproto.ShellDirIn})
 	done := make(chan struct{})
-	go func() { s.handleShellAgent(badGW, wrong, agentAttach); close(done) }()
+	go func() { s.handleShellAgent(badGW, wrong, outAttach); close(done) }()
 	select {
 	case <-done: // good: rejected and returned
 	case <-time.After(2 * time.Second):
 		t.Fatal("handleShellAgent did not reject a mismatched-object agent")
 	}
 
-	// The real agent attaches.
-	go s.handleShellAgent(agentGW, objID, agentAttach)
+	// The real agent attaches both directions; the relay starts only once both
+	// are present.
+	go s.handleShellAgent(agentOutGW, objID, outAttach)
+	go s.handleShellAgent(agentInGW, objID, inAttach)
 
-	// client -> agent
+	// client -> agent, over the IN connection
 	writeFrame(t, clientUser, agentproto.ShellData, []byte("hello"))
-	if mt, body := readFrame(t, agentHost); mt != agentproto.ShellData || string(body) != "hello" {
-		t.Fatalf("agent got (%v, %q), want (ShellData, hello)", mt, body)
+	if mt, body := readFrame(t, agentInHost); mt != agentproto.ShellData || string(body) != "hello" {
+		t.Fatalf("agent IN got (%v, %q), want (ShellData, hello)", mt, body)
 	}
-	// agent -> client
-	writeFrame(t, agentHost, agentproto.ShellData, []byte("world"))
+	// agent -> client, over the OUT connection
+	writeFrame(t, agentOutHost, agentproto.ShellData, []byte("world"))
 	if mt, body := readFrame(t, clientUser); mt != agentproto.ShellData || string(body) != "world" {
 		t.Fatalf("client got (%v, %q), want (ShellData, world)", mt, body)
 	}
 
-	// Closing from the client is forwarded to the agent (which, being a real
-	// agent, reads it -- net.Pipe is unbuffered, so the test must consume it),
-	// then the session tears down and de-registers.
+	// Closing from the client is forwarded to the agent IN side (which, being a
+	// real agent, reads it -- net.Pipe is unbuffered, so the test must consume
+	// it), then the session tears down and de-registers.
 	writeFrame(t, clientUser, agentproto.ShellClose, []byte(`{"reason":"bye"}`))
-	if mt, _ := readFrame(t, agentHost); mt != agentproto.ShellClose {
-		t.Fatalf("agent got %v on close, want ShellClose", mt)
+	if mt, _ := readFrame(t, agentInHost); mt != agentproto.ShellClose {
+		t.Fatalf("agent IN got %v on close, want ShellClose", mt)
 	}
 	waitFor(t, func() bool {
 		s.relayMu.Lock()

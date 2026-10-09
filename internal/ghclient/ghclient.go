@@ -378,8 +378,25 @@ func (c *Client) RequestDeviceCode(ctx context.Context, clientID string, scopes 
 
 type deviceTokenResponse struct {
 	AccessToken string `json:"access_token"`
-	Error       string `json:"error"`
-	ErrorDesc   string `json:"error_description"`
+	// Present when the GitHub App has "Expire user authorization tokens" on:
+	// the access token lasts expires_in seconds and refresh_token (good for
+	// refresh_token_expires_in seconds) trades for a fresh one. Absent (zero)
+	// when the App doesn't expire user tokens, in which case no refresh is ever
+	// needed.
+	RefreshToken          string `json:"refresh_token"`
+	ExpiresIn             int    `json:"expires_in"`
+	RefreshTokenExpiresIn int    `json:"refresh_token_expires_in"`
+	Error                 string `json:"error"`
+	ErrorDesc             string `json:"error_description"`
+}
+
+// OAuthToken is a user access token and, when the App expires user tokens, the
+// refresh token and lifetimes (in seconds) needed to keep it fresh.
+type OAuthToken struct {
+	AccessToken           string
+	RefreshToken          string
+	ExpiresIn             int
+	RefreshTokenExpiresIn int
 }
 
 // ErrAuthorizationDenied is returned when the person declines the sign-in
@@ -396,7 +413,7 @@ var ErrDeviceCodeExpired = fmt.Errorf("device code expired before authorization 
 // in, the code expires, or they decline. This is the actual wait loop
 // behind `laforge login` -- ctx cancellation (e.g. the person hits Ctrl-C)
 // stops it immediately rather than waiting out the full interval.
-func (c *Client) PollForToken(ctx context.Context, clientID, deviceCode string, interval, expiresIn int) (string, error) {
+func (c *Client) PollForToken(ctx context.Context, clientID, deviceCode string, interval, expiresIn int) (OAuthToken, error) {
 	deadline := time.Now().Add(time.Duration(expiresIn) * time.Second)
 	wait := time.Duration(interval) * time.Second
 	if wait <= 0 {
@@ -404,11 +421,11 @@ func (c *Client) PollForToken(ctx context.Context, clientID, deviceCode string, 
 	}
 	for {
 		if time.Now().After(deadline) {
-			return "", ErrDeviceCodeExpired
+			return OAuthToken{}, ErrDeviceCodeExpired
 		}
 		select {
 		case <-ctx.Done():
-			return "", ctx.Err()
+			return OAuthToken{}, ctx.Err()
 		default:
 		}
 		c.sleep(wait)
@@ -420,40 +437,45 @@ func (c *Client) PollForToken(ctx context.Context, clientID, deviceCode string, 
 		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.AuthBaseURL+"/login/oauth/access_token", strings.NewReader(form.Encode()))
 		if err != nil {
-			return "", err
+			return OAuthToken{}, err
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Accept", "application/json")
 		resp, err := c.HTTPClient.Do(req)
 		if err != nil {
-			return "", err
+			return OAuthToken{}, err
 		}
 		respBody, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
-			return "", err
+			return OAuthToken{}, err
 		}
 		var out deviceTokenResponse
 		if err := json.Unmarshal(respBody, &out); err != nil {
-			return "", fmt.Errorf("decoding token response: %w (body: %s)", err, respBody)
+			return OAuthToken{}, fmt.Errorf("decoding token response: %w (body: %s)", err, respBody)
 		}
 		switch out.Error {
 		case "":
 			if out.AccessToken == "" {
-				return "", fmt.Errorf("github returned no access_token and no error (body: %s)", respBody)
+				return OAuthToken{}, fmt.Errorf("github returned no access_token and no error (body: %s)", respBody)
 			}
-			return out.AccessToken, nil
+			return OAuthToken{
+				AccessToken:           out.AccessToken,
+				RefreshToken:          out.RefreshToken,
+				ExpiresIn:             out.ExpiresIn,
+				RefreshTokenExpiresIn: out.RefreshTokenExpiresIn,
+			}, nil
 		case "authorization_pending":
 			continue
 		case "slow_down":
 			wait += 5 * time.Second
 			continue
 		case "expired_token":
-			return "", ErrDeviceCodeExpired
+			return OAuthToken{}, ErrDeviceCodeExpired
 		case "access_denied":
-			return "", ErrAuthorizationDenied
+			return OAuthToken{}, ErrAuthorizationDenied
 		default:
-			return "", fmt.Errorf("github device token error: %s: %s", out.Error, out.ErrorDesc)
+			return OAuthToken{}, fmt.Errorf("github device token error: %s: %s", out.Error, out.ErrorDesc)
 		}
 	}
 }
@@ -487,40 +509,64 @@ func (c *Client) AuthorizeURL(clientID, redirectURI, state string, scopes []stri
 	return c.AuthBaseURL + "/login/oauth/authorize?" + q.Encode()
 }
 
-// ExchangeCode trades the callback's `code` for a real access token --
-// the one request that completes the web flow, no polling needed (unlike
-// device flow, the person has already approved by the time this runs).
-func (c *Client) ExchangeCode(ctx context.Context, clientID, clientSecret, code, redirectURI string) (string, error) {
-	form := url.Values{
+// ExchangeCode trades the callback's `code` for a real access token (and, when
+// the App expires user tokens, the refresh token + lifetimes) -- the one
+// request that completes the web flow, no polling needed (unlike device flow,
+// the person has already approved by the time this runs).
+func (c *Client) ExchangeCode(ctx context.Context, clientID, clientSecret, code, redirectURI string) (OAuthToken, error) {
+	return c.postOAuthToken(ctx, url.Values{
 		"client_id":     {clientID},
 		"client_secret": {clientSecret},
 		"code":          {code},
 		"redirect_uri":  {redirectURI},
-	}
+	})
+}
+
+// RefreshUserToken trades a refresh token for a fresh access token (GitHub
+// rotates the refresh token too, returning a new one), keeping a long LaForge
+// session's short-lived GitHub token alive without re-prompting the person.
+func (c *Client) RefreshUserToken(ctx context.Context, clientID, clientSecret, refreshToken string) (OAuthToken, error) {
+	return c.postOAuthToken(ctx, url.Values{
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"grant_type":    {"refresh_token"},
+		"refresh_token": {refreshToken},
+	})
+}
+
+// postOAuthToken POSTs the token endpoint and parses the shared
+// {access_token, refresh_token, expires_in, ...} / {error} response both the
+// code exchange and the refresh use.
+func (c *Client) postOAuthToken(ctx context.Context, form url.Values) (OAuthToken, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.AuthBaseURL+"/login/oauth/access_token", strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", err
+		return OAuthToken{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return "", err
+		return OAuthToken{}, err
 	}
 	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return OAuthToken{}, err
 	}
-	var out deviceTokenResponse // same {access_token} / {error, error_description} shape
+	var out deviceTokenResponse
 	if err := json.Unmarshal(respBody, &out); err != nil {
-		return "", fmt.Errorf("decoding code exchange response: %w (body: %s)", err, respBody)
+		return OAuthToken{}, fmt.Errorf("decoding token response: %w (body: %s)", err, respBody)
 	}
 	if out.Error != "" {
-		return "", fmt.Errorf("github oauth error: %s: %s", out.Error, out.ErrorDesc)
+		return OAuthToken{}, fmt.Errorf("github oauth error: %s: %s", out.Error, out.ErrorDesc)
 	}
 	if out.AccessToken == "" {
-		return "", fmt.Errorf("github returned no access_token and no error (body: %s)", respBody)
+		return OAuthToken{}, fmt.Errorf("github returned no access_token and no error (body: %s)", respBody)
 	}
-	return out.AccessToken, nil
+	return OAuthToken{
+		AccessToken:           out.AccessToken,
+		RefreshToken:          out.RefreshToken,
+		ExpiresIn:             out.ExpiresIn,
+		RefreshTokenExpiresIn: out.RefreshTokenExpiresIn,
+	}, nil
 }

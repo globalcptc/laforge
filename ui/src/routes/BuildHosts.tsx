@@ -1,4 +1,4 @@
-import { Link, useParams } from '@tanstack/react-router'
+import { useParams } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Box, CalendarClock, CheckCircle2, ChevronDown, Container, Hammer, Info, Network, Play, Power, Radar, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, useDetectDrift, usePowerAction, useRebuild, useTopology } from '../api/hooks'
@@ -493,22 +493,9 @@ export function BuildHosts() {
                                       {!readOnly && <input type="checkbox" checked={selected.has(h.id)} onChange={() => toggle(h.id)} />}
                                     </Td>
                                     <Td className="font-medium">
-                                      <span className="flex items-center gap-1.5 pl-8">
-                                        <button onClick={() => setLogPanelFor({ id: h.id, label: h.as_name ?? h.object_name, kind: h.kind, object: h, teamNumber: team.teamNumber })} className="text-left text-fg hover:text-accent hover:underline">
-                                          {h.as_name ?? h.object_name}
-                                        </button>
-                                        {(h.kind === 'host' || h.kind === 'container') && !GONE_STATES.has(h.status) && (
-                                          <Link
-                                            to="/repos/$repoId/builds/$buildId/hosts/$objectId/terminal"
-                                            params={{ repoId, buildId, objectId: h.id }}
-                                            title="Open terminal"
-                                            aria-label={`Open a terminal on ${h.as_name ?? h.object_name}`}
-                                            className="text-fg-subtle hover:text-accent"
-                                          >
-                                            <Terminal size={13} />
-                                          </Link>
-                                        )}
-                                      </span>
+                                      <button onClick={() => setLogPanelFor({ id: h.id, label: h.as_name ?? h.object_name, kind: h.kind, object: h, teamNumber: team.teamNumber })} className="pl-8 text-left text-fg hover:text-accent hover:underline">
+                                        {h.as_name ?? h.object_name}
+                                      </button>
                                       {mem?.depends_on && mem.depends_on.length > 0 && (
                                         <div className="pl-8 text-[11px] text-fg-subtle">depends on {mem.depends_on.join(', ')}</div>
                                       )}
@@ -544,7 +531,7 @@ export function BuildHosts() {
                                       )}
                                     </Td>
                                     <Td>
-                                      <StatusBadge status={h.status} kind={h.kind} />
+                                      <StatusBadge status={h.status} kind={h.kind} blockedOn={h.blocked_on} />
                                     </Td>
                                     <Td>
                                       <InfraCell
@@ -672,7 +659,7 @@ export function BuildHosts() {
       )}
 
       {logPanelFor && buildId && (
-        <ObjectLogPanel buildId={buildId} objectId={logPanelFor.id} label={logPanelFor.label} kind={logPanelFor.kind} object={logPanelFor.object} teamNumber={logPanelFor.teamNumber} onClose={() => setLogPanelFor(null)} />
+        <ObjectLogPanel repoId={repoId} buildId={buildId} objectId={logPanelFor.id} label={logPanelFor.label} kind={logPanelFor.kind} object={logPanelFor.object} teamNumber={logPanelFor.teamNumber} onClose={() => setLogPanelFor(null)} />
       )}
 
       <StatusLegendDialog open={legendOpen} onClose={() => setLegendOpen(false)} />

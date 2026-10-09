@@ -12,6 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,12 +48,18 @@ type Server struct {
 	// JitterMS, a new random draw every heartbeat.
 	BasePollMS int
 	JitterMS   int
-	// LogSink, when set, receives every container's captured console lines
-	// (enriched with build/team/object identity) for forwarding to an external
-	// ingester. Nil disables log forwarding -- agents still send, the gateway
-	// just acks and discards, so delivery is an operator choice, not a build
-	// requirement. See logsink.go.
-	LogSink LogSink
+	// Container-log forwarding for the FALLBACK builders only -- Incus
+	// (native-OCI) and OpenStack Zun, which have no native log driver, so their
+	// agents ship captured console lines here and the gateway forwards them to
+	// the environment's container_logs sink. Native builders (MicroCloud,
+	// Fargate) ship straight from the platform and never reach this, which keeps
+	// the gateway out of the high-volume data path. Sinks are built lazily from
+	// each environment's container_logs and shared by identical configs; objSink
+	// caches the resolved sink per object (a nil value = that object's
+	// environment has no/unsupported container_logs, so no forwarding).
+	sinkMu  sync.Mutex
+	sinks   map[string]*HTTPSink
+	objSink map[string]*HTTPSink
 
 	// logCtx caches each object's enrichment identity (build/team/name/kind),
 	// resolved once per object rather than on every log batch.
@@ -174,6 +181,11 @@ func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtyp
 	pending := s.pendingSessionsForObject(objID)
 	if len(pending) > 0 {
 		next = 250
+		// Diagnostic: proves this (fixed) gateway is telling the agent to open
+		// the shell. If you see this but the agent never logs "opening shell",
+		// the agent on that host is stale (predates the shell feature) and the
+		// host needs redeploying.
+		log.Printf("gateway: heartbeat %s: signaling agent of pending shell session(s) %v", uuidString(objID), pending)
 	}
 	// The append-only log, alongside (never instead of) the upsert above
 	// -- "log as much data as we can to help with live troubleshooting
@@ -193,7 +205,10 @@ func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtyp
 	}); err != nil {
 		log.Printf("gateway: heartbeat: logging history: %v", err)
 	}
-	body, _ := json.Marshal(agentproto.HeartbeatResponsePayload{NextPollMS: next})
+	// PendingSessions is what actually tells the agent to open its shell half --
+	// without it the agent only polls faster and never learns which session to
+	// join, so every shell times out with "agent never attached".
+	body, _ := json.Marshal(agentproto.HeartbeatResponsePayload{NextPollMS: next, PendingSessions: pending})
 	if err := agentproto.WriteFrame(conn, agentproto.HeartbeatResponse, body); err != nil {
 		log.Printf("gateway: heartbeat: writing response: %v", err)
 	}
@@ -391,21 +406,23 @@ func (s *Server) handleLogBatch(ctx context.Context, conn net.Conn, objID pgtype
 	ok := true
 	if err := json.Unmarshal(payload, &req); err != nil {
 		ok = false
-	} else if s.LogSink != nil && len(req.Records) > 0 {
-		lc, found := s.logContextFor(ctx, objID)
-		oid := uuidString(objID)
-		for _, r := range req.Records {
-			rec := LogRecord{
-				TS:       time.UnixMilli(r.TSMs).UTC().Format("2006-01-02T15:04:05.000Z07:00"),
-				ObjectID: oid,
-				Stream:   r.Stream,
-				Line:     r.Line,
-				Dropped:  r.Dropped,
+	} else if len(req.Records) > 0 {
+		if sink := s.sinkForObject(ctx, objID); sink != nil {
+			lc, found := s.logContextFor(ctx, objID)
+			oid := uuidString(objID)
+			for _, r := range req.Records {
+				rec := LogRecord{
+					TS:       time.UnixMilli(r.TSMs).UTC().Format("2006-01-02T15:04:05.000Z07:00"),
+					ObjectID: oid,
+					Stream:   r.Stream,
+					Line:     r.Line,
+					Dropped:  r.Dropped,
+				}
+				if found {
+					rec.BuildID, rec.Team, rec.Object, rec.Kind = lc.buildID, lc.team, lc.object, lc.kind
+				}
+				sink.Enqueue(rec)
 			}
-			if found {
-				rec.BuildID, rec.Team, rec.Object, rec.Kind = lc.buildID, lc.team, lc.object, lc.kind
-			}
-			s.LogSink.Enqueue(rec)
 		}
 	}
 	body, _ := json.Marshal(agentproto.LogBatchResponsePayload{OK: ok})
@@ -444,6 +461,96 @@ func (s *Server) logContextFor(ctx context.Context, objID pgtype.UUID) (logConte
 	s.logCtx[key] = lc
 	s.logCtxMu.Unlock()
 	return lc, true
+}
+
+// sinkForObject returns the log sink for a fallback-builder object's
+// environment, or nil when that environment set no (or an unsupported)
+// container_logs. Resolved once per object (cached), so the DB is hit at most
+// once per object and identical environment configs share one shipper.
+func (s *Server) sinkForObject(ctx context.Context, objID pgtype.UUID) *HTTPSink {
+	key := uuidString(objID)
+	s.sinkMu.Lock()
+	if s.objSink == nil {
+		s.objSink = make(map[string]*HTTPSink)
+	}
+	if sink, ok := s.objSink[key]; ok {
+		s.sinkMu.Unlock()
+		return sink
+	}
+	s.sinkMu.Unlock()
+
+	var sink *HTTPSink
+	if raw, err := db.New(s.Pool).GetEnvironmentContainerLogsForObject(ctx, objID); err == nil && len(raw) > 0 {
+		sink = s.sinkForConfig(raw)
+	}
+	s.sinkMu.Lock()
+	s.objSink[key] = sink
+	s.sinkMu.Unlock()
+	return sink
+}
+
+// sinkForConfig maps an environment's container_logs ({driver, options}) to a
+// shared HTTPSink, building one per distinct config. The gateway fallback only
+// knows how to speak the "splunk" driver (its HEC raw endpoint); any other
+// driver on a fallback builder is a documented gap -- native-driver builders
+// never reach here, so only Incus/Zun are affected.
+func (s *Server) sinkForConfig(raw []byte) *HTTPSink {
+	var cl struct {
+		Driver  string            `json:"driver"`
+		Options map[string]string `json:"options"`
+	}
+	if err := json.Unmarshal(raw, &cl); err != nil || cl.Driver == "" {
+		return nil
+	}
+	url, headers, ok := fallbackTarget(cl.Driver, cl.Options)
+	if !ok {
+		log.Printf("gateway: container_logs driver %q has no gateway-fallback mapping (only \"splunk\" is supported for Incus/Zun); not forwarding", cl.Driver)
+		return nil
+	}
+	ckey := url + "\x00" + fmt.Sprint(headers)
+	s.sinkMu.Lock()
+	defer s.sinkMu.Unlock()
+	if s.sinks == nil {
+		s.sinks = make(map[string]*HTTPSink)
+	}
+	if sink, ok := s.sinks[ckey]; ok {
+		return sink
+	}
+	sink := NewHTTPSink(url, headers, nil)
+	s.sinks[ckey] = sink
+	return sink
+}
+
+// fallbackTarget turns a log driver + options into the HTTP endpoint and headers
+// the gateway POSTs NDJSON to. Only "splunk" is mapped (its HEC raw endpoint,
+// which ingests newline JSON with the token as an Authorization header).
+func fallbackTarget(driver string, opts map[string]string) (url string, headers map[string]string, ok bool) {
+	switch driver {
+	case "splunk":
+		base := strings.TrimRight(opts["splunk-url"], "/")
+		if base == "" {
+			return "", nil, false
+		}
+		headers = map[string]string{}
+		if tok := opts["splunk-token"]; tok != "" {
+			headers["Authorization"] = "Splunk " + tok
+		}
+		return base + "/services/collector/raw", headers, true
+	default:
+		return "", nil, false
+	}
+}
+
+// CloseSinks flushes and stops every forwarding sink; the gateway calls it on
+// shutdown.
+func (s *Server) CloseSinks() {
+	s.sinkMu.Lock()
+	defer s.sinkMu.Unlock()
+	for _, sink := range s.sinks {
+		if sink != nil {
+			sink.Close()
+		}
+	}
 }
 
 // uuidString renders a pgtype.UUID in canonical 8-4-4-4-12 form, for a map key

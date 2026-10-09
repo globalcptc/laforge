@@ -1,19 +1,26 @@
 import { useParams } from '@tanstack/react-router'
+import { AlertTriangle } from 'lucide-react'
 import { useBuild, useDashboard, useUpcomingChanges } from '../api/hooks'
-import { ProvisioningProgress, StateByTeam, FailuresByCause, AgentActivity } from '../components/DashboardCharts'
+import {
+  ProvisioningProgress,
+  StateByTeam,
+  FailuresByCause,
+  AgentActivity,
+  ResourceCpu,
+  ResourceMem,
+  ResourceDisk,
+  ResourceNet,
+} from '../components/DashboardCharts'
+import { StatusBadge } from '../components/StatusBadge'
 import { UpcomingChangesPanel } from '../components/UpcomingChangesPanel'
-import { Card, cn, Spinner } from '../ui'
+import { Card, Spinner } from '../ui'
 
-// "Build → Overview: health band -- a row of stat tiles and a few
-// charts, all fed by server-side aggregates rather than counted in the
-// browser." The stat tiles and all four named charts
-// (provisioning progress, agent check-ins, state by team, failures by
-// cause) now read from the real GET /builds/{id}/dashboard aggregate
-// (internal/api/dashboard.go) -- an earlier version of this screen
-// counted client-side from the whole build payload, which
-// the spec's own "Performance" section calls out as the wrong long-term
-// answer; still not built here are the top bar's own countdown and
-// true heartbeat-history charting.
+// Build → Overview. The counts (finished / in-progress / failures / teams-open)
+// that used to sit across the top told you little the charts below don't; what
+// actually matters when a build is unhealthy is WHAT failed and why, so instead
+// of the tiles we surface the failing objects directly. The four charts
+// (provisioning progress, state by team, agent check-ins, failures by cause)
+// read from the real GET /builds/{id}/dashboard aggregate (internal/api/dashboard.go).
 export function BuildOverview() {
   const { buildId } = useParams({ from: '/repos/$repoId/builds/$buildId/' })
   const { data: build } = useBuild(buildId)
@@ -27,44 +34,53 @@ export function BuildOverview() {
       </div>
     )
 
-  const s = dash.provisioning_by_status
-  const total = Object.values(s).reduce((a, b) => a + b, 0)
-  const finished = s.finished ?? 0
-  // Every terminal failure, regardless of which layer it failed at.
-  const failed = (s.deploy_failed ?? 0) + (s.build_failed ?? 0) + (s.invalid ?? 0)
-  // Everything not yet at a terminal state: infra still coming up, or hosts
-  // still building. Deliberately kept apart from "finished" -- an object that
-  // is up but still building is not done.
-  const inProgress = (s.pending ?? 0) + (s.deploying ?? 0) + (s.running ?? 0) + (s.building ?? 0)
-  const teamsOpen = build.teams.filter((t) => t.access_state === 'open').length
+  // The actual failing objects (terminal failures at any layer), surfaced so an
+  // operator sees exactly which host/container failed and why.
+  const failures = (build.teams ?? []).flatMap((t) =>
+    (t.objects ?? [])
+      .filter((o) => o.status === 'deploy_failed' || o.status === 'build_failed' || o.status === 'invalid')
+      .map((o) => ({ team: t.team_number, obj: o })),
+  )
 
   return (
     <div className="flex flex-col gap-4">
       {upcoming && <UpcomingChangesPanel buildId={buildId} data={upcoming} />}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Finished" value={`${finished} / ${total}`} />
-        <StatTile label="In progress" value={inProgress} />
-        <StatTile label="Failures" value={failed} tone={failed > 0 ? 'bad' : 'good'} />
-        <StatTile label="Teams open" value={`${teamsOpen} / ${build.teams.length}`} />
+      {failures.length > 0 && (
+        <Card className="border-danger/40 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-danger">
+            <AlertTriangle size={14} /> {failures.length} failure{failures.length === 1 ? '' : 's'}
+          </div>
+          <ul className="flex flex-col gap-1.5 text-sm">
+            {failures.map(({ team, obj }) => (
+              <li key={obj.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="shrink-0 font-mono text-xs text-fg-muted">Team {team}</span>
+                <span className="font-medium text-fg">{obj.as_name ?? obj.object_name}</span>
+                <StatusBadge status={obj.status} kind={obj.kind} tooltip={false} />
+                {obj.last_error ? (
+                  <span className="min-w-0 text-fg-muted">— {obj.last_error}</span>
+                ) : obj.status === 'invalid' ? (
+                  <span className="text-fg-muted">— a validator did not pass</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ResourceCpu data={dash} />
+        <ResourceMem data={dash} />
+        <ResourceDisk data={dash} />
+        <ResourceNet data={dash} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ProvisioningProgress data={dash} />
-        <StateByTeam data={dash} />
         <AgentActivity data={dash} />
-        <FailuresByCause data={dash} />
       </div>
-
+      <FailuresByCause data={dash} />
+      <StateByTeam data={dash} />
     </div>
-  )
-}
-
-function StatTile({ label, value, tone }: { label: string; value: string | number; tone?: 'good' | 'bad' }) {
-  return (
-    <Card className="px-4 py-3">
-      <div className="text-xs font-medium uppercase tracking-wide text-fg-muted">{label}</div>
-      <div className={cn('mt-1 text-2xl font-semibold text-fg', tone === 'bad' && 'text-danger', tone === 'good' && 'text-success')}>{value}</div>
-    </Card>
   )
 }

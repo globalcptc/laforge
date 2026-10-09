@@ -112,7 +112,7 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 		DependsOn:        appDeps,
 		MountPoints:      appMounts,
 		PortMappings:     portMappings(spec.TCPPorts, spec.UDPPorts),
-		LogConfiguration: b.logConfig("app", spec.ExternalName),
+		LogConfiguration: b.appLogConfig(spec),
 	})
 
 	family := "laforge-" + appName
@@ -237,6 +237,21 @@ func (b *Builder) logConfig(streamPrefix, externalName string) *ecstypes.LogConf
 			"awslogs-stream-prefix": streamPrefix + "-" + externalName,
 		},
 	}
+}
+
+// appLogConfig is the app container's logging. When the environment set
+// container_logs, Fargate ships the app's console output NATIVELY via that
+// driver (e.g. "splunk" straight to HEC) -- the LaForge agent never touches it,
+// which is what keeps the gateway out of the data path at scale. With no
+// container_logs it falls back to the awslogs default (if a LogGroup is set).
+func (b *Builder) appLogConfig(spec builder.ContainerSpec) *ecstypes.LogConfiguration {
+	if spec.LogDriver != "" {
+		return &ecstypes.LogConfiguration{
+			LogDriver: ecstypes.LogDriver(spec.LogDriver),
+			Options:   spec.LogOptions,
+		}
+	}
+	return b.logConfig("app", spec.ExternalName)
 }
 
 // Image entrypoint resolution (the Docker Hub registry dance) moved to

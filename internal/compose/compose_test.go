@@ -82,7 +82,7 @@ func TestLoadShipsTheWholeDirectoryAndFindsImages(t *testing.T) {
 		"nginx/certs/site.key": "\x00\x01binary\xff",
 	}
 	root := writeStack(t, "flaky", files)
-	b, err := Load(root, "containers/flaky/compose.yaml")
+	b, err := Load(root, "containers/flaky/compose.yaml", nil)
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -100,9 +100,72 @@ func TestLoadShipsTheWholeDirectoryAndFindsImages(t *testing.T) {
 			t.Errorf("archive %s = %q, want %q", rel, got[rel], want)
 		}
 	}
-	again, err := Load(root, "containers/flaky/compose.yaml")
+	again, err := Load(root, "containers/flaky/compose.yaml", nil)
 	if err != nil || !bytes.Equal(b.Archive, again.Archive) {
 		t.Errorf("archive is not stable across loads (err %v)", err)
+	}
+}
+
+// A compose file carrying LaForge `{{ }}` templates: unresolved at load time
+// (skipped, no error), and the renderer's output is what gets validated and
+// shipped.
+func TestComposeFileIsTemplated(t *testing.T) {
+	const tmpl = "services:\n  app:\n    image: \"{{ vars.app }}\"\n"
+	root := writeStack(t, "tpl", map[string]string{"compose.yaml": tmpl})
+
+	b, err := Load(root, "containers/tpl/compose.yaml", nil)
+	if err != nil {
+		t.Fatalf("Load(nil): %v", err)
+	}
+	if len(b.Images) != 0 {
+		t.Errorf("Images = %v, want none (a {{ }} ref is unresolved at load time, so skipped)", b.Images)
+	}
+
+	render := func(raw []byte) ([]byte, error) {
+		return []byte(strings.ReplaceAll(string(raw), "{{ vars.app }}", "registry.example/app:1")), nil
+	}
+	b, err = Load(root, "containers/tpl/compose.yaml", render)
+	if err != nil {
+		t.Fatalf("Load(render): %v", err)
+	}
+	if strings.Join(b.Images, ",") != "registry.example/app:1" {
+		t.Errorf("Images = %v, want the rendered ref", b.Images)
+	}
+	got := untar(t, b.Archive)["compose.yaml"]
+	if !strings.Contains(got, "registry.example/app:1") || strings.Contains(got, "{{") {
+		t.Errorf("shipped compose.yaml = %q, want the rendered image with no template left", got)
+	}
+}
+
+// A `.tmpl` supporting file is rendered and ships with the suffix stripped; a
+// volume that mounts the stripped name is satisfied by the `.tmpl` on disk.
+func TestSupportingTmplFileIsRenderedAndRenamed(t *testing.T) {
+	root := writeStack(t, "tpl2", map[string]string{
+		"compose.yaml":    "services:\n  web:\n    image: nginx:alpine\n    volumes:\n      - ./nginx.conf:/etc/nginx/nginx.conf:ro\n",
+		"nginx.conf.tmpl": "server_name {{ vars.host }};\n",
+	})
+	render := func(raw []byte) ([]byte, error) {
+		return []byte(strings.ReplaceAll(string(raw), "{{ vars.host }}", "team3.example")), nil
+	}
+	b, err := Load(root, "containers/tpl2/compose.yaml", render)
+	if err != nil {
+		t.Fatalf("Load(render): %v", err)
+	}
+	files := untar(t, b.Archive)
+	if _, ok := files["nginx.conf.tmpl"]; ok {
+		t.Error("the .tmpl file should not ship under its .tmpl name")
+	}
+	if got := files["nginx.conf"]; got != "server_name team3.example;\n" {
+		t.Errorf("nginx.conf = %q, want the rendered content at the stripped name", got)
+	}
+
+	// Without a renderer (load/check/fingerprint), it ships verbatim.
+	b, err = Load(root, "containers/tpl2/compose.yaml", nil)
+	if err != nil {
+		t.Fatalf("Load(nil): %v", err)
+	}
+	if _, ok := untar(t, b.Archive)["nginx.conf.tmpl"]; !ok {
+		t.Error("with no renderer the .tmpl file should ship verbatim")
 	}
 }
 
@@ -125,14 +188,14 @@ func TestLoadRejectsWhatCannotWorkOnAHost(t *testing.T) {
 			for k, v := range tc.extra {
 				files[k] = v
 			}
-			_, err := Load(writeStack(t, "s", files), "containers/s/compose.yaml")
+			_, err := Load(writeStack(t, "s", files), "containers/s/compose.yaml", nil)
 			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
 				t.Fatalf("err = %v, want it to mention %q", err, tc.wantErr)
 			}
 		})
 	}
 
-	if _, err := Load(t.TempDir(), "containers/nope/compose.yaml"); err == nil || !strings.Contains(err.Error(), "not found in the content repo") {
+	if _, err := Load(t.TempDir(), "containers/nope/compose.yaml", nil); err == nil || !strings.Contains(err.Error(), "not found in the content repo") {
 		t.Errorf("missing compose file: err = %v", err)
 	}
 }
