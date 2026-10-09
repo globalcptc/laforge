@@ -451,6 +451,20 @@ export function useUnapprovedInstalledRepositories() {
   })
 }
 
+// useRemoveInstallation removes a GitHub connection: uninstalls the App from
+// that account on GitHub (when LaForge has the App's credentials), then forgets
+// it here. Approved repositories stay tracked.
+export function useRemoveInstallation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ uninstalled_on_github: boolean } | undefined>(`/installations/${encodeURIComponent(id)}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['installations'] })
+      qc.invalidateQueries({ queryKey: ['repositories'] })
+    },
+  })
+}
+
 export function useApproveInstalledRepository() {
   const qc = useQueryClient()
   return useMutation({

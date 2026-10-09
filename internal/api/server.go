@@ -180,6 +180,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /installations", s.handleListInstallations)
 	mux.HandleFunc("GET /installations/repositories", s.handleListUnapprovedInstalledRepositories)
 	mux.HandleFunc("POST /installations/repositories/approve", s.handleApproveInstalledRepository)
+	mux.HandleFunc("DELETE /installations/{id}", s.handleDeleteInstallation)
 
 	mux.HandleFunc("GET /builder-configs", s.handleListBuilderConfigs)
 	mux.HandleFunc("GET /builder-configs/{name}", s.handleGetBuilderConfig)

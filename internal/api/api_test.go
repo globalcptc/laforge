@@ -78,6 +78,11 @@ type fakeGitHub struct {
 	// collaborators is what GET /repos/{owner}/{repo}/collaborators
 	// returns, keyed by "owner/repo"; a missing key is a 404.
 	collaborators map[string][]ghclient.Collaborator
+	// deletedInstallations records every DELETE /app/installations/{id}
+	// (an uninstall); installationsGone makes those ids answer 404, as an
+	// installation already uninstalled on GitHub does.
+	deletedInstallations []string
+	installationsGone    map[string]bool
 }
 
 func (f *fakeGitHub) handler() http.HandlerFunc {
@@ -130,6 +135,15 @@ func (f *fakeGitHub) handler() http.HandlerFunc {
 				out = append(out, map[string]interface{}{"name": n, "commit": map[string]string{"sha": "fake-sha-" + n}})
 			}
 			json.NewEncoder(w).Encode(out)
+		case r.Method == http.MethodDelete && strings.HasPrefix(r.URL.Path, "/app/installations/"):
+			// DeleteInstallation -- uninstalling the App from an account.
+			id := strings.TrimPrefix(r.URL.Path, "/app/installations/")
+			if f.installationsGone[id] {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			f.deletedInstallations = append(f.deletedInstallations, id)
+			w.WriteHeader(http.StatusNoContent)
 		case strings.HasSuffix(r.URL.Path, "/access_tokens") && strings.HasPrefix(r.URL.Path, "/app/installations/"):
 			// CreateInstallationToken -- doesn't check the app JWT's
 			// signature (that's ghclient's own responsibility, proven

@@ -90,6 +90,14 @@ type InstallationToken struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
+// DeleteInstallation uninstalls the App from installationID's account -- the
+// same as an owner clicking Uninstall on GitHub. GitHub then sends the
+// `installation` "deleted" webhook. A 404 (*APIError) means it is already gone.
+func (c *Client) DeleteInstallation(ctx context.Context, appJWT string, installationID int64) error {
+	u := fmt.Sprintf("%s/app/installations/%d", c.APIBaseURL, installationID)
+	return c.doJSON(ctx, http.MethodDelete, u, appJWT, nil, nil)
+}
+
 // CreateInstallationToken exchanges appJWT (from GenerateAppJWT) for a
 // token scoped to exactly installationID's repositories -- the
 // authoritative credential internal/api/webhook.go's reconcile uses to

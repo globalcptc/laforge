@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ExternalLink, GitBranchPlus, ShieldCheck } from 'lucide-react'
-import { useInstallations, useApproveInstalledRepository, useMe } from '../api/hooks'
+import { ExternalLink, GitBranchPlus, ShieldCheck, Trash2 } from 'lucide-react'
+import { useInstallations, useApproveInstalledRepository, useMe, useRemoveInstallation } from '../api/hooks'
 import { ApiError } from '../api/client'
 import { EmptyState } from '../components/EmptyState'
 import { InstallGitHubAppLink } from '../components/InstallGitHubAppLink'
@@ -77,6 +77,32 @@ function githubManageURL(installation: Installation): string {
 }
 
 function InstallationCard({ installation, canApprove }: { installation: Installation; canApprove: boolean }) {
+  const remove = useRemoveInstallation()
+  const toast = useToast()
+
+  async function onRemove() {
+    const approved = installation.repos.filter((r) => r.approved).length
+    const message =
+      `Remove the GitHub connection for ${installation.account_login}?\n\n` +
+      `This uninstalls the LaForge GitHub App from ${installation.account_login} on GitHub, and LaForge stops seeing its repositories and pushes.` +
+      (approved > 0
+        ? `\n\n${approved} approved repositor${approved === 1 ? 'y stays' : 'ies stay'} in LaForge with ${approved === 1 ? 'its' : 'their'} builds, but can only be fetched with the server's service token from now on.`
+        : '')
+    if (!confirm(message)) return
+    try {
+      const res = await remove.mutateAsync(installation.id)
+      toast({
+        title: 'GitHub connection removed',
+        description: res?.uninstalled_on_github
+          ? `Uninstalled from ${installation.account_login} on GitHub.`
+          : `${installation.account_login} was already uninstalled on GitHub (or no GitHub App is configured); removed from LaForge.`,
+        tone: 'success',
+      })
+    } catch (e) {
+      toast({ title: 'Remove failed', description: e instanceof ApiError ? e.message : 'error', tone: 'danger', duration: 0 })
+    }
+  }
+
   return (
     <Card>
       <CardHeader
@@ -89,9 +115,16 @@ function InstallationCard({ installation, canApprove }: { installation: Installa
         }
         description={`${installation.repos.length} repositor${installation.repos.length === 1 ? 'y' : 'ies'}`}
         actions={
-          <a href={githubManageURL(installation)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-fg-muted hover:text-fg">
-            Manage on GitHub <ExternalLink size={12} />
-          </a>
+          <div className="flex items-center gap-3">
+            <a href={githubManageURL(installation)} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-fg-muted hover:text-fg">
+              Manage on GitHub <ExternalLink size={12} />
+            </a>
+            {canApprove && (
+              <Button variant="ghost" size="sm" onClick={onRemove} disabled={remove.isPending} className="text-danger hover:bg-danger-soft hover:text-danger">
+                <Trash2 size={12} /> Remove
+              </Button>
+            )}
+          </div>
         }
       />
       {installation.repos.length === 0 ? (

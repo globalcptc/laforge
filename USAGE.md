@@ -398,6 +398,14 @@ track it.
 From there: configure a build (repo + branch + environment file + builder), push, and
 LaForge validates, builds, and — on your go — deploys.
 
+**Removing a connection.** On **GitHub Connections**, an instance admin's **Remove**
+uninstalls the App from that account on GitHub and removes the connection from LaForge.
+It also cleans up a connection whose uninstall never reached LaForge (one removed on
+GitHub while webhooks couldn't get through). Repositories you approved from it stay in
+LaForge with their builds, but from then on are fetched with `GITHUB_SERVICE_TOKEN` —
+reinstall the App on the account to restore the per-installation access. Without a GitHub
+App configured, Remove only forgets the connection in LaForge.
+
 ---
 
 ## The VS Code extension

@@ -10,11 +10,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/globalcptc/laforge/internal/db"
+	"github.com/globalcptc/laforge/internal/ghclient"
 )
 
 // requireInstanceAdmin is deliberately not requireLevel: approving a
@@ -162,4 +166,59 @@ func (s *Server) handleApproveInstalledRepository(w http.ResponseWriter, r *http
 		return
 	}
 	writeJSON(w, http.StatusCreated, repo)
+}
+
+// handleDeleteInstallation removes a GitHub connection. With a GitHub App
+// configured it first uninstalls the App from that account on GitHub (the
+// same as Uninstall on GitHub's own page), so the connection can't quietly
+// come back; then it forgets the installation here, whether or not GitHub's
+// own "deleted" webhook ever arrives -- which is the case this exists for: an
+// install recorded before webhooks could reach LaForge, or one uninstalled
+// while they couldn't. Approved repositories stay tracked (their builds are
+// LaForge's own) but lose the installation; content fetches fall back to
+// GITHUB_SERVICE_TOKEN.
+func (s *Server) handleDeleteInstallation(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.requireInstanceAdmin(r.Context(), r); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	id, err := parseUUID(r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid installation id"))
+		return
+	}
+	inst, err := s.Queries.GetGithubInstallation(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		w.WriteHeader(http.StatusNoContent) // already gone
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	uninstalled := false
+	if s.AppID != "" && s.AppPrivateKey != nil {
+		jwt, err := ghclient.GenerateAppJWT(s.AppID, s.AppPrivateKey, time.Now())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		err = s.GH.DeleteInstallation(r.Context(), jwt, inst.InstallationID)
+		var apiErr *ghclient.APIError
+		switch {
+		case err == nil:
+			uninstalled = true
+		case errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound:
+			// Already uninstalled on GitHub -- only LaForge still had it.
+		default:
+			writeError(w, http.StatusBadGateway, fmt.Errorf("uninstalling the GitHub App from %s: %w -- nothing was removed; try again, or uninstall it on GitHub", inst.AccountLogin, err))
+			return
+		}
+	}
+	if err := s.Queries.DeleteGithubInstallation(r.Context(), inst.InstallationID); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"uninstalled_on_github": uninstalled})
 }
