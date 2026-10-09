@@ -234,7 +234,12 @@ func (c *Client) delete(ctx context.Context, path string) (json.RawMessage, erro
 	return c.do(ctx, http.MethodDelete, path, nil)
 }
 
-func (c *Client) do(ctx context.Context, method, path string, body interface{}) (json.RawMessage, error) {
+type requestOptions struct {
+	ifMatch string
+	etag    *string
+}
+
+func (c *Client) do(ctx context.Context, method, path string, body interface{}, options ...requestOptions) (json.RawMessage, error) {
 	// reqCtx, not a reassigned ctx: waitForOperation below needs the
 	// ORIGINAL, undecorated ctx this function was called with, not this
 	// request's own short-lived deadline -- a child context can never
@@ -244,7 +249,13 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 	// OperationTimeout is configured to. Found exactly this way, live,
 	// against a real MicroCloud/Ceph cluster -- see NewClient's own doc
 	// comment on this same class of bug.
-	reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+	timeout := requestTimeout
+	// Some LXD cluster mutations (notably OVN network creation) complete
+	// synchronously. Give them the configured operation budget too.
+	if method != http.MethodGet && c.OperationTimeout > timeout {
+		timeout = c.OperationTimeout
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	u := c.BaseURL + path
 	if c.Project != "" {
@@ -271,11 +282,17 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 		req.Header.Set("Content-Type", "application/json")
 	}
 
+	if len(options) > 0 && options[0].ifMatch != "" {
+		req.Header.Set("If-Match", options[0].ifMatch)
+	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%s %s: %w", method, u, err)
 	}
 	defer resp.Body.Close()
+	if len(options) > 0 && options[0].etag != nil {
+		*options[0].etag = resp.Header.Get("ETag")
+	}
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -283,7 +300,13 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 
 	var ar apiResponse
 	if err := json.Unmarshal(data, &ar); err != nil {
+		if resp.StatusCode >= 400 {
+			return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: resp.StatusCode, Message: http.StatusText(resp.StatusCode)}
+		}
 		return nil, fmt.Errorf("decoding response from %s %s: %w (body: %s)", method, u, err, data)
+	}
+	if resp.StatusCode >= 400 {
+		return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: ar.ErrorCode, Message: ar.Error}
 	}
 
 	switch ar.Type {
@@ -334,7 +357,13 @@ type operationResult struct {
 // found" instead of the real, actionable cause. Every caller of do()/
 // post()/put()/patch()/delete() that goes through an async operation
 // (network/instance create, start/stop, ...) was affected equally.
-func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawMessage, error) {
+func (c *Client) waitForOperation(ctx context.Context, opPath string) (result json.RawMessage, resultErr error) {
+	terminal := false
+	defer func() {
+		if resultErr != nil && !terminal {
+			resultErr = &pendingOperationError{Path: opPath, Err: resultErr}
+		}
+	}()
 	// The client's own deadline must be strictly longer than what the
 	// URL's ?timeout=N tells the SERVER to hold the long-poll for --
 	// otherwise the client could give up and tear down the connection
@@ -343,7 +372,18 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 	// this can't just be c.HTTPClient's own Timeout field.
 	ctx, cancel := context.WithTimeout(ctx, c.OperationTimeout+10*time.Second)
 	defer cancel()
-	u := fmt.Sprintf("%s%s/wait?timeout=%d", c.BaseURL, opPath, int(c.OperationTimeout.Seconds()))
+	opURL, err := url.Parse(opPath)
+	if err != nil {
+		return nil, fmt.Errorf("invalid operation URL: %w", err)
+	}
+	opURL.Path = strings.TrimRight(opURL.Path, "/") + "/wait"
+	query := opURL.Query()
+	query.Set("timeout", fmt.Sprint(int(c.OperationTimeout.Seconds())))
+	if query.Get("project") == "" && c.Project != "" {
+		query.Set("project", c.Project)
+	}
+	opURL.RawQuery = query.Encode()
+	u := c.BaseURL + opURL.RequestURI()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
@@ -359,9 +399,12 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 	}
 	var ar apiResponse
 	if err := json.Unmarshal(data, &ar); err != nil {
+		if resp.StatusCode >= 400 {
+			return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: resp.StatusCode, Message: http.StatusText(resp.StatusCode)}
+		}
 		return nil, fmt.Errorf("decoding operation-wait response: %w (body: %s)", err, data)
 	}
-	if ar.Type == "error" {
+	if ar.Type == "error" || resp.StatusCode >= 400 {
 		return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: ar.ErrorCode, Message: ar.Error}
 	}
 	var op operationResult
@@ -372,11 +415,15 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 	// cancelled -- mirrored from a live daemon's real response, not
 	// documentation alone (see this function's own doc comment).
 	if op.StatusCode >= 400 || op.Status == "Failure" || op.Status == "Cancelled" {
+		terminal = true
 		msg := op.Err
 		if msg == "" {
 			msg = op.Status
 		}
 		return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: op.StatusCode, Message: msg}
+	}
+	if op.StatusCode != 200 {
+		return nil, fmt.Errorf("%w: %s (status %s, code %d)", errOperationRunning, opPath, op.Status, op.StatusCode)
 	}
 	return ar.Metadata, nil
 }

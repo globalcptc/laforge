@@ -330,15 +330,29 @@ func resolveMicrocloud(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builde
 		return nil, err
 	}
 
-	return microcloud.New(client, microcloud.Config{
-		Images: images, Sizes: sizes,
+	var publicAccess microcloud.PublicAccessConfig
+	if len(row.MicrocloudPublicAccess) > 0 {
+		if err := json.Unmarshal(row.MicrocloudPublicAccess, &publicAccess); err != nil {
+			return nil, fmt.Errorf("decoding microcloud_public_access: %w", err)
+		}
+	}
+	if err := publicAccess.Validate(); err != nil {
+		return nil, err
+	}
+	b := microcloud.New(client, microcloud.Config{
+		PublicAccess: publicAccess,
+		Images:       images, Sizes: sizes,
 		OVNUplinkNetwork:      db.StrOrEmpty(row.IncusOvnUplinkNetwork),
 		StoragePool:           db.StrOrEmpty(row.IncusStoragePool),
 		ExternalAccessIP:      db.StrOrEmpty(row.ExternalAccessIp),
 		ExternalPortMin:       int(db.Int32OrZero(row.ExternalPortMin)),
 		ExternalPortMax:       int(db.Int32OrZero(row.ExternalPortMax)),
 		DockerBaseFingerprint: row.DockerBaseFingerprint,
-	}), nil
+	})
+	if pool != nil && row.ID.Valid {
+		b.PublicAddresses = microcloud.SQLPublicAddressAllocator{Pool: pool, BuilderID: row.ID}
+	}
+	return b, nil
 }
 
 // decodeMicrocloudImagesAndSizes decodes the same incus_images/incus_sizes JSON

@@ -273,7 +273,7 @@ UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = 
 -- Clears power_state too: the instance is gone, so the last-polled "running"
 -- (or any) power state is no longer true and must not linger as a stale
 -- "Infra: Running" next to a "Destroyed" lifecycle badge.
-UPDATE deployed_object SET status = 'destroyed', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING *;
+UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING *;
 
 -- name: ResetDeployedObjectForRedeploy :one
 -- Used after a destroy that happened only because the fingerprint changed
@@ -569,3 +569,6 @@ JOIN deployed_object ON deployed_object.id = agent_task.deployed_object_id
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = ANY(sqlc.arg(build_ids)::uuid[])
 GROUP BY team.build_id, agent_task.status;
+
+-- name: SetDeployedObjectPublicAddress :exec
+UPDATE deployed_object SET public_address = $2, updated_at = now() WHERE id = $1;

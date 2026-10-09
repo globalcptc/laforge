@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { PublicNICSettings } from './PublicNICSettings'
+import type { MicrocloudPublicAccess } from '../../api/types'
 import { AlertTriangle, FolderTree, Globe, HardDrive, Network, Plus, Server, X } from 'lucide-react'
 import { api, ApiError } from '../../api/client'
 import { builderConnectionPath } from '../../api/hooks'
@@ -14,8 +16,12 @@ export function StepPlacement({
   externalPortMin,
   externalPortMax,
   onExternalChange,
+  microcloudPublicAccess,
+  onPublicAccessChange,
 }: {
   kind: Kind
+  microcloudPublicAccess?: MicrocloudPublicAccess
+  onPublicAccessChange: (value: MicrocloudPublicAccess) => void
   hosts: HostDraft[]
   onChange: (hosts: HostDraft[]) => void
   externalAccessIp: string
@@ -65,8 +71,13 @@ export function StepPlacement({
           {kind === 'microcloud' && h.connection && h.credentialId && (
             <ProjectPicker host={h} onChange={(patch) => update(i, patch)} />
           )}
+          {kind === 'microcloud' && (!h.connection || !h.credentialId) && (
+            <Field label="Project" hint="The existing LXD project used for this builder's instances and networks. Empty uses default." className="mb-4 max-w-sm">
+              <Input value={h.project ?? ''} onChange={(e) => update(i, { project: e.target.value.trim() })} placeholder="default" />
+            </Field>
+          )}
 
-          {h.connection ? (
+          {h.connection || kind === 'microcloud' ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 label={
@@ -121,6 +132,15 @@ export function StepPlacement({
         <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg">
           <Globe size={14} className="text-fg-muted" /> External access
         </div>
+        {kind === 'microcloud' && <Field label="Public access type" hint="Applies to this builder's hosts that declare public ports.">
+          <Select value={microcloudPublicAccess?.type ?? 'proxy'} onChange={(e) => onPublicAccessChange(e.target.value === 'nic' ? { type: 'nic' } : { type: 'proxy' })}>
+            <option value="proxy">Shared IP port forwarding</option>
+            <option value="nic">Separate network NIC</option>
+          </Select>
+        </Field>}
+        {kind === 'microcloud' && microcloudPublicAccess?.type === 'nic' ? (
+          <PublicNICSettings value={microcloudPublicAccess} onChange={onPublicAccessChange} />
+        ) : <>
         <p className="mb-3 text-xs text-fg-muted">
           The external IPs that hosts' <span className="font-mono">public:</span> ports (e.g. RDP) are NAT'd in on. Each team is assigned one IP,
           round-robin, so with enough IPs every team gets its own address; teams that share one get a distinct external port each. Add no IPs to disable
@@ -155,6 +175,7 @@ export function StepPlacement({
             </Field>
           </div>
         </div>
+        </>}
       </div>
     </div>
   )
