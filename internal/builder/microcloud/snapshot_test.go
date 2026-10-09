@@ -34,6 +34,16 @@ func newFakeSnapshotServer(t *testing.T) (*fakeSnapshotServer, *Client) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/1.0/instances":
 			json.NewDecoder(r.Body).Decode(&f.createReq)
+			if src, _ := f.createReq["source"].(map[string]interface{}); src["type"] == "copy" {
+				devices, _ := f.createReq["devices"].(map[string]interface{})
+				for _, key := range []string{"eth-1", "data", "profile-nic"} {
+					if dev, _ := devices[key].(map[string]interface{}); dev["type"] != "none" {
+						w.WriteHeader(400)
+						json.NewEncoder(w).Encode(map[string]interface{}{"type": "error", "error": "inherited device refers to a deleted network or volume"})
+						return
+					}
+				}
+			}
 			ok(w, map[string]interface{}{})
 		case r.Method == http.MethodGet && r.URL.Path == "/1.0/instances":
 			ok(w, []string{"/1.0/instances/win-tmpl", "/1.0/instances/lf-t1-web01-abc"})
@@ -47,10 +57,18 @@ func newFakeSnapshotServer(t *testing.T) (*fakeSnapshotServer, *Client) {
 			t.Errorf("read LaForge's own instance %s while looking for templates", r.URL.Path)
 			ok(w, []string{})
 		case r.Method == http.MethodGet && r.URL.Path == "/1.0/instances/win-tmpl/snapshots/golden":
-			ok(w, map[string]string{"name": "golden"})
+			ok(w, map[string]interface{}{"name": "golden", "devices": map[string]interface{}{
+				"eth-1": map[string]string{"type": "nic", "network": "deleted-network"},
+				"data":  map[string]string{"type": "disk", "source": "deleted-volume"},
+			}, "expanded_devices": map[string]interface{}{
+				"profile-nic": map[string]string{"type": "nic", "network": "deleted-profile-network"},
+				"root":        map[string]string{"type": "disk", "path": "/", "pool": "source-pool"},
+			}})
 		case r.Method == http.MethodGet && r.URL.Path == "/1.0/instances/win-tmpl/snapshots/missing":
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]interface{}{"type": "error", "error_code": 404, "error": "Instance snapshot not found"})
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/state"):
+			ok(w, map[string]string{"status": "Running"})
 		case r.Method == http.MethodGet:
 			// The copy, as created: still carrying the template's own devices
 			// and profiles.

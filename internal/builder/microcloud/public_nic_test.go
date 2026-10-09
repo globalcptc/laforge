@@ -95,10 +95,21 @@ func newPublicTestServer(t *testing.T) (*publicTestServer, *Builder, *memoryPubl
 			}
 			ok(map[string]interface{}{})
 		case strings.HasSuffix(path, "/state"):
+			if r.Method == "GET" {
+				ok(map[string]string{"status": "Running"})
+				return
+			}
 			if body["action"] == "start" {
 				f.starts++
 			}
 			ok(map[string]interface{}{})
+		case path == "/1.0/instances/windows-base/snapshots/golden" && r.Method == "GET":
+			if r.URL.Query().Get("project") != "templates" {
+				t.Errorf("source snapshot read used project %s", r.URL.Query().Get("project"))
+			}
+			ok(map[string]interface{}{"devices": map[string]interface{}{
+				"eth-1": map[string]string{"type": "nic", "network": "deleted-network"},
+			}})
 		case strings.HasPrefix(path, "/1.0/instances/"):
 			name := strings.TrimPrefix(path, "/1.0/instances/")
 			inst := f.instances[name]

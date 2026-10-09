@@ -112,7 +112,7 @@ export function StepPlacement({
           <details className="mt-3 text-xs text-fg-muted">
             <summary className="cursor-pointer select-none">Advanced</summary>
             <div className="mt-2 max-w-xs">
-              <Field label="Wait for slow operations up to" hint="Large images on network storage can take minutes to copy." className="mb-0">
+              <Field label="Wait for slow operations up to" hint={kind === 'microcloud' ? 'Applies to API reads and provisioning operations. Busy clusters and large image copies can take minutes.' : 'Large images on network storage can take minutes to copy.'} className="mb-0">
                 <Select value={String(h.timeoutSeconds)} onChange={(e) => update(i, { timeoutSeconds: Number(e.target.value) })}>
                   {TIMEOUT_OPTIONS.map((s) => (
                     <option key={s} value={s}>

@@ -96,7 +96,9 @@ func TestDeployInstanceInAProject(t *testing.T) {
 		project  string
 		wantRoot bool
 	}{{"laforge", true}, {"", false}} {
-		rec, client := newProjectRecorder(t, nil)
+		rec, client := newProjectRecorder(t, map[string]interface{}{
+			"/1.0/instances/" + instanceName("", "x") + "/state": map[string]string{"status": "Running"},
+		})
 		client.Project = tc.project
 		b := New(client, Config{
 			Images:      map[string]ImageRef{"ubuntu": {Fingerprint: "abc"}},

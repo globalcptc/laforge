@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/url"
 	"strings"
 	"time"
 
@@ -541,6 +542,21 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		// management/public NIC or network metadata from a shared profile.
 		request["profiles"] = []string{}
 	}
+	if img.IsSnapshot() {
+		// LXD merges copy-time devices with the snapshot's devices and
+		// validates that merged set before it creates the destination. Mask
+		// obsolete NICs/disks now: replacing devices after the copy is too
+		// late when a template refers to a network or volume that is gone.
+		if err := b.retryInstanceStep(ctx, name, "reading snapshot devices", func() error {
+			createDevices, err := b.snapshotCreateDevices(ctx, img, devices)
+			if err == nil {
+				request["devices"] = createDevices
+			}
+			return err
+		}); err != nil {
+			return name, err
+		}
+	}
 	err := b.createInstance(ctx, name, request)
 	if err != nil {
 		// Keep the deterministic ref for cleanup even if creation is uncertain.
@@ -1030,6 +1046,34 @@ func (b *Builder) HasWorkingEth0(ctx context.Context, name string) (bool, error)
 		return false, nil
 	}
 	return devMap["type"] != "none", nil
+}
+
+func (b *Builder) snapshotCreateDevices(ctx context.Context, img ImageRef, devices map[string]interface{}) (map[string]interface{}, error) {
+	scoped := *b.Client
+	if img.SourceProject != "" {
+		scoped.Project = img.SourceProject
+	}
+	raw, err := scoped.get(ctx, "/1.0/instances/"+url.PathEscape(img.Instance)+"/snapshots/"+url.PathEscape(img.Snapshot))
+	if err != nil {
+		return nil, fmt.Errorf("reading source snapshot devices: %w", err)
+	}
+	var snapshot struct {
+		Devices         map[string]json.RawMessage `json:"devices"`
+		ExpandedDevices map[string]json.RawMessage `json:"expanded_devices"`
+	}
+	if err := json.Unmarshal(raw, &snapshot); err != nil {
+		return nil, fmt.Errorf("decoding source snapshot devices: %w", err)
+	}
+	createDevices := make(map[string]interface{}, len(devices)+len(snapshot.ExpandedDevices))
+	for _, inherited := range []map[string]json.RawMessage{snapshot.Devices, snapshot.ExpandedDevices} {
+		for key := range inherited {
+			createDevices[key] = map[string]string{"type": "none"}
+		}
+	}
+	for key, device := range devices {
+		createDevices[key] = device
+	}
+	return createDevices, nil
 }
 
 // replaceCopiedDevices makes a copied instance's devices exactly LaForge's own

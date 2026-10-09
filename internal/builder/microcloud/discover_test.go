@@ -204,7 +204,11 @@ func TestDeployHostUsesImageFingerprint(t *testing.T) {
 			json.NewDecoder(r.Body).Decode(&body)
 			source = body.Source
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "status_code": 200, "metadata": map[string]interface{}{}})
+		metadata := map[string]interface{}{}
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/state") {
+			metadata["status"] = "Running"
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "status_code": 200, "metadata": metadata})
 	}))
 	t.Cleanup(srv.Close)
 	b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: 5}, Config{

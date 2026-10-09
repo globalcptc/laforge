@@ -105,25 +105,22 @@ func NewClient(baseURL string, clientCertPEM, clientKeyPEM, serverCertPEM []byte
 		// Timeout: 30*time.Second right here. do and waitForOperation
 		// each derive their own per-request context deadline instead
 		// (context.WithTimeout), so a genuinely slow operation gets the
-		// time OperationTimeout actually promises it, while an ordinary
-		// call still fails fast on a truly dead connection.
+		// time OperationTimeout actually promises it. Ordinary calls also
+		// honor that budget: cluster reads can exceed 30 seconds under load.
 		HTTPClient: &http.Client{Transport: &http.Transport{TLSClientConfig: tlsCfg}},
 		// 5 minutes: a win2019 VM's first image clone onto network-attached
 		// Ceph RBD genuinely runs past two minutes (found live -- deploys
 		// failed at "context deadline exceeded" with the old 120s default),
-		// and this budget only bounds waitForOperation's long-poll on async
-		// operations, not ordinary calls (those use requestTimeout). A
-		// builder config can raise it further via OperationTimeoutSeconds.
+		// and this budget bounds ordinary API calls as well as asynchronous
+		// operation waits. A builder config can raise it further via
+		// OperationTimeoutSeconds. Caller cancellation always wins.
 		OperationTimeout: 300 * time.Second,
 	}, nil
 }
 
-// requestTimeout is do's own per-request deadline for everything that
-// ISN'T waitForOperation's long-poll -- ordinary GET/POST/PUT/PATCH/DELETE
-// calls, which should still fail fast on a truly dead connection rather
-// than hang indefinitely just because the caller's own ctx has no
-// deadline (context.Background(), the common case throughout this
-// codebase's production callers).
+// requestTimeout is the minimum per-request budget when a client does not
+// configure a longer cluster operation timeout. Every request remains bounded,
+// even when its caller has no deadline.
 const requestTimeout = 30 * time.Second
 
 // FetchServerCertificateInsecure connects without verifying the server's
@@ -240,19 +237,15 @@ type requestOptions struct {
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body interface{}, options ...requestOptions) (json.RawMessage, error) {
-	// reqCtx, not a reassigned ctx: waitForOperation below needs the
-	// ORIGINAL, undecorated ctx this function was called with, not this
-	// request's own short-lived deadline -- a child context can never
-	// outlive its parent's, so passing reqCtx into waitForOperation would
-	// silently cap its own, much longer c.OperationTimeout+10s deadline
-	// back down to requestTimeout (30s) regardless of what
-	// OperationTimeout is configured to. Found exactly this way, live,
-	// against a real MicroCloud/Ceph cluster -- see NewClient's own doc
-	// comment on this same class of bug.
+	// Keep the original caller context for waitForOperation. Submission
+	// and waiting each need their own bounded budget; time spent submitting
+	// must not consume the operation wait's budget. Both still obey the
+	// caller's overall deadline and cancellation.
 	timeout := requestTimeout
-	// Some LXD cluster mutations (notably OVN network creation) complete
-	// synchronously. Give them the configured operation budget too.
-	if method != http.MethodGet && c.OperationTimeout > timeout {
+	// Cluster reads can also be slow: a live OVN network read succeeded
+	// after the old fixed 30-second deadline had repeatedly cancelled it.
+	// Use the configured budget for reads and synchronous mutations alike.
+	if c.OperationTimeout > timeout {
 		timeout = c.OperationTimeout
 	}
 	reqCtx, cancel := context.WithTimeout(ctx, timeout)
