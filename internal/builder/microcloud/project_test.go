@@ -47,15 +47,15 @@ func newProjectRecorder(t *testing.T, routes map[string]interface{}) (*projectRe
 // (where the uplink lives) from the server as a whole, and lists the projects.
 func TestDiscoveryScopesImagesToTheProject(t *testing.T) {
 	rec, client := newProjectRecorder(t, map[string]interface{}{
-		"/1.0/storage-pools":   []map[string]string{{"name": "remote", "driver": "ceph"}},
-		"/1.0/networks":        []string{"/1.0/networks/UPLINK"},
-		"/1.0/networks/UPLINK": map[string]string{"name": "UPLINK", "type": "physical"},
-		"/1.0/images":          []map[string]interface{}{{"fingerprint": "abc", "aliases": []map[string]string{{"name": "ubuntu"}}}},
-		"/1.0/instances":       []map[string]interface{}{},
-		"/1.0/projects": []map[string]interface{}{
-			{"name": "default", "config": map[string]string{"features.networks": "true", "features.images": "true"}},
-			{"name": "laforge", "description": "ours", "config": map[string]string{"features.networks": "true", "features.profiles": "true", "restricted": "true"}},
-		},
+		"/1.0/storage-pools":        []string{"/1.0/storage-pools/remote"},
+		"/1.0/storage-pools/remote": map[string]string{"name": "remote", "driver": "ceph"},
+		"/1.0/networks":             []string{"/1.0/networks/UPLINK"},
+		"/1.0/networks/UPLINK":      map[string]string{"name": "UPLINK", "type": "physical"},
+		"/1.0/images":               []map[string]interface{}{{"fingerprint": "abc", "aliases": []map[string]string{{"name": "ubuntu"}}}},
+		"/1.0/instances":            []string{},
+		"/1.0/projects":             []string{"/1.0/projects/default", "/1.0/projects/laforge", "/1.0/projects/student-0042"},
+		"/1.0/projects/default":     map[string]interface{}{"name": "default", "config": map[string]string{"features.networks": "true", "features.images": "true"}},
+		"/1.0/projects/laforge":     map[string]interface{}{"name": "laforge", "description": "ours", "config": map[string]string{"features.networks": "true", "features.profiles": "true", "restricted": "true"}},
 	})
 	got, err := discoverResources(context.Background(), client, "laforge")
 	if err != nil {
@@ -66,13 +66,22 @@ func TestDiscoveryScopesImagesToTheProject(t *testing.T) {
 			t.Errorf("%s listed in project %q, want laforge", p, rec.projects[p])
 		}
 	}
+	if _, read := rec.projects["GET /1.0/projects/student-0042"]; read {
+		t.Error("read a project nobody chose in full")
+	}
 	for _, p := range []string{"GET /1.0/storage-pools", "GET /1.0/networks", "GET /1.0/projects"} {
 		if rec.projects[p] != "" {
 			t.Errorf("%s was scoped to project %q, want the server as a whole", p, rec.projects[p])
 		}
 	}
-	if len(got.Projects) != 2 || got.Projects[1].Name != "laforge" || !got.Projects[1].Networks || !got.Projects[1].Profiles || !got.Projects[1].Restricted || got.Projects[1].Images {
+	if len(got.Projects) != 3 || got.Projects[1].Name != "laforge" || !got.Projects[1].Detailed || !got.Projects[1].Networks || !got.Projects[1].Profiles || !got.Projects[1].Restricted || got.Projects[1].Images {
 		t.Errorf("projects = %+v", got.Projects)
+	}
+	if got.Projects[2].Name != "student-0042" || got.Projects[2].Detailed {
+		t.Errorf("an unchosen project should be listed by name only: %+v", got.Projects[2])
+	}
+	if len(got.Warnings) != 0 {
+		t.Errorf("warnings = %v", got.Warnings)
 	}
 	if len(got.Images) != 1 || len(got.Networks) != 1 || len(got.StoragePools) != 1 {
 		t.Errorf("discovery = %+v", got)

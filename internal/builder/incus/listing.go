@@ -3,6 +3,8 @@ package incus
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/url"
 	"path"
 	"strings"
@@ -57,3 +59,101 @@ const detailConcurrency = 8
 
 // maxNetworkDetails bounds how many networks ListNetworks reads in full.
 const maxNetworkDetails = 40
+
+// laforgeInstances reads LaForge's own instances (named lf-…) in the client's
+// project. In default it reads them one request each, at most
+// detailConcurrency at a time -- never every instance in one recursive
+// listing. On a shared cluster that listing grows
+// with everyone else's instances, and it's polled throughout an event. An
+// instance deleted between the two steps is skipped; any other failure fails
+// the whole read, since callers (drift, power state) would otherwise treat a
+// missing instance as gone.
+//
+// In a project of LaForge's own (anything but default) the project holds only
+// LaForge's instances, so one recursive listing is the cheaper way to read
+// them all -- this is polled every 30 seconds during an event.
+func (c *Client) laforgeInstances(ctx context.Context) ([]json.RawMessage, error) {
+	if c.Project != "" && c.Project != "default" {
+		raw, err := c.get(ctx, "/1.0/instances?recursion=1")
+		if err != nil {
+			return nil, err
+		}
+		var all []json.RawMessage
+		if err := json.Unmarshal(raw, &all); err != nil {
+			return nil, err
+		}
+		var ours []json.RawMessage
+		for _, r := range all {
+			var named struct {
+				Name string `json:"name"`
+			}
+			if json.Unmarshal(r, &named) == nil && strings.HasPrefix(named.Name, "lf-") {
+				ours = append(ours, r)
+			}
+		}
+		return ours, nil
+	}
+	names, err := c.listNames(ctx, "/1.0/instances")
+	if err != nil {
+		return nil, err
+	}
+	var ours []string
+	for _, n := range names {
+		if strings.HasPrefix(n, "lf-") {
+			ours = append(ours, n)
+		}
+	}
+	raws := make([]json.RawMessage, len(ours))
+	errs := make([]error, len(ours))
+	forEachConcurrently(ours, detailConcurrency, func(i int, name string) {
+		raw, err := c.get(ctx, "/1.0/instances/"+url.PathEscape(name))
+		var apiErr *APIError
+		if err != nil && !(errors.As(err, &apiErr) && apiErr.NotFound()) {
+			errs[i] = fmt.Errorf("reading instance %s: %w", name, err)
+			return
+		}
+		raws[i] = raw
+	})
+	out := make([]json.RawMessage, 0, len(raws))
+	for i, r := range raws {
+		if errs[i] != nil {
+			return nil, errs[i]
+		}
+		if r != nil {
+			out = append(out, r)
+		}
+	}
+	return out, nil
+}
+
+// fetchDetails reads each named item at path(name), at most
+// detailConcurrency at a time, decoding into T. Items that fail are left out;
+// the first failure is returned alongside whatever succeeded, so a caller can
+// show what it could read and say what it couldn't.
+func fetchDetails[T any](ctx context.Context, c *Client, names []string, path func(string) string) ([]T, error) {
+	results := make([]*T, len(names))
+	var mu sync.Mutex
+	var firstErr error
+	forEachConcurrently(names, detailConcurrency, func(i int, name string) {
+		raw, err := c.get(ctx, path(name))
+		if err == nil {
+			var v T
+			if err = json.Unmarshal(raw, &v); err == nil {
+				results[i] = &v
+				return
+			}
+		}
+		mu.Lock()
+		if firstErr == nil {
+			firstErr = fmt.Errorf("%s: %w", name, err)
+		}
+		mu.Unlock()
+	})
+	out := make([]T, 0, len(results))
+	for _, r := range results {
+		if r != nil {
+			out = append(out, *r)
+		}
+	}
+	return out, firstErr
+}

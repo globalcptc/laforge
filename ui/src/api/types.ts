@@ -735,6 +735,8 @@ export interface ProjectInfo {
   features_profiles: boolean
   features_storage_volumes: boolean
   restricted: boolean
+  /** False when only the name was read; the fields above are then unknown. */
+  detailed?: boolean
 }
 
 // BuilderConnection mirrors internal/api/builder_probe.go's connectionView:

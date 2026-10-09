@@ -230,6 +230,15 @@ containers are then deployed from it like a host.
 
 ## Limits and troubleshooting
 
+- **On a shared cluster** (other tenants' instances, networks, pools and projects),
+  LaForge never asks the server for every object in full. LXD and Incus work out
+  everything that uses each one for that, which can take longer than a request is
+  allowed. It lists names, which is cheap. It reads details only for what it needs: a
+  bounded number of networks (likely uplinks first), each storage pool, the chosen
+  project, the instances that have snapshots, and its own `lf-…` instances. It keeps to
+  a few requests at a time. In a project of LaForge's own, its instances are read with
+  one listing. If something still can't be read while connecting, the wizard shows a
+  warning and takes a typed name instead.
 - **Everything is in the `default` project.** See [Permissions](#permissions).
 - **OVN network creation can stall** while the host is busy creating or deleting other
   networks; it is retried by the runner.

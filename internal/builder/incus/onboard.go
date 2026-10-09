@@ -59,41 +59,39 @@ func (onboarder) Rediscover(ctx context.Context, conn builder.Connection) (*buil
 // discoverResources reads a host's pickable resources, never returning nil
 // slices so the API always ships JSON arrays.
 func discoverResources(ctx context.Context, c *Client) (builder.Discovery, error) {
+	// Every listing is best effort: on a shared server any of them can be slow
+	// or refused, and each only feeds a picker that also takes a typed name.
+	// What couldn't be read becomes a warning, never a failed connection.
+	var warnings []string
+	warn := func(what string, err error) {
+		warnings = append(warnings, fmt.Sprintf("couldn't list the %s (%v); type the name instead", what, err))
+	}
 	pools, err := c.ListStoragePools(ctx)
 	if err != nil {
-		return builder.Discovery{}, fmt.Errorf("listing storage pools: %w", err)
+		warn("storage pools", err)
 	}
-	// Networks only feed the uplink picker, which also takes a typed name, so
-	// failing to read them is a warning, not a failed connection.
-	var warnings []string
 	networks, networkNames, err := c.ListNetworks(ctx)
 	if err != nil {
-		warnings = append(warnings, fmt.Sprintf("couldn't list the server's networks (%v); type the uplink network's name instead", err))
+		warn("networks", err)
 	}
 	images, err := c.ListImages(ctx)
 	if err != nil {
-		return builder.Discovery{}, fmt.Errorf("listing images: %w", err)
+		warn("images", err)
 	}
-	if pools == nil {
-		pools = []builder.StoragePoolInfo{}
-	}
-	if networks == nil {
-		networks = []builder.NetworkInfo{}
-	}
-	if networkNames == nil {
-		networkNames = []string{}
-	}
-	if warnings == nil {
-		warnings = []string{}
-	}
-	if images == nil {
-		images = []builder.ImageInfo{}
-	}
-	// Snapshots are optional (most builders use images), so not being able to
-	// list them mustn't stop a builder connecting.
 	snapshots, err := c.ListSnapshots(ctx)
-	if err != nil || snapshots == nil {
-		snapshots = []builder.SnapshotInfo{}
+	if err != nil {
+		warn("instance snapshots", err)
 	}
-	return builder.Discovery{StoragePools: pools, Networks: networks, Images: images, Projects: []builder.ProjectInfo{}, Snapshots: snapshots, NetworkNames: networkNames, Warnings: warnings}, nil
+	return builder.Discovery{
+		StoragePools: orEmpty(pools), Networks: orEmpty(networks), NetworkNames: orEmpty(networkNames),
+		Images: orEmpty(images), Projects: []builder.ProjectInfo{}, Snapshots: orEmpty(snapshots), Warnings: orEmpty(warnings),
+	}, nil
+}
+
+// orEmpty keeps the API's lists JSON arrays, never null.
+func orEmpty[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
 }

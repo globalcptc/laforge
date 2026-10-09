@@ -29,14 +29,28 @@ type StoragePoolInfo = builder.StoragePoolInfo
 
 // ListStoragePools lists every storage pool this server knows about --
 // real candidates for Config.StoragePool (a host's root disk device).
+//
+// Names come from one cheap listing; each pool's details (its driver) are read
+// separately, because a recursive listing makes the server work out every
+// volume in every pool -- on a shared cluster, every tenant's. A pool whose
+// details can't be read is still returned by name.
 func (c *Client) ListStoragePools(ctx context.Context) ([]StoragePoolInfo, error) {
-	raw, err := c.get(ctx, "/1.0/storage-pools?recursion=1")
+	names, err := c.listNames(ctx, "/1.0/storage-pools")
 	if err != nil {
 		return nil, err
 	}
-	var out []StoragePoolInfo
-	if err := json.Unmarshal(raw, &out); err != nil {
-		return nil, err
+	detailed, _ := fetchDetails[StoragePoolInfo](ctx, c, names, func(n string) string { return "/1.0/storage-pools/" + url.PathEscape(n) })
+	byName := map[string]StoragePoolInfo{}
+	for _, p := range detailed {
+		byName[p.Name] = p
+	}
+	out := make([]StoragePoolInfo, 0, len(names))
+	for _, n := range names {
+		if p, ok := byName[n]; ok {
+			out = append(out, p)
+		} else {
+			out = append(out, StoragePoolInfo{Name: n})
+		}
 	}
 	return out, nil
 }

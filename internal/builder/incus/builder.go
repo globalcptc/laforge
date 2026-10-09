@@ -733,13 +733,9 @@ type incusNetwork struct {
 }
 
 func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
-	raw, err := b.Client.get(ctx, "/1.0/instances?recursion=1")
+	instances, err := b.ourInstances(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("listing instances: %w", err)
-	}
-	var instances []incusInstance
-	if err := json.Unmarshal(raw, &instances); err != nil {
-		return nil, fmt.Errorf("decoding instance list: %w", err)
+		return nil, err
 	}
 	var out []builder.Resource
 	for _, inst := range instances {
@@ -798,13 +794,9 @@ func (b *Builder) OpenAccess(ctx context.Context, team string) error {
 }
 
 func (b *Builder) forEachTeamInstance(ctx context.Context, team string, fn func(name string, inst incusInstance) error) error {
-	raw, err := b.Client.get(ctx, "/1.0/instances?recursion=1")
+	instances, err := b.ourInstances(ctx)
 	if err != nil {
-		return fmt.Errorf("listing instances: %w", err)
-	}
-	var instances []incusInstance
-	if err := json.Unmarshal(raw, &instances); err != nil {
-		return fmt.Errorf("decoding instance list: %w", err)
+		return err
 	}
 	for _, inst := range instances {
 		if inst.Config[teamConfigKey] != team {
@@ -1043,4 +1035,22 @@ func (b *Builder) replaceCopiedDevices(ctx context.Context, name string, devices
 		}
 		return nil
 	})
+}
+
+// ourInstances is LaForge's own instances in this builder's project -- see
+// Client.laforgeInstances for why they're read one by one.
+func (b *Builder) ourInstances(ctx context.Context) ([]incusInstance, error) {
+	raws, err := b.Client.laforgeInstances(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("listing instances: %w", err)
+	}
+	out := make([]incusInstance, 0, len(raws))
+	for _, raw := range raws {
+		var inst incusInstance
+		if err := json.Unmarshal(raw, &inst); err != nil {
+			return nil, fmt.Errorf("decoding instance: %w", err)
+		}
+		out = append(out, inst)
+	}
+	return out, nil
 }

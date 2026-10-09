@@ -77,14 +77,7 @@ export function StepPlacement({
                 hint="Where each machine's disk is created."
                 className="mb-0"
               >
-                <Select value={h.storagePool} onChange={(e) => update(i, { storagePool: e.target.value })}>
-                  <option value="">Choose a pool…</option>
-                  {h.connection.discovery.storage_pools.map((p) => (
-                    <option key={p.name} value={p.name}>
-                      {p.name} ({p.driver})
-                    </option>
-                  ))}
-                </Select>
+<PoolInput host={h} onChange={(storagePool) => update(i, { storagePool })} />
               </Field>
               <Field
                 label={
@@ -219,7 +212,7 @@ function ProjectPicker({ host, onChange }: { host: HostDraft; onChange: (patch: 
         )}
       </Field>
       {error && <div className="mt-1 text-xs text-danger">{error}</div>}
-      {info && <ProjectNotes project={info} />}
+      {info?.detailed !== false && info && <ProjectNotes project={info} />}
     </div>
   )
 }
@@ -282,6 +275,40 @@ function UplinkInput({ host, onChange }: { host: HostDraft; onChange: (uplink: s
       )}
       {host.uplink && names.length > 0 && !names.includes(host.uplink) && (
         <div className="mt-1 text-xs text-warning">No network named {host.uplink} was found on the server.</div>
+      )}
+    </div>
+  )
+}
+
+// PoolInput picks the storage pool. Pool names are always listed (cheaply);
+// drivers only where the pool's details could be read in time, so it's a
+// text field with suggestions rather than a list that needs them all.
+function PoolInput({ host, onChange }: { host: HostDraft; onChange: (pool: string) => void }) {
+  const pools = host.connection?.discovery.storage_pools ?? []
+  const listId = `pools-${host.key}`
+  return (
+    <div>
+      <Input value={host.storagePool} onChange={(e) => onChange(e.target.value.trim())} list={listId} placeholder="default" className="font-mono" />
+      <datalist id={listId}>
+        {pools.map((p) => (
+          <option key={p.name} value={p.name}>
+            {p.driver}
+          </option>
+        ))}
+      </datalist>
+      {pools.length > 0 && (
+        <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-fg-subtle">
+          On the server:
+          {pools.map((p) => (
+            <button key={p.name} type="button" onClick={() => onChange(p.name)} className="rounded bg-surface-sunken px-1.5 py-0.5 font-mono text-fg hover:bg-surface-hover">
+              {p.name}
+              {p.driver && <span className="text-fg-subtle"> ({p.driver})</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {host.storagePool && pools.length > 0 && !pools.some((p) => p.name === host.storagePool) && (
+        <div className="mt-1 text-xs text-warning">No storage pool named {host.storagePool} was found on the server.</div>
       )}
     </div>
   )

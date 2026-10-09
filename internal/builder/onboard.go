@@ -109,6 +109,9 @@ type ProjectInfo struct {
 	StorageVolumes bool `json:"features_storage_volumes"`
 	// Restricted is the project's own `restricted` setting.
 	Restricted bool `json:"restricted"`
+	// Detailed is false when only the name was read (every project except
+	// the one being chosen and default); the fields above are then unknown.
+	Detailed bool `json:"detailed"`
 }
 
 // OnboardRequest is the operator's input for connecting a new hoster. Which

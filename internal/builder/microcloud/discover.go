@@ -27,14 +27,28 @@ type StoragePoolInfo = builder.StoragePoolInfo
 
 // ListStoragePools lists every storage pool this server knows about --
 // real candidates for Config.StoragePool (a host's root disk device).
+//
+// Names come from one cheap listing; each pool's details (its driver) are read
+// separately, because a recursive listing makes the server work out every
+// volume in every pool -- on a shared cluster, every tenant's. A pool whose
+// details can't be read is still returned by name.
 func (c *Client) ListStoragePools(ctx context.Context) ([]StoragePoolInfo, error) {
-	raw, err := c.get(ctx, "/1.0/storage-pools?recursion=1")
+	names, err := c.listNames(ctx, "/1.0/storage-pools")
 	if err != nil {
 		return nil, err
 	}
-	var out []StoragePoolInfo
-	if err := json.Unmarshal(raw, &out); err != nil {
-		return nil, err
+	detailed, _ := fetchDetails[StoragePoolInfo](ctx, c, names, func(n string) string { return "/1.0/storage-pools/" + url.PathEscape(n) })
+	byName := map[string]StoragePoolInfo{}
+	for _, p := range detailed {
+		byName[p.Name] = p
+	}
+	out := make([]StoragePoolInfo, 0, len(names))
+	for _, n := range names {
+		if p, ok := byName[n]; ok {
+			out = append(out, p)
+		} else {
+			out = append(out, StoragePoolInfo{Name: n})
+		}
 	}
 	return out, nil
 }
@@ -173,29 +187,51 @@ func (c *Client) ListImages(ctx context.Context) ([]ImageInfo, error) {
 type ProjectInfo = builder.ProjectInfo
 
 // ListProjects lists the projects this client can see -- every project for a
-// fully trusted client, only its allowed ones for a restricted one.
-func (c *Client) ListProjects(ctx context.Context) ([]ProjectInfo, error) {
-	raw, err := c.get(ctx, "/1.0/projects?recursion=1")
+// fully trusted client, only its allowed ones for a restricted one -- by name.
+// Features are read only for the projects in detailFor (the one being chosen,
+// and default): a university cluster can have a project per student, and a
+// recursive listing makes the server work out everything in each of them.
+func (c *Client) ListProjects(ctx context.Context, detailFor ...string) ([]ProjectInfo, error) {
+	names, err := c.listNames(ctx, "/1.0/projects")
 	if err != nil {
 		return nil, err
 	}
-	var rows []struct {
+	want := map[string]bool{}
+	for _, n := range detailFor {
+		if n == "" {
+			n = "default"
+		}
+		want[n] = true
+	}
+	var toRead []string
+	for _, n := range names {
+		if want[n] {
+			toRead = append(toRead, n)
+		}
+	}
+	type rawProject struct {
 		Name        string            `json:"name"`
 		Description string            `json:"description"`
 		Config      map[string]string `json:"config"`
 	}
-	if err := json.Unmarshal(raw, &rows); err != nil {
-		return nil, err
-	}
-	out := make([]ProjectInfo, 0, len(rows))
-	for _, r := range rows {
+	detailed, _ := fetchDetails[rawProject](ctx, c, toRead, func(n string) string { return "/1.0/projects/" + url.PathEscape(n) })
+	byName := map[string]ProjectInfo{}
+	for _, r := range detailed {
 		on := func(key string) bool { return r.Config[key] == "true" }
-		out = append(out, ProjectInfo{
-			Name: r.Name, Description: r.Description,
+		byName[r.Name] = ProjectInfo{
+			Name: r.Name, Description: r.Description, Detailed: true,
 			Networks: on("features.networks"), Images: on("features.images"),
 			Profiles: on("features.profiles"), StorageVolumes: on("features.storage.volumes"),
 			Restricted: on("restricted"),
-		})
+		}
+	}
+	out := make([]ProjectInfo, 0, len(names))
+	for _, n := range names {
+		if p, ok := byName[n]; ok {
+			out = append(out, p)
+		} else {
+			out = append(out, ProjectInfo{Name: n})
+		}
 	}
 	return out, nil
 }

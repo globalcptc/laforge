@@ -45,18 +45,35 @@ func fakeIncusServer(t *testing.T, routes map[string]interface{}) *Client {
 const defaultTestOperationTimeout = 5
 
 func TestListStoragePools(t *testing.T) {
-	client := fakeIncusServer(t, map[string]interface{}{
-		"/1.0/storage-pools": []StoragePoolInfo{
-			{Name: "default", Driver: "zfs", Status: "Created"},
-			{Name: "remote", Driver: "ceph", Status: "Created"},
-		},
-	})
+	// Names from one cheap listing, each pool's details separately (never a
+	// recursive listing), and a pool whose details fail is still listed.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("recursion") != "" {
+			t.Errorf("listing used recursion: %s", r.URL)
+		}
+		var metadata interface{}
+		switch r.URL.Path {
+		case "/1.0/storage-pools":
+			metadata = []string{"/1.0/storage-pools/default", "/1.0/storage-pools/remote", "/1.0/storage-pools/busy"}
+		case "/1.0/storage-pools/default":
+			metadata = StoragePoolInfo{Name: "default", Driver: "zfs", Status: "Created"}
+		case "/1.0/storage-pools/remote":
+			metadata = StoragePoolInfo{Name: "remote", Driver: "ceph", Status: "Created"}
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"type": "error", "error_code": 500, "error": "timed out"})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "status_code": 200, "metadata": metadata})
+	}))
+	t.Cleanup(srv.Close)
+	client := &Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: 5}
 	pools, err := client.ListStoragePools(context.Background())
 	if err != nil {
 		t.Fatalf("ListStoragePools: %v", err)
 	}
-	if len(pools) != 2 || pools[1].Name != "remote" || pools[1].Driver != "ceph" {
-		t.Fatalf("pools = %+v, want [default/zfs, remote/ceph]", pools)
+	if len(pools) != 3 || pools[1].Name != "remote" || pools[1].Driver != "ceph" || pools[2].Name != "busy" || pools[2].Driver != "" {
+		t.Fatalf("pools = %+v, want default/zfs, remote/ceph, and busy by name only", pools)
 	}
 }
 
