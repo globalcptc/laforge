@@ -47,9 +47,11 @@ func newProjectRecorder(t *testing.T, routes map[string]interface{}) (*projectRe
 // (where the uplink lives) from the server as a whole, and lists the projects.
 func TestDiscoveryScopesImagesToTheProject(t *testing.T) {
 	rec, client := newProjectRecorder(t, map[string]interface{}{
-		"/1.0/storage-pools": []map[string]string{{"name": "remote", "driver": "ceph"}},
-		"/1.0/networks":      []map[string]string{{"name": "UPLINK", "type": "physical"}},
-		"/1.0/images":        []map[string]interface{}{{"fingerprint": "abc", "aliases": []map[string]string{{"name": "ubuntu"}}}},
+		"/1.0/storage-pools":   []map[string]string{{"name": "remote", "driver": "ceph"}},
+		"/1.0/networks":        []string{"/1.0/networks/UPLINK"},
+		"/1.0/networks/UPLINK": map[string]string{"name": "UPLINK", "type": "physical"},
+		"/1.0/images":          []map[string]interface{}{{"fingerprint": "abc", "aliases": []map[string]string{{"name": "ubuntu"}}}},
+		"/1.0/instances":       []map[string]interface{}{},
 		"/1.0/projects": []map[string]interface{}{
 			{"name": "default", "config": map[string]string{"features.networks": "true", "features.images": "true"}},
 			{"name": "laforge", "description": "ours", "config": map[string]string{"features.networks": "true", "features.profiles": "true", "restricted": "true"}},
@@ -59,8 +61,10 @@ func TestDiscoveryScopesImagesToTheProject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("discoverResources: %v", err)
 	}
-	if rec.projects["GET /1.0/images"] != "laforge" {
-		t.Errorf("images listed in project %q, want laforge", rec.projects["GET /1.0/images"])
+	for _, p := range []string{"GET /1.0/images", "GET /1.0/instances"} {
+		if rec.projects[p] != "laforge" {
+			t.Errorf("%s listed in project %q, want laforge", p, rec.projects[p])
+		}
 	}
 	for _, p := range []string{"GET /1.0/storage-pools", "GET /1.0/networks", "GET /1.0/projects"} {
 		if rec.projects[p] != "" {

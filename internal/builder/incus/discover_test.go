@@ -3,9 +3,11 @@ package incus
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/globalcptc/laforge/internal/builder"
@@ -59,28 +61,63 @@ func TestListStoragePools(t *testing.T) {
 }
 
 func TestListNetworks(t *testing.T) {
-	client := fakeIncusServer(t, map[string]interface{}{
-		"/1.0/networks": []NetworkInfo{
-			{Name: "UPLINK", Type: "physical", Managed: true, Status: "Created"},
-			{Name: "eth0", Type: "physical", Managed: false, Status: "Created"},
-			{Name: "lxdbr0", Type: "bridge", Managed: true, Status: "Created"},
-		},
-	})
-	networks, err := client.ListNetworks(context.Background())
+	// A shared cluster: LaForge's own team networks, many of other tenants',
+	// and an uplink listed last. Details are read for a bounded number,
+	// likely uplinks first; never all of them, never recursively.
+	var mu sync.Mutex
+	var detailed []string
+	urls := []string{"/1.0/networks/lf-t1lan-abc", "/1.0/networks/lf-t2lan-def"}
+	for i := 0; i < 60; i++ {
+		urls = append(urls, fmt.Sprintf("/1.0/networks/club-%02d", i))
+	}
+	urls = append(urls, "/1.0/networks/UPLINK?project=default")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("recursion") != "" {
+			t.Errorf("listing used recursion: %s", r.URL)
+		}
+		var metadata interface{}
+		switch {
+		case r.URL.Path == "/1.0/networks":
+			metadata = urls
+		case strings.HasPrefix(r.URL.Path, "/1.0/networks/"):
+			name := strings.TrimPrefix(r.URL.Path, "/1.0/networks/")
+			mu.Lock()
+			detailed = append(detailed, name)
+			mu.Unlock()
+			typ := "bridge"
+			if name == "UPLINK" {
+				typ = "physical"
+			}
+			metadata = NetworkInfo{Name: name, Type: typ, Managed: true, Status: "Created"}
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "status_code": 200, "metadata": metadata})
+	}))
+	t.Cleanup(srv.Close)
+	client := &Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: 5}
+
+	networks, names, err := client.ListNetworks(context.Background())
 	if err != nil {
 		t.Fatalf("ListNetworks: %v", err)
 	}
-	if len(networks) != 3 {
-		t.Fatalf("len(networks) = %d, want 3", len(networks))
+	if len(names) != 61 || names[0] != "UPLINK" {
+		t.Errorf("names = %d (first %q), want the 61 non-LaForge networks, sorted", len(names), names[0])
 	}
-	var physical int
-	for _, n := range networks {
-		if n.Type == "physical" {
-			physical++
+	if len(detailed) > maxNetworkDetails {
+		t.Errorf("read %d networks in full, want at most %d", len(detailed), maxNetworkDetails)
+	}
+	for _, d := range detailed {
+		if strings.HasPrefix(d, "lf-") {
+			t.Errorf("read LaForge's own team network %s in full", d)
 		}
 	}
-	if physical != 2 {
-		t.Fatalf("physical-type networks = %d, want 2 (real OVN uplink candidates)", physical)
+	var sawUplink bool
+	for _, n := range networks {
+		if n.Name == "UPLINK" && n.Type == "physical" {
+			sawUplink = true
+		}
+	}
+	if !sawUplink {
+		t.Errorf("the uplink (listed last) wasn't read in full: %v", detailed)
 	}
 }
 

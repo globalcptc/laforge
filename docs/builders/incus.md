@@ -77,7 +77,7 @@ the first two rows is in the `default` project.
 | Trust | `POST /1.0/certificates` (trust token) | Once, when the builder is connected. Never again. |
 | Storage pools, networks | `GET /1.0/storage-pools`, `GET /1.0/networks` | Listing what to pick from when connecting (read-only); connecting fails without it. |
 | Storage volumes | `POST`/`DELETE /1.0/storage-pools/{pool}/volumes/custom/…` | Windows config-drive ISOs only. |
-| Instances | create, `GET`, `PUT`/`PATCH` (config and devices), delete; `PUT …/state` (start, stop, restart); `POST …/exec`; `POST …/files` | Deploying and powering instances; access windows (closing one detaches the instance's NIC and stores it in the instance's config; opening restores it); external-access proxy devices; pushing the agent into OCI containers; the docker base image build. |
+| Instances | create (from an image, or as a copy of a snapshot — `source.type: copy`), `GET` snapshots, `GET`, `PUT`/`PATCH` (config and devices), delete; `PUT …/state` (start, stop, restart); `POST …/exec`; `POST …/files` | Deploying and powering instances; access windows (closing one detaches the instance's NIC and stores it in the instance's config; opening restores it); external-access proxy devices; pushing the agent into OCI containers; the docker base image build. |
 | Images | `POST /1.0/images` (pull, publish), `GET /1.0/images`, `GET`/`DELETE /1.0/images/aliases/…` | Pulling builder images from simplestreams/OCI registries; publishing the docker base image. |
 | Networks | `POST`/`GET`/`PATCH`/`DELETE /1.0/networks…`, `POST /1.0/networks/{n}/peers` | Team OVN networks, peering, attaching ACLs. Creating an OVN network uses the uplink network. |
 | Network ACLs | `POST`/`PUT`/`DELETE /1.0/network-acls…` | `visible_from` and `ports:` enforcement. |
@@ -153,13 +153,58 @@ A token is single-use and expires; if enrollment fails, generate a new one.
 | Setting | Per | What it is |
 | --- | --- | --- |
 | Hosts | builder | One entry per Incus server: its connection (from enrollment), storage pool, OVN uplink network, and an optional operation timeout. |
-| Images | builder | Content `os:` names (and `compose-host`, optionally) mapped to an image: alias + simplestreams server, or a fingerprint already on every host; mark VM images (Windows) as VM. |
+| Images | builder | Content `os:` names (and `compose-host`, optionally) mapped to an image (alias + simplestreams server, or a fingerprint already on every host) or to an instance snapshot to copy (see [Images or snapshots](#images-or-snapshots)); mark VM images (Windows) as VM. |
 | Sizes | builder | Content `size:` names mapped to `limits.cpu` / `limits.memory`. |
 | External access IP and port range | builder | For `public:` ports: the address proxy devices listen on, and the window of external ports (default 40000–50000, 100 per team). |
 
 A build fails validation before deploying anything if content uses an `os:` with no
 image mapped, or has a compose container and the builder has neither a built docker base
 image nor a `compose-host` image.
+
+## Images or snapshots
+
+Each name content uses (`os: win2019`, `os: ubuntu22`) is mapped, in the builder's
+**Images** step, to one of two sources:
+
+- **An image** in the host's image store, as before.
+- **A copy of an instance snapshot** — a stopped *template* instance you keep, with a
+  snapshot of it. On storage like Ceph a copy from a snapshot is a cheap clone, so this is
+  usually much faster to deploy than unpacking an image, especially for large VMs.
+
+The Images step lists the snapshots it finds in `default` on each host next to the images; tick one and
+give it the name content uses. A template in a different project can be added by typing
+its project, instance and snapshot. Saving checks that every snapshot exists on every host in the pool (a team can land on any host).
+
+**What LaForge does with a snapshot:** it creates each instance as a copy of
+`<instance>/<snapshot>` (without the template's other snapshots), on the builder's storage
+pool, then — before the copy first boots — **replaces its devices with exactly LaForge's
+own** (the team NIC at its address, the root disk, the Windows config drive) and its
+profiles with just `default`. A template's other devices — a NIC on a management network,
+an attached data volume, a GPU — are never carried into team instances, so one team's
+copy can't share a network or disk with another's.
+
+**Preparing a template:**
+
+1. Build the instance the way every copy should start, and leave cloud-init installed
+   (cloudbase-init on Windows): the agent is delivered through it on each copy's first
+   boot.
+2. Reset first-boot state so each copy runs it again: on Linux `cloud-init clean --logs`;
+   on Windows, generalize it as you would for any cloned image (sysprep with
+   cloudbase-init's unattend). Each copy gets a new instance identity, which is what makes
+   cloud-init treat it as a new machine.
+3. Stop it, then snapshot it, e.g. `incus snapshot create win-tmpl golden`.
+4. Keep the template on the builder's storage pool. A copy to a different pool is a full
+   copy, not a clone, and loses most of the speed.
+5. Mark it **VM** in the builder if the template is a VM (the wizard does this for listed
+   snapshots); it has to match.
+
+Re-snapshotting a template under the same name changes what new copies get, but not
+existing instances — redeploy them to pick it up. The `compose-host` override can be a
+snapshot too.
+
+> Snapshot sources are tested against a simulated Incus API, not yet a live
+> Incus server. Before an event, deploy one Linux and one Windows host from a snapshot and
+> confirm the agent checks in.
 
 ## The docker base image
 

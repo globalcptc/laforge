@@ -3,6 +3,11 @@ package microcloud
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net/url"
+	"sort"
+	"strings"
+	"sync"
 
 	"github.com/globalcptc/laforge/internal/builder"
 )
@@ -44,16 +49,62 @@ type NetworkInfo = builder.NetworkInfo
 // caller building an uplink picker filters this list to Type=="physical"
 // itself; returning the full list here (not pre-filtered) keeps this
 // method a plain mirror of the real API, same as ListStoragePools.
-func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
-	raw, err := c.get(ctx, "/1.0/networks?recursion=1")
+func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, []string, error) {
+	// Every name first (cheap; see listNames), then full details for at most
+	// maxNetworkDetails of them, likely uplinks first. LaForge's own team
+	// networks (lf-…) are skipped: never an uplink.
+	all, err := c.listNames(ctx, "/1.0/networks")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	var out []NetworkInfo
-	if err := json.Unmarshal(raw, &out); err != nil {
-		return nil, err
+	var names, likely, rest []string
+	for _, n := range all {
+		if strings.HasPrefix(n, "lf-") {
+			continue
+		}
+		names = append(names, n)
+		if strings.Contains(strings.ToLower(n), "uplink") {
+			likely = append(likely, n)
+		} else {
+			rest = append(rest, n)
+		}
 	}
-	return out, nil
+	sort.Strings(names)
+	wanted := append(likely, rest...)
+	if len(wanted) > maxNetworkDetails {
+		wanted = wanted[:maxNetworkDetails]
+	}
+	results := make([]*NetworkInfo, len(wanted))
+	var firstErr error
+	var mu sync.Mutex
+	forEachConcurrently(wanted, detailConcurrency, func(i int, name string) {
+		raw, err := c.get(ctx, "/1.0/networks/"+url.PathEscape(name))
+		if err == nil {
+			var n NetworkInfo
+			if err = json.Unmarshal(raw, &n); err == nil {
+				results[i] = &n
+				return
+			}
+		}
+		mu.Lock()
+		if firstErr == nil {
+			firstErr = err
+		}
+		mu.Unlock()
+	})
+	out := []NetworkInfo{}
+	for _, r := range results {
+		if r != nil {
+			out = append(out, *r)
+		}
+	}
+	if len(out) == 0 && firstErr != nil {
+		return nil, names, firstErr
+	}
+	if names == nil {
+		names = []string{}
+	}
+	return out, names, nil
 }
 
 // ImageInfo is a trimmed projection of GET /1.0/images?recursion=1 --
@@ -147,4 +198,94 @@ func (c *Client) ListProjects(ctx context.Context) ([]ProjectInfo, error) {
 		})
 	}
 	return out, nil
+}
+
+// SnapshotInfo is one entry of ListSnapshots.
+type SnapshotInfo = builder.SnapshotInfo
+
+// maxTemplateInstances bounds how many instances ListSnapshots looks inside:
+// each costs a request, and a busy project can hold many.
+const maxTemplateInstances = 200
+
+// ListSnapshots lists the snapshots of the instances in the client's project
+// that could be templates -- every instance except LaForge's own (lf-…) and
+// its base image build container.
+func (c *Client) ListSnapshots(ctx context.Context) ([]SnapshotInfo, error) {
+	names, err := c.listNames(ctx, "/1.0/instances")
+	if err != nil {
+		return nil, err
+	}
+	var candidates []string
+	for _, n := range names {
+		if strings.HasPrefix(n, "lf-") || n == tempBuildInstance {
+			continue
+		}
+		if len(candidates) == maxTemplateInstances {
+			break
+		}
+		candidates = append(candidates, n)
+	}
+	found := make([][]SnapshotInfo, len(candidates))
+	forEachConcurrently(candidates, detailConcurrency, func(i int, name string) {
+		// Most instances have no snapshots; only those are read in full.
+		snapNames, err := c.listNames(ctx, "/1.0/instances/"+url.PathEscape(name)+"/snapshots")
+		if err != nil || len(snapNames) == 0 {
+			return
+		}
+		raw, err := c.get(ctx, "/1.0/instances/"+url.PathEscape(name))
+		if err != nil {
+			return
+		}
+		var inst struct {
+			Type        string            `json:"type"`
+			Status      string            `json:"status"`
+			Description string            `json:"description"`
+			Config      map[string]string `json:"config"`
+		}
+		if json.Unmarshal(raw, &inst) != nil {
+			return
+		}
+		created := map[string]string{}
+		if raw, err := c.get(ctx, "/1.0/instances/"+url.PathEscape(name)+"/snapshots?recursion=1"); err == nil {
+			var snaps []struct {
+				Name      string `json:"name"`
+				CreatedAt string `json:"created_at"`
+			}
+			if json.Unmarshal(raw, &snaps) == nil {
+				for _, sn := range snaps {
+					created[sn.Name] = sn.CreatedAt
+				}
+			}
+		}
+		for _, sn := range snapNames {
+			found[i] = append(found[i], SnapshotInfo{
+				Instance: name, Snapshot: sn, Type: inst.Type, Status: inst.Status,
+				Description: inst.Description, OS: inst.Config["image.os"], Release: inst.Config["image.release"],
+				CreatedAt: created[sn],
+			})
+		}
+	})
+	out := []SnapshotInfo{}
+	for _, f := range found {
+		out = append(out, f...)
+	}
+	return out, nil
+}
+
+// SnapshotExists reports whether instance/snapshot exists in project ("" is
+// the client's own).
+func (c *Client) SnapshotExists(ctx context.Context, project, instance, snapshot string) (bool, error) {
+	scoped := *c
+	if project != "" {
+		scoped.Project = project
+	}
+	_, err := scoped.get(ctx, "/1.0/instances/"+url.PathEscape(instance)+"/snapshots/"+url.PathEscape(snapshot))
+	if err == nil {
+		return true, nil
+	}
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && apiErr.NotFound() {
+		return false, nil
+	}
+	return false, err
 }

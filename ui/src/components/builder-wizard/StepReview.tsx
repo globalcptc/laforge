@@ -60,7 +60,14 @@ export function StepReview({ draft }: { draft: Draft }) {
             {draft.images.length === 0 && <div className="px-3 py-2 text-fg-muted">None offered.</div>}
             {draft.images.map((i) => (
               <Row key={i.name} label={<span className="font-mono">{i.name}</span>}>
-                <span className="font-mono">{i.alias || shortFingerprint(i.fingerprint)}</span>{' '}
+                {i.source === 'snapshot' ? (
+                  <span>
+                    copy of <span className="font-mono">{i.instance}/{i.snapshot}</span>
+                    {i.sourceProject && <span className="text-xs text-fg-muted"> (project {i.sourceProject})</span>}
+                  </span>
+                ) : (
+                  <span className="font-mono">{i.alias || shortFingerprint(i.fingerprint)}</span>
+                )}{' '}
                 <Badge tone={i.vm ? 'info' : 'neutral'}>{i.vm ? 'VM' : 'Container'}</Badge>
                 {i.server && <span className="ml-1 text-xs text-fg-muted">downloaded on first use</span>}
               </Row>

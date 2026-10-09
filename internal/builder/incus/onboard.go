@@ -63,9 +63,12 @@ func discoverResources(ctx context.Context, c *Client) (builder.Discovery, error
 	if err != nil {
 		return builder.Discovery{}, fmt.Errorf("listing storage pools: %w", err)
 	}
-	networks, err := c.ListNetworks(ctx)
+	// Networks only feed the uplink picker, which also takes a typed name, so
+	// failing to read them is a warning, not a failed connection.
+	var warnings []string
+	networks, networkNames, err := c.ListNetworks(ctx)
 	if err != nil {
-		return builder.Discovery{}, fmt.Errorf("listing networks: %w", err)
+		warnings = append(warnings, fmt.Sprintf("couldn't list the server's networks (%v); type the uplink network's name instead", err))
 	}
 	images, err := c.ListImages(ctx)
 	if err != nil {
@@ -77,8 +80,20 @@ func discoverResources(ctx context.Context, c *Client) (builder.Discovery, error
 	if networks == nil {
 		networks = []builder.NetworkInfo{}
 	}
+	if networkNames == nil {
+		networkNames = []string{}
+	}
+	if warnings == nil {
+		warnings = []string{}
+	}
 	if images == nil {
 		images = []builder.ImageInfo{}
 	}
-	return builder.Discovery{StoragePools: pools, Networks: networks, Images: images, Projects: []builder.ProjectInfo{}}, nil
+	// Snapshots are optional (most builders use images), so not being able to
+	// list them mustn't stop a builder connecting.
+	snapshots, err := c.ListSnapshots(ctx)
+	if err != nil || snapshots == nil {
+		snapshots = []builder.SnapshotInfo{}
+	}
+	return builder.Discovery{StoragePools: pools, Networks: networks, Images: images, Projects: []builder.ProjectInfo{}, Snapshots: snapshots, NetworkNames: networkNames, Warnings: warnings}, nil
 }

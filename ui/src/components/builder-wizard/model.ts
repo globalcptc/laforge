@@ -7,6 +7,7 @@ import type {
   IncusImageRef,
   IncusSizeSpec,
   NetworkInfo,
+  SnapshotInfo,
 } from '../../api/types'
 
 // The builder workflow's own state. A draft is built step by step and only
@@ -43,7 +44,16 @@ export interface ImageDraft {
   vm: boolean
   // Set only for older configs that pull by alias from a remote server.
   server: string
+  // A snapshot source instead of an image: instances are copies of
+  // instance/snapshot (in sourceProject when that's not the builder's own).
+  source?: 'snapshot'
+  instance?: string
+  snapshot?: string
+  sourceProject?: string
 }
+
+export const isSnapshotDraft = (i: ImageDraft): boolean => i.source === 'snapshot'
+export const snapshotKey = (instance: string, snapshot: string, project = ''): string => `${project}|${instance}/${snapshot}`
 
 export interface SizeDraft {
   name: string
@@ -117,7 +127,9 @@ export function placementDefaults(conn: BuilderConnection): { storagePool: strin
   const candidates = uplinkCandidates(conn.discovery.networks)
   const physical = candidates.filter((n) => n.type === 'physical')
   const uplink =
-    candidates.find((n) => n.name.toLowerCase() === 'uplink')?.name ?? (physical.length === 1 ? physical[0].name : '')
+    candidates.find((n) => n.name.toLowerCase() === 'uplink')?.name ??
+    (conn.discovery.network_names ?? []).find((n) => n.toLowerCase() === 'uplink') ??
+    (physical.length === 1 ? physical[0].name : '')
   return { storagePool, uplink }
 }
 
@@ -164,8 +176,32 @@ export function isHostPlaced(h: HostDraft): boolean {
 
 export function imagesFromConfig(existing: Record<string, IncusImageRef>): ImageDraft[] {
   return Object.entries(existing)
-    .map(([name, ref]) => ({ name, fingerprint: ref.fingerprint ?? '', alias: ref.alias, vm: ref.vm, server: ref.server ?? '' }))
+    .map(([name, ref]): ImageDraft =>
+      ref.source === 'snapshot'
+        ? { name, fingerprint: '', alias: '', vm: ref.vm, server: '', source: 'snapshot', instance: ref.instance ?? '', snapshot: ref.snapshot ?? '', sourceProject: ref.source_project ?? '' }
+        : { name, fingerprint: ref.fingerprint ?? '', alias: ref.alias, vm: ref.vm, server: ref.server ?? '' },
+    )
     .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// Every template snapshot on every connected host, with which hosts have it --
+// like availableImages, a pool can only offer one every host has.
+export interface AvailableSnapshot {
+  snapshot: SnapshotInfo
+  hostKeys: string[]
+}
+
+export function availableSnapshots(hosts: HostDraft[]): AvailableSnapshot[] {
+  const byKey = new Map<string, AvailableSnapshot>()
+  for (const h of hosts) {
+    for (const s of h.connection?.discovery.snapshots ?? []) {
+      const key = snapshotKey(s.instance, s.snapshot)
+      const existing = byKey.get(key)
+      if (existing) existing.hostKeys.push(h.key)
+      else byKey.set(key, { snapshot: s, hostKeys: [h.key] })
+    }
+  }
+  return [...byKey.values()].sort((a, b) => `${a.snapshot.instance}/${a.snapshot.snapshot}`.localeCompare(`${b.snapshot.instance}/${b.snapshot.snapshot}`))
 }
 
 export function sizesFromConfig(existing: Record<string, IncusSizeSpec>): SizeDraft[] {
@@ -232,13 +268,22 @@ export function toRequest(d: Draft): BuilderConfigRequest {
 
   const incus_images: Record<string, IncusImageRef> = {}
   for (const img of d.images) {
-    incus_images[img.name] = {
-      fingerprint: img.fingerprint || undefined,
-      alias: img.alias,
-      server: img.server,
-      protocol: img.server ? 'simplestreams' : '',
-      vm: img.vm,
-    }
+    incus_images[img.name] = isSnapshotDraft(img)
+      ? {
+          alias: '',
+          vm: img.vm,
+          source: 'snapshot',
+          instance: img.instance,
+          snapshot: img.snapshot,
+          source_project: img.sourceProject || undefined,
+        }
+      : {
+          fingerprint: img.fingerprint || undefined,
+          alias: img.alias,
+          server: img.server,
+          protocol: img.server ? 'simplestreams' : '',
+          vm: img.vm,
+        }
   }
   const incus_sizes: Record<string, IncusSizeSpec> = {}
   for (const s of d.sizes) incus_sizes[s.name] = { cpu: s.cpu, memory: s.memory }

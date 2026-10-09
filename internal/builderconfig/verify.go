@@ -31,16 +31,20 @@ func VerifyImages(ctx context.Context, pool *pgxpool.Pool, row db.BuilderConfig)
 			return fmt.Errorf("decoding incus_images: %w", err)
 		}
 	}
-	var local []string
+	var local, snapshots []string
 	for name, ref := range images {
-		if ref.Server == "" {
+		switch {
+		case ref.IsSnapshot():
+			snapshots = append(snapshots, name)
+		case ref.Server == "":
 			local = append(local, name)
 		}
 	}
-	if len(local) == 0 {
+	if len(local) == 0 && len(snapshots) == 0 {
 		return nil
 	}
 	sort.Strings(local)
+	sort.Strings(snapshots)
 
 	hosts, err := hostEndpoints(pool, row)
 	if err != nil {
@@ -51,6 +55,23 @@ func VerifyImages(ctx context.Context, pool *pgxpool.Pool, row db.BuilderConfig)
 		client, err := h.ep.client()
 		if err != nil {
 			return fmt.Errorf("%s: %w", h.label, err)
+		}
+		for _, name := range snapshots {
+			ref := images[name]
+			ok, err := client.SnapshotExists(ctx, ref.SourceProject, ref.Instance, ref.Snapshot)
+			if err != nil {
+				return fmt.Errorf("checking snapshot %s/%s on %s: %w", ref.Instance, ref.Snapshot, h.label, err)
+			}
+			if !ok {
+				where := h.label
+				if ref.SourceProject != "" {
+					where += " (project " + ref.SourceProject + ")"
+				}
+				problems = append(problems, fmt.Sprintf("%q (snapshot %s/%s) is not on %s", name, ref.Instance, ref.Snapshot, where))
+			}
+		}
+		if len(local) == 0 {
+			continue
 		}
 		have, err := client.ListImages(ctx)
 		if err != nil {
@@ -74,7 +95,7 @@ func VerifyImages(ctx context.Context, pool *pgxpool.Pool, row db.BuilderConfig)
 		}
 	}
 	if len(problems) > 0 {
-		return fmt.Errorf("every host needs every image this builder offers: %s", strings.Join(problems, "; "))
+		return fmt.Errorf("every host needs every image and snapshot this builder offers: %s", strings.Join(problems, "; "))
 	}
 	return nil
 }

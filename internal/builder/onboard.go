@@ -63,14 +63,37 @@ type ImageInfo struct {
 type Discovery struct {
 	StoragePools []StoragePoolInfo `json:"storage_pools"`
 	// Networks are the server's own (the `default` project's), since uplink
-	// networks always live there whatever project instances go in.
-	Networks []NetworkInfo `json:"networks"`
+	// networks always live there whatever project instances go in -- with
+	// details for at most a bounded number of them, likely uplinks first: on a
+	// shared cluster with hundreds of networks, reading every one is slow and
+	// loads a system others depend on. NetworkNames is every name, read
+	// cheaply, so a picker can still offer any of them.
+	Networks     []NetworkInfo `json:"networks"`
+	NetworkNames []string      `json:"network_names"`
+	// Warnings are things discovery couldn't read; what it could is still here.
+	Warnings []string `json:"warnings"`
 	// Images are the chosen project's (Connection.Project), which differ from
 	// `default`'s when that project has features.images on.
 	Images []ImageInfo `json:"images"`
 	// Projects lists the server's projects, for a kind that lets an operator
 	// choose one (MicroCloud); empty for every other kind.
 	Projects []ProjectInfo `json:"projects"`
+	// Snapshots are instance snapshots in the same project as Images, which
+	// a builder can copy instances from instead of an image.
+	Snapshots []SnapshotInfo `json:"snapshots"`
+}
+
+// SnapshotInfo is one snapshot of an instance that could serve as a template.
+type SnapshotInfo struct {
+	Instance string `json:"instance"`
+	Snapshot string `json:"snapshot"`
+	Type     string `json:"type"` // "container" or "virtual-machine"
+	// Status is the instance's own (a template is usually "Stopped").
+	Status      string `json:"status"`
+	Description string `json:"description"`
+	OS          string `json:"os"`
+	Release     string `json:"release"`
+	CreatedAt   string `json:"created_at"`
 }
 
 // ProjectInfo is one Incus/LXD project and the features that decide what it

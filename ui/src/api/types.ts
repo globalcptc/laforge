@@ -529,6 +529,12 @@ export interface IncusImageRef {
   server?: string
   protocol?: string
   vm: boolean
+  /** 'snapshot': instances are copies of instance/snapshot instead of an image. */
+  source?: 'snapshot'
+  instance?: string
+  snapshot?: string
+  /** The project the template lives in, when not the builder's own. */
+  source_project?: string
 }
 
 export interface IncusSizeSpec {
@@ -680,10 +686,30 @@ export interface ImageInfo {
 
 export interface Discovery {
   storage_pools: StoragePoolInfo[]
+  /** Full details for a bounded number of networks (likely uplinks first). */
   networks: NetworkInfo[]
+  /** Every network name -- read cheaply, for clusters with hundreds of networks. */
+  network_names?: string[]
+  /** What discovery couldn't read; what it could is still returned. */
+  warnings?: string[]
   images: ImageInfo[]
   /** MicroCloud only: the projects the server lets LaForge see. */
   projects?: ProjectInfo[]
+  /** Instance snapshots (in the builder's project) that can serve as templates. */
+  snapshots?: SnapshotInfo[]
+}
+
+// SnapshotInfo is one snapshot of an instance that could be a template --
+// mirrors internal/builder.SnapshotInfo.
+export interface SnapshotInfo {
+  instance: string
+  snapshot: string
+  type: 'container' | 'virtual-machine'
+  status: string
+  description: string
+  os: string
+  release: string
+  created_at: string
 }
 
 // TokenCheck is what POST /builder-connections/check found probing a trust

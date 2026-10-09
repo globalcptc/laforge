@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FolderTree, Globe, HardDrive, Network, Plus, Server, X } from 'lucide-react'
+import { AlertTriangle, FolderTree, Globe, HardDrive, Network, Plus, Server, X } from 'lucide-react'
 import { api, ApiError } from '../../api/client'
 import { builderConnectionPath } from '../../api/hooks'
 import type { BuilderConnection, ProjectInfo } from '../../api/types'
@@ -55,6 +55,13 @@ export function StepPlacement({
             {h.connection && <span className="font-normal text-fg-muted">· {h.connection.credential.server_name || h.connection.credential.api_url}</span>}
           </div>
 
+          {(h.connection?.discovery.warnings ?? []).map((w) => (
+            <div key={w} className="mb-3 flex items-start gap-2 rounded-token border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+              {w}
+            </div>
+          ))}
+
           {kind === 'microcloud' && h.connection && h.credentialId && (
             <ProjectPicker host={h} onChange={(patch) => update(i, patch)} />
           )}
@@ -88,14 +95,7 @@ export function StepPlacement({
                 hint="The existing network each team's network routes out through. MicroCloud names it UPLINK by convention."
                 className="mb-0"
               >
-                <Select value={h.uplink} onChange={(e) => update(i, { uplink: e.target.value })}>
-                  <option value="">Choose a network…</option>
-                  {uplinkCandidates(h.connection.discovery.networks).map((n) => (
-                    <option key={n.name} value={n.name}>
-                      {n.name} ({n.type})
-                    </option>
-                  ))}
-                </Select>
+<UplinkInput host={h} onChange={(uplink) => update(i, { uplink })} />
               </Field>
             </div>
           ) : (
@@ -241,5 +241,48 @@ function ProjectNotes({ project }: { project: ProjectInfo }) {
         </li>
       ))}
     </ul>
+  )
+}
+
+// UplinkInput picks the network team networks route out through. On a shared
+// cluster with hundreds of networks only some are read in full, so this is a
+// text field that suggests every name (types shown where known) rather than a
+// list that would have to describe them all.
+function UplinkInput({ host, onChange }: { host: HostDraft; onChange: (uplink: string) => void }) {
+  const disc = host.connection?.discovery
+  const known = new Map((disc?.networks ?? []).map((n) => [n.name, n]))
+  const names = disc?.network_names?.length ? disc.network_names : (disc?.networks ?? []).map((n) => n.name)
+  const candidates = uplinkCandidates(disc?.networks ?? [])
+  const listId = `uplinks-${host.key}`
+  const chosen = known.get(host.uplink)
+  return (
+    <div>
+      <Input value={host.uplink} onChange={(e) => onChange(e.target.value.trim())} list={listId} placeholder="UPLINK" className="font-mono" />
+      <datalist id={listId}>
+        {[...candidates.map((n) => n.name), ...names.filter((n) => !candidates.some((c) => c.name === n))].map((n) => (
+          <option key={n} value={n}>
+            {known.get(n)?.type ?? ''}
+          </option>
+        ))}
+      </datalist>
+      {candidates.length > 0 && (
+        <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-fg-subtle">
+          Likely uplinks:
+          {candidates.map((n) => (
+            <button key={n.name} type="button" onClick={() => onChange(n.name)} className="rounded bg-surface-sunken px-1.5 py-0.5 font-mono text-fg hover:bg-surface-hover">
+              {n.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {host.uplink && chosen && chosen.type !== 'physical' && chosen.type !== 'bridge' && (
+        <div className="mt-1 text-xs text-warning">
+          {host.uplink} is a {chosen.type} network; an uplink is normally physical.
+        </div>
+      )}
+      {host.uplink && names.length > 0 && !names.includes(host.uplink) && (
+        <div className="mt-1 text-xs text-warning">No network named {host.uplink} was found on the server.</div>
+      )}
+    </div>
   )
 }

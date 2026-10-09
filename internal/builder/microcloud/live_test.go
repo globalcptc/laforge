@@ -109,7 +109,7 @@ func TestMicroCloudDiscoveryLive(t *testing.T) {
 		t.Errorf("no ceph storage pool found live; pools=%+v", pools)
 	}
 
-	nets, err := b.Client.ListNetworks(ctx)
+	nets, _, err := b.Client.ListNetworks(ctx)
 	if err != nil {
 		t.Fatalf("ListNetworks: %v", err)
 	}

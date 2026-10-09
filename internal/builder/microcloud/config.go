@@ -119,7 +119,23 @@ type ImageRef struct {
 	// everything on the VM path could be verified in this session's test
 	// environment (no /dev/kvm, no licensed Windows image available).
 	VM bool `json:"vm"`
+	// Source is what an instance is created from: "" (an image, above) or
+	// "snapshot" -- a copy of an existing instance's snapshot. Copying a
+	// stopped template's snapshot is a cheap clone on storage like Ceph, and
+	// far faster than unpacking an image. Instance/Snapshot name it;
+	// SourceProject is the project it lives in, when not the builder's own.
+	// VM must match the template's type.
+	Source        string `json:"source,omitempty"`
+	Instance      string `json:"instance,omitempty"`
+	Snapshot      string `json:"snapshot,omitempty"`
+	SourceProject string `json:"source_project,omitempty"`
 }
+
+// SourceSnapshot is the Source value for an ImageRef that copies a snapshot.
+const SourceSnapshot = "snapshot"
+
+// IsSnapshot reports whether instances are created by copying a snapshot.
+func (r ImageRef) IsSnapshot() bool { return r.Source == SourceSnapshot }
 
 type SizeSpec struct {
 	CPU    string `json:"cpu"`    // Incus limits.cpu, e.g. "2"

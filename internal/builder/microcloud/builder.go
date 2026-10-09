@@ -465,9 +465,27 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		devices["cidata"] = map[string]string{"type": "disk", "pool": b.Config.storagePoolOrDefault(), "source": volName}
 	}
 
-	source := map[string]string{"type": "image", "alias": img.Alias, "server": img.Server, "protocol": img.Protocol}
-	if img.Fingerprint != "" {
-		source = map[string]string{"type": "image", "fingerprint": img.Fingerprint}
+	if _, ok := devices["root"]; !ok && img.IsSnapshot() {
+		// A copy's disk lands on whatever pool its root device names; without
+		// one it would follow the template's, and then disagree with the
+		// default profile once the template's devices are replaced. Naming the
+		// builder's pool also keeps the copy a fast clone when the template
+		// lives there.
+		devices["root"] = map[string]string{"type": "disk", "path": "/", "pool": b.Config.storagePoolOrDefault()}
+	}
+	var source map[string]interface{}
+	switch {
+	case img.IsSnapshot():
+		// A copy of a template's snapshot. instance_only: the template's other
+		// snapshots aren't wanted on every team's copy.
+		source = map[string]interface{}{"type": "copy", "source": img.Instance + "/" + img.Snapshot, "instance_only": true}
+		if img.SourceProject != "" {
+			source["project"] = img.SourceProject
+		}
+	case img.Fingerprint != "":
+		source = map[string]interface{}{"type": "image", "fingerprint": img.Fingerprint}
+	default:
+		source = map[string]interface{}{"type": "image", "alias": img.Alias, "server": img.Server, "protocol": img.Protocol}
 	}
 	_, err := b.Client.post(ctx, "/1.0/instances", map[string]interface{}{
 		"name":    name,
@@ -487,6 +505,12 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 			return name, fmt.Errorf("creating instance %s (from %s): %w", name, externalName, err)
 		}
 		// "adopt if already there" -- fall through to ensure it's started.
+	}
+
+	if img.IsSnapshot() {
+		if err := b.replaceCopiedDevices(ctx, name, devices); err != nil {
+			return name, err
+		}
 	}
 
 	if err := b.startInstance(ctx, name); err != nil {
@@ -661,19 +685,17 @@ func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 		out = append(out, builder.Resource{ExternalRef: inst.Name, Kind: kind, State: powerStateFromLXDState(inst.Status)})
 	}
 
-	rawNets, err := b.Client.get(ctx, "/1.0/networks?recursion=1")
+	// Names only: with hundreds of networks, a recursive listing can outlast
+	// the request (see listNames), and only the names are needed here.
+	netNames, err := b.Client.listNames(ctx, "/1.0/networks")
 	if err != nil {
 		return nil, fmt.Errorf("listing networks: %w", err)
 	}
-	var nets []mcNetwork
-	if err := json.Unmarshal(rawNets, &nets); err != nil {
-		return nil, fmt.Errorf("decoding network list: %w", err)
-	}
-	for _, n := range nets {
-		if !n.Managed || !strings.HasPrefix(n.Name, "lf-") {
+	for _, n := range netNames {
+		if !strings.HasPrefix(n, "lf-") {
 			continue // the project's own pre-existing networks, not ours
 		}
-		out = append(out, builder.Resource{ExternalRef: n.Name, Kind: "network"})
+		out = append(out, builder.Resource{ExternalRef: n, Kind: "network"})
 	}
 	return out, nil
 }
@@ -921,4 +943,32 @@ func (b *Builder) HasWorkingEth0(ctx context.Context, name string) (bool, error)
 		return false, nil
 	}
 	return devMap["type"] != "none", nil
+}
+
+// replaceCopiedDevices makes a copied instance's devices exactly LaForge's own
+// -- the team NIC, the root disk, a config drive -- and its profiles just
+// "default", as an instance created from an image has. A copy otherwise keeps
+// the template's own devices and profiles: a second NIC on some management
+// network, a data volume, a GPU, all shared by every team's copy. Done before
+// the first start, so a copy never boots with them.
+func (b *Builder) replaceCopiedDevices(ctx context.Context, name string, devices map[string]interface{}) error {
+	return retryOnBusy(ctx, func() error {
+		full, _, err := b.getInstancePut(ctx, name)
+		if err != nil {
+			return err
+		}
+		full.Devices = map[string]json.RawMessage{}
+		for k, d := range devices {
+			raw, err := json.Marshal(d)
+			if err != nil {
+				return err
+			}
+			full.Devices[k] = raw
+		}
+		full.Profiles = []string{"default"}
+		if _, err := b.Client.put(ctx, "/1.0/instances/"+name, full); err != nil {
+			return fmt.Errorf("replacing the devices %s copied from its template: %w", name, err)
+		}
+		return nil
+	})
 }

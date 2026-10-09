@@ -98,7 +98,7 @@ export function BuilderWizard() {
     setDraft((d) => ({
       ...d,
       images: d.images.map((img) => {
-        if (img.fingerprint || img.server) return img
+        if (img.fingerprint || img.server || img.source === 'snapshot') return img
         const found = available.find((a) => a.image.aliases.includes(img.alias))
         return found ? { ...img, fingerprint: found.image.fingerprint, vm: found.image.type === 'virtual-machine' } : img
       }),
@@ -147,6 +147,8 @@ export function BuilderWizard() {
     placement: !draft.hosts.every(isHostPlaced) ? 'Choose a storage pool and uplink for every server.' : null,
     images: draft.images.some((i) => !i.name)
       ? 'Every offered image needs a name.'
+      : draft.images.some((i) => i.source === 'snapshot' && (!i.instance || !i.snapshot))
+        ? 'Every snapshot needs an instance and a snapshot name.'
       : new Set(draft.images.map((i) => i.name)).size !== draft.images.length
         ? 'Two images share a name.'
         : null,
