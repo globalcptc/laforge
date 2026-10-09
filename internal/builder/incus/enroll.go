@@ -196,44 +196,73 @@ func normalizeAddress(a string) string {
 // are typically unreachable from wherever LaForge runs.
 const probeTimeout = 4 * time.Second
 
-type probeResult struct {
-	certPEM  []byte
-	matched  bool
-	reached  bool
-	errorMsg string
+// AddressCheck is what probing one of a token's addresses found: whether
+// LaForge could open a TLS connection to it, and whether the certificate there
+// is the one the token names.
+type AddressCheck struct {
+	Address            string `json:"address"`
+	Reachable          bool   `json:"reachable"`
+	FingerprintMatches bool   `json:"fingerprint_matches"`
+	Error              string `json:"error,omitempty"`
+	Millis             int64  `json:"millis"`
+	certPEM            []byte
 }
 
-func firstMatchingAddress(ctx context.Context, addresses []string, fingerprint string) (string, []byte, error) {
+// TokenAddresses is the list Enroll tries, in order: the token's own
+// addresses, or only addressOverride when one is given.
+func TokenAddresses(token TrustToken, addressOverride string) []string {
+	if strings.TrimSpace(addressOverride) != "" {
+		return []string{normalizeAddress(addressOverride)}
+	}
+	return token.Addresses
+}
+
+// CheckAddresses probes every address in parallel exactly as Enroll does, but
+// redeems nothing -- the token stays unused. Results are in the input order.
+func CheckAddresses(ctx context.Context, addresses []string, fingerprint string) []AddressCheck {
 	want := strings.ToLower(strings.ReplaceAll(fingerprint, ":", ""))
-	results := make([]probeResult, len(addresses))
+	results := make([]AddressCheck, len(addresses))
 	var wg sync.WaitGroup
 	for i, addr := range addresses {
 		wg.Add(1)
 		go func(i int, addr string) {
 			defer wg.Done()
+			start := time.Now()
 			certPEM, err := fetchServerCertificate(ctx, addr, probeTimeout)
+			r := AddressCheck{Address: addr, Millis: time.Since(start).Milliseconds()}
 			if err != nil {
-				results[i] = probeResult{errorMsg: err.Error()}
-				return
+				r.Error = err.Error()
+			} else {
+				r.Reachable, r.certPEM = true, certPEM
+				r.FingerprintMatches = certFingerprintHex(certPEM) == want
+				if !r.FingerprintMatches {
+					r.Error = "reachable, but its certificate isn't the one the token names"
+				}
 			}
-			results[i] = probeResult{certPEM: certPEM, reached: true, matched: certFingerprintHex(certPEM) == want}
+			results[i] = r
 		}(i, addr)
 	}
 	wg.Wait()
+	return results
+}
 
+func firstMatchingAddress(ctx context.Context, addresses []string, fingerprint string) (string, []byte, error) {
+	results := CheckAddresses(ctx, addresses, fingerprint)
 	anyReached := false
-	for i, r := range results {
-		if r.matched {
-			return addresses[i], r.certPEM, nil
+	var reasons []string
+	for _, r := range results {
+		if r.FingerprintMatches {
+			return r.Address, r.certPEM, nil
 		}
-		if r.reached {
+		if r.Reachable {
 			anyReached = true
 		}
+		reasons = append(reasons, r.Address+": "+r.Error)
 	}
 	if anyReached {
 		return "", nil, ErrFingerprintMismatch
 	}
-	return "", nil, fmt.Errorf("couldn't reach the server at any of the token's addresses (%s) -- if it's reachable some other way, enter that address instead", strings.Join(addresses, ", "))
+	return "", nil, fmt.Errorf("couldn't reach the server at any of the token's addresses (%s) -- if it's reachable some other way, enter that address instead", strings.Join(reasons, "; "))
 }
 
 // fetchServerCertificate is FetchServerCertificateInsecure with a real

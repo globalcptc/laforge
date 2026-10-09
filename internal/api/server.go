@@ -189,6 +189,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("PUT /builder-configs/{name}", s.handleUpdateBuilderConfig)
 	mux.HandleFunc("DELETE /builder-configs/{name}", s.handleDeleteBuilderConfig)
 	mux.HandleFunc("POST /builder-connections", s.handleConnectBuilder)
+	mux.HandleFunc("POST /builder-connections/check", s.handleCheckBuilderToken)
 	mux.HandleFunc("GET /builder-connections/{id}", s.handleGetBuilderConnection)
 
 	mux.HandleFunc("POST /builder-configs/{name}/image-builds", s.handleRebuildBuilderImage)

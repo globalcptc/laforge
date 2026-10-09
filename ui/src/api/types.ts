@@ -686,6 +686,19 @@ export interface Discovery {
   projects?: ProjectInfo[]
 }
 
+// TokenCheck is what POST /builder-connections/check found probing a trust
+// token's addresses from the API server, without redeeming the token --
+// mirrors internal/api/builder_probe.go's tokenCheckView.
+export interface TokenCheck {
+  client_name: string
+  fingerprint: string
+  expires_at?: string
+  type?: string
+  addresses: { address: string; reachable: boolean; fingerprint_matches: boolean; error?: string; millis: number }[]
+  /** The address Connect would enroll through; empty if none would work. */
+  will_use: string
+}
+
 // ProjectInfo is one Incus/LXD project and which resources it keeps separate
 // from `default` -- mirrors internal/builder.ProjectInfo.
 export interface ProjectInfo {

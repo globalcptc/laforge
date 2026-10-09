@@ -11,8 +11,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/globalcptc/laforge/internal/builder"
+	"github.com/globalcptc/laforge/internal/builder/incus"
+	"github.com/globalcptc/laforge/internal/builder/microcloud"
 	"github.com/globalcptc/laforge/internal/db"
 )
 
@@ -181,4 +184,88 @@ func (s *Server) handleListBuilderConfigImages(w http.ResponseWriter, r *http.Re
 		return
 	}
 	writeJSON(w, http.StatusOK, disc)
+}
+
+// tokenCheckView is what checking a trust token found, without redeeming it.
+type tokenCheckView struct {
+	ClientName  string `json:"client_name"`
+	Fingerprint string `json:"fingerprint"`
+	ExpiresAt   string `json:"expires_at,omitempty"`
+	// Type is set for an LXD identity token (redeemed through the identities
+	// API) and empty for a plain trust token.
+	Type string `json:"type,omitempty"`
+	// Addresses are probed in the order Connect tries them; WillUse is the one
+	// Connect would enroll through (the first whose certificate matches), or
+	// empty if none would work.
+	Addresses []addressCheckView `json:"addresses"`
+	WillUse   string             `json:"will_use"`
+}
+
+type addressCheckView struct {
+	Address            string `json:"address"`
+	Reachable          bool   `json:"reachable"`
+	FingerprintMatches bool   `json:"fingerprint_matches"`
+	Error              string `json:"error,omitempty"`
+	Millis             int64  `json:"millis"`
+}
+
+// handleCheckBuilderToken tries every address a trust token (or the override
+// address) names from the API server -- exactly the probe Connect starts with
+// -- and reports each one, without redeeming the token. It answers "why won't
+// this connect?" before a single-use token is spent on finding out.
+func (s *Server) handleCheckBuilderToken(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.requireInstanceAdmin(r.Context(), r); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	var req connectBuilderRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	var view tokenCheckView
+	var addresses []string
+	switch onboarderKindOrDefault(req.Kind) {
+	case "microcloud":
+		t, err := microcloud.ParseTrustToken(req.Token)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err)
+			return
+		}
+		view = tokenCheckView{ClientName: t.ClientName, Fingerprint: t.Fingerprint, Type: t.Type}
+		if !t.ExpiresAt.IsZero() {
+			view.ExpiresAt = t.ExpiresAt.Format(time.RFC3339)
+		}
+		addresses = microcloud.TokenAddresses(t, req.Address)
+		for _, c := range microcloud.CheckAddresses(r.Context(), addresses, t.Fingerprint) {
+			view.Addresses = append(view.Addresses, addressCheckView{c.Address, c.Reachable, c.FingerprintMatches, c.Error, c.Millis})
+		}
+	case "incus":
+		t, err := incus.ParseTrustToken(req.Token)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err)
+			return
+		}
+		view = tokenCheckView{ClientName: t.ClientName, Fingerprint: t.Fingerprint, Type: t.Type}
+		if !t.ExpiresAt.IsZero() {
+			view.ExpiresAt = t.ExpiresAt.Format(time.RFC3339)
+		}
+		addresses = incus.TokenAddresses(t, req.Address)
+		for _, c := range incus.CheckAddresses(r.Context(), addresses, t.Fingerprint) {
+			view.Addresses = append(view.Addresses, addressCheckView{c.Address, c.Reachable, c.FingerprintMatches, c.Error, c.Millis})
+		}
+	default:
+		writeError(w, http.StatusBadRequest, errors.New("only Incus and MicroCloud builders connect with a trust token"))
+		return
+	}
+	for _, a := range view.Addresses {
+		if a.FingerprintMatches {
+			view.WillUse = a.Address
+			break
+		}
+	}
+	if view.Addresses == nil {
+		view.Addresses = []addressCheckView{}
+	}
+	writeJSON(w, http.StatusOK, view)
 }

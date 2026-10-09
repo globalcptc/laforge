@@ -17,6 +17,7 @@ import type {
   ImageBuildLogResponse,
   RegistryCredential,
   InstanceAdmin,
+  TokenCheck,
   BuilderConnection,
   BuilderSummary,
   ConfiguredBuild,
@@ -672,6 +673,14 @@ export function useEnvironmentFiles(repoId: string | undefined, branch: string) 
 // token's fingerprint, enrolls its own client certificate, and keeps the key
 // server-side -- and every later choice is a pick from what the server
 // actually has.
+// useCheckBuilderToken probes a trust token's addresses from the API server
+// without redeeming it -- "which of these can LaForge actually reach?"
+export function useCheckBuilderToken() {
+  return useMutation({
+    mutationFn: (req: { kind: string; token: string; address?: string }) => api.post<TokenCheck>('/builder-connections/check', req),
+  })
+}
+
 export function useConnectBuilder() {
   return useMutation({
     // kind selects the builder type's onboarding (the backend dispatches through
