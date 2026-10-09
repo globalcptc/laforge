@@ -1418,7 +1418,7 @@ func TestDetectDriftRequiresLevelManage(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer resp2.Body.Close()
-	if resp2.StatusCode != http.StatusBadGateway {
-		t.Fatalf("drift with no configured_build: status = %d, want 502", resp2.StatusCode)
+	if resp2.StatusCode != statusUpstreamFailed {
+		t.Fatalf("drift with no configured_build: status = %d, want %d", resp2.StatusCode, statusUpstreamFailed)
 	}
 }

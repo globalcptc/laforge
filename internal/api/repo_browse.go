@@ -60,12 +60,12 @@ func (s *Server) handleListBranches(w http.ResponseWriter, r *http.Request) {
 	}
 	ghRepo, err := s.GH.GetRepo(r.Context(), token, repo.GithubOwner, repo.GithubRepo)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, err)
+		writeError(w, statusUpstreamFailed, err)
 		return
 	}
 	branches, err := s.GH.ListBranches(r.Context(), token, repo.GithubOwner, repo.GithubRepo)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, err)
+		writeError(w, statusUpstreamFailed, err)
 		return
 	}
 	out := make([]branchInfo, 0, len(branches))
@@ -151,7 +151,7 @@ func (s *Server) handleListEnvironmentFiles(w http.ResponseWriter, r *http.Reque
 		}
 		dir, err := s.Checkouts.ForRef(r.Context(), repo.ID, branch)
 		if err != nil {
-			writeError(w, http.StatusBadGateway, err)
+			writeError(w, statusUpstreamFailed, err)
 			return
 		}
 		root = dir

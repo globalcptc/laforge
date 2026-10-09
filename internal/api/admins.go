@@ -108,7 +108,7 @@ func (s *Server) handleAddInstanceAdmin(w http.ResponseWriter, r *http.Request) 
 	}
 	ghUser, err := s.GH.GetUserByLogin(r.Context(), sess.GithubToken, login)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, fmt.Errorf("looking up %q on GitHub: %w", login, err))
+		writeError(w, statusUpstreamFailed, fmt.Errorf("looking up %q on GitHub: %w", login, err))
 		return
 	}
 	if _, err := s.Queries.AddInstanceAdmin(r.Context(), db.AddInstanceAdminParams{

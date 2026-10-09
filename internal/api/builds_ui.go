@@ -670,7 +670,7 @@ func (s *Server) handleSetRepositoryAccess(w http.ResponseWriter, r *http.Reques
 	}
 	grantee, err := s.resolveGrantee(r.Context(), sess, r.PathValue("login"))
 	if err != nil {
-		writeError(w, http.StatusBadGateway, err)
+		writeError(w, statusUpstreamFailed, err)
 		return
 	}
 	if grantee.ID == sess.AccountID && parseLevel(req.Level) < levelAdmin && !s.isInstanceAdmin(sess) {

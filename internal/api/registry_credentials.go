@@ -205,7 +205,7 @@ func (s *Server) handleListRegistryImages(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusBadGateway, err)
+		writeError(w, statusUpstreamFailed, err)
 		return
 	}
 

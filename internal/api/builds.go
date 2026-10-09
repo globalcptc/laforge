@@ -124,7 +124,7 @@ func (s *Server) handleSyncConfiguredBuild(w http.ResponseWriter, r *http.Reques
 			writeError(w, http.StatusConflict, err)
 			return
 		}
-		writeError(w, http.StatusBadGateway, err)
+		writeError(w, statusUpstreamFailed, err)
 		return
 	}
 	if len(issues) > 0 {

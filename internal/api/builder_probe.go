@@ -65,11 +65,11 @@ func (s *Server) handleConnectBuilder(w http.ResponseWriter, r *http.Request) {
 	result, err := onb.Onboard(r.Context(), builder.OnboardRequest{Token: req.Token, Address: req.Address})
 	if err != nil {
 		// Bad operator input (a malformed token) is a 400; a genuine failure to
-		// reach or enroll the hoster is a 502.
+		// reach or enroll the hoster is statusUpstreamFailed (424, not 502 -- see json.go).
 		if errors.Is(err, builder.ErrInvalidOnboardRequest) {
 			writeError(w, http.StatusBadRequest, err)
 		} else {
-			writeError(w, http.StatusBadGateway, err)
+			writeError(w, statusUpstreamFailed, err)
 		}
 		return
 	}
@@ -130,7 +130,7 @@ func (s *Server) handleGetBuilderConnection(w http.ResponseWriter, r *http.Reque
 		Project: r.URL.Query().Get("project"),
 	})
 	if err != nil {
-		writeError(w, http.StatusBadGateway, err)
+		writeError(w, statusUpstreamFailed, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, connectionView{
@@ -177,7 +177,7 @@ func (s *Server) handleListBuilderConfigImages(w http.ResponseWriter, r *http.Re
 		Project: db.StrOrEmpty(cfg.IncusProject),
 	})
 	if err != nil {
-		writeError(w, http.StatusBadGateway, err)
+		writeError(w, statusUpstreamFailed, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, disc)

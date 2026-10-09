@@ -133,13 +133,13 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 	redirectURI := s.PublicBaseURL + "/auth/github/callback"
 	ghOAuth, err := s.GH.ExchangeCode(ctx, s.GitHubClientID, s.GitHubClientSecret, code, redirectURI)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, err)
+		writeError(w, statusUpstreamFailed, err)
 		return
 	}
 	ghToken := ghOAuth.AccessToken
 	ghUser, err := s.GH.GetAuthenticatedUser(ctx, ghToken)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, err)
+		writeError(w, statusUpstreamFailed, err)
 		return
 	}
 	// Found missing entirely by direct product feedback: this handler

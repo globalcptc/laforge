@@ -212,7 +212,7 @@ func (s *Server) handleDeleteInstallation(w http.ResponseWriter, r *http.Request
 		case errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound:
 			// Already uninstalled on GitHub -- only LaForge still had it.
 		default:
-			writeError(w, http.StatusBadGateway, fmt.Errorf("uninstalling the GitHub App from %s: %w -- nothing was removed; try again, or uninstall it on GitHub", inst.AccountLogin, err))
+			writeError(w, statusUpstreamFailed, fmt.Errorf("uninstalling the GitHub App from %s: %w -- nothing was removed; try again, or uninstall it on GitHub", inst.AccountLogin, err))
 			return
 		}
 	}

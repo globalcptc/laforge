@@ -33,7 +33,7 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 	}
 	report, err := orchestrator.DetectDrift(r.Context(), s.Pool, build.ID)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, err)
+		writeError(w, statusUpstreamFailed, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, driftReportResponse{
