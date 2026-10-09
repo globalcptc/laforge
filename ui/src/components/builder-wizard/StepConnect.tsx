@@ -238,7 +238,7 @@ function TokenForm({ kind, onConnected }: { kind: Kind; onConnected: (conn: Buil
         <StepNumber n={3} />
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={onConnect} disabled={!token.trim() || connect.isPending}>
+            <Button variant="brand" onClick={onConnect} disabled={!token.trim() || connect.isPending}>
               {connect.isPending ? <Spinner /> : <Plug size={12} />} {connect.isPending ? 'Connecting…' : 'Connect'}
             </Button>
             <Button
