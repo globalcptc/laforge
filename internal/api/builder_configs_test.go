@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/globalcptc/laforge/internal/agentpki"
 	"github.com/globalcptc/laforge/internal/builder/incus"
+	"github.com/globalcptc/laforge/internal/builder/microcloud"
 	"github.com/globalcptc/laforge/internal/db"
 )
 
@@ -202,7 +204,8 @@ func TestBuilderConfigCreateAcceptsARealMicrocloudConfig(t *testing.T) {
 	os.WriteFile(keyPath, ca.KeyPEM, 0o600)
 
 	req := builderConfigRequest{
-		Kind: "microcloud", IncusApiUrl: "https://example.invalid:8443",
+		MicrocloudPublicAccess: &microcloud.PublicAccessConfig{Type: "nic", Network: "GUEST_GUAC_WAN", CIDR: "10.250.0.0/16", Ranges: "10.250.3.100-199", Gateway: "10.250.0.1", DNS: []string{"10.250.0.1"}, MTU: 1500, Routes: []microcloud.PublicRoute{{To: "192.0.2.0/24", Via: "10.250.0.2"}}},
+		Kind:                   "microcloud", IncusApiUrl: "https://example.invalid:8443",
 		IncusClientCertPath: certPath, IncusClientKeyPath: keyPath,
 		IncusServerCertPem:    string(ca.CertPEM),
 		IncusOvnUplinkNetwork: "UPLINK", IncusStoragePool: "remote",
@@ -220,8 +223,48 @@ func TestBuilderConfigCreateAcceptsARealMicrocloudConfig(t *testing.T) {
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("create: status = %d, want 201", resp.StatusCode)
 	}
+	var public microcloud.PublicAccessConfig
+	if err := json.Unmarshal(created.MicrocloudPublicAccess, &public); err != nil || !reflect.DeepEqual(public, *req.MicrocloudPublicAccess) {
+		t.Fatalf("public config did not round trip: %s (%v)", created.MicrocloudPublicAccess, err)
+	}
 	if created.IncusStoragePool == nil || *created.IncusStoragePool != "remote" {
 		t.Fatalf("incus_storage_pool = %v, want remote", created.IncusStoragePool)
+	}
+	// The edit page must preserve every NIC option and work with the saved
+	// certificate connection, without enrolling a new trust credential.
+	req.IncusProject = "CPTC-Comp-Environment"
+	req.IncusStoragePool = "Cluster_A_Pool"
+	req.IncusOperationTimeoutSeconds = 600
+	req.MicrocloudPublicAccess.Ranges = "10.250.4.100-119"
+	req.MicrocloudPublicAccess.MTU = 1450
+	req.MicrocloudPublicAccess.DNS = []string{"10.250.0.2", "10.250.0.1"}
+	body, _ = json.Marshal(req)
+	update, _ := http.NewRequest(http.MethodPut, env.httpURL+"/builder-configs/test-real-microcloud", bytes.NewReader(body))
+	resp, err = adminClient.Do(update)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("update: status = %d", resp.StatusCode)
+	}
+	resp, err = adminClient.Get(env.httpURL + "/builder-configs/test-real-microcloud")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var saved db.BuilderConfig
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("read saved config: status = %d", resp.StatusCode)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&saved); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(saved.MicrocloudPublicAccess, &public); err != nil || !reflect.DeepEqual(public, *req.MicrocloudPublicAccess) {
+		t.Fatalf("public settings lost during edit: %s (%v)", saved.MicrocloudPublicAccess, err)
+	}
+	if db.StrOrEmpty(saved.IncusProject) != req.IncusProject || db.StrOrEmpty(saved.IncusStoragePool) != req.IncusStoragePool || db.Int32OrZero(saved.IncusOperationTimeoutSeconds) != 600 {
+		t.Fatal("legacy connection placement settings lost during edit")
 	}
 }
 
@@ -278,5 +321,14 @@ func TestBuilderConfigCreateAcceptsARealIncusPoolConfig(t *testing.T) {
 	}
 	if len(hosts) != 2 || hosts[0].OVNUplinkNetwork != "UPLINK-A" || hosts[1].OVNUplinkNetwork != "UPLINK-B" {
 		t.Fatalf("incus_hosts round-tripped incorrectly: %+v", hosts)
+	}
+}
+
+func TestPublicNICConfigIsMicrocloudOnly(t *testing.T) {
+	for _, kind := range []string{"incus", "aws", "openstack", "fake"} {
+		_, err := (builderConfigRequest{Kind: kind, MicrocloudPublicAccess: &microcloud.PublicAccessConfig{Type: "nic"}}).validate(nil)
+		if err == nil {
+			t.Fatalf("%s accepted MicroCloud NIC configuration", kind)
+		}
 	}
 }

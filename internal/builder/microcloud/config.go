@@ -5,6 +5,8 @@ package microcloud
 // Never exposed to content authors, never taking vars -- server-side only,
 // same as every other builder config in the plan.
 type Config struct {
+	PublicAccess PublicAccessConfig
+
 	// Images maps a content Host's `os` or Container's `image` field to
 	// where Incus should actually pull it from. A missing entry is a
 	// validation failure before a build starts ("an environment using

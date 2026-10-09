@@ -91,6 +91,7 @@ func (s *Server) handleRenderObject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx.PublicAddress = obj.PublicAddress
 	steps := make([]renderedStep, 0, len(ctx.Steps))
 	for i, step := range ctx.Steps {
 		rs := renderedStep{Index: i, Action: step.ActionKey(), Raw: step}

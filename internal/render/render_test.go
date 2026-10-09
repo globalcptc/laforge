@@ -401,3 +401,23 @@ func TestCheckAllCatchesABrokenComposeProject(t *testing.T) {
 		t.Errorf("expected one error about build: without image:, got: %+v", errs)
 	}
 }
+
+func TestPublicAddressTemplate(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, err := render.Resolve(c, "lm-test", "web01", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, err := render.RenderString("public-address", "{{ .host.public_address }}|{{ .host.address }}", ctx, c)
+	if err != nil || text != "|"+ctx.Address {
+		t.Fatalf("offline/private value: %q %v", text, err)
+	}
+	ctx.PublicAddress = "10.250.3.100"
+	text, err = render.RenderString("public-address", "{{ .host.public_address }}|{{ .host.address }}", ctx, c)
+	if err != nil || text != "10.250.3.100|"+ctx.Address {
+		t.Fatalf("runtime value: %q %v", text, err)
+	}
+}

@@ -99,7 +99,7 @@ func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *lo
 		}
 		return gateway.RegistryAuth{Username: cred.Username, Secret: cred.Secret}, true
 	})
-	authored, notes, err := gateway.ExpandSteps(repoRoot, c, envName, asName, teamNum, registryAuth)
+	authored, notes, err := gateway.ExpandSteps(repoRoot, c, envName, asName, teamNum, registryAuth, gateway.WithPublicAddress(obj.PublicAddress))
 	if err != nil {
 		return fmt.Errorf("expanding steps: %w", err)
 	}

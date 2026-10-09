@@ -176,24 +176,43 @@ func (b *Builder) ensureHostPortACL(ctx context.Context, ownCIDR string, visible
 	if err := b.ensureACLObject(ctx, name, "LaForge port firewall for "+h.ExternalRef, nicIngressRules(sources, h)); err != nil {
 		return err
 	}
-	full, _, err := b.getInstancePut(ctx, h.ExternalRef)
-	if err != nil {
-		return fmt.Errorf("reading instance %s: %w", h.ExternalRef, err)
-	}
-	eth0 := map[string]interface{}{}
-	if raw, ok := full.Devices["eth0"]; ok {
-		if err := json.Unmarshal(raw, &eth0); err != nil {
-			return fmt.Errorf("decoding eth0 of %s: %w", h.ExternalRef, err)
-		}
-	}
-	if eth0["type"] == nil {
-		eth0["type"] = "nic"
-	}
-	eth0["security.acls"] = name
 	return retryOnBusy(ctx, func() error {
-		_, err := b.Client.patch(ctx, "/1.0/instances/"+h.ExternalRef, map[string]interface{}{
-			"devices": map[string]interface{}{"eth0": eth0},
-		})
+		full, expanded, err := b.getInstancePut(ctx, h.ExternalRef)
+		if err != nil {
+			return fmt.Errorf("reading instance %s: %w", h.ExternalRef, err)
+		}
+		// A concurrent access-window task may have closed the NIC. Update the
+		// saved device, preserving the closed state and all other devices.
+		if raw, closed := full.Config[removedNICKey]; closed {
+			var saved savedNIC
+			if err := json.Unmarshal([]byte(raw), &saved); err != nil {
+				return err
+			}
+			if saved.Device == nil {
+				return fmt.Errorf("closed primary NIC has no saved device")
+			}
+			saved.Device["security.acls"] = name
+			saved.Instance = true
+			encoded, err := json.Marshal(saved)
+			if err != nil {
+				return err
+			}
+			_, err = b.Client.do(ctx, "PATCH", "/1.0/instances/"+h.ExternalRef, map[string]interface{}{"config": map[string]string{removedNICKey: string(encoded)}}, requestOptions{ifMatch: full.etag})
+			return err
+		}
+		eth0 := map[string]interface{}{}
+		if raw, ok := full.Devices["eth0"]; ok {
+			if err := json.Unmarshal(raw, &eth0); err != nil {
+				return err
+			}
+		} else if device, ok := expanded["eth0"].(map[string]interface{}); ok {
+			eth0 = device
+		}
+		if eth0["type"] != "nic" {
+			return fmt.Errorf("instance %s has no active primary NIC", h.ExternalRef)
+		}
+		eth0["security.acls"] = name
+		_, err = b.Client.do(ctx, "PATCH", "/1.0/instances/"+h.ExternalRef, map[string]interface{}{"devices": map[string]interface{}{"eth0": eth0}}, requestOptions{ifMatch: full.etag})
 		return err
 	})
 }

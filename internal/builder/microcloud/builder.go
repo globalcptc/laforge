@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 	"time"
@@ -50,8 +51,10 @@ import (
 // with no OVN control plane behind it (see builder_test.go). A real
 // MicroCloud cluster's own OVN setup is what this now depends on.
 type Builder struct {
-	Client *Client
-	Config Config
+	Client          *Client
+	Config          Config
+	PublicAddresses PublicAddressAllocator
+	retryWait       func(context.Context, time.Duration) error
 }
 
 func New(client *Client, config Config) *Builder {
@@ -180,6 +183,7 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 		return "", fmt.Errorf("this builder config has no OVNUplinkNetwork set -- every DeployNetwork call needs an uplink to route OVN logical networks through")
 	}
 	name := networkName(spec.DisplayName, spec.ExternalName)
+	slog.InfoContext(ctx, "MicroCloud ensuring primary OVN network", "project", b.Client.Project, "network", name, "uplink", b.Config.OVNUplinkNetwork, "cidr", spec.CIDR)
 	bridgeAddr, err := bridgeAddressCIDR(spec.CIDR)
 	if err != nil {
 		return "", fmt.Errorf("computing gateway address for %s: %w", spec.CIDR, err)
@@ -192,7 +196,7 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	// cluster: without this pre-check the second (retried) DeployNetwork of an
 	// existing network errored instead of adopting, breaking the "ensure" contract.
 	if exists, err := b.networkExists(ctx, name); err != nil {
-		return "", fmt.Errorf("checking whether network %s exists: %w", name, err)
+		return name, fmt.Errorf("checking whether network %s exists: %w", name, err)
 	} else if exists {
 		return name, nil // adopt
 	}
@@ -212,10 +216,14 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	if err != nil {
 		var apiErr *APIError
 		if errors.As(err, &apiErr) && apiErr.AlreadyExists() {
-			return name, nil // adopt (single-node/incus-lineage error shape)
+			if exists, readErr := b.networkExists(ctx, name); readErr == nil && exists {
+				return name, nil
+			}
 		}
-		return "", fmt.Errorf("creating network %s (from %s): %w", name, spec.ExternalName, err)
+		slog.ErrorContext(ctx, "MicroCloud primary network creation failed", "project", b.Client.Project, "network", name, "error", err)
+		return name, fmt.Errorf("creating network %s (from %s): %w", name, spec.ExternalName, err)
 	}
+	slog.InfoContext(ctx, "MicroCloud primary OVN network created", "project", b.Client.Project, "network", name)
 	return name, nil
 }
 
@@ -224,8 +232,17 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 // adopt idempotently on a clustered LXD, where a duplicate create doesn't surface
 // as a recognizable "already exists" error.
 func (b *Builder) networkExists(ctx context.Context, name string) (bool, error) {
-	_, err := b.Client.get(ctx, "/1.0/networks/"+name)
+	raw, err := b.Client.get(ctx, "/1.0/networks/"+name)
 	if err == nil {
+		var state struct {
+			Status string `json:"status"`
+		}
+		if err := json.Unmarshal(raw, &state); err != nil {
+			return false, err
+		}
+		if state.Status != "" && state.Status != "Created" {
+			return false, fmt.Errorf("network %s exists in state %s; cluster network creation must finish successfully before deploying boxes", name, state.Status)
+		}
 		return true, nil
 	}
 	var apiErr *APIError
@@ -359,9 +376,14 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 // see shortName's own doc comment).
 const teamConfigKey = "user.laforge_team"
 
-func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool) (string, error) {
+func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool, publicPlans ...*publicNICPlan) (string, error) {
 	name := instanceName(displayName, externalName)
+	slog.InfoContext(ctx, "MicroCloud deploying instance", "project", b.Client.Project, "instance", name, "external_name", externalName, "team", team, "instance_type", instanceType, "snapshot", img.IsSnapshot())
 
+	var public *publicNICPlan
+	if len(publicPlans) > 0 {
+		public = publicPlans[0]
+	}
 	config := map[string]string{teamConfigKey: team}
 	if nesting {
 		// A LaForge Docker container runs Docker INSIDE this LXD system
@@ -376,7 +398,7 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		// nothing here; turning it off lets any image boot.
 		config["security.secureboot"] = "false"
 	}
-	if cloudInit != "" && !cloudInitViaISO {
+	if cloudInit != "" && (!cloudInitViaISO || public != nil) {
 		// Linux: cloud-init reads user-data from the /dev/lxd/sock
 		// datasource, so setting the config key is enough.
 		config["cloud-init.user-data"] = cloudInit
@@ -416,6 +438,10 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		if address != "" {
 			nic["ipv4.address"] = address
 		}
+		if public != nil {
+			nic["name"] = "eth0"
+			nic["hwaddr"] = public.PrimaryMAC
+		}
 		devices["eth0"] = nic
 	}
 	if diskGB > 0 {
@@ -428,14 +454,30 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		// own tests never had, since neither TestContainerDeployAdoptDestroy
 		// nor TestDeployHostVMSurfacesRealKVMError sets a disk size).
 		devices["root"] = map[string]string{"type": "disk", "path": "/", "pool": b.Config.storagePoolOrDefault(), "size": fmt.Sprintf("%dGB", diskGB)}
-	} else if b.Client.Project != "" {
+	} else if b.Client.Project != "" || public != nil {
 		// A project other than `default` often has its own, empty default
 		// profile (features.profiles), so it can't be relied on for a root
 		// disk. In `default` the profile's root disk is left alone, as before.
 		devices["root"] = map[string]string{"type": "disk", "path": "/", "pool": b.Config.storagePoolOrDefault()}
 	}
 
-	if cloudInit != "" && cloudInitViaISO {
+	if public != nil {
+		devices[publicNICName] = public.Device
+		raw, err := json.Marshal(public)
+		if err != nil {
+			return name, err
+		}
+		config[publicNICKey] = string(raw)
+		config["cloud-init.network-config"] = public.NetworkConfig
+		config["user.network-config"] = public.NetworkConfig
+		// LXD 5.21 supplies a native NoCloud config drive. It includes the
+		// network-config file and works even without agent user-data.
+		if cloudInitViaISO {
+			devices["cidata"] = map[string]string{"type": "disk", "source": "cloud-init:config"}
+		}
+	}
+
+	if cloudInit != "" && cloudInitViaISO && public == nil {
 		// Windows: cloudbase-init can't read the socket, so the user-data
 		// is delivered as a NoCloud config-drive ISO attached to the
 		// instance (imported as a custom volume first -- see configdrive.go).
@@ -487,78 +529,42 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	default:
 		source = map[string]interface{}{"type": "image", "alias": img.Alias, "server": img.Server, "protocol": img.Protocol}
 	}
-	_, err := b.Client.post(ctx, "/1.0/instances", map[string]interface{}{
+	request := map[string]interface{}{
 		"name":    name,
 		"type":    instanceType,
 		"source":  source,
 		"config":  config,
 		"devices": devices,
-	})
+	}
+	if public != nil {
+		// Both NICs and the root disk are explicit. Do not inherit an extra
+		// management/public NIC or network metadata from a shared profile.
+		request["profiles"] = []string{}
+	}
+	err := b.createInstance(ctx, name, request)
 	if err != nil {
-		var apiErr *APIError
-		if !(errors.As(err, &apiErr) && apiErr.AlreadyExists()) {
-			// Return the (deterministic) name even on failure: the instance
-			// may have been partially created at the hoster, and the runner
-			// records this ref so teardown can still destroy the orphan --
-			// otherwise a config-drive/create failure leaves an untracked
-			// instance nothing can clean up (found live on MicroCloud/Ceph).
-			return name, fmt.Errorf("creating instance %s (from %s): %w", name, externalName, err)
-		}
-		// "adopt if already there" -- fall through to ensure it's started.
+		// Keep the deterministic ref for cleanup even if creation is uncertain.
+		return name, fmt.Errorf("creating instance from %s: %w", externalName, err)
 	}
 
 	if img.IsSnapshot() {
-		if err := b.replaceCopiedDevices(ctx, name, devices); err != nil {
+		if err := b.retryInstanceStep(ctx, name, "configuring snapshot devices", func() error { return b.replaceCopiedDevices(ctx, name, devices) }); err != nil {
 			return name, err
 		}
 	}
 
+	if public != nil {
+		if err := b.retryInstanceStep(ctx, name, "recording public NIC readiness", func() error {
+			_, err := b.Client.patch(ctx, "/1.0/instances/"+name, map[string]interface{}{"config": map[string]string{publicReadyKey: "true"}})
+			return err
+		}); err != nil {
+			return name, err
+		}
+	}
 	if err := b.startInstance(ctx, name); err != nil {
 		return name, err
 	}
 	return name, nil
-}
-
-// startInstance issues the start call, retrying a bounded number of times
-// on failure. A live daemon under deeply nested cgroup delegation (Incus
-// running inside Docker inside Docker Desktop's own VM) was
-// observed failing this exact call with a
-// transient EBUSY race in LXC's own cgroup controller delegation during
-// setup -- confirmed by hand against a live daemon: the *same* start
-// call, simply repeated, reliably succeeds within a couple of attempts
-// (a bare status check right after the first failure isn't enough --
-// the instance was confirmed still genuinely Stopped at that point, not
-// just slow to report; a fresh start call is what actually resolves it).
-// Trusting the first failure here would make DeployHost/DeployContainer
-// wrongly non-idempotent in that environment: a caller's own retry would
-// hit "already exists" on create and then fail again on this same racy
-// start, forever. "Ensure" means converging on the desired state, so a
-// handful of retries against a real, observed transient condition is the
-// correct, honest fix -- not a blanket "ignore all start errors."
-func (b *Builder) startInstance(ctx context.Context, name string) error {
-	const maxAttempts = 5
-	var lastErr error
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		_, err := b.Client.put(ctx, "/1.0/instances/"+name+"/state", map[string]interface{}{
-			"action": "start", "timeout": 60, "force": false,
-		})
-		if err == nil {
-			return nil
-		}
-		var apiErr *APIError
-		if errors.As(err, &apiErr) && apiErr.AlreadyRunning() {
-			return nil
-		}
-		lastErr = err
-		if attempt < maxAttempts {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(time.Duration(attempt) * 500 * time.Millisecond):
-			}
-		}
-	}
-	return fmt.Errorf("starting instance %s (after %d attempts): %w", name, maxAttempts, lastErr)
 }
 
 // PowerAction maps LaForge's start/stop/reboot onto Incus's own instance
@@ -605,7 +611,59 @@ func (b *Builder) DestroyContainer(ctx context.Context, team, externalRef string
 	return b.destroyInstance(ctx, externalRef)
 }
 
-func (b *Builder) destroyInstance(ctx context.Context, name string) error {
+// DestroyHostForRebuild keeps the public reservation while replacing a box.
+func (b *Builder) DestroyHostForRebuild(ctx context.Context, team, externalRef string) error {
+	return b.destroyInstance(ctx, externalRef, destroyOptions{keepPublicAddress: true})
+}
+
+// The runner knows the full deployment identity, unlike a shortened LXD name.
+// Use it to guard teardown against adopting/deleting another build's public box.
+func (b *Builder) DestroyHostForDeployment(ctx context.Context, team, externalRef, externalName string, rebuild bool) error {
+	return b.destroyInstance(ctx, externalRef, destroyOptions{keepPublicAddress: rebuild, externalName: externalName})
+}
+
+// HostReference resolves the same name as DeployHost when a rebuild reset has
+// already cleared external_ref. Only this builder exposes this optional hook.
+func (b *Builder) HostReference(externalName, displayName string) string {
+	return instanceName(displayName, externalName)
+}
+
+type destroyOptions struct {
+	keepPublicAddress bool
+	externalName      string
+}
+
+func (b *Builder) destroyInstance(ctx context.Context, name string, options ...destroyOptions) error {
+	var opts destroyOptions
+	if len(options) > 0 {
+		opts = options[0]
+	}
+	retain := opts.keepPublicAddress
+	if opts.externalName != "" {
+		full, _, err := b.getInstancePut(ctx, name)
+		if err != nil {
+			var apiErr *APIError
+			if !errors.As(err, &apiErr) || apiErr.HTTPStatus != 404 {
+				return err
+			}
+			// Nothing exists at this exact name. Do not delete later by name:
+			// a different colliding deployment could be creating it right now.
+			if b.PublicAddresses != nil && !retain {
+				return b.PublicAddresses.Release(ctx, b.publicProject(), name, opts.externalName)
+			}
+			return nil
+		}
+		if raw := full.Config[publicNICKey]; raw != "" {
+			var plan publicNICPlan
+			if err := json.Unmarshal([]byte(raw), &plan); err != nil {
+				return err
+			}
+			if plan.ExternalName != opts.externalName {
+				return fmt.Errorf("instance %s belongs to another deployment; refusing to delete it", name)
+			}
+		}
+	}
+	slog.InfoContext(ctx, "MicroCloud deleting instance", "project", b.Client.Project, "instance", name, "retain_public_ip_for_rebuild", retain)
 	_, err := b.Client.put(ctx, "/1.0/instances/"+name+"/state", map[string]interface{}{
 		"action": "stop", "timeout": 30, "force": true,
 	})
@@ -626,6 +684,24 @@ func (b *Builder) destroyInstance(ctx context.Context, name string) error {
 			return fmt.Errorf("deleting instance %s: %w", name, err)
 		}
 	}
+	if b.PublicAddresses != nil {
+		// A successful asynchronous delete is followed by an exact read. Do
+		// not free the address while deletion is still in flight or uncertain.
+		_, readErr := b.Client.get(ctx, "/1.0/instances/"+name)
+		var apiErr *APIError
+		if !errors.As(readErr, &apiErr) || apiErr.HTTPStatus != 404 {
+			slog.WarnContext(ctx, "MicroCloud deletion uncertain; public IP remains reserved", "project", b.publicProject(), "instance", name, "error", readErr)
+			return fmt.Errorf("instance %s deletion not confirmed; retaining public address: %v", name, readErr)
+		}
+		if !retain {
+			if err := b.PublicAddresses.Release(ctx, b.publicProject(), name, opts.externalName); err != nil {
+				return fmt.Errorf("releasing public address: %w", err)
+			}
+		} else {
+			slog.InfoContext(ctx, "MicroCloud public IP reservation retained for rebuild", "project", b.publicProject(), "instance", name)
+		}
+	}
+	_, _ = b.Client.delete(ctx, "/1.0/network-acls/"+publicACLName(b.publicProject(), name))
 	// Remove the config-drive volume, if this instance had one (Windows).
 	// A no-op when there wasn't one; never fails the destroy.
 	_ = b.Client.deleteVolume(ctx, b.Config.storagePoolOrDefault(), cidataVolName(name))
@@ -790,6 +866,7 @@ type savedNIC struct {
 // device to null was tried live and rejected: "Missing device type in
 // config").
 type instancePut struct {
+	etag         string
 	Architecture string                     `json:"architecture"`
 	Config       map[string]string          `json:"config"`
 	Devices      map[string]json.RawMessage `json:"devices"`
@@ -800,7 +877,8 @@ type instancePut struct {
 }
 
 func (b *Builder) getInstancePut(ctx context.Context, name string) (instancePut, map[string]interface{}, error) {
-	raw, err := b.Client.get(ctx, "/1.0/instances/"+name)
+	var etag string
+	raw, err := b.Client.do(ctx, "GET", "/1.0/instances/"+name, nil, requestOptions{etag: &etag})
 	if err != nil {
 		return instancePut{}, nil, fmt.Errorf("reading instance: %w", err)
 	}
@@ -814,6 +892,7 @@ func (b *Builder) getInstancePut(ctx context.Context, name string) (instancePut,
 	if err := json.Unmarshal(raw, &expanded); err != nil {
 		return instancePut{}, nil, fmt.Errorf("decoding instance: %w", err)
 	}
+	full.etag = etag
 	return full, expanded.ExpandedDevices, nil
 }
 
@@ -834,7 +913,7 @@ func retryOnBusy(ctx context.Context, fn func() error) error {
 			return nil
 		}
 		var apiErr *APIError
-		if !(errors.As(err, &apiErr) && apiErr.Busy()) {
+		if !(errors.As(err, &apiErr) && (apiErr.Busy() || apiErr.HTTPStatus == 412)) {
 			return err
 		}
 		lastErr = err
@@ -850,64 +929,80 @@ func retryOnBusy(ctx context.Context, fn func() error) error {
 }
 
 func (b *Builder) removeNIC(ctx context.Context, name string) error {
-	full, expandedDevices, err := b.getInstancePut(ctx, name)
-	if err != nil {
-		return err
-	}
-	if _, closed := full.Config[removedNICKey]; closed {
-		return nil // idempotent
-	}
-	effective, hasNIC := expandedDevices["eth0"]
-	if !hasNIC {
-		return nil // no network device at all -- nothing to close
-	}
-	saved := savedNIC{}
-	if instanceDevice, ok := full.Devices["eth0"]; ok {
-		saved.Instance = true
-		if err := json.Unmarshal(instanceDevice, &saved.Device); err != nil {
-			return fmt.Errorf("decoding instance-level eth0 device: %w", err)
-		}
-	} else if m, ok := effective.(map[string]interface{}); ok {
-		saved.Device = m // for reference only; Instance stays false
-	}
-	savedJSON, err := json.Marshal(saved)
-	if err != nil {
-		return err
-	}
 	return retryOnBusy(ctx, func() error {
-		_, err := b.Client.patch(ctx, "/1.0/instances/"+name, map[string]interface{}{
-			"config":  map[string]string{removedNICKey: string(savedJSON)},
-			"devices": map[string]interface{}{"eth0": map[string]interface{}{"type": "none"}},
-		})
+		full, expanded, err := b.getInstancePut(ctx, name)
+		if err != nil {
+			return err
+		}
+		config := map[string]string{}
+		devices := map[string]interface{}{}
+		for device, key := range map[string]string{"eth0": removedNICKey, publicNICName: publicClosedKey} {
+			if _, closed := full.Config[key]; closed {
+				continue
+			}
+			effective, exists := expanded[device]
+			if !exists {
+				continue
+			}
+			saved := savedNIC{}
+			if raw, ok := full.Devices[device]; ok {
+				saved.Instance = true
+				if err := json.Unmarshal(raw, &saved.Device); err != nil {
+					return err
+				}
+			} else if m, ok := effective.(map[string]interface{}); ok {
+				saved.Device = m
+			}
+			if saved.Device["type"] != "nic" {
+				continue
+			}
+			raw, err := json.Marshal(saved)
+			if err != nil {
+				return err
+			}
+			config[key] = string(raw)
+			devices[device] = map[string]string{"type": "none"}
+		}
+		if len(devices) == 0 {
+			return nil
+		}
+		_, err = b.Client.do(ctx, "PATCH", "/1.0/instances/"+name, map[string]interface{}{"config": config, "devices": devices}, requestOptions{ifMatch: full.etag})
 		return err
 	})
 }
 
 func (b *Builder) restoreNIC(ctx context.Context, name string) error {
-	full, _, err := b.getInstancePut(ctx, name)
-	if err != nil {
-		return err
-	}
-	rawSaved, ok := full.Config[removedNICKey]
-	if !ok {
-		return nil // already open -- idempotent
-	}
-	var saved savedNIC
-	if err := json.Unmarshal([]byte(rawSaved), &saved); err != nil {
-		return fmt.Errorf("decoding saved nic state: %w", err)
-	}
-	if saved.Instance {
-		deviceJSON, err := json.Marshal(saved.Device)
+	return retryOnBusy(ctx, func() error {
+		full, _, err := b.getInstancePut(ctx, name)
 		if err != nil {
 			return err
 		}
-		full.Devices["eth0"] = deviceJSON
-	} else {
-		delete(full.Devices, "eth0") // fall back to the profile's own device
-	}
-	delete(full.Config, removedNICKey)
-	return retryOnBusy(ctx, func() error {
-		_, err := b.Client.put(ctx, "/1.0/instances/"+name, full)
+		changed := false
+		for device, key := range map[string]string{"eth0": removedNICKey, publicNICName: publicClosedKey} {
+			raw, closed := full.Config[key]
+			if !closed {
+				continue
+			}
+			var saved savedNIC
+			if err := json.Unmarshal([]byte(raw), &saved); err != nil {
+				return fmt.Errorf("decoding saved NIC state: %w", err)
+			}
+			if saved.Instance {
+				raw, err := json.Marshal(saved.Device)
+				if err != nil {
+					return err
+				}
+				full.Devices[device] = raw
+			} else {
+				delete(full.Devices, device)
+			}
+			delete(full.Config, key)
+			changed = true
+		}
+		if !changed {
+			return nil
+		}
+		_, err = b.Client.do(ctx, "PUT", "/1.0/instances/"+name, full, requestOptions{ifMatch: full.etag})
 		return err
 	})
 }
@@ -939,7 +1034,7 @@ func (b *Builder) HasWorkingEth0(ctx context.Context, name string) (bool, error)
 
 // replaceCopiedDevices makes a copied instance's devices exactly LaForge's own
 // -- the team NIC, the root disk, a config drive -- and its profiles just
-// "default", as an instance created from an image has. A copy otherwise keeps
+// "default" (or empty for explicit public-NIC deployments). A copy otherwise keeps
 // the template's own devices and profiles: a second NIC on some management
 // network, a data volume, a GPU, all shared by every team's copy. Done before
 // the first start, so a copy never boots with them.
@@ -958,7 +1053,10 @@ func (b *Builder) replaceCopiedDevices(ctx context.Context, name string, devices
 			full.Devices[k] = raw
 		}
 		full.Profiles = []string{"default"}
-		if _, err := b.Client.put(ctx, "/1.0/instances/"+name, full); err != nil {
+		if _, public := devices[publicNICName]; public {
+			full.Profiles = []string{}
+		}
+		if _, err := b.Client.do(ctx, "PUT", "/1.0/instances/"+name, full, requestOptions{ifMatch: full.etag}); err != nil {
 			return fmt.Errorf("replacing the devices %s copied from its template: %w", name, err)
 		}
 		return nil

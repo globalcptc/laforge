@@ -55,6 +55,9 @@ func (b *Builder) externalPortRange() (min, max int) {
 // and surfacing are all exercised by the fake builder; this is the real-fabric
 // half to confirm live.
 func (b *Builder) ConfigureExternalAccess(ctx context.Context, team string, hosts []builder.ExternalHost) ([]builder.ExternalEndpoint, error) {
+	if b.PublicNICEnabled() {
+		return b.configurePublicNICAccess(ctx, hosts)
+	}
 	if b.Config.ExternalAccessIP == "" {
 		return nil, fmt.Errorf("this builder has no external_access_ip configured -- set one before content can expose public: ports")
 	}
@@ -148,6 +151,10 @@ const maxExternalIPs = 1024
 // proxy `listen` syntax this feeds is IPv4-only (no bracketed address). Order is
 // preserved so the per-team, round-robin IP assignment is stable.
 func parseExternalIPs(s string) ([]string, error) {
+	return parseIPv4Ranges(s, maxExternalIPs)
+}
+
+func parseIPv4Ranges(s string, maximum int) ([]string, error) {
 	seen := map[string]bool{}
 	var out []string
 	add := func(ip string) {
@@ -195,8 +202,8 @@ func parseExternalIPs(s string) ([]string, error) {
 		if end < start {
 			return nil, fmt.Errorf("range %q: end is before start", tok)
 		}
-		if count := uint64(end) - uint64(start) + 1; count > maxExternalIPs {
-			return nil, fmt.Errorf("range %q spans %d addresses (max %d) -- narrow it", tok, count, maxExternalIPs)
+		if count := uint64(end) - uint64(start) + 1; count > uint64(maximum) {
+			return nil, fmt.Errorf("range %q spans %d addresses (max %d) -- narrow it", tok, count, maximum)
 		}
 		for v := start; ; v++ {
 			var b4 [4]byte
@@ -210,8 +217,8 @@ func parseExternalIPs(s string) ([]string, error) {
 	if len(out) == 0 {
 		return nil, fmt.Errorf("no IPv4 address found")
 	}
-	if len(out) > maxExternalIPs {
-		return nil, fmt.Errorf("%d external IPs is more than the maximum %d", len(out), maxExternalIPs)
+	if len(out) > maximum {
+		return nil, fmt.Errorf("%d external IPs is more than the maximum %d", len(out), maximum)
 	}
 	return out, nil
 }

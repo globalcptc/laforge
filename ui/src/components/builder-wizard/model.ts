@@ -1,3 +1,4 @@
+import type { MicrocloudPublicAccess } from "../../api/types"
 import type {
   BuilderConfig,
   BuilderConfigRequest,
@@ -73,6 +74,7 @@ export interface Draft {
   // External access (Incus/MicroCloud): the single external IP content `public:`
   // ports are NAT'd in on, and the external-port window allocated on it. Empty
   // IP = external access off; 0 ports = builder defaults.
+  microcloudPublicAccess?: MicrocloudPublicAccess
   externalAccessIp: string
   externalPortMin?: number
   externalPortMax?: number
@@ -246,6 +248,7 @@ export function draftFromConfig(bc: BuilderConfig): Draft {
     hosts,
     images: [],
     sizes: [],
+    microcloudPublicAccess: bc.microcloud_public_access ?? undefined,
     externalAccessIp: bc.external_access_ip ?? '',
     externalPortMin: bc.external_port_min ?? undefined,
     externalPortMax: bc.external_port_max ?? undefined,
@@ -298,6 +301,7 @@ export function toRequest(d: Draft): BuilderConfigRequest {
   if (d.kind === 'microcloud') {
     const h = d.hosts[0]
     const placement = {
+      microcloud_public_access: d.microcloudPublicAccess ? { ...d.microcloudPublicAccess, dns: d.microcloudPublicAccess.dns?.map((v) => v.trim()).filter(Boolean) } : undefined,
       incus_storage_pool: h.storagePool,
       incus_ovn_uplink_network: h.uplink,
       incus_project: h.project || undefined,

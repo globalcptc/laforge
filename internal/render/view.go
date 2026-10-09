@@ -18,12 +18,13 @@ type ContextView struct {
 	Stop        string `yaml:"stop,omitempty" json:"stop,omitempty"`
 
 	Host struct {
-		As      string `yaml:"as" json:"as"`
-		Kind    string `yaml:"kind" json:"kind"`
-		OS      string `yaml:"os,omitempty" json:"os,omitempty"`
-		Image   string `yaml:"image,omitempty" json:"image,omitempty"`
-		Size    string `yaml:"size" json:"size"`
-		Address string `yaml:"address" json:"address"`
+		As            string `yaml:"as" json:"as"`
+		Kind          string `yaml:"kind" json:"kind"`
+		OS            string `yaml:"os,omitempty" json:"os,omitempty"`
+		Image         string `yaml:"image,omitempty" json:"image,omitempty"`
+		Size          string `yaml:"size" json:"size"`
+		Address       string `yaml:"address" json:"address"`
+		PublicAddress string `yaml:"public_address,omitempty" json:"public_address,omitempty"`
 	} `yaml:"host" json:"host"`
 
 	Network struct {
@@ -65,6 +66,7 @@ func NewContextView(ctx *Context) ContextView {
 	v.Host.Image = ctx.Image
 	v.Host.Size = ctx.Size
 	v.Host.Address = ctx.Address
+	v.Host.PublicAddress = ctx.PublicAddress
 	v.Network.Name = ctx.NetworkName
 	v.Network.CIDR = ctx.NetworkCIDR
 	for _, p := range ctx.Peers {

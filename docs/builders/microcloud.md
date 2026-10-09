@@ -32,7 +32,7 @@ builds never collide.
 | `container:` with `image:` | LXD has no OCI runtime, so a nesting system container booted from the [docker base image](#the-docker-base-image) runs the image with Docker. The agent is pushed in and bind-mounted as the application container's entrypoint, so it runs inside the application, never beside it. |
 | `container:` with `compose:` | A nesting system container booted from the docker base image, with the agent delivered by cloud-init; the agent starts the project with `docker compose`. |
 | `visible_from` / `ports:` | OVN network peers between a team's own networks, and a network ACL per network allowing only the declared sources and ports. |
-| `public:` | A NAT proxy device on the instance, listening on the builder's external IP at a per-team port. |
+| `public:` | Builder-selected shared-IP port forwarding, or a separate OVN NIC with a unique static IPv4 address per host. |
 
 Every instance carries `user.laforge_team`, which is how access windows find a team's
 instances.
@@ -210,6 +210,160 @@ A token is single-use and expires; if enrollment fails, generate a new one.
 A build fails validation before deploying anything if content uses an `os:` with no
 image mapped, or has a compose container and the docker base image hasn't been built
 (and there's no `compose-host` image).
+
+## Public access through a separate NIC
+
+In the MicroCloud builder's **Placement → External access → Public access type**, select
+**Separate network NIC**. This is a MicroCloud-only builder-wide setting. The existing
+**Shared IP port forwarding** type remains the default; other builders are unchanged.
+
+Content continues to declare ports on each host:
+
+```yaml
+host:
+  name: workstation
+  os: win2019-desktop
+  size: medium
+  disk: 80
+  ports: { tcp: ["3389"] }
+  public: { tcp: ["3389"] }
+```
+
+For the CPTC deployment, the primary team networks are new OVN networks whose provider
+is `UPLINK`. The public NIC attaches directly to the existing `GUEST_GUAC_WAN` OVN
+network. Do not use that OVN network as the primary network's provider.
+
+The builder create/update API accepts the following settings (the address range is an
+example; reserve an exclusive, unused range for the builder before deploying):
+
+```json
+{
+  "kind": "microcloud",
+  "incus_project": "CPTC-Comp-Environment",
+  "incus_ovn_uplink_network": "UPLINK",
+  "incus_storage_pool": "Cluster_A_Pool",
+  "microcloud_public_access": {
+    "type": "nic",
+    "network": "GUEST_GUAC_WAN",
+    "cidr": "10.250.0.0/16",
+    "ranges": "10.250.3.100-10.250.3.199",
+    "dns": ["10.250.0.1"],
+    "mtu": 1500,
+    "routes": []
+  }
+}
+```
+
+Supply the normal connection, image and size fields as well. `ranges` accepts individual
+IPv4 addresses and inclusive ranges, comma-separated (up to 65,536 addresses). The
+subnet must not overlap the host's primary subnet. Exclude subnet/broadcast addresses,
+gateways, DNS servers, external DHCP pools, and addresses used outside this builder.
+
+`gateway` is optional. Empty keeps the primary NIC's default route. Setting a gateway
+moves the default route to the public NIC, avoiding two competing defaults. Optional
+routes use `{"to":"192.0.2.0/24","via":"10.250.0.1"}`; next hops must be in the public
+subnet. `dns` overrides the primary network's DNS. `mtu` configures the guest and must
+not exceed the existing OVN network's MTU; the builder does not alter the shared network.
+
+Every public **host copy** gets its own address, including boxes on the same team,
+other teams, and every other MicroCloud build in this LaForge database. PostgreSQL
+enforces globally unique reserved IPs, even across overlapping ranges in different
+builder configurations, projects, or named networks. Concurrent allocations serialize
+and reservations survive runner restarts, failed creates, and rebuilds. Reservations
+also record the full deployment identity; shortened instance-name collisions cannot
+adopt another box, share its IP, or release its reservation during teardown.
+A rebuild destroys the instance while retaining its reservation, so its replacement gets
+**the same public IP**, even if another deployment runs during the rebuild. Permanent
+removal or build teardown releases the address only after an exact instance read confirms
+deletion. Reservations do not expire automatically after a failed deploy. A builder with
+outstanding reservations cannot be deleted.
+
+Reserve these ranges exclusively for LaForge: coordination covers all MicroCloud
+builder configurations sharing this database, but cannot cover independent LaForge
+databases, manually configured guests, or an external DHCP server. Destroyed builds
+release their addresses through confirmed instance deletion; merely marking a failed
+build as failed does not make its potentially live boxes safe to reuse.
+
+Only hosts with nonempty `public:` ports receive a public NIC. The public IP keeps the
+original port numbers (for example, `10.250.3.100:3389`); an OVN ACL admits only the
+listed TCP/UDP ports. Removing public ports revokes those ACL rules. Closing an access
+window detaches both NICs, and reopening restores their original MACs and addresses.
+This access type supports `host:` instances; Docker `container:` public access should
+use the shared-IP type.
+
+Linux needs cloud-init; Windows needs Cloudbase-Init configured to consume NoCloud
+metadata with its network configuration plugin enabled. Both NICs are identified by
+explicit MAC addresses in version-1 network configuration, with static guest addresses.
+Separate-NIC hosts use explicit devices and no inherited profiles, including snapshot
+copies, so a template/profile cannot add an unintended third NIC.
+Windows uses LXD's native `cloud-init:config` disk, so networking does not depend on a
+Linux-only LXD guest agent. The builder also requests a NIC-level DHCP reservation when
+the public network supports one. On `GUEST_GUAC_WAN`, `ipv4.address=none` disables IPv4
+DHCP, so the static public address is configured inside the guest only. See
+[LXD's NIC validation](https://github.com/canonical/lxd/blob/stable-5.21/lxd/device/nic_ovn.go)
+and [Cloudbase-Init's NoCloud format](https://cloudbase-init.readthedocs.io/en/latest/services.html#nocloud-configuration-drive).
+
+Existing private hosts need a rebuild to gain this NIC. Guest setting changes take effect
+on rebuild; the retained IP must still be in the configured network and pool. Changing
+to an incompatible network/pool cannot silently assign a replacement address.
+
+### Slow retries and logging
+
+MicroCloud instance creation and startup retry transient cluster/database/network
+failures up to six attempts, waiting 15, 30, 60, 120, and 120 seconds. Cancellation
+stops the wait immediately. Invalid settings, missing images, and authorization
+failures are not retried. An unfinished LXD operation is polled by its original ID;
+an ambiguous create is checked by exact instance name before another create is sent.
+Retries retain the same instance identity, public IP, and first-boot metadata.
+
+Structured runner logs record allocation/reuse/release, retained rebuild reservations,
+NIC setup, public-port rules, create/start completion, and retries with their delays,
+phase, attempts, elapsed time, and LXD errors. Filter by `instance`, `builder_id`,
+`project`, or `public_ip`. The build event history records `public_ip.assigned` with
+the instance and address. Credentials and cloud-init user-data are not logged.
+
+### Script templates and API
+
+`{{ .host.public_address }}` supplies this box's assigned IPv4 address to authored scripts,
+step fields, and scheduled scripts. It is recorded before the box becomes runnable and
+persists during rebuilds. It is an empty string for private hosts and offline
+`laforge check`/`laforge render`, where no runtime allocation exists. `.host.address`
+continues to mean the primary lab address.
+
+Examples:
+
+```bash
+PUBLIC_IP='{{ .host.public_address }}'
+```
+
+```powershell
+$PublicIP = '{{ .host.public_address }}'
+```
+
+The authenticated API returns `public_address` in `GET /builds/{id}/objects` and
+`GET /builds/{id}/objects/{objectId}/config`. The rendered-script API uses the same
+runtime value. The existing external-access API and `laforge access` show the address
+with each declared public port. Normal repository read permissions apply.
+
+### Validation status (2026-10-09)
+
+Automated coverage includes Linux/Windows metadata, native Windows config drives,
+24 concurrent allocations across builder configurations/projects/networks/builds,
+database uniqueness enforcement, pool exhaustion/reuse, rebuild retention, ownership
+guards, access-window close/open, port removal, slow retries/cancellation, and the
+runner → script materialization → authenticated API path. Relevant Go suites pass
+with race detection; the UI build and migration up/down/up checks pass. The existing
+`TestConnectBuilderEnrollsAndDiscovers` discovery-fixture failure was also reproduced
+on the base branch and is excluded from the otherwise passing API suite.
+
+The opt-in `TestMicrocloudPublicNICLive` was attempted using the existing trusted LXD
+client and pinned server certificate against `CPTC-Comp-Environment`. Creating the
+primary OVN network on `UPLINK` repeatedly failed while notifying `micro-10`, with a
+cluster database transaction timeout. No test VMs were created, and the failed test
+network was deleted and its absence confirmed by an exact read. Linux and Windows
+guest connectivity therefore remains **unverified on the live cluster**. The smoke
+test remains available for another run after cluster recovery; it does not enroll a
+new client or change the trust store.
 
 ## Images or snapshots
 
