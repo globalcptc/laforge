@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"syscall"
 	"time"
@@ -22,7 +23,7 @@ func transientInstanceError(err error) bool {
 	if errors.Is(err, context.Canceled) {
 		return false
 	}
-	if errors.Is(err, errInstanceNotRunning) {
+	if errors.Is(err, errInstanceNotRunning) || errors.Is(err, errPlacementCapacity) {
 		return true
 	}
 	var pending *pendingOperationError
@@ -44,7 +45,7 @@ func transientInstanceError(err error) bool {
 		}
 		// Some operation failures are HTTP 200 with an inner 400/500. Only
 		// recognized transient failures should retry, not every server error.
-		for _, fragment := range []string{"database is locked", "database is busy", "failed to begin transaction", "context deadline exceeded", "connection refused", "connection reset", "no available leader", "is down", "resource temporarily unavailable", "device or resource busy"} {
+		for _, fragment := range []string{"database is locked", "database is busy", "failed to begin transaction", "context deadline exceeded", "request deadline exceeded", "connection refused", "connection reset", "no available leader", "is down", "resource temporarily unavailable", "device or resource busy"} {
 			if strings.Contains(msg, fragment) {
 				return true
 			}
@@ -108,7 +109,11 @@ type pendingOperationError struct {
 func (e *pendingOperationError) Error() string { return e.Err.Error() }
 func (e *pendingOperationError) Unwrap() error { return e.Err }
 
-func (b *Builder) createInstance(ctx context.Context, name string, body interface{}) error {
+func (b *Builder) createInstance(ctx context.Context, name string, body interface{}, targets ...string) error {
+	path := "/1.0/instances"
+	if len(targets) > 0 && targets[0] != "" {
+		path += "?target=" + url.QueryEscape(targets[0])
+	}
 	var pending *pendingOperationError
 	checkExisting := false
 	return b.retryInstanceStep(ctx, name, "creating", func() error {
@@ -132,7 +137,7 @@ func (b *Builder) createInstance(ctx context.Context, name string, body interfac
 				return err
 			}
 		}
-		_, err := b.Client.post(ctx, "/1.0/instances", body)
+		_, err := b.Client.post(ctx, path, body)
 		checkExisting = true
 		errors.As(err, &pending)
 		var apiErr *APIError

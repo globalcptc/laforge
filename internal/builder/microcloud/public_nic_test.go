@@ -63,6 +63,10 @@ func newPublicTestServer(t *testing.T) (*publicTestServer, *Builder, *memoryPubl
 		}
 		path := r.URL.Path
 		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/1.0/cluster/members":
+			// This fixture exercises networking against a non-clustered API.
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{"type": "error", "error_code": 404, "error": "not clustered"})
 		case strings.HasPrefix(path, "/1.0/networks/") && r.Method == "GET":
 			ip := "172.16.0.1/24"
 			if strings.HasSuffix(path, "GUEST_GUAC_WAN") {
@@ -107,7 +111,7 @@ func newPublicTestServer(t *testing.T) (*publicTestServer, *Builder, *memoryPubl
 			if r.URL.Query().Get("project") != "templates" {
 				t.Errorf("source snapshot read used project %s", r.URL.Query().Get("project"))
 			}
-			ok(map[string]interface{}{"devices": map[string]interface{}{
+			ok(map[string]interface{}{"expanded_config": map[string]string{"security.secureboot": "true"}, "devices": map[string]interface{}{
 				"eth-1": map[string]string{"type": "nic", "network": "deleted-network"},
 			}})
 		case strings.HasPrefix(path, "/1.0/instances/"):
@@ -263,6 +267,10 @@ func TestPublicNICSnapshotDoesNotInheritTemplateProfiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	inst := f.instances[name]
+	config := inst["config"].(map[string]interface{})
+	if config["security.secureboot"] != "true" {
+		t.Fatalf("snapshot lost its profile's firmware mode: %v", config["security.secureboot"])
+	}
 	profiles, ok := inst["profiles"].([]interface{})
 	if !ok || len(profiles) != 0 {
 		t.Fatalf("snapshot inherited profiles: %v", inst["profiles"])

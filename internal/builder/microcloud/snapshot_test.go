@@ -15,10 +15,12 @@ import (
 // fakeSnapshotServer answers just enough of the API to deploy a copy and list
 // templates, recording the create and update bodies it was sent.
 type fakeSnapshotServer struct {
-	mu        sync.Mutex
-	createReq map[string]interface{}
-	putReq    map[string]interface{}
-	order     []string
+	mu                     sync.Mutex
+	createReq              map[string]interface{}
+	putReq                 map[string]interface{}
+	order                  []string
+	snapshotConfig         map[string]string
+	snapshotExpandedConfig map[string]string
 }
 
 func newFakeSnapshotServer(t *testing.T) (*fakeSnapshotServer, *Client) {
@@ -57,7 +59,7 @@ func newFakeSnapshotServer(t *testing.T) (*fakeSnapshotServer, *Client) {
 			t.Errorf("read LaForge's own instance %s while looking for templates", r.URL.Path)
 			ok(w, []string{})
 		case r.Method == http.MethodGet && r.URL.Path == "/1.0/instances/win-tmpl/snapshots/golden":
-			ok(w, map[string]interface{}{"name": "golden", "devices": map[string]interface{}{
+			ok(w, map[string]interface{}{"name": "golden", "config": f.snapshotConfig, "expanded_config": f.snapshotExpandedConfig, "devices": map[string]interface{}{
 				"eth-1": map[string]string{"type": "nic", "network": "deleted-network"},
 				"data":  map[string]string{"type": "disk", "source": "deleted-volume"},
 			}, "expanded_devices": map[string]interface{}{
@@ -142,6 +144,39 @@ func TestDeployFromSnapshotCopiesThenReplacesTemplateDevices(t *testing.T) {
 	}
 }
 
+// A copied VM's NVRAM belongs to the source firmware mode. Changing that mode
+// in the copy request can leave LXD unable to find matching firmware at boot.
+func TestSnapshotCopyPreservesFirmwareMode(t *testing.T) {
+	for _, tc := range []struct {
+		name                  string
+		local, expanded, want map[string]string
+	}{
+		{"Windows profile secure boot", nil, map[string]string{"security.secureboot": "true"}, map[string]string{"security.secureboot": "true", "security.csm": "false"}},
+		{"Linux profile without secure boot", nil, map[string]string{"security.secureboot": "false"}, map[string]string{"security.secureboot": "false", "security.csm": "false"}},
+		{"legacy profile firmware", nil, map[string]string{"security.secureboot": "false", "security.csm": "true"}, map[string]string{"security.secureboot": "false", "security.csm": "true"}},
+		{"local firmware overrides profile", map[string]string{"security.secureboot": "false"}, map[string]string{"security.secureboot": "true"}, map[string]string{"security.secureboot": "false", "security.csm": "false"}},
+		{"LXD firmware defaults", nil, nil, map[string]string{"security.secureboot": "true", "security.csm": "false"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f, client := newFakeSnapshotServer(t)
+			f.snapshotConfig, f.snapshotExpandedConfig = tc.local, tc.expanded
+			b := New(client, Config{Images: map[string]ImageRef{"guest": {Source: SourceSnapshot, Instance: "win-tmpl", Snapshot: "golden", VM: true}}, Sizes: map[string]SizeSpec{"small": {CPU: "2", Memory: "4GiB"}}})
+			if _, err := b.DeployHost(context.Background(), builder.HostSpec{ExternalName: "firmware", OS: "guest", Size: "small"}); err != nil {
+				t.Fatal(err)
+			}
+			config := f.createReq["config"].(map[string]interface{})
+			if config["migration.stateful"] != "false" {
+				t.Fatal("VM copy allows inherited stateful migration to disable Hyper-V enlightenments")
+			}
+			for key, want := range tc.want {
+				if config[key] != want {
+					t.Errorf("copy %s = %v, want source value %s", key, config[key], want)
+				}
+			}
+		})
+	}
+}
+
 // An image-sourced host is created as before: no copy, no device replacement.
 func TestDeployFromImageIsUnchanged(t *testing.T) {
 	f, client := newFakeSnapshotServer(t)
@@ -157,6 +192,24 @@ func TestDeployFromImageIsUnchanged(t *testing.T) {
 	}
 	if f.putReq != nil {
 		t.Errorf("an image-created instance's devices were rewritten: %v", f.putReq)
+	}
+}
+
+func TestVMImageKeepsNativeHostCPUAndHyperV(t *testing.T) {
+	f, client := newFakeSnapshotServer(t)
+	b := New(client, Config{
+		Images: map[string]ImageRef{"ubuntu": {Fingerprint: "abc", VM: true}},
+		Sizes:  map[string]SizeSpec{"small": {CPU: "2", Memory: "2GiB"}},
+	})
+	if _, err := b.DeployHost(context.Background(), builder.HostSpec{ExternalName: "cpu", OS: "ubuntu", Size: "small"}); err != nil {
+		t.Fatal(err)
+	}
+	config := f.createReq["config"].(map[string]interface{})
+	if config["migration.stateful"] != "false" {
+		t.Fatal("VM image allows inherited stateful migration to disable Hyper-V enlightenments")
+	}
+	if config["security.nesting"] != nil || config["raw.qemu"] != nil {
+		t.Fatal("VM adds container-only nesting or overrides LXD's host CPU configuration")
 	}
 }
 

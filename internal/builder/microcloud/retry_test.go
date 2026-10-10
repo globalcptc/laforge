@@ -59,6 +59,9 @@ func TestCreateRetryChecksExactInstanceBeforeResubmitting(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Method == "POST" && r.URL.Path == "/1.0/instances" {
 					creates++
+					if r.URL.Query().Get("target") != "micro-04" || r.URL.Query().Get("project") != "competition" {
+						t.Errorf("retry changed target or project: %s", r.URL)
+					}
 					var body map[string]interface{}
 					json.NewDecoder(r.Body).Decode(&body)
 					bodies = append(bodies, body)
@@ -86,10 +89,10 @@ func TestCreateRetryChecksExactInstanceBeforeResubmitting(t *testing.T) {
 				json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "metadata": map[string]string{"name": "box"}})
 			}))
 			defer srv.Close()
-			b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client()}, Config{})
+			b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client(), Project: "competition"}, Config{})
 			b.retryWait = func(context.Context, time.Duration) error { return nil }
 			body := map[string]interface{}{"name": "box", "config": map[string]string{"cloud-init.user-data": "same token", publicNICKey: "same IP"}}
-			if err := b.createInstance(context.Background(), "box", body); err != nil {
+			if err := b.createInstance(context.Background(), "box", body, "micro-04"); err != nil {
 				t.Fatal(err)
 			}
 			want := 2
@@ -143,6 +146,8 @@ func TestInstanceRetryErrorClassification(t *testing.T) {
 		{400, "invalid device option", false}, {403, "permission denied", false},
 		{404, "image not found", false}, {500, "Source image size exceeds specified volume size", false},
 		{500, "Failed to begin transaction: context deadline exceeded", true},
+		{500, "Failed to check OpenFGA relation: rpc error: code = Code(4004) desc = Request Deadline Exceeded", true},
+		{403, "Request Deadline Exceeded", false},
 		{400, "Instance is busy running a stop operation", true},
 		{500, "Peer cluster member micro-06 is down", true}, {503, "unavailable", true},
 	} {

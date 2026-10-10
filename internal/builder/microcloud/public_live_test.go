@@ -166,7 +166,7 @@ func TestMicrocloudPublicNICLive(t *testing.T) {
 		reachable := false
 		for attempt := 0; attempt < 30; attempt++ {
 			probe, stop := context.WithTimeout(ctx, 15*time.Second)
-			out, err := exec.CommandContext(probe, "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", input.JumpHost, "curl --fail --silent --connect-timeout 3 --max-time 5 http://"+g.address+":18080/").CombinedOutput()
+			out, err := exec.CommandContext(probe, "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", input.JumpHost, "curl --fail --silent --show-error --connect-timeout 3 --max-time 5 http://"+g.address+":18080/").CombinedOutput()
 			stop()
 			last = string(out)
 			if err == nil && strings.TrimSpace(last) == g.marker {

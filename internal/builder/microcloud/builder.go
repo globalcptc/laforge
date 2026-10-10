@@ -392,11 +392,17 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		config["security.nesting"] = "true"
 	}
 	if instanceType == "virtual-machine" {
+		// LXD uses the host CPU and exposes supported KVM virtualization
+		// extensions. On x86 UEFI guests it also enables hv_passthrough,
+		// unless stateful migration is enabled. Make this explicit so a
+		// snapshot/profile cannot silently disable Hyper-V enlightenments.
+		config["migration.stateful"] = "false"
 		// Lab VMs boot from images whose bootloader shim isn't signed for
 		// Incus's Secure Boot (Ubuntu cloud images loop on "prohibited by
 		// secure boot policy" and never reach cloud-init) -- found live.
 		// These are throwaway competition hosts, so Secure Boot buys
-		// nothing here; turning it off lets any image boot.
+		// nothing here; turning it off lets these images boot. Snapshot
+		// copies restore their source firmware mode below to match copied NVRAM.
 		config["security.secureboot"] = "false"
 	}
 	if cloudInit != "" && (!cloudInitViaISO || public != nil) {
@@ -547,8 +553,8 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		// validates that merged set before it creates the destination. Mask
 		// obsolete NICs/disks now: replacing devices after the copy is too
 		// late when a template refers to a network or volume that is gone.
-		if err := b.retryInstanceStep(ctx, name, "reading snapshot devices", func() error {
-			createDevices, err := b.snapshotCreateDevices(ctx, img, devices)
+		if err := b.retryInstanceStep(ctx, name, "reading snapshot configuration", func() error {
+			createDevices, err := b.snapshotCreateDevices(ctx, img, devices, config)
 			if err == nil {
 				request["devices"] = createDevices
 			}
@@ -557,7 +563,19 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 			return name, err
 		}
 	}
-	err := b.createInstance(ctx, name, request)
+	var target string
+	if instanceType == "virtual-machine" {
+		var release func()
+		if err := b.retryInstanceStep(ctx, name, "selecting member from host stats", func() error {
+			var err error
+			target, release, err = b.selectInstanceTarget(ctx, name, size)
+			return err
+		}); err != nil {
+			return name, err
+		}
+		defer release()
+	}
+	err := b.createInstance(ctx, name, request, target)
 	if err != nil {
 		// Keep the deterministic ref for cleanup even if creation is uncertain.
 		return name, fmt.Errorf("creating instance from %s: %w", externalName, err)
@@ -1048,7 +1066,7 @@ func (b *Builder) HasWorkingEth0(ctx context.Context, name string) (bool, error)
 	return devMap["type"] != "none", nil
 }
 
-func (b *Builder) snapshotCreateDevices(ctx context.Context, img ImageRef, devices map[string]interface{}) (map[string]interface{}, error) {
+func (b *Builder) snapshotCreateDevices(ctx context.Context, img ImageRef, devices map[string]interface{}, config map[string]string) (map[string]interface{}, error) {
 	scoped := *b.Client
 	if img.SourceProject != "" {
 		scoped.Project = img.SourceProject
@@ -1060,9 +1078,25 @@ func (b *Builder) snapshotCreateDevices(ctx context.Context, img ImageRef, devic
 	var snapshot struct {
 		Devices         map[string]json.RawMessage `json:"devices"`
 		ExpandedDevices map[string]json.RawMessage `json:"expanded_devices"`
+		Config          map[string]string          `json:"config"`
+		ExpandedConfig  map[string]string          `json:"expanded_config"`
 	}
 	if err := json.Unmarshal(raw, &snapshot); err != nil {
 		return nil, fmt.Errorf("decoding source snapshot devices: %w", err)
+	}
+	if img.VM {
+		// The copied NVRAM must use the source firmware mode, even when
+		// that mode came from a profile we remove from the copy. LXD's
+		// defaults are secure boot on and CSM off. Changing the mode in a
+		// copy request does not regenerate NVRAM and can prevent startup.
+		for key, fallback := range map[string]string{"security.secureboot": "true", "security.csm": "false"} {
+			config[key] = fallback
+			for _, source := range []map[string]string{snapshot.ExpandedConfig, snapshot.Config} {
+				if value := source[key]; value != "" {
+					config[key] = value
+				}
+			}
+		}
 	}
 	createDevices := make(map[string]interface{}, len(devices)+len(snapshot.ExpandedDevices))
 	for _, inherited := range []map[string]json.RawMessage{snapshot.Devices, snapshot.ExpandedDevices} {

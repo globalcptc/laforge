@@ -94,14 +94,15 @@ Unix socket, or root on any member.
 ### What LaForge does with the API
 
 This is every call the builder makes, from `internal/builder/microcloud`. Everything
-except the server, trust, storage-pool and network listing rows is in the builder's
-project.
+except the server, trust, cluster-member, storage-pool and network listing rows is
+in the builder's project.
 
 | Area | Calls | Why |
 | --- | --- | --- |
 | Server | `GET /1.0` | Version and extension checks; confirming trust after enrollment. |
 | Trust | `POST /1.0/certificates`, or `POST /1.0/auth/identities/tls` for an identity token | Once, when the builder is connected. Never again. |
 | Storage pools, networks | `GET /1.0/storage-pools`, `GET /1.0/networks` | Listing what to pick from when connecting (read-only); connecting fails without it. |
+| Placement | `GET /1.0/cluster/members?recursion=1`, `GET /1.0/cluster/members/{name}/state`, `GET /1.0/projects/{project}` | Read host stats and placement policy; create VMs with `POST /1.0/instances?target={member}`. |
 | Storage volumes | `POST`/`DELETE /1.0/storage-pools/{pool}/volumes/custom/…` | Windows config-drive ISOs only. |
 | Instances | create (from an image, or as a copy of a snapshot — `source.type: copy`), `GET` snapshots, `GET`, `PUT`/`PATCH` (config and devices), delete; `PUT …/state` (start, stop, restart); `POST …/exec`; `POST …/files` | Deploying and powering instances; access windows (closing one detaches the instance's NIC and stores it in the instance's config; opening restores it); external-access proxy devices; pushing the agent and running Docker in a container's machine; the docker base image build. |
 | Images | `POST /1.0/images` (pull, publish), `GET /1.0/images`, `GET`/`DELETE /1.0/images/aliases/…` | Pulling builder images from simplestreams servers; publishing the docker base image. |
@@ -109,7 +110,7 @@ project.
 | Network ACLs | `POST`/`PUT`/`DELETE /1.0/network-acls…` | `visible_from` and `ports:` enforcement. |
 | Operations | `GET /1.0/operations/{id}/wait` | Waiting for the above to finish. |
 
-It does **not** touch cluster or server configuration, cluster members, other projects,
+It does **not** modify cluster or server configuration, cluster members, source templates,
 profiles, the uplink network's own configuration, or other identities.
 
 ### Option 1: a full trusted client (what the wizard does today)
@@ -176,8 +177,10 @@ If LaForge's project has `restricted=true`, also allow:
   nesting container.
 - `restricted.networks.uplinks=<your uplink>` — OVN networks route through it.
 - `restricted.devices.proxy=allow` — `public:` ports are proxy devices.
-- `restricted.virtual-machines.lowlevel=allow` — VMs are created with
-  `security.secureboot=false`.
+- `restricted.cluster.target=allow` — permits placement using host stats; otherwise
+  the builder delegates to LXD's scheduler.
+- `restricted.virtual-machines.lowlevel=allow` — image-based VMs are created with
+  `security.secureboot=false`; snapshot copies preserve the source firmware settings.
 
 ## Connecting it to LaForge
 
@@ -299,6 +302,10 @@ copies, so a template/profile cannot add an unintended third NIC.
 Snapshot devices that are not needed are masked in the copy request before LXD
 validates them, then removed from the stopped copy. This also permits snapshots
 whose old NICs reference deleted networks; source templates remain unchanged.
+VM copies preserve the snapshot's effective `security.secureboot` and `security.csm`
+settings, including values inherited from a source profile. These settings must
+match the copied NVRAM; forcing Secure Boot off on a Windows snapshot that used it
+can fail startup with `Unable to locate matching VM firmware`.
 LXD merges copy devices by name before validation ([implementation](https://github.com/canonical/lxd/blob/lxd-5.21.7/lxd/instances_post.go#L447)).
 Windows uses LXD's native `cloud-init:config` disk, so networking does not depend on a
 Linux-only LXD guest agent. The builder also requests a NIC-level DHCP reservation when
@@ -311,11 +318,58 @@ Existing private hosts need a rebuild to gain this NIC. Guest setting changes ta
 on rebuild; the retained IP must still be in the configured network and pool. Changing
 to an incompatible network/pool cannot silently assign a replacement address.
 
+### VM CPU and nested virtualization
+
+LXD 5.21 starts VMs with the `host` CPU model. For x86 UEFI VMs on Linux 5.10+
+it adds `hv_passthrough`, exposing KVM's supported Hyper-V enlightenments.
+LaForge explicitly sets `migration.stateful=false` on VM creates, including snapshot
+copies, because LXD disables these enlightenments for stateful migration. It keeps
+LXD's native CPU configuration instead of adding a second `-cpu` argument.
+See the [LXD 5.21.7 VM startup implementation](https://github.com/canonical/lxd/blob/lxd-5.21.7/lxd/instance/drivers/driver_qemu.go#L1480).
+
+Nested virtualization also requires KVM nesting enabled on the selected physical
+member. Host CPU passthrough exposes the available Intel VMX or AMD SVM extensions;
+the builder cannot enable a disabled host KVM module through the LXD instance API.
+`security.nesting` is a container setting and is not applied to VMs. A successful
+VM start alone does not verify nested virtualization: check guest CPU capabilities
+and boot a nested guest. Legacy CSM snapshots retain their source boot mode, for
+which LXD does not automatically enable Hyper-V enlightenments. Custom template
+`raw.qemu` CPU overrides must also be reviewed, since they can override LXD's default.
+See [KVM nesting requirements](https://docs.kernel.org/virt/kvm/x86/running-nested-guests.html).
+
+### Placement from host stats
+
+VM creation uses the same host-stat endpoints as `TNMC-STATUS.py`: cluster membership
+and `/1.0/cluster/members/{name}/state`. It scores each eligible member using the greater
+of projected CPU load per logical CPU and projected RAM usage as a fraction of total
+RAM, then chooses the lowest score. CPU load uses the larger of the 1- and 5-minute
+load averages; this is load, not a CPU utilization percentage. RAM headroom uses
+`sysinfo.free_ram` conservatively, without treating swap or reclaimable cache as free.
+The requested CPU/RAM and this runner's outstanding reservations count toward the score.
+A member must have enough free RAM for the request after those reservations.
+
+Only Online members allowing automatic instance scheduling are eligible. Missing or
+invalid stats exclude a member; offline/manual/group-only members are excluded.
+Restricted projects' allowed groups are honored. Sampling uses at most two concurrent
+requests, a two-minute collection deadline and a 30-second cache shared by builder
+instances for the same endpoint and project. Reservations last through create/start
+and for another minute to cover metric lag. They coordinate a single runner process;
+separate processes/projects/endpoints rely on their next host-stat samples.
+
+The selected target stays fixed across create retries, and existing instances keep
+their location. If no measured eligible member has capacity, creation waits and retries
+with fresh stats. The builder logs a fallback to LXD's scheduler when the membership or
+project-policy API is unsupported or forbidden, a project forbids explicit targets, the cluster mixes
+architectures, or the size uses inherited limits/CPU pin sets/relative RAM. Supply
+explicit CPU counts and absolute RAM sizes (for example `2` and `4GiB`) for balancing.
+LXD still enforces target authorization and storage/image compatibility. Placement
+requires no host `/resources` permission or changes to cluster configuration.
+
 ### Slow retries and logging
 
 MicroCloud instance creation and startup retry transient cluster/database/network
-failures up to six attempts, waiting 15, 30, 60, 120, and 120 seconds. Cancellation
-stops the wait immediately. Invalid settings, missing images, and authorization
+failures, including OpenFGA request deadlines, up to six attempts, waiting 15, 30,
+60, 120, and 120 seconds. Cancellation stops the wait immediately. Invalid settings, missing images, and authorization
 failures are not retried. An unfinished LXD operation is polled by its original ID;
 an ambiguous create is checked by exact instance name before another create is sent.
 Retries retain the same instance identity, public IP, and first-boot metadata.
@@ -356,7 +410,9 @@ with each declared public port. Normal repository read permissions apply.
 
 ### Validation status (2026-10-09)
 
-Automated coverage includes Linux/Windows metadata, native Windows config drives,
+Automated coverage includes normalized host-load/RAM placement, concurrent placement
+reservations, member/project eligibility, snapshot firmware preservation, native host
+CPU settings, Linux/Windows metadata, native Windows config drives,
 24 concurrent allocations across builder configurations/projects/networks/builds,
 database uniqueness enforcement, pool exhaustion/reuse, rebuild retention, ownership
 guards, access-window close/open, port removal, slow retries/cancellation, and the
@@ -377,10 +433,14 @@ The Windows test copies `CPTC-Templates/windows-19-base/v03`. Its initial copy f
 because the snapshot retained a NIC on a deleted network, prompting the copy-time
 device masking fix. Subsequent OVN reads exceeded the previous fixed 30-second
 deadline; a read succeeded in 41 seconds after honoring the configured timeout.
-Windows guest connectivity and live rebuild retention are **not yet verified**.
-Automated retention, API, template, allocation, and
-new live-failure regression tests pass. Source templates and cluster trust are not
-modified. Linux snapshot-based deployment remains unverified.
+A later start exposed a firmware mismatch when Secure Boot was forced off on the
+Secure Boot snapshot; copies now preserve the source firmware configuration. With
+that correction, Windows booted and served its first-boot HTTP marker through
+`10.250.3.241`, with primary address `172.16.231.11`. The subsequent rebuild retained
+its public reservation, but replacement creation hit an OpenFGA request deadline;
+that error now uses the existing slow retry path. Replacement connectivity has not
+yet passed; the resumed test is retrying authorization/database timeouts. Linux snapshot-based deployment and nested guest execution remain
+unverified. Source templates and cluster trust are not modified.
 
 The live test accepts `VerifyGuests` to probe guests even when `Keep` retains them,
 and `Rebuild` to verify both connectivity and the unchanged public IP after replacing
@@ -428,9 +488,9 @@ Re-snapshotting a template under the same name changes what new copies get, but 
 existing instances — redeploy them to pick it up. The `compose-host` override can be a
 snapshot too.
 
-> Snapshot sources are tested against a simulated LXD API, not yet a live
-> MicroCloud cluster. Before an event, deploy one Linux and one Windows host from a snapshot and
-> confirm the agent checks in.
+> The Windows snapshot has booted and served its first-boot HTTP marker on a live
+> MicroCloud cluster. Linux snapshot deployment and agent enrollment still need a
+> live check before an event.
 
 ## The docker base image
 
