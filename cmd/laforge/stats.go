@@ -21,12 +21,27 @@ func runStats(args []string) error {
 	envFlag := fs.String("environment", "", "environment to profile; default profiles every environment")
 	fs.Parse(args)
 
-	c, err := loadOrExplain(*repo)
+	// stats is informational, so load leniently: a repo with some stray,
+	// non-content YAML (or even content errors) can still be profiled for what
+	// it does define. loader.Load always returns a Content; only a hard failure
+	// (e.g. unreadable schema) is a real error here.
+	c, err := loader.Load(*repo)
 	if err != nil {
 		return err
 	}
 	if len(c.Environments) == 0 {
-		return fmt.Errorf("no environments defined in %s", *repo)
+		// The thing stats needs is missing -- lead with that, gracefully, rather
+		// than a wall of per-file parse errors. Point at `laforge check` for the
+		// detail if there was any.
+		if len(c.Errors) > 0 {
+			return fmt.Errorf("no environment found in %s -- laforge stats needs a content repo with at least one `environment:` document (%d file(s) there weren't LaForge content; run `laforge check` for detail)", *repo, len(c.Errors))
+		}
+		return fmt.Errorf("no environment found in %s -- laforge stats needs a content repo with at least one `environment:` document", *repo)
+	}
+	// Environments exist: profile them, but note anything that didn't parse as
+	// content so a skipped file isn't silent.
+	if len(c.Errors) > 0 {
+		fmt.Fprintf(os.Stderr, "note: skipped %d YAML file(s) that aren't LaForge content; run `laforge check` for detail\n", len(c.Errors))
 	}
 
 	envs := c.Environments

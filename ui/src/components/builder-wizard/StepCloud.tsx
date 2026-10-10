@@ -113,7 +113,7 @@ function Field({ label, hint, children }: { label: string; hint: string; childre
 // StepCloudConnect enrolls the AWS access key (validated + stored server-side;
 // the wizard keeps only the credential id). It must happen first -- every later
 // step discovers against this credential.
-export function StepCloudConnect({ credentialId, onCredential }: { credentialId?: string; onCredential: (id: string | undefined) => void }) {
+export function StepCloudConnect({ credentialId, account, onConnected }: { credentialId?: string; account?: string; onConnected: (id: string | undefined, account?: string) => void }) {
   const connect = useConnectBuilder()
   const [keyId, setKeyId] = useState('')
   const [secret, setSecret] = useState('')
@@ -123,7 +123,8 @@ export function StepCloudConnect({ credentialId, onCredential }: { credentialId?
     setError(null)
     try {
       const conn = await connect.mutateAsync({ kind: 'aws', aws_access_key_id: keyId.trim(), aws_secret_access_key: secret.trim() })
-      onCredential(conn.credential.id)
+      // credential.server_name carries the AWS account id (captured by STS at connect).
+      onConnected(conn.credential.id, conn.credential.server_name || undefined)
       setKeyId('')
       setSecret('')
     } catch (e) {
@@ -143,9 +144,9 @@ export function StepCloudConnect({ credentialId, onCredential }: { credentialId?
       {credentialId ? (
         <div className="flex items-center justify-between gap-2 rounded-token border border-success/40 bg-success-soft px-3 py-2 text-xs">
           <span className="flex items-center gap-2 text-fg">
-            <Check size={14} className="text-success" /> Access key connected and stored.
+            <Check size={14} className="text-success" /> Access key connected and stored{account ? ` (account ${account})` : ''}.
           </span>
-          <Button variant="ghost" size="sm" onClick={() => onCredential(undefined)}>
+          <Button variant="ghost" size="sm" onClick={() => onConnected(undefined, undefined)}>
             Change
           </Button>
         </div>

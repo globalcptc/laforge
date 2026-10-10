@@ -54,6 +54,15 @@ func (c *Content) addf(file string, line int, format string, args ...interface{}
 	})
 }
 
+// isNonContentDir reports whether a directory should never be walked for
+// content: a node_modules dependency tree, or any hidden directory (content
+// lives in plainly-named directories, never in `.git`/`.github`/...). Other
+// conventional non-content dirs (e.g. `vendor`) stay normal and are excluded
+// with a .laforgeignore if wanted -- only these two are never content.
+func isNonContentDir(name string) bool {
+	return name == "node_modules" || strings.HasPrefix(name, ".")
+}
+
 // Load walks root, validates and decodes every .yaml/.yml file, loads every
 // people/*.csv, and runs the cross-file checks a single document's JSON
 // Schema can't express. It always returns a Content, even when Errors is
@@ -73,6 +82,14 @@ func Load(root string) (*Content, error) {
 			return err
 		}
 		rel, _ := filepath.Rel(root, path)
+		// Never descend into version-control, dependency, or hidden
+		// directories -- they're never LaForge content, and scanning them
+		// (node_modules especially) only produces "no type header" noise. This
+		// is unconditional, before .laforgeignore, so a content repo needs no
+		// ignore file just to keep `.git`/`node_modules` out.
+		if d.IsDir() && rel != "." && isNonContentDir(d.Name()) {
+			return filepath.SkipDir
+		}
 		if rel != "." && ignore.match(filepath.ToSlash(rel), d.IsDir()) {
 			if d.IsDir() {
 				return filepath.SkipDir

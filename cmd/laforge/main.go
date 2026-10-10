@@ -418,10 +418,29 @@ func loadOrExplain(repo string) (*loader.Content, error) {
 		return nil, err
 	}
 	if len(c.Errors) > 0 {
+		// When nothing parsed as content and every error is just "this YAML has
+		// no LaForge type header", the directory isn't a content repo at all --
+		// say that once instead of listing every stray file (you ran it in the
+		// wrong place, or a non-content repo).
+		allNoTypeHeader := true
+		for _, e := range c.Errors {
+			if !strings.HasPrefix(e.Message, "no type header found") {
+				allNoTypeHeader = false
+				break
+			}
+		}
+		if isEmptyContent(c) && allNoTypeHeader {
+			return nil, fmt.Errorf("%s doesn't look like a LaForge content repository -- no environment/network/host/container/script documents found. Run this inside a content repo (or pass --repo), and add a %s for any non-content YAML it should skip", repo, loader.IgnoreFile)
+		}
 		for _, e := range c.Errors {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", e.File, e.Message)
 		}
 		return nil, fmt.Errorf("%d schema/reference error(s) in %s -- run `laforge check` for details", len(c.Errors), repo)
 	}
 	return c, nil
+}
+
+func isEmptyContent(c *loader.Content) bool {
+	return len(c.Environments) == 0 && len(c.Networks) == 0 && len(c.Hosts) == 0 &&
+		len(c.Containers) == 0 && len(c.Scripts) == 0 && len(c.People) == 0
 }

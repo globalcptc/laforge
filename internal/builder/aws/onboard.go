@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -45,11 +46,17 @@ func (onboarder) Onboard(ctx context.Context, req builder.OnboardRequest) (*buil
 	if err != nil {
 		return nil, fmt.Errorf("%w: loading AWS credentials: %v", builder.ErrInvalidOnboardRequest, err)
 	}
-	if _, err := sts.NewFromConfig(cfg).GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{}); err != nil {
+	who, err := sts.NewFromConfig(cfg).GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
+	if err != nil {
 		return nil, fmt.Errorf("%w: those AWS credentials are not usable: %v", builder.ErrInvalidOnboardRequest, err)
 	}
-	// An explicit key is stored; an instance-role connect stores nothing.
-	conn := builder.Connection{AWSAccessKeyID: req.AWSAccessKeyID, AWSSecretAccessKey: req.AWSSecretAccessKey}
+	// An explicit key is stored; an instance-role connect stores nothing. Record
+	// the AWS account id (STS just told us) as the credential's display identity,
+	// so the UI can show which account a builder deploys into, not "env creds".
+	conn := builder.Connection{
+		AWSAccessKeyID: req.AWSAccessKeyID, AWSSecretAccessKey: req.AWSSecretAccessKey,
+		ServerName: awssdk.ToString(who.Account),
+	}
 	return &builder.Onboarding{Connection: conn}, nil
 }
 

@@ -17,9 +17,10 @@ import type {
 
 export type Kind = 'microcloud' | 'incus' | 'fake' | 'aws' | 'openstack'
 
-// The cloud kinds share one wizard path: no host connection or placement,
-// just an image map (os -> AMI/Glance id) and a size map (size -> instance
-// type/flavor). Credentials and region come from the runner's environment.
+// The cloud kinds reuse the shared image/size columns (os -> AMI/Glance id,
+// size -> instance type/flavor). AWS enrolls a credential and picks its region
+// in the wizard (multi-step, discovery-driven); OpenStack still reads both from
+// the runner's OS_* environment.
 export const isCloud = (k: Kind): boolean => k === 'aws' || k === 'openstack'
 
 export interface HostDraft {
@@ -270,7 +271,8 @@ export function toRequest(d: Draft): BuilderConfigRequest {
   if (isCloud(d.kind)) {
     // Cloud kinds reuse the shared image/size columns: the image id (AMI /
     // Glance id) rides in the ImageRef fingerprint, the instance type/flavor
-    // in the SizeSpec type. Credentials and region come from the runner env.
+    // in the SizeSpec type. AWS adds its credential + region/account via
+    // aws_config/aws_credential_id below; OpenStack reads them from the runner env.
     const images: Record<string, IncusImageRef> = {}
     for (const img of d.images) if (img.name && img.fingerprint) images[img.name] = { fingerprint: img.fingerprint, alias: '', server: '', protocol: '', vm: false }
     const sizes: Record<string, IncusSizeSpec> = {}
@@ -351,6 +353,7 @@ function cleanAwsConfig(c: AwsConfig): AwsConfig {
   if (c.execution_role_arn?.trim()) out.execution_role_arn = c.execution_role_arn.trim()
   if (c.log_group?.trim()) out.log_group = c.log_group.trim()
   if (c.agent_init_image?.trim()) out.agent_init_image = c.agent_init_image.trim()
+  if (c.account?.trim()) out.account = c.account.trim()
   return out
 }
 

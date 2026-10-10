@@ -75,6 +75,10 @@ type ConfigInput struct {
 	ExecutionRoleARN string `json:"execution_role_arn,omitempty"`
 	LogGroup         string `json:"log_group,omitempty"`
 	AgentInitImage   string `json:"agent_init_image,omitempty"`
+	// Account is the AWS account id the enrolled credential belongs to (captured
+	// at connect via STS). Display-only — shown in the builders list so you can
+	// tell which account a builder deploys into; the builder itself doesn't use it.
+	Account string `json:"account,omitempty"`
 }
 
 // Config is what the resolver hands the builder. Credentials and region come

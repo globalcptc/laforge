@@ -284,7 +284,10 @@ export function BuilderWizard() {
                 {step === 'cloud-connect' && (
                   <StepCloudConnect
                     credentialId={draft.awsCredentialId}
-                    onCredential={(awsCredentialId) => setDraft((d) => ({ ...d, awsCredentialId }))}
+                    account={draft.awsConfig?.account}
+                    onConnected={(awsCredentialId, account) =>
+                      setDraft((d) => ({ ...d, awsCredentialId, awsConfig: { ...d.awsConfig, account } }))
+                    }
                   />
                 )}
                 {step === 'cloud-region' && (

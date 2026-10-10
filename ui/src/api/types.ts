@@ -629,6 +629,8 @@ export interface AwsConfig {
   execution_role_arn?: string
   log_group?: string
   agent_init_image?: string
+  /** AWS account id the credential belongs to, captured at connect. Display-only. */
+  account?: string
 }
 
 export interface BuilderConfig {

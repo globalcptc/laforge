@@ -14,8 +14,28 @@ export function StepReview({ draft }: { draft: Draft }) {
 
       {cloud && (
         <>
-          <Section title="Credentials">
-            <Row label="Source">Runner environment ({draft.kind === 'aws' ? 'AWS_* / AWS_REGION' : 'OS_* / OS_REGION_NAME'})</Row>
+          <Section title="Account">
+            {draft.kind === 'aws' ? (
+              <>
+                <Row label="Credential">
+                  {draft.awsCredentialId ? (
+                    <span>IAM access key{draft.awsConfig?.account ? ` · account ${draft.awsConfig.account}` : ''}</span>
+                  ) : (
+                    'runner instance role'
+                  )}
+                </Row>
+                <Row label="Region">
+                  <span className="font-mono">{draft.awsConfig?.region || '—'}</span>
+                </Row>
+                {draft.awsConfig?.execution_role_arn && (
+                  <Row label="Execution role">
+                    <span className="font-mono">{draft.awsConfig.execution_role_arn}</span>
+                  </Row>
+                )}
+              </>
+            ) : (
+              <Row label="Source">Runner environment (OS_* / OS_REGION_NAME)</Row>
+            )}
           </Section>
           <Section title="Images">
             {draft.images.filter((i) => i.name && i.fingerprint).length === 0 && <div className="px-3 py-2 text-fg-muted">None mapped.</div>}
