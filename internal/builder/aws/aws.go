@@ -75,10 +75,6 @@ type ConfigInput struct {
 	ExecutionRoleARN string `json:"execution_role_arn,omitempty"`
 	LogGroup         string `json:"log_group,omitempty"`
 	AgentInitImage   string `json:"agent_init_image,omitempty"`
-	// AssignPublicIP makes team subnets auto-assign a public IP on launch, so an
-	// instance can reach the LaForge API/gateway (egress) without a NAT gateway.
-	// Defaults true when unset -- a lab host with no egress can't run at all.
-	AssignPublicIP *bool `json:"assign_public_ip,omitempty"`
 }
 
 // Config is what the resolver hands the builder. Credentials and region come
@@ -96,10 +92,6 @@ type Config struct {
 	ExecutionRoleARN string // task execution role (AWS_ECS_EXECUTION_ROLE_ARN)
 	LogGroup         string // CloudWatch log group for task logs (AWS_ECS_LOG_GROUP), optional
 	AgentInitImage   string // public image the agent-download init container runs (AWS_ECS_AGENT_INIT_IMAGE, default "alpine:3.20")
-
-	// AssignPublicIP: team subnets auto-assign a public IP on launch (default
-	// true). Egress to the LaForge control plane needs either this or a NAT.
-	AssignPublicIP bool
 
 	// AccessKeyID/SecretAccessKey are the enrolled wizard credential (from the
 	// builder_credential store). When set they are used as a static credentials
@@ -159,10 +151,6 @@ func New(ctx context.Context, cfg Config) (*Builder, error) {
 // ConfigFromInput merges a stored/wizard ConfigInput with the image/size maps
 // into a Config. Empty fields are left empty so New can apply env fallbacks.
 func ConfigFromInput(in ConfigInput, images, sizes map[string]string) Config {
-	assign := true
-	if in.AssignPublicIP != nil {
-		assign = *in.AssignPublicIP
-	}
 	return Config{
 		Region:           in.Region,
 		Images:           images,
@@ -171,7 +159,6 @@ func ConfigFromInput(in ConfigInput, images, sizes map[string]string) Config {
 		ExecutionRoleARN: in.ExecutionRoleARN,
 		LogGroup:         in.LogGroup,
 		AgentInitImage:   in.AgentInitImage,
-		AssignPublicIP:   assign,
 	}
 }
 
@@ -413,12 +400,17 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 		}
 		subnetID = awssdk.ToString(created.Subnet.SubnetId)
 	}
-	if b.cfg.AssignPublicIP {
-		if _, err := b.ec2.ModifySubnetAttribute(ctx, &ec2.ModifySubnetAttributeInput{
-			SubnetId: awssdk.String(subnetID), MapPublicIpOnLaunch: &ec2types.AttributeBooleanValue{Value: awssdk.Bool(true)},
-		}); err != nil {
-			return "", fmt.Errorf("enabling public IPs on subnet %s: %w", subnetID, err)
-		}
+	// Every host gets a public IP. On AWS an instance with no public IP can't
+	// egress even through an IGW (the IGW has no address to NAT), so without a
+	// public IP a host can't reach the LaForge control plane to check in. It is
+	// not exposure: the per-object security group denies all internet inbound
+	// (only declared ports from sibling lab CIDRs; `public:` hosts additionally
+	// get a 0.0.0.0/0 rule + EIP). A NAT-gateway alternative isn't provisioned,
+	// so this is not optional.
+	if _, err := b.ec2.ModifySubnetAttribute(ctx, &ec2.ModifySubnetAttributeInput{
+		SubnetId: awssdk.String(subnetID), MapPublicIpOnLaunch: &ec2types.AttributeBooleanValue{Value: awssdk.Bool(true)},
+	}); err != nil {
+		return "", fmt.Errorf("enabling public IPs on subnet %s: %w", subnetID, err)
 	}
 	if _, err := b.ec2.AssociateRouteTable(ctx, &ec2.AssociateRouteTableInput{
 		RouteTableId: awssdk.String(rtID), SubnetId: awssdk.String(subnetID),

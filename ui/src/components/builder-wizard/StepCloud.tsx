@@ -268,13 +268,6 @@ export function StepCloudRegion({
           <Field label="Agent Init Image" hint="Small public image a Fargate container runs once to download the agent. Default alpine:3.20 — change only if you can't pull from Docker Hub.">
             <Input value={aws.agent_init_image ?? ''} onChange={(e) => setAws({ agent_init_image: e.target.value })} placeholder="alpine:3.20" className="font-mono" />
           </Field>
-          <label className="flex items-start gap-2 text-xs text-fg">
-            <input type="checkbox" checked={aws.assign_public_ip !== false} onChange={(e) => setAws({ assign_public_ip: e.target.checked })} className="mt-0.5 h-4 w-4 rounded-token-sm border-border accent-accent" />
-            <span>
-              Assign a public IP to hosts
-              <span className="block text-fg-subtle">Instances need outbound reach to the LaForge API/gateway to check in. Leave on unless you've added a NAT gateway for egress.</span>
-            </span>
-          </label>
         </div>
       </section>
     </div>

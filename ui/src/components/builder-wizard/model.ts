@@ -351,7 +351,6 @@ function cleanAwsConfig(c: AwsConfig): AwsConfig {
   if (c.execution_role_arn?.trim()) out.execution_role_arn = c.execution_role_arn.trim()
   if (c.log_group?.trim()) out.log_group = c.log_group.trim()
   if (c.agent_init_image?.trim()) out.agent_init_image = c.agent_init_image.trim()
-  if (c.assign_public_ip !== undefined) out.assign_public_ip = c.assign_public_ip
   return out
 }
 

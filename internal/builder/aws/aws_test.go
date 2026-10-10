@@ -72,21 +72,12 @@ func TestPortPermissions(t *testing.T) {
 }
 
 func TestConfigFromInput(t *testing.T) {
-	// AssignPublicIP defaults true (a host with no egress can't run).
 	c := ConfigFromInput(ConfigInput{Region: "us-east-1", ECSCluster: "lab"}, map[string]string{"ubuntu": "ami-1"}, map[string]string{"small": "t3.micro"})
-	if !c.AssignPublicIP {
-		t.Error("AssignPublicIP should default true when unset")
-	}
 	if c.Region != "us-east-1" || c.Cluster != "lab" {
 		t.Errorf("fields not mapped: %+v", c)
 	}
 	if c.Images["ubuntu"] != "ami-1" || c.Sizes["small"] != "t3.micro" {
 		t.Errorf("image/size maps not carried: %+v", c)
-	}
-	// Explicit false is honored.
-	no := false
-	if ConfigFromInput(ConfigInput{AssignPublicIP: &no}, nil, nil).AssignPublicIP {
-		t.Error("explicit assign_public_ip=false should be honored")
 	}
 	// Empty fields stay empty so New applies env fallbacks.
 	if c2 := ConfigFromInput(ConfigInput{}, nil, nil); c2.Cluster != "" || c2.ExecutionRoleARN != "" {

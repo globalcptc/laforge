@@ -33,7 +33,7 @@ func TestCloudSizes(t *testing.T) {
 // resolveAWS reads the per-builder aws_config JSONB; a valid blob resolves and a
 // malformed one is a clear error (not a silent env-only fallback).
 func TestResolveAWSConfig(t *testing.T) {
-	row := db.BuilderConfig{Name: "aws1", Kind: "aws", AwsConfig: []byte(`{"region":"us-west-2","ecs_cluster":"lab","assign_public_ip":false}`)}
+	row := db.BuilderConfig{Name: "aws1", Kind: "aws", AwsConfig: []byte(`{"region":"us-west-2","ecs_cluster":"lab"}`)}
 	if _, err := resolveAWS(nil, row); err != nil {
 		t.Fatalf("resolveAWS with valid aws_config: %v", err)
 	}

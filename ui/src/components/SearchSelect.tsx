@@ -53,21 +53,36 @@ export function SearchSelect({
   }, [open])
 
   // Server search: debounce the query (and ignore too-short ones) so typing
-  // doesn't fire a request per keystroke.
+  // doesn't fire a request per keystroke. onSearch is called through a ref so a
+  // caller that passes a fresh function each render (the common case) doesn't
+  // re-trigger the debounce on every re-render -- which otherwise loops: fetch →
+  // state update → re-render → new onSearch identity → effect re-fires → fetch.
+  // The effect depends ONLY on the typed text.
+  const onSearchRef = useRef(onSearch)
   useEffect(() => {
-    if (!onSearch) return
+    onSearchRef.current = onSearch
+  }, [onSearch])
+  const hasSearch = !!onSearch
+  useEffect(() => {
+    if (!hasSearch) return
     const q = search.trim()
     if (q.length > 0 && q.length < minSearchChars) return
-    const t = setTimeout(() => onSearch(q), 350)
+    const t = setTimeout(() => onSearchRef.current?.(q), 350)
     return () => clearTimeout(t)
-  }, [search, onSearch, minSearchChars])
+  }, [search, hasSearch, minSearchChars])
 
   const q = search.trim().toLowerCase()
   // With a server search the list is already scoped; client-filter only in the
   // default (no onSearch) mode.
   const shown = onSearch ? options : options.filter((o) => !q || o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q) || (o.hint ?? '').toLowerCase().includes(q))
 
-  const selected = options.find((o) => o.value === value)
+  // Remember every label we've seen so the trigger keeps showing the chosen
+  // option's name even after a later server search drops it from `options`
+  // (otherwise the button flips between the name and the raw value as results
+  // churn). Ref mutation during render is fine -- it's a cache, not state.
+  const labelCache = useRef<Record<string, string>>({})
+  for (const o of options) labelCache.current[o.value] = o.label
+  const displayLabel = value ? labelCache.current[value] ?? value : placeholder
 
   function choose(v: string) {
     onChange(v)
@@ -86,7 +101,7 @@ export function SearchSelect({
         className="flex h-9 w-full items-center gap-2 rounded-token border border-border bg-surface-raised px-3 text-left text-sm hover:border-border-strong"
       >
         <span className={cn('min-w-0 flex-1 truncate', value ? 'font-mono text-fg' : 'text-fg-subtle')}>
-          {selected ? selected.label : value || placeholder}
+          {displayLabel}
         </span>
         <ChevronsUpDown size={14} className="shrink-0 text-fg-subtle" />
       </button>

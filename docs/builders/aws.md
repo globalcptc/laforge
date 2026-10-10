@@ -203,9 +203,6 @@ rest are discovered for you or have sane defaults.
 - **Agent Init Image** — a small public image a Fargate container runs once to
   download the LaForge agent. *Optional, default `alpine:3.20`.* Leave it unless
   your account can't pull from Docker Hub (then point it at an ECR mirror).
-- **Assign a public IP to hosts** — *default on.* Instances need outbound reach to
-  the LaForge API/gateway to check in; a public IP is the simplest way. Turn it off
-  only if you've added a NAT gateway for egress.
 
 ### Images step
 

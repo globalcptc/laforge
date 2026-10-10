@@ -629,7 +629,6 @@ export interface AwsConfig {
   execution_role_arn?: string
   log_group?: string
   agent_init_image?: string
-  assign_public_ip?: boolean
 }
 
 export interface BuilderConfig {

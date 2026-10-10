@@ -50,6 +50,8 @@ func main() {
 		err = runRender(os.Args[2:])
 	case "check":
 		err = runCheck(os.Args[2:])
+	case "stats":
+		err = runStats(os.Args[2:])
 	case "convert":
 		err = runConvert(os.Args[2:])
 	case "login":
@@ -122,6 +124,11 @@ func usage() {
       Validate and render everything: every file against its schema, every
       cross-file reference, and every script against every host in every
       team. Exit code is non-zero if anything failed.
+
+  laforge stats [--environment <name>] [--repo <path>]
+      Profile what an environment deploys: hosts/containers counts, broken
+      down by os image, size and network, and how many are public -- per team
+      and in total. Defaults to every environment.
 
   laforge convert <old-hcl-repo> <new-repo-out>
       One-shot: convert an existing HCL content repository into the new
