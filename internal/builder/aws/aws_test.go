@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 func TestParsePortRange(t *testing.T) {
@@ -105,5 +106,28 @@ func TestExternalEndpoint(t *testing.T) {
 	}
 	if e.ExternalRef != "i-abc" || e.Protocol != "tcp" {
 		t.Errorf("endpoint fields wrong: %+v", e)
+	}
+}
+
+func TestToImageInfo(t *testing.T) {
+	img := ec2types.Image{
+		ImageId:         awssdk.String("ami-0abc123"),
+		Name:            awssdk.String("ubuntu-22.04-server"),
+		Architecture:    ec2types.ArchitectureValuesX8664,
+		PlatformDetails: awssdk.String("Linux/UNIX"),
+		Description:     awssdk.String("Canonical Ubuntu 22.04"),
+	}
+	got := toImageInfo(img)
+	if got.Fingerprint != "ami-0abc123" {
+		t.Errorf("Fingerprint = %q, want the AMI id", got.Fingerprint)
+	}
+	if len(got.Aliases) != 1 || got.Aliases[0] != "ubuntu-22.04-server" {
+		t.Errorf("Aliases = %v, want the AMI name", got.Aliases)
+	}
+	if got.Architecture != "x86_64" || got.Type != "virtual-machine" {
+		t.Errorf("arch/type = %q/%q", got.Architecture, got.Type)
+	}
+	if got.Properties.OS != "Linux/UNIX" || got.Properties.Description != "Canonical Ubuntu 22.04" {
+		t.Errorf("properties = %+v", got.Properties)
 	}
 }

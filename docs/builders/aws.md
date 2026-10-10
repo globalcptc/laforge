@@ -39,6 +39,25 @@ Everything below lives in **one AWS account**. Two pieces:
    and ship logs. You create it once and name its ARN in the wizard; LaForge only
    references the ARN (via `iam:PassRole`). Hosts-only environments don't need it.
 
+## Fastest path: the CloudFormation template
+
+[`deploy/aws/laforge-iam.yaml`](../../deploy/aws/laforge-iam.yaml) provisions the
+runner IAM user (with the policy below) **and** the ECS task execution role in one
+stack. Deploy it, create an access key for the runner user, and paste the key +
+the role ARN (a stack Output) into the wizard:
+
+```bash
+aws cloudformation deploy --stack-name laforge-iam \
+  --template-file deploy/aws/laforge-iam.yaml \
+  --capabilities CAPABILITY_NAMED_IAM --region <your-region>
+aws cloudformation describe-stacks --stack-name laforge-iam \
+  --query 'Stacks[0].Outputs' --region <your-region>
+```
+
+The stack deliberately creates **no** access key (a CloudFormation output would
+expose the secret) — make one for the runner user in the IAM console. The policy
+below is the same set, for reference and for least-privilege tightening by hand.
+
 ## Permissions for the runner credential
 
 Attach this policy to the IAM user or role whose credentials the runner uses.

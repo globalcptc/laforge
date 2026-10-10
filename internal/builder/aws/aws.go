@@ -119,7 +119,14 @@ type Builder struct {
 // New constructs the builder from the ambient AWS credential/region chain,
 // filling any empty Config field from its AWS_* environment variable.
 func New(ctx context.Context, cfg Config) (*Builder, error) {
-	opts := []func(*awsconfig.LoadOptions) error{}
+	opts := []func(*awsconfig.LoadOptions) error{
+		// Adaptive retry runs a client-side rate limiter that backs off on AWS
+		// throttling (ThrottlingException), so every call this builder makes --
+		// deploy, Inspect, wizard discovery -- rides it out instead of failing a
+		// reconcile. (We have been bitten by unthrottled API loops before.)
+		awsconfig.WithRetryMode(awssdk.RetryModeAdaptive),
+		awsconfig.WithRetryMaxAttempts(8),
+	}
 	if cfg.Region != "" {
 		opts = append(opts, awsconfig.WithRegion(cfg.Region))
 	}

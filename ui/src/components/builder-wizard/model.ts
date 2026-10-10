@@ -1,4 +1,4 @@
-import type { AwsConfig, MicrocloudPublicAccess } from "../../api/types"
+import type { AwsConfig, Discovery, MicrocloudPublicAccess } from "../../api/types"
 import type {
   BuilderConfig,
   BuilderConfigRequest,
@@ -79,6 +79,9 @@ export interface Draft {
   // credential (set by the Connect step; the secret itself never lives here).
   awsConfig?: AwsConfig
   awsCredentialId?: string
+  // AWS discovery for the current region (regions, instance types, AMIs),
+  // refetched as the region / AMI-search changes. Powers the wizard's pickers.
+  awsDiscovery?: Discovery
   externalAccessIp: string
   externalPortMin?: number
   externalPortMax?: number

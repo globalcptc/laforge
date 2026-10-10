@@ -727,6 +727,10 @@ export interface Discovery {
   projects?: ProjectInfo[]
   /** Instance snapshots (in the builder's project) that can serve as templates. */
   snapshots?: SnapshotInfo[]
+  /** AWS only: the account's regions, and the chosen region's instance types.
+   *  (AMIs come back in `images`.) */
+  regions?: string[]
+  instance_types?: string[]
 }
 
 // SnapshotInfo is one snapshot of an instance that could be a template --

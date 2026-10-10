@@ -81,6 +81,11 @@ type Discovery struct {
 	// Snapshots are instance snapshots in the same project as Images, which
 	// a builder can copy instances from instead of an image.
 	Snapshots []SnapshotInfo `json:"snapshots"`
+	// Regions and InstanceTypes are AWS-only: the account's regions and the
+	// chosen region's instance types, for the wizard's region dropdown and
+	// instance-type picker. Nil for every other kind. (AMIs reuse Images.)
+	Regions       []string `json:"regions"`
+	InstanceTypes []string `json:"instance_types"`
 }
 
 // SnapshotInfo is one snapshot of an instance that could serve as a template.
@@ -145,6 +150,11 @@ type Connection struct {
 	// (the cert fields above stay empty for an AWS row).
 	AWSAccessKeyID     string
 	AWSSecretAccessKey string
+	// Region and ImageQuery scope AWS Rediscover (like Project scopes Incus):
+	// the region whose instance types / AMIs to list, and an optional AMI
+	// name-search term. Transient request parameters, not stored.
+	Region     string
+	ImageQuery string
 }
 
 // HasCredential reports whether this onboarding produced stored credential

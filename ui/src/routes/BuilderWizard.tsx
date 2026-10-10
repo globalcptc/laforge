@@ -23,10 +23,10 @@ import { StepConnect } from '../components/builder-wizard/StepConnect'
 import { StepPlacement } from '../components/builder-wizard/StepPlacement'
 import { StepImages } from '../components/builder-wizard/StepImages'
 import { StepSizes } from '../components/builder-wizard/StepSizes'
-import { StepCloud } from '../components/builder-wizard/StepCloud'
+import { StepCloud, StepCloudConnect, StepCloudRegion, StepCloudImages, StepCloudSizes } from '../components/builder-wizard/StepCloud'
 import { StepReview } from '../components/builder-wizard/StepReview'
 
-type StepId = 'type' | 'connect' | 'placement' | 'images' | 'sizes' | 'cloud' | 'review'
+type StepId = 'type' | 'connect' | 'placement' | 'images' | 'sizes' | 'cloud' | 'cloud-connect' | 'cloud-region' | 'cloud-images' | 'cloud-sizes' | 'review'
 
 const STEP_TITLE: Record<StepId, string> = {
   type: 'Type',
@@ -35,6 +35,10 @@ const STEP_TITLE: Record<StepId, string> = {
   images: 'Images',
   sizes: 'Sizes',
   cloud: 'Mappings',
+  'cloud-connect': 'Connect',
+  'cloud-region': 'Region',
+  'cloud-images': 'Images',
+  'cloud-sizes': 'Sizes',
   review: 'Review',
 }
 
@@ -50,6 +54,24 @@ function cloudBlocker(d: Draft): string | null {
   const szs = d.sizes.filter((s) => s.name || s.type)
   if (szs.length === 0) return 'Add at least one size mapping.'
   if (szs.some((s) => !s.name || !s.type)) return 'Every size needs a name and a type.'
+  if (new Set(szs.map((s) => s.name)).size !== szs.length) return 'Two sizes share a name.'
+  return null
+}
+
+// The AWS wizard splits the cloud image/size validation across its own steps
+// (the picks are the same shape: image.fingerprint = AMI id, size.type = instance type).
+function awsImageBlocker(d: Draft): string | null {
+  const imgs = d.images.filter((i) => i.name || i.fingerprint)
+  if (imgs.length === 0) return 'Add at least one os → AMI mapping.'
+  if (imgs.some((i) => !i.name || !i.fingerprint)) return 'Every image needs an os name and an AMI.'
+  if (new Set(imgs.map((i) => i.name)).size !== imgs.length) return 'Two images share a name.'
+  return null
+}
+
+function awsSizeBlocker(d: Draft): string | null {
+  const szs = d.sizes.filter((s) => s.name || s.type)
+  if (szs.length === 0) return 'Add at least one size → instance-type mapping.'
+  if (szs.some((s) => !s.name || !s.type)) return 'Every size needs a name and an instance type.'
   if (new Set(szs.map((s) => s.name)).size !== szs.length) return 'Two sizes share a name.'
   return null
 }
@@ -124,7 +146,14 @@ export function BuilderWizard() {
     }
   }
 
-  const steps: StepId[] = draft.kind === 'fake' ? ['type', 'review'] : isCloud(draft.kind) ? ['type', 'cloud', 'review'] : ['type', 'connect', 'placement', 'images', 'sizes', 'review']
+  const steps: StepId[] =
+    draft.kind === 'fake'
+      ? ['type', 'review']
+      : draft.kind === 'aws'
+        ? ['type', 'cloud-connect', 'cloud-region', 'cloud-images', 'cloud-sizes', 'review']
+        : isCloud(draft.kind)
+          ? ['type', 'cloud', 'review']
+          : ['type', 'connect', 'placement', 'images', 'sizes', 'review']
   const step = steps[Math.min(stepIndex, steps.length - 1)]
 
   function setKind(kind: Kind) {
@@ -155,6 +184,10 @@ export function BuilderWizard() {
         : null,
     sizes: draft.sizes.some((s) => !s.cpu || !s.memory) ? 'Every size needs CPUs and memory.' : null,
     cloud: cloudBlocker(draft),
+    'cloud-connect': !draft.awsCredentialId ? 'Connect an AWS access key first.' : null,
+    'cloud-region': !draft.awsConfig?.region ? 'Choose a region first.' : null,
+    'cloud-images': awsImageBlocker(draft),
+    'cloud-sizes': awsSizeBlocker(draft),
     review: null,
   }
 
@@ -242,15 +275,51 @@ export function BuilderWizard() {
                 {step === 'sizes' && <StepSizes sizes={draft.sizes} onChange={(sizes) => setDraft((d) => ({ ...d, sizes }))} />}
                 {step === 'cloud' && (
                   <StepCloud
-                    kind={draft.kind}
                     images={draft.images}
                     sizes={draft.sizes}
-                    awsConfig={draft.awsConfig}
-                    awsCredentialId={draft.awsCredentialId}
                     onImages={(images) => setDraft((d) => ({ ...d, images }))}
                     onSizes={(sizes) => setDraft((d) => ({ ...d, sizes }))}
+                  />
+                )}
+                {step === 'cloud-connect' && (
+                  <StepCloudConnect
+                    credentialId={draft.awsCredentialId}
+                    onCredential={(awsCredentialId) => setDraft((d) => ({ ...d, awsCredentialId }))}
+                  />
+                )}
+                {step === 'cloud-region' && (
+                  <StepCloudRegion
+                    credentialId={draft.awsCredentialId}
+                    awsConfig={draft.awsConfig}
+                    discovery={draft.awsDiscovery}
                     onAwsConfig={(awsConfig) => setDraft((d) => ({ ...d, awsConfig }))}
-                    onAwsCredential={(awsCredentialId) => setDraft((d) => ({ ...d, awsCredentialId }))}
+                    onDiscovery={(awsDiscovery) => setDraft((d) => ({ ...d, awsDiscovery }))}
+                    onRegionChange={() =>
+                      setDraft((d) => ({
+                        ...d,
+                        // AMIs/instance types are region-specific; clear the picks so a
+                        // stale AMI id from another region can't be saved.
+                        images: d.images.map((i) => ({ ...i, fingerprint: '' })),
+                        sizes: d.sizes.map((s) => ({ ...s, type: '' })),
+                      }))
+                    }
+                  />
+                )}
+                {step === 'cloud-images' && (
+                  <StepCloudImages
+                    credentialId={draft.awsCredentialId}
+                    region={draft.awsConfig?.region}
+                    images={draft.images}
+                    discovery={draft.awsDiscovery}
+                    onImages={(images) => setDraft((d) => ({ ...d, images }))}
+                    onDiscovery={(awsDiscovery) => setDraft((d) => ({ ...d, awsDiscovery }))}
+                  />
+                )}
+                {step === 'cloud-sizes' && (
+                  <StepCloudSizes
+                    sizes={draft.sizes}
+                    discovery={draft.awsDiscovery}
+                    onSizes={(sizes) => setDraft((d) => ({ ...d, sizes }))}
                   />
                 )}
                 {step === 'review' && <StepReview draft={draft} />}

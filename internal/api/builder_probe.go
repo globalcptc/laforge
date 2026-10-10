@@ -138,8 +138,12 @@ func (s *Server) handleGetBuilderConnection(w http.ResponseWriter, r *http.Reque
 	disc, err := onb.Rediscover(r.Context(), builder.Connection{
 		APIURL: cred.ApiUrl, ServerName: cred.ServerName, ServerFingerprint: cred.ServerFingerprint,
 		ServerCertPEM: []byte(cred.ServerCertPem), ClientCertPEM: []byte(cred.ClientCertPem), ClientKeyPEM: []byte(cred.ClientKeyPem),
-		// ?project= scopes the images to the project the builder will use.
-		Project: r.URL.Query().Get("project"),
+		AWSAccessKeyID: cred.AwsAccessKeyID, AWSSecretAccessKey: cred.AwsSecretAccessKey,
+		// ?project= scopes Incus images to a project; ?region= / ?q= scope AWS
+		// discovery to a region and an AMI name-search term.
+		Project:    r.URL.Query().Get("project"),
+		Region:     r.URL.Query().Get("region"),
+		ImageQuery: r.URL.Query().Get("q"),
 	})
 	if err != nil {
 		writeError(w, statusUpstreamFailed, err)

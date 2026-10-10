@@ -49,6 +49,4 @@ func (onboarder) Onboard(ctx context.Context, req builder.OnboardRequest) (*buil
 	return &builder.Onboarding{Connection: conn}, nil
 }
 
-func (onboarder) Rediscover(ctx context.Context, conn builder.Connection) (*builder.Discovery, error) {
-	return &builder.Discovery{}, nil
-}
+// Rediscover is implemented in discover.go.
