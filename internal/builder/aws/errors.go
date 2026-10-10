@@ -30,8 +30,27 @@ func isNotFound(err error) bool {
 		code == "InvalidPermission.NotFound"
 }
 
-// isDuplicate is the "this ingress rule already exists" case, so a repeated
-// OpenAccess converges instead of erroring.
+// isDuplicate covers the "this already exists" codes so a repeated ensure
+// converges instead of erroring: a duplicate ingress rule, an IGW already
+// attached, a route already present, a NACL entry already there, a VPC CIDR
+// already associated.
 func isDuplicate(err error) bool {
-	return apiErrorCode(err) == "InvalidPermission.Duplicate"
+	switch apiErrorCode(err) {
+	case "InvalidPermission.Duplicate",
+		"Resource.AlreadyAssociated",
+		"RouteAlreadyExists",
+		"NetworkAclEntryAlreadyExists",
+		"InvalidVpcCidrBlock.DuplicateCidr",
+		"CidrConflict",
+		"Gateway.AlreadyAttached",
+		"Resource.AlreadyExists":
+		return true
+	}
+	return false
+}
+
+// alreadyAssociated is the "subnet is already associated with this route table"
+// case, so re-associating on a retry is a no-op success.
+func alreadyAssociated(err error) bool {
+	return apiErrorCode(err) == "Resource.AlreadyAssociated"
 }

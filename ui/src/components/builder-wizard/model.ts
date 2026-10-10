@@ -1,4 +1,4 @@
-import type { MicrocloudPublicAccess } from "../../api/types"
+import type { AwsConfig, MicrocloudPublicAccess } from "../../api/types"
 import type {
   BuilderConfig,
   BuilderConfigRequest,
@@ -75,6 +75,10 @@ export interface Draft {
   // ports are NAT'd in on, and the external-port window allocated on it. Empty
   // IP = external access off; 0 ports = builder defaults.
   microcloudPublicAccess?: MicrocloudPublicAccess
+  // AWS only: account infrastructure, plus the id of the enrolled access-key
+  // credential (set by the Connect step; the secret itself never lives here).
+  awsConfig?: AwsConfig
+  awsCredentialId?: string
   externalAccessIp: string
   externalPortMin?: number
   externalPortMax?: number
@@ -249,6 +253,8 @@ export function draftFromConfig(bc: BuilderConfig): Draft {
     images: [],
     sizes: [],
     microcloudPublicAccess: bc.microcloud_public_access ?? undefined,
+    awsConfig: bc.aws_config ?? undefined,
+    awsCredentialId: bc.aws_credential_id ?? undefined,
     externalAccessIp: bc.external_access_ip ?? '',
     externalPortMin: bc.external_port_min ?? undefined,
     externalPortMax: bc.external_port_max ?? undefined,
@@ -266,7 +272,10 @@ export function toRequest(d: Draft): BuilderConfigRequest {
     for (const img of d.images) if (img.name && img.fingerprint) images[img.name] = { fingerprint: img.fingerprint, alias: '', server: '', protocol: '', vm: false }
     const sizes: Record<string, IncusSizeSpec> = {}
     for (const s of d.sizes) if (s.name && s.type) sizes[s.name] = { cpu: '', memory: '', type: s.type }
-    return { kind: d.kind, incus_images: images, incus_sizes: sizes }
+    const req: BuilderConfigRequest = { kind: d.kind, incus_images: images, incus_sizes: sizes }
+    if (d.kind === 'aws' && d.awsConfig) req.aws_config = cleanAwsConfig(d.awsConfig)
+    if (d.kind === 'aws' && d.awsCredentialId) req.aws_credential_id = d.awsCredentialId
+    return req
   }
 
   const incus_images: Record<string, IncusImageRef> = {}
@@ -328,6 +337,19 @@ export function toRequest(d: Draft): BuilderConfigRequest {
     return { ...(h.legacy as IncusHostConfig), ...placement }
   })
   return { kind: 'incus', incus_hosts, ...externalAccess, incus_images, incus_sizes }
+}
+
+// cleanAwsConfig drops empty-string fields so they fall back to the runner's
+// AWS_* env vars rather than being stored as "".
+function cleanAwsConfig(c: AwsConfig): AwsConfig {
+  const out: AwsConfig = {}
+  if (c.region?.trim()) out.region = c.region.trim()
+  if (c.ecs_cluster?.trim()) out.ecs_cluster = c.ecs_cluster.trim()
+  if (c.execution_role_arn?.trim()) out.execution_role_arn = c.execution_role_arn.trim()
+  if (c.log_group?.trim()) out.log_group = c.log_group.trim()
+  if (c.agent_init_image?.trim()) out.agent_init_image = c.agent_init_image.trim()
+  if (c.assign_public_ip !== undefined) out.assign_public_ip = c.assign_public_ip
+  return out
 }
 
 export function shortFingerprint(fp: string): string {

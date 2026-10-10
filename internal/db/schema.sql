@@ -134,6 +134,8 @@ CREATE TABLE public.builder_config (
     external_port_max integer,
     incus_project text,
     microcloud_public_access jsonb,
+    aws_config jsonb,
+    aws_credential_id uuid,
     CONSTRAINT builder_config_kind_check CHECK ((kind = ANY (ARRAY['fake'::text, 'incus'::text, 'microcloud'::text, 'aws'::text, 'openstack'::text])))
 );
 --
@@ -147,6 +149,8 @@ CREATE TABLE public.builder_credential (
     server_cert_pem text NOT NULL,
     client_cert_pem text NOT NULL,
     client_key_pem text NOT NULL,
+    aws_access_key_id text DEFAULT ''::text NOT NULL,
+    aws_secret_access_key text DEFAULT ''::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 --
@@ -1067,6 +1071,11 @@ ALTER TABLE ONLY public.build
 --
 ALTER TABLE ONLY public.builder_config
     ADD CONSTRAINT builder_config_incus_credential_id_fkey FOREIGN KEY (incus_credential_id) REFERENCES public.builder_credential(id);
+--
+-- Name: builder_config builder_config_aws_credential_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.builder_config
+    ADD CONSTRAINT builder_config_aws_credential_id_fkey FOREIGN KEY (aws_credential_id) REFERENCES public.builder_credential(id);
 --
 -- Name: builder_image_build builder_image_build_builder_config_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --

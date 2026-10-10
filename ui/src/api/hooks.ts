@@ -684,8 +684,10 @@ export function useCheckBuilderToken() {
 export function useConnectBuilder() {
   return useMutation({
     // kind selects the builder type's onboarding (the backend dispatches through
-    // the builder.Onboarder registry); trust-token kinds send a token.
-    mutationFn: (req: { kind: string; token: string; address?: string }) => api.post<BuilderConnection>('/builder-connections', req),
+    // the builder.Onboarder registry); trust-token kinds send a token, the AWS
+    // kind sends an access key (validated and stored server-side).
+    mutationFn: (req: { kind: string; token?: string; address?: string; aws_access_key_id?: string; aws_secret_access_key?: string }) =>
+      api.post<BuilderConnection>('/builder-connections', req),
   })
 }
 

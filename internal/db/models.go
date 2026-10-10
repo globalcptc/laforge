@@ -112,17 +112,21 @@ type BuilderConfig struct {
 	ExternalPortMax              *int32             `json:"external_port_max"`
 	IncusProject                 *string            `json:"incus_project"`
 	MicrocloudPublicAccess       json.RawMessage    `json:"microcloud_public_access"`
+	AwsConfig                    json.RawMessage    `json:"aws_config"`
+	AwsCredentialID              pgtype.UUID        `json:"aws_credential_id"`
 }
 
 type BuilderCredential struct {
-	ID                pgtype.UUID        `json:"id"`
-	ApiUrl            string             `json:"api_url"`
-	ServerName        string             `json:"server_name"`
-	ServerFingerprint string             `json:"server_fingerprint"`
-	ServerCertPem     string             `json:"server_cert_pem"`
-	ClientCertPem     string             `json:"client_cert_pem"`
-	ClientKeyPem      string             `json:"client_key_pem"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	ID                 pgtype.UUID        `json:"id"`
+	ApiUrl             string             `json:"api_url"`
+	ServerName         string             `json:"server_name"`
+	ServerFingerprint  string             `json:"server_fingerprint"`
+	ServerCertPem      string             `json:"server_cert_pem"`
+	ClientCertPem      string             `json:"client_cert_pem"`
+	ClientKeyPem       string             `json:"client_key_pem"`
+	AwsAccessKeyID     string             `json:"aws_access_key_id"`
+	AwsSecretAccessKey string             `json:"aws_secret_access_key"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 }
 
 type BuilderImageBuild struct {

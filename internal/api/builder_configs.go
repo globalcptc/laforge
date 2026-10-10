@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	awsbuilder "github.com/globalcptc/laforge/internal/builder/aws"
 	"github.com/globalcptc/laforge/internal/builder/incus"
 	"github.com/globalcptc/laforge/internal/builder/microcloud"
 	"github.com/globalcptc/laforge/internal/builderconfig"
@@ -40,7 +41,12 @@ import (
 // obtains it once, out of band).
 type builderConfigRequest struct {
 	MicrocloudPublicAccess *microcloud.PublicAccessConfig `json:"microcloud_public_access,omitempty"`
-	Kind                   string                         `json:"kind"`
+	// AwsConfig is kind "aws"'s account infrastructure (ECS cluster,
+	// task-execution role, log group, region, agent-init image, assign-public-IP).
+	// Empty fields fall back to the runner's AWS_* env vars. Ignored by every
+	// other kind.
+	AwsConfig *awsbuilder.ConfigInput `json:"aws_config,omitempty"`
+	Kind      string                  `json:"kind"`
 	IncusApiUrl            string                         `json:"incus_api_url,omitempty"`
 	IncusClientCertPath    string                         `json:"incus_client_cert_path,omitempty"`
 	IncusClientKeyPath     string                         `json:"incus_client_key_path,omitempty"`
@@ -60,6 +66,9 @@ type builderConfigRequest struct {
 	// builder_probe.go's handleConnectBuilder) -- when set, the older
 	// incus_api_url/cert path/server cert fields are left empty.
 	IncusCredentialID string `json:"incus_credential_id,omitempty"`
+	// AwsCredentialID is kind "aws"'s enrolled credential (the access key stored
+	// by the connect step). Empty means the runner's ambient AWS chain.
+	AwsCredentialID string `json:"aws_credential_id,omitempty"`
 	// ExternalAccessIP + the port window realize content `public:` ports on a
 	// shared-IP builder (Incus/MicroCloud): the single external IP, and the
 	// range of external ports allocated on it. Empty IP = external access off.
@@ -93,6 +102,13 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		}
 		publicAccess, _ = json.Marshal(req.MicrocloudPublicAccess)
 	}
+	var awsConfig []byte
+	if req.AwsConfig != nil {
+		if req.Kind != "aws" {
+			return db.CreateBuilderConfigParams{}, errors.New("aws_config is only supported by the AWS builder")
+		}
+		awsConfig, _ = json.Marshal(req.AwsConfig)
+	}
 	images, err := json.Marshal(req.IncusImages)
 	if err != nil {
 		return db.CreateBuilderConfigParams{}, err
@@ -117,6 +133,7 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 	params := db.CreateBuilderConfigParams{
 		Kind:                   req.Kind,
 		MicrocloudPublicAccess: publicAccess,
+		AwsConfig:              awsConfig,
 		IncusApiUrl:            db.StrPtr(req.IncusApiUrl),
 		IncusClientCertPath:    db.StrPtr(req.IncusClientCertPath),
 		IncusClientKeyPath:     db.StrPtr(req.IncusClientKeyPath),
@@ -143,6 +160,14 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 	if req.IncusCredentialID != "" {
 		if err := params.IncusCredentialID.Scan(req.IncusCredentialID); err != nil {
 			return db.CreateBuilderConfigParams{}, fmt.Errorf("invalid incus_credential_id: %w", err)
+		}
+	}
+	if req.AwsCredentialID != "" {
+		if req.Kind != "aws" {
+			return db.CreateBuilderConfigParams{}, errors.New("aws_credential_id is only supported by the AWS builder")
+		}
+		if err := params.AwsCredentialID.Scan(req.AwsCredentialID); err != nil {
+			return db.CreateBuilderConfigParams{}, fmt.Errorf("invalid aws_credential_id: %w", err)
 		}
 	}
 
@@ -351,6 +376,8 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		ExternalPortMin:  params.ExternalPortMin, ExternalPortMax: params.ExternalPortMax,
 		IncusProject:           params.IncusProject,
 		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
+		AwsConfig:              params.AwsConfig,
+		AwsCredentialID:        params.AwsCredentialID,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

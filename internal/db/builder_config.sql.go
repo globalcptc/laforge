@@ -18,10 +18,10 @@ INSERT INTO builder_config (
     incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool,
     incus_operation_timeout_seconds, incus_images, incus_sizes, incus_hosts,
     incus_credential_id, external_access_ip, external_port_min, external_port_max,
-    incus_project, microcloud_public_access
+    incus_project, microcloud_public_access, aws_config, aws_credential_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
-) RETURNING id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+) RETURNING id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access, aws_config, aws_credential_id
 `
 
 type CreateBuilderConfigParams struct {
@@ -43,6 +43,8 @@ type CreateBuilderConfigParams struct {
 	ExternalPortMax              *int32          `json:"external_port_max"`
 	IncusProject                 *string         `json:"incus_project"`
 	MicrocloudPublicAccess       json.RawMessage `json:"microcloud_public_access"`
+	AwsConfig                    json.RawMessage `json:"aws_config"`
+	AwsCredentialID              pgtype.UUID     `json:"aws_credential_id"`
 }
 
 func (q *Queries) CreateBuilderConfig(ctx context.Context, arg CreateBuilderConfigParams) (BuilderConfig, error) {
@@ -65,6 +67,8 @@ func (q *Queries) CreateBuilderConfig(ctx context.Context, arg CreateBuilderConf
 		arg.ExternalPortMax,
 		arg.IncusProject,
 		arg.MicrocloudPublicAccess,
+		arg.AwsConfig,
+		arg.AwsCredentialID,
 	)
 	var i BuilderConfig
 	err := row.Scan(
@@ -92,25 +96,30 @@ func (q *Queries) CreateBuilderConfig(ctx context.Context, arg CreateBuilderConf
 		&i.ExternalPortMax,
 		&i.IncusProject,
 		&i.MicrocloudPublicAccess,
+		&i.AwsConfig,
+		&i.AwsCredentialID,
 	)
 	return i, err
 }
 
 const createBuilderCredential = `-- name: CreateBuilderCredential :one
 INSERT INTO builder_credential (
-    api_url, server_name, server_fingerprint, server_cert_pem, client_cert_pem, client_key_pem
+    api_url, server_name, server_fingerprint, server_cert_pem, client_cert_pem, client_key_pem,
+    aws_access_key_id, aws_secret_access_key
 ) VALUES (
-    $1, $2, $3, $4, $5, $6
+    $1, $2, $3, $4, $5, $6, $7, $8
 ) RETURNING id, api_url, server_name, server_fingerprint, created_at
 `
 
 type CreateBuilderCredentialParams struct {
-	ApiUrl            string `json:"api_url"`
-	ServerName        string `json:"server_name"`
-	ServerFingerprint string `json:"server_fingerprint"`
-	ServerCertPem     string `json:"server_cert_pem"`
-	ClientCertPem     string `json:"client_cert_pem"`
-	ClientKeyPem      string `json:"client_key_pem"`
+	ApiUrl             string `json:"api_url"`
+	ServerName         string `json:"server_name"`
+	ServerFingerprint  string `json:"server_fingerprint"`
+	ServerCertPem      string `json:"server_cert_pem"`
+	ClientCertPem      string `json:"client_cert_pem"`
+	ClientKeyPem       string `json:"client_key_pem"`
+	AwsAccessKeyID     string `json:"aws_access_key_id"`
+	AwsSecretAccessKey string `json:"aws_secret_access_key"`
 }
 
 type CreateBuilderCredentialRow struct {
@@ -129,6 +138,8 @@ func (q *Queries) CreateBuilderCredential(ctx context.Context, arg CreateBuilder
 		arg.ServerCertPem,
 		arg.ClientCertPem,
 		arg.ClientKeyPem,
+		arg.AwsAccessKeyID,
+		arg.AwsSecretAccessKey,
 	)
 	var i CreateBuilderCredentialRow
 	err := row.Scan(
@@ -151,7 +162,7 @@ func (q *Queries) DeleteBuilderConfig(ctx context.Context, name string) error {
 }
 
 const getBuilderConfigByName = `-- name: GetBuilderConfigByName :one
-SELECT id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access FROM builder_config WHERE name = $1
+SELECT id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access, aws_config, aws_credential_id FROM builder_config WHERE name = $1
 `
 
 func (q *Queries) GetBuilderConfigByName(ctx context.Context, name string) (BuilderConfig, error) {
@@ -182,12 +193,14 @@ func (q *Queries) GetBuilderConfigByName(ctx context.Context, name string) (Buil
 		&i.ExternalPortMax,
 		&i.IncusProject,
 		&i.MicrocloudPublicAccess,
+		&i.AwsConfig,
+		&i.AwsCredentialID,
 	)
 	return i, err
 }
 
 const getBuilderCredential = `-- name: GetBuilderCredential :one
-SELECT id, api_url, server_name, server_fingerprint, server_cert_pem, client_cert_pem, client_key_pem, created_at FROM builder_credential WHERE id = $1
+SELECT id, api_url, server_name, server_fingerprint, server_cert_pem, client_cert_pem, client_key_pem, aws_access_key_id, aws_secret_access_key, created_at FROM builder_credential WHERE id = $1
 `
 
 func (q *Queries) GetBuilderCredential(ctx context.Context, id pgtype.UUID) (BuilderCredential, error) {
@@ -201,6 +214,8 @@ func (q *Queries) GetBuilderCredential(ctx context.Context, id pgtype.UUID) (Bui
 		&i.ServerCertPem,
 		&i.ClientCertPem,
 		&i.ClientKeyPem,
+		&i.AwsAccessKeyID,
+		&i.AwsSecretAccessKey,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -234,7 +249,7 @@ func (q *Queries) GetBuilderCredentialSummary(ctx context.Context, id pgtype.UUI
 }
 
 const listBuilderConfigs = `-- name: ListBuilderConfigs :many
-SELECT id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access FROM builder_config ORDER BY name
+SELECT id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access, aws_config, aws_credential_id FROM builder_config ORDER BY name
 `
 
 func (q *Queries) ListBuilderConfigs(ctx context.Context) ([]BuilderConfig, error) {
@@ -271,6 +286,8 @@ func (q *Queries) ListBuilderConfigs(ctx context.Context) ([]BuilderConfig, erro
 			&i.ExternalPortMax,
 			&i.IncusProject,
 			&i.MicrocloudPublicAccess,
+			&i.AwsConfig,
+			&i.AwsCredentialID,
 		); err != nil {
 			return nil, err
 		}
@@ -288,9 +305,9 @@ UPDATE builder_config SET
     incus_server_cert_pem = $6, incus_ovn_uplink_network = $7, incus_storage_pool = $8,
     incus_operation_timeout_seconds = $9, incus_images = $10, incus_sizes = $11, incus_hosts = $12,
     incus_credential_id = $13, external_access_ip = $14, external_port_min = $15, external_port_max = $16,
-    incus_project = $17, microcloud_public_access = $18, updated_at = now()
+    incus_project = $17, microcloud_public_access = $18, aws_config = $19, aws_credential_id = $20, updated_at = now()
 WHERE name = $1
-RETURNING id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access
+RETURNING id, name, kind, incus_api_url, incus_client_cert_path, incus_client_key_path, incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool, incus_operation_timeout_seconds, incus_images, incus_sizes, created_at, updated_at, incus_hosts, incus_credential_id, container_base_server, container_base_alias, docker_base_fingerprint, external_access_ip, external_port_min, external_port_max, incus_project, microcloud_public_access, aws_config, aws_credential_id
 `
 
 type UpdateBuilderConfigParams struct {
@@ -312,6 +329,8 @@ type UpdateBuilderConfigParams struct {
 	ExternalPortMax              *int32          `json:"external_port_max"`
 	IncusProject                 *string         `json:"incus_project"`
 	MicrocloudPublicAccess       json.RawMessage `json:"microcloud_public_access"`
+	AwsConfig                    json.RawMessage `json:"aws_config"`
+	AwsCredentialID              pgtype.UUID     `json:"aws_credential_id"`
 }
 
 func (q *Queries) UpdateBuilderConfig(ctx context.Context, arg UpdateBuilderConfigParams) (BuilderConfig, error) {
@@ -334,6 +353,8 @@ func (q *Queries) UpdateBuilderConfig(ctx context.Context, arg UpdateBuilderConf
 		arg.ExternalPortMax,
 		arg.IncusProject,
 		arg.MicrocloudPublicAccess,
+		arg.AwsConfig,
+		arg.AwsCredentialID,
 	)
 	var i BuilderConfig
 	err := row.Scan(
@@ -361,6 +382,8 @@ func (q *Queries) UpdateBuilderConfig(ctx context.Context, arg UpdateBuilderConf
 		&i.ExternalPortMax,
 		&i.IncusProject,
 		&i.MicrocloudPublicAccess,
+		&i.AwsConfig,
+		&i.AwsCredentialID,
 	)
 	return i, err
 }

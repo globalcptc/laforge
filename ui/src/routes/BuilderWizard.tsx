@@ -42,6 +42,7 @@ const STEP_TITLE: Record<StepId, string> = {
 // each, every row complete, no duplicate names. Blank rows are ignored (and
 // dropped on save).
 function cloudBlocker(d: Draft): string | null {
+  if (d.kind === 'aws' && !d.awsCredentialId) return 'Connect an AWS access key first.'
   const imgs = d.images.filter((i) => i.name || i.fingerprint)
   if (imgs.length === 0) return 'Add at least one image mapping.'
   if (imgs.some((i) => !i.name || !i.fingerprint)) return 'Every image needs an os name and an id.'
@@ -244,8 +245,12 @@ export function BuilderWizard() {
                     kind={draft.kind}
                     images={draft.images}
                     sizes={draft.sizes}
+                    awsConfig={draft.awsConfig}
+                    awsCredentialId={draft.awsCredentialId}
                     onImages={(images) => setDraft((d) => ({ ...d, images }))}
                     onSizes={(sizes) => setDraft((d) => ({ ...d, sizes }))}
+                    onAwsConfig={(awsConfig) => setDraft((d) => ({ ...d, awsConfig }))}
+                    onAwsCredential={(awsCredentialId) => setDraft((d) => ({ ...d, awsCredentialId }))}
                   />
                 )}
                 {step === 'review' && <StepReview draft={draft} />}

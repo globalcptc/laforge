@@ -1,0 +1,109 @@
+package aws
+
+import (
+	"testing"
+
+	awssdk "github.com/aws/aws-sdk-go-v2/aws"
+)
+
+func TestParsePortRange(t *testing.T) {
+	cases := []struct {
+		in       string
+		from, to int32
+		ok       bool
+	}{
+		{"80", 80, 80, true},
+		{" 443 ", 443, 443, true},
+		{"8000-8100", 8000, 8100, true},
+		{"0-65535", 0, 65535, true},
+		{"100-50", 0, 0, false}, // inverted
+		{"70000", 0, 0, false},  // out of range
+		{"-5", 0, 0, false},
+		{"abc", 0, 0, false},
+		{"", 0, 0, false},
+	}
+	for _, c := range cases {
+		from, to, ok := parsePortRange(c.in)
+		if ok != c.ok || (ok && (from != c.from || to != c.to)) {
+			t.Errorf("parsePortRange(%q) = %d,%d,%v want %d,%d,%v", c.in, from, to, ok, c.from, c.to, c.ok)
+		}
+	}
+}
+
+// TestPortPermissions is the per-host firewall's core rule generation: one
+// permission per port(-range) per protocol, each carrying every source CIDR; a
+// host with no ports (deny-all) or no sources yields nothing.
+func TestPortPermissions(t *testing.T) {
+	sources := []string{"10.0.1.0/24", "10.0.2.0/24"}
+	perms := portPermissions(sources, []string{"80", "8000-8100"}, []string{"53"})
+	if len(perms) != 3 {
+		t.Fatalf("got %d permissions, want 3 (2 tcp + 1 udp)", len(perms))
+	}
+	// First tcp rule: port 80 from both sources.
+	if awssdk.ToString(perms[0].IpProtocol) != "tcp" || awssdk.ToInt32(perms[0].FromPort) != 80 || awssdk.ToInt32(perms[0].ToPort) != 80 {
+		t.Errorf("tcp/80 rule malformed: %+v", perms[0])
+	}
+	if len(perms[0].IpRanges) != 2 {
+		t.Errorf("tcp/80 should list both source CIDRs, got %d", len(perms[0].IpRanges))
+	}
+	// Range rule.
+	if awssdk.ToInt32(perms[1].FromPort) != 8000 || awssdk.ToInt32(perms[1].ToPort) != 8100 {
+		t.Errorf("range rule = %d-%d, want 8000-8100", awssdk.ToInt32(perms[1].FromPort), awssdk.ToInt32(perms[1].ToPort))
+	}
+	// Udp rule.
+	if awssdk.ToString(perms[2].IpProtocol) != "udp" || awssdk.ToInt32(perms[2].FromPort) != 53 {
+		t.Errorf("udp rule malformed: %+v", perms[2])
+	}
+
+	// Deny-all: a host with no declared ports gets no ingress.
+	if got := portPermissions(sources, nil, nil); got != nil {
+		t.Errorf("no ports should yield no permissions, got %d", len(got))
+	}
+	// No sources (shouldn't happen -- a host is always at least on its own net)
+	// yields nothing rather than an all-sources rule.
+	if got := portPermissions(nil, []string{"80"}, nil); got != nil {
+		t.Errorf("no sources should yield no permissions, got %d", len(got))
+	}
+	// Unparseable ports are skipped, not errored.
+	if got := portPermissions(sources, []string{"bad"}, nil); got != nil {
+		t.Errorf("only-bad ports should yield no permissions, got %d", len(got))
+	}
+}
+
+func TestConfigFromInput(t *testing.T) {
+	// AssignPublicIP defaults true (a host with no egress can't run).
+	c := ConfigFromInput(ConfigInput{Region: "us-east-1", ECSCluster: "lab"}, map[string]string{"ubuntu": "ami-1"}, map[string]string{"small": "t3.micro"})
+	if !c.AssignPublicIP {
+		t.Error("AssignPublicIP should default true when unset")
+	}
+	if c.Region != "us-east-1" || c.Cluster != "lab" {
+		t.Errorf("fields not mapped: %+v", c)
+	}
+	if c.Images["ubuntu"] != "ami-1" || c.Sizes["small"] != "t3.micro" {
+		t.Errorf("image/size maps not carried: %+v", c)
+	}
+	// Explicit false is honored.
+	no := false
+	if ConfigFromInput(ConfigInput{AssignPublicIP: &no}, nil, nil).AssignPublicIP {
+		t.Error("explicit assign_public_ip=false should be honored")
+	}
+	// Empty fields stay empty so New applies env fallbacks.
+	if c2 := ConfigFromInput(ConfigInput{}, nil, nil); c2.Cluster != "" || c2.ExecutionRoleARN != "" {
+		t.Errorf("empty input should leave fields empty for env fallback, got %+v", c2)
+	}
+}
+
+// TestExternalEndpoint pins the public-IP builder contract: no port remap, and
+// the address is the host's own public IP.
+func TestExternalEndpoint(t *testing.T) {
+	e := externalEndpoint("i-abc", "tcp", "3389", "203.0.113.7")
+	if e.InternalPort != "3389" || e.ExternalPort != "3389" {
+		t.Errorf("public-IP builder must not remap ports: %+v", e)
+	}
+	if e.PublicAddress != "203.0.113.7:3389" {
+		t.Errorf("PublicAddress = %q, want 203.0.113.7:3389", e.PublicAddress)
+	}
+	if e.ExternalRef != "i-abc" || e.Protocol != "tcp" {
+		t.Errorf("endpoint fields wrong: %+v", e)
+	}
+}

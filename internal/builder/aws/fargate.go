@@ -49,11 +49,14 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 	if b.cfg.ExecutionRoleARN == "" {
 		return "", fmt.Errorf("AWS Fargate needs an ECS task execution role -- set AWS_ECS_EXECUTION_ROLE_ARN")
 	}
-	subnetID, err := b.subnetForNetwork(ctx, spec.Network)
+	subnetID, vpcID, err := b.subnetForNetwork(ctx, spec.Network)
 	if err != nil {
 		return "", fmt.Errorf("resolving subnet for container %q: %w", spec.ExternalName, err)
 	}
-	sgID, err := b.ensureTeamSecurityGroup(ctx, spec.Team, subnetID)
+	// Per-object SG, like a host. The task's SG membership is fixed at launch,
+	// but ConfigureNetworkAccess converges this SG's RULES afterward, so the
+	// container gets the same port firewall as an EC2 host.
+	sgID, err := b.ensureObjectSecurityGroup(ctx, spec.ExternalName, spec.Team, vpcID)
 	if err != nil {
 		return "", err
 	}
@@ -160,7 +163,11 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 		}
 		return "", fmt.Errorf("Fargate RunTask for %q returned no task: %s", spec.ExternalName, reason)
 	}
-	return awssdk.ToString(run.Tasks[0].TaskArn), nil
+	arn := awssdk.ToString(run.Tasks[0].TaskArn)
+	// Tag the object SG with the task ARN so ConfigureNetworkAccess finds it from
+	// the externalRef the runner hands back (it never gets the ExternalName).
+	b.tagSGWithRef(ctx, sgID, arn)
+	return arn, nil
 }
 
 // DestroyContainer stops the Fargate task. Idempotent: a missing/stopped task is

@@ -61,7 +61,7 @@ func Resolve(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder, error) 
 	case "incus":
 		return resolveIncusPool(pool, row)
 	case "aws":
-		return resolveAWS(row)
+		return resolveAWS(pool, row)
 	case "openstack":
 		return resolveOpenStack(row)
 	default:
@@ -110,14 +110,32 @@ func cloudSizes(raw []byte) map[string]string {
 // from each SDK's standard environment chain (AWS_*, OS_*) and region from the
 // matching env var (set on the runner), so nothing secret is stored in the DB;
 // the image/size maps come from the builder config the wizard writes.
-func resolveAWS(row db.BuilderConfig) (builder.Builder, error) {
+func resolveAWS(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	b, err := awsbuilder.New(ctx, awsbuilder.Config{
-		Region: os.Getenv("AWS_REGION"),
-		Images: cloudImages(row.IncusImages),
-		Sizes:  cloudSizes(row.IncusSizes),
-	})
+	var in awsbuilder.ConfigInput
+	if len(row.AwsConfig) > 0 {
+		if err := json.Unmarshal(row.AwsConfig, &in); err != nil {
+			return nil, fmt.Errorf("builder config %q: parsing aws_config: %w", row.Name, err)
+		}
+	}
+	// A stored region wins; otherwise fall back to the runner env (New applies
+	// the rest of the AWS_* fallbacks for any still-empty field).
+	if in.Region == "" {
+		in.Region = os.Getenv("AWS_REGION")
+	}
+	cfg := awsbuilder.ConfigFromInput(in, cloudImages(row.IncusImages), cloudSizes(row.IncusSizes))
+	// The enrolled wizard credential (builder_credential), when the config names
+	// one. Absent means the runner's ambient AWS chain (an instance-profile role).
+	if row.AwsCredentialID.Valid {
+		cred, err := db.New(pool).GetBuilderCredential(ctx, row.AwsCredentialID)
+		if err != nil {
+			return nil, fmt.Errorf("builder config %q: loading AWS credential: %w", row.Name, err)
+		}
+		cfg.AccessKeyID = cred.AwsAccessKeyID
+		cfg.SecretAccessKey = cred.AwsSecretAccessKey
+	}
+	b, err := awsbuilder.New(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("builder config %q: %w", row.Name, err)
 	}

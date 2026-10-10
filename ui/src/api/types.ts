@@ -622,6 +622,16 @@ export interface MicrocloudPublicAccess {
   routes?: { to: string; via: string }[]
 }
 
+/** AWS only: account infrastructure. Empty fields fall back to the runner's AWS_* env vars. */
+export interface AwsConfig {
+  region?: string
+  ecs_cluster?: string
+  execution_role_arn?: string
+  log_group?: string
+  agent_init_image?: string
+  assign_public_ip?: boolean
+}
+
 export interface BuilderConfig {
   id: string
   name: string
@@ -642,7 +652,9 @@ export interface BuilderConfig {
   incus_sizes: Record<string, IncusSizeSpec>
   incus_hosts: IncusHostConfig[]
   incus_credential_id: string | null
+  aws_credential_id?: string | null
   microcloud_public_access?: MicrocloudPublicAccess | null
+  aws_config?: AwsConfig | null
   external_access_ip: string | null
   external_port_min: number | null
   external_port_max: number | null
@@ -666,7 +678,9 @@ export interface BuilderConfigRequest {
   incus_sizes?: Record<string, IncusSizeSpec>
   incus_hosts?: IncusHostConfig[]
   incus_credential_id?: string
+  aws_credential_id?: string
   microcloud_public_access?: MicrocloudPublicAccess
+  aws_config?: AwsConfig
   external_access_ip?: string
   external_port_min?: number
   external_port_max?: number

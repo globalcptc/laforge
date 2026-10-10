@@ -30,6 +30,11 @@ type connectBuilderRequest struct {
 	// Address is optional: only needed when none of the addresses the token
 	// lists are reachable from LaForge (e.g. the host sits behind NAT).
 	Address string `json:"address,omitempty"`
+	// AWS access key, for kind "aws": validated (STS) and stored like any other
+	// builder credential. The UI sends them only on connect and never sees the
+	// secret back -- only the resulting credential id.
+	AWSAccessKeyID     string `json:"aws_access_key_id,omitempty"`
+	AWSSecretAccessKey string `json:"aws_secret_access_key,omitempty"`
 }
 
 type connectionView struct {
@@ -65,7 +70,10 @@ func (s *Server) handleConnectBuilder(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	result, err := onb.Onboard(r.Context(), builder.OnboardRequest{Token: req.Token, Address: req.Address})
+	result, err := onb.Onboard(r.Context(), builder.OnboardRequest{
+		Token: req.Token, Address: req.Address,
+		AWSAccessKeyID: req.AWSAccessKeyID, AWSSecretAccessKey: req.AWSSecretAccessKey,
+	})
 	if err != nil {
 		// Bad operator input (a malformed token) is a 400; a genuine failure to
 		// reach or enroll the hoster is statusUpstreamFailed (424, not 502 -- see json.go).
@@ -88,6 +96,7 @@ func (s *Server) handleConnectBuilder(w http.ResponseWriter, r *http.Request) {
 	cred, err := s.Queries.CreateBuilderCredential(r.Context(), db.CreateBuilderCredentialParams{
 		ApiUrl: conn.APIURL, ServerName: conn.ServerName, ServerFingerprint: conn.ServerFingerprint,
 		ServerCertPem: string(conn.ServerCertPEM), ClientCertPem: string(conn.ClientCertPEM), ClientKeyPem: string(conn.ClientKeyPEM),
+		AwsAccessKeyID: conn.AWSAccessKeyID, AwsSecretAccessKey: conn.AWSSecretAccessKey,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)

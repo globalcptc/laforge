@@ -327,8 +327,9 @@ troubleshooting for each:
 
 - [Incus](docs/builders/incus.md) — one or more standalone Incus servers.
 - [MicroCloud](docs/builders/microcloud.md) — a MicroCloud (LXD) cluster.
+- [AWS](docs/builders/aws.md) — EC2/VPC + ECS/Fargate, including the exact IAM permissions.
 
-The AWS and OpenStack builders aren't documented here yet.
+The OpenStack builder isn't documented here yet.
 
 ---
 

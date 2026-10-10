@@ -121,6 +121,11 @@ type ProjectInfo struct {
 type OnboardRequest struct {
 	Token   string
 	Address string
+	// AWSAccessKeyID/AWSSecretAccessKey are the AWS builder's credential, entered
+	// in the wizard and validated here (an STS identity check) before being
+	// stored like any other builder credential. Other kinds ignore them.
+	AWSAccessKeyID     string
+	AWSSecretAccessKey string
 }
 
 // Connection is the credential material an onboarding produced, to be persisted
@@ -136,11 +141,16 @@ type Connection struct {
 	// Project scopes Rediscover's project-specific results (images) to an
 	// Incus/LXD project; "" is `default`. Not part of the stored credential.
 	Project string
+	// AWSAccessKeyID/AWSSecretAccessKey are the AWS builder's stored credential
+	// (the cert fields above stay empty for an AWS row).
+	AWSAccessKeyID     string
+	AWSSecretAccessKey string
 }
 
 // HasCredential reports whether this onboarding produced stored credential
-// material (true for trust-token kinds, false for env-credential clouds).
-func (c Connection) HasCredential() bool { return c.APIURL != "" }
+// material (a trust-token Incus/LXD credential or an AWS access key); false for
+// a kind that authenticates purely from the environment.
+func (c Connection) HasCredential() bool { return c.APIURL != "" || c.AWSAccessKeyID != "" }
 
 // Onboarding is a completed connect: what to store, plus what was discovered.
 type Onboarding struct {

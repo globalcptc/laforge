@@ -1,27 +1,33 @@
-// Package aws is a DRAFT builder.Builder backed by real EC2/VPC calls via
-// aws-sdk-go-v2. It is written to the same contract every other builder
+// Package aws is a builder.Builder backed by real EC2/VPC + ECS/Fargate calls
+// via aws-sdk-go-v2. It is written to the same contract every other builder
 // satisfies (internal/builder.Builder) and follows the same conventions --
-// deterministic ExternalName-based "ensure" semantics, team-tagged
-// resources, power/access as infrastructure operations -- but it has NOT
-// been exercised against a real AWS account: there is no test infrastructure
-// for it yet. Treat every method here as a reviewed starting point, not a
-// proven path. Places that need a real account decision (a NAT/IGW for
-// genuine egress, Windows password retrieval, Route 53 for DNS) are marked
-// TODO(untested) rather than guessed at.
+// deterministic ExternalName-based "ensure" semantics, team-tagged resources,
+// power/access as infrastructure operations.
+//
+// It has NOT yet been exercised against a real AWS account end to end: there is
+// no CI account, so the live smoke test and the packet-reachability probe
+// (builder_live_test.go / netaccess_probe_test.go) skip unless AWS credentials
+// and LAFORGE_AWS_TEST_* are set. Treat the firewall/access paths as implemented
+// but pending that real-traffic verification (see docs/builder-authoring.md).
 //
 // Mapping from LaForge concepts to AWS:
-//   - network   -> a VPC + one subnet with the network's CIDR
-//   - host      -> an EC2 instance in that subnet
-//   - container -> not yet implemented here; containers on AWS are ECS/Fargate
-//     (a different shape from EC2). DeployContainer returns an error until that's
-//     built -- there is no capability opt-out, so this is a DRAFT gap, not a
-//     declared "can't"
-//   - team access -> a per-team security group whose ingress rules are
-//     added on OpenAccess and revoked on CloseAccess
+//   - team      -> one VPC (the isolation boundary) with an internet gateway, a
+//                  public route table (0.0.0.0/0 -> IGW), and a custom Network
+//                  ACL used as the access schedule's kill switch.
+//   - network   -> a subnet in that team VPC, carved from the network's CIDR
+//                  (added to the VPC as a secondary CIDR association). Networks
+//                  in the same VPC route to each other for free, which is what
+//                  makes cross-network `visible_from` actually enforceable.
+//   - host      -> an EC2 instance in that subnet, with a per-object security
+//                  group whose ingress rules ConfigureNetworkAccess converges.
+//   - container -> an ECS/Fargate task (see fargate.go), same per-object SG.
 //
-// Every resource is tagged laforgeExternalNameTag=<ExternalName> and
-// laforgeTeamTag=<team>, which is how "ensure" (adopt-or-create) and Inspect
-// both find what already exists.
+// Every resource is tagged laforgeManagedTag=true, laforgeTeamTag=<team>, and
+// (where it has one) laforgeExternalNameTag=<ExternalName>; instance/container
+// security groups also get laforgeExternalRefTag=<externalRef> once the ref is
+// known, so ConfigureNetworkAccess can find an object's own SG from the ref the
+// runner hands it. Tags are how "ensure" (adopt-or-create) and Inspect find what
+// already exists.
 package aws
 
 import (
@@ -29,11 +35,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
@@ -43,45 +51,88 @@ import (
 
 const (
 	laforgeExternalNameTag = "laforge:external-name"
+	laforgeExternalRefTag  = "laforge:external-ref"
 	laforgeTeamTag         = "laforge:team"
 	laforgeManagedTag      = "laforge:managed" // "true" on everything we create, for Inspect's filter
+
+	// NACL rule numbers. A custom NACL is deny-by-default, so every team subnet
+	// gets a baseline allow (ingress + egress) at allowRuleNumber; CloseAccess
+	// adds a deny-all ingress at denyIngressRuleNumber, which -- being a LOWER
+	// number -- is evaluated first and wins. OpenAccess deletes it. NACLs are
+	// stateless and ordered, so the deny severs established flows too, which a
+	// (stateful) security-group change cannot.
+	denyIngressRuleNumber = 1
+	allowRuleNumber       = 100
 )
+
+// ConfigInput is the JSON shape stored in builder_config.aws_config and sent by
+// the wizard. All fields are optional; an empty field falls back to the
+// matching AWS_* environment variable in New, so a runner-env deployment keeps
+// working unchanged.
+type ConfigInput struct {
+	Region           string `json:"region,omitempty"`
+	ECSCluster       string `json:"ecs_cluster,omitempty"`
+	ExecutionRoleARN string `json:"execution_role_arn,omitempty"`
+	LogGroup         string `json:"log_group,omitempty"`
+	AgentInitImage   string `json:"agent_init_image,omitempty"`
+	// AssignPublicIP makes team subnets auto-assign a public IP on launch, so an
+	// instance can reach the LaForge API/gateway (egress) without a NAT gateway.
+	// Defaults true when unset -- a lab host with no egress can't run at all.
+	AssignPublicIP *bool `json:"assign_public_ip,omitempty"`
+}
 
 // Config is what the resolver hands the builder. Credentials and region come
 // from the standard AWS chain (env, shared config, instance profile) via
-// LoadDefaultConfig, so nothing secret is stored here; Region overrides the
-// chain's region when set. Images maps a LaForge `os` name to an AMI id;
-// Sizes maps a LaForge `size` name to an EC2 instance type.
+// LoadDefaultConfig; Region overrides the chain's region when set. Images maps a
+// LaForge `os` name to an AMI id; Sizes maps a LaForge `size` name to an EC2
+// instance type (and, for Fargate, a "cpu/memory" pair -- see fargate.go).
 type Config struct {
 	Region string
 	Images map[string]string // os name -> AMI id
 	Sizes  map[string]string // size name -> instance type (e.g. "t3.medium")
 
-	// Fargate (container) settings, read from the environment in New when unset,
-	// since containers on AWS run as ECS/Fargate tasks (see fargate.go). All are
-	// account-specific infrastructure, hence env-configured like the credentials.
+	// Fargate (container) settings; account-specific infrastructure.
 	Cluster          string // ECS cluster (AWS_ECS_CLUSTER, default "default")
-	ExecutionRoleARN string // task execution role (AWS_ECS_EXECUTION_ROLE_ARN) -- Fargate needs it to pull images and write logs
+	ExecutionRoleARN string // task execution role (AWS_ECS_EXECUTION_ROLE_ARN)
 	LogGroup         string // CloudWatch log group for task logs (AWS_ECS_LOG_GROUP), optional
 	AgentInitImage   string // public image the agent-download init container runs (AWS_ECS_AGENT_INIT_IMAGE, default "alpine:3.20")
+
+	// AssignPublicIP: team subnets auto-assign a public IP on launch (default
+	// true). Egress to the LaForge control plane needs either this or a NAT.
+	AssignPublicIP bool
+
+	// AccessKeyID/SecretAccessKey are the enrolled wizard credential (from the
+	// builder_credential store). When set they are used as a static credentials
+	// provider; when empty the builder falls back to the ambient AWS chain (a
+	// runner instance-profile role).
+	AccessKeyID     string
+	SecretAccessKey string
 }
 
-// Builder is the draft EC2/VPC + ECS/Fargate builder.
+// Builder is the EC2/VPC + ECS/Fargate builder.
 type Builder struct {
 	ec2 *ec2.Client
 	ecs *ecs.Client
 	cfg Config
 }
 
-// New constructs the builder from the ambient AWS credential/region chain.
+// New constructs the builder from the ambient AWS credential/region chain,
+// filling any empty Config field from its AWS_* environment variable.
 func New(ctx context.Context, cfg Config) (*Builder, error) {
 	opts := []func(*awsconfig.LoadOptions) error{}
 	if cfg.Region != "" {
 		opts = append(opts, awsconfig.WithRegion(cfg.Region))
 	}
+	if cfg.AccessKeyID != "" {
+		opts = append(opts, awsconfig.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, "")))
+	}
 	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("loading AWS config: %w", err)
+	}
+	if cfg.Region == "" {
+		cfg.Region = awsCfg.Region
 	}
 	if cfg.Cluster == "" {
 		cfg.Cluster = envOr("AWS_ECS_CLUSTER", "default")
@@ -98,6 +149,25 @@ func New(ctx context.Context, cfg Config) (*Builder, error) {
 	return &Builder{ec2: ec2.NewFromConfig(awsCfg), ecs: ecs.NewFromConfig(awsCfg), cfg: cfg}, nil
 }
 
+// ConfigFromInput merges a stored/wizard ConfigInput with the image/size maps
+// into a Config. Empty fields are left empty so New can apply env fallbacks.
+func ConfigFromInput(in ConfigInput, images, sizes map[string]string) Config {
+	assign := true
+	if in.AssignPublicIP != nil {
+		assign = *in.AssignPublicIP
+	}
+	return Config{
+		Region:           in.Region,
+		Images:           images,
+		Sizes:            sizes,
+		Cluster:          in.ECSCluster,
+		ExecutionRoleARN: in.ExecutionRoleARN,
+		LogGroup:         in.LogGroup,
+		AgentInitImage:   in.AgentInitImage,
+		AssignPublicIP:   assign,
+	}
+}
+
 func envOr(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -105,97 +175,367 @@ func envOr(key, def string) string {
 	return def
 }
 
-// tagSpec builds the standard LaForge tag set for a resource type.
+// --- tag / filter helpers -------------------------------------------------
+
+func tag(key, value string) ec2types.Tag {
+	return ec2types.Tag{Key: awssdk.String(key), Value: awssdk.String(value)}
+}
+
 func (b *Builder) tagSpec(rt ec2types.ResourceType, externalName, team, displayName string) ec2types.TagSpecification {
 	tags := []ec2types.Tag{
-		{Key: awssdk.String(laforgeManagedTag), Value: awssdk.String("true")},
-		{Key: awssdk.String(laforgeExternalNameTag), Value: awssdk.String(externalName)},
-		{Key: awssdk.String(laforgeTeamTag), Value: awssdk.String(team)},
+		tag(laforgeManagedTag, "true"),
+		tag(laforgeTeamTag, team),
+	}
+	if externalName != "" {
+		tags = append(tags, tag(laforgeExternalNameTag, externalName))
 	}
 	if displayName != "" {
-		tags = append(tags, ec2types.Tag{Key: awssdk.String("Name"), Value: awssdk.String(displayName)})
+		tags = append(tags, tag("Name", displayName))
 	}
 	return ec2types.TagSpecification{ResourceType: rt, Tags: tags}
 }
 
-func nameFilter(externalName string) ec2types.Filter {
-	return ec2types.Filter{Name: awssdk.String("tag:" + laforgeExternalNameTag), Values: []string{externalName}}
+func filter(name string, values ...string) ec2types.Filter {
+	return ec2types.Filter{Name: awssdk.String(name), Values: values}
 }
 
-// --- Networks -------------------------------------------------------------
+func nameFilter(externalName string) ec2types.Filter {
+	return filter("tag:"+laforgeExternalNameTag, externalName)
+}
 
-func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (string, error) {
-	// Ensure: a VPC already tagged with this ExternalName is adopted.
-	if id, err := b.findVPC(ctx, spec.ExternalName); err != nil {
+func teamFilter(team string) ec2types.Filter {
+	return filter("tag:"+laforgeTeamTag, team)
+}
+
+var managedFilter = filter("tag:"+laforgeManagedTag, "true")
+
+// --- team VPC + egress + NACL (the per-team scaffolding) ------------------
+
+// ensureTeamVPC finds or creates the team's VPC (one per team) and returns its
+// id. seedCIDR is only used as the primary CIDR block when the VPC is first
+// created; later networks add their CIDRs as secondary associations in
+// DeployNetwork. A describe-before-create guard plus a lowest-id dedup makes a
+// concurrent create (networks deploy in parallel) converge on one VPC.
+func (b *Builder) ensureTeamVPC(ctx context.Context, team, seedCIDR string) (string, error) {
+	if id, err := b.findTeamVPC(ctx, team); err != nil {
 		return "", err
 	} else if id != "" {
 		return id, nil
 	}
-	if spec.CIDR == "" {
-		return "", fmt.Errorf("network %q has no CIDR -- AWS requires one for the VPC", spec.ExternalName)
+	if seedCIDR == "" {
+		return "", fmt.Errorf("team %s VPC has no CIDR to seed from -- a network needs a CIDR", team)
 	}
-	vpc, err := b.ec2.CreateVpc(ctx, &ec2.CreateVpcInput{
-		CidrBlock:         awssdk.String(spec.CIDR),
-		TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeVpc, spec.ExternalName, spec.Team, spec.DisplayName)},
+	out, err := b.ec2.CreateVpc(ctx, &ec2.CreateVpcInput{
+		CidrBlock:         awssdk.String(seedCIDR),
+		TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeVpc, "team-"+team+"-vpc", team, "laforge-team-"+team)},
 	})
 	if err != nil {
-		return "", fmt.Errorf("creating VPC for %q: %w", spec.ExternalName, err)
+		return "", fmt.Errorf("creating VPC for team %s: %w", team, err)
 	}
-	vpcID := awssdk.ToString(vpc.Vpc.VpcId)
-	// One subnet spanning the whole CIDR -- enough for a flat team network;
-	// multi-subnet topologies aren't something LaForge content expresses.
-	if _, err := b.ec2.CreateSubnet(ctx, &ec2.CreateSubnetInput{
-		VpcId:             awssdk.String(vpcID),
-		CidrBlock:         awssdk.String(spec.CIDR),
-		TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeSubnet, spec.ExternalName, spec.Team, spec.DisplayName)},
-	}); err != nil {
-		return "", fmt.Errorf("creating subnet for %q: %w", spec.ExternalName, err)
+	created := awssdk.ToString(out.Vpc.VpcId)
+	// Dedup a parallel-create race: adopt the lowest id, best-effort delete the
+	// freshly-created extras (they have no subnets yet).
+	id, err := b.findTeamVPC(ctx, team)
+	if err != nil || id == "" {
+		return created, nil // describe hiccup -- use what we just made
 	}
-	// TODO(untested): for genuine external ingress/egress this VPC also needs
-	// an internet gateway, a route table, and (for private hosts) a NAT --
-	// deferred until there's an account to validate the routing against.
-	return vpcID, nil
+	if id != created {
+		_, _ = b.ec2.DeleteVpc(ctx, &ec2.DeleteVpcInput{VpcId: awssdk.String(created)})
+	}
+	return id, nil
 }
 
-func (b *Builder) DestroyNetwork(ctx context.Context, team, externalRef string) error {
-	// externalRef is the VPC id. Delete its subnets first, then the VPC.
-	subnets, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
-		Filters: []ec2types.Filter{{Name: awssdk.String("vpc-id"), Values: []string{externalRef}}},
+func (b *Builder) findTeamVPC(ctx context.Context, team string) (string, error) {
+	out, err := b.ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{Filters: []ec2types.Filter{teamFilter(team), managedFilter}})
+	if err != nil {
+		return "", fmt.Errorf("looking up VPC for team %s: %w", team, err)
+	}
+	ids := make([]string, 0, len(out.Vpcs))
+	for _, v := range out.Vpcs {
+		ids = append(ids, awssdk.ToString(v.VpcId))
+	}
+	if len(ids) == 0 {
+		return "", nil
+	}
+	sort.Strings(ids)
+	return ids[0], nil
+}
+
+func (b *Builder) ensureInternetGateway(ctx context.Context, vpcID, team string) (string, error) {
+	out, err := b.ec2.DescribeInternetGateways(ctx, &ec2.DescribeInternetGatewaysInput{
+		Filters: []ec2types.Filter{filter("attachment.vpc-id", vpcID)},
 	})
-	if err == nil {
-		for _, s := range subnets.Subnets {
-			_, _ = b.ec2.DeleteSubnet(ctx, &ec2.DeleteSubnetInput{SubnetId: s.SubnetId})
+	if err != nil {
+		return "", fmt.Errorf("looking up internet gateway for %s: %w", vpcID, err)
+	}
+	if len(out.InternetGateways) > 0 {
+		return awssdk.ToString(out.InternetGateways[0].InternetGatewayId), nil
+	}
+	created, err := b.ec2.CreateInternetGateway(ctx, &ec2.CreateInternetGatewayInput{
+		TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeInternetGateway, "team-"+team+"-igw", team, "laforge-team-"+team)},
+	})
+	if err != nil {
+		return "", fmt.Errorf("creating internet gateway for team %s: %w", team, err)
+	}
+	igw := awssdk.ToString(created.InternetGateway.InternetGatewayId)
+	if _, err := b.ec2.AttachInternetGateway(ctx, &ec2.AttachInternetGatewayInput{
+		InternetGatewayId: awssdk.String(igw), VpcId: awssdk.String(vpcID),
+	}); err != nil && !isDuplicate(err) {
+		return "", fmt.Errorf("attaching internet gateway to %s: %w", vpcID, err)
+	}
+	return igw, nil
+}
+
+// ensureTeamRouteTable returns a managed route table with a default route to the
+// IGW, creating it (and the route) if absent.
+func (b *Builder) ensureTeamRouteTable(ctx context.Context, vpcID, team, igwID string) (string, error) {
+	out, err := b.ec2.DescribeRouteTables(ctx, &ec2.DescribeRouteTablesInput{
+		Filters: []ec2types.Filter{filter("vpc-id", vpcID), teamFilter(team), managedFilter},
+	})
+	if err != nil {
+		return "", fmt.Errorf("looking up route table for %s: %w", vpcID, err)
+	}
+	var rtID string
+	if len(out.RouteTables) > 0 {
+		rtID = awssdk.ToString(out.RouteTables[0].RouteTableId)
+	} else {
+		created, err := b.ec2.CreateRouteTable(ctx, &ec2.CreateRouteTableInput{
+			VpcId:             awssdk.String(vpcID),
+			TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeRouteTable, "team-"+team+"-rt", team, "laforge-team-"+team)},
+		})
+		if err != nil {
+			return "", fmt.Errorf("creating route table for team %s: %w", team, err)
+		}
+		rtID = awssdk.ToString(created.RouteTable.RouteTableId)
+	}
+	if _, err := b.ec2.CreateRoute(ctx, &ec2.CreateRouteInput{
+		RouteTableId: awssdk.String(rtID), DestinationCidrBlock: awssdk.String("0.0.0.0/0"), GatewayId: awssdk.String(igwID),
+	}); err != nil && !isDuplicate(err) {
+		return "", fmt.Errorf("adding default route on %s: %w", rtID, err)
+	}
+	return rtID, nil
+}
+
+// ensureTeamNACL returns the team's custom Network ACL, creating it with a
+// baseline allow-all (ingress + egress) if absent. CloseAccess later layers a
+// lower-numbered deny on top; the baseline is what keeps an "open" team's
+// subnets actually reachable (a custom NACL is deny-by-default).
+func (b *Builder) ensureTeamNACL(ctx context.Context, vpcID, team string) (string, error) {
+	out, err := b.ec2.DescribeNetworkAcls(ctx, &ec2.DescribeNetworkAclsInput{
+		Filters: []ec2types.Filter{filter("vpc-id", vpcID), teamFilter(team), managedFilter},
+	})
+	if err != nil {
+		return "", fmt.Errorf("looking up network ACL for %s: %w", vpcID, err)
+	}
+	if len(out.NetworkAcls) > 0 {
+		return awssdk.ToString(out.NetworkAcls[0].NetworkAclId), nil
+	}
+	created, err := b.ec2.CreateNetworkAcl(ctx, &ec2.CreateNetworkAclInput{
+		VpcId:             awssdk.String(vpcID),
+		TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeNetworkAcl, "team-"+team+"-nacl", team, "laforge-team-"+team)},
+	})
+	if err != nil {
+		return "", fmt.Errorf("creating network ACL for team %s: %w", team, err)
+	}
+	naclID := awssdk.ToString(created.NetworkAcl.NetworkAclId)
+	for _, egress := range []bool{false, true} {
+		if _, err := b.ec2.CreateNetworkAclEntry(ctx, &ec2.CreateNetworkAclEntryInput{
+			NetworkAclId: awssdk.String(naclID), RuleNumber: awssdk.Int32(allowRuleNumber),
+			Protocol: awssdk.String("-1"), RuleAction: ec2types.RuleActionAllow,
+			Egress: awssdk.Bool(egress), CidrBlock: awssdk.String("0.0.0.0/0"),
+		}); err != nil && !isDuplicate(err) {
+			return "", fmt.Errorf("adding baseline allow to NACL %s: %w", naclID, err)
 		}
 	}
-	if _, err := b.ec2.DeleteVpc(ctx, &ec2.DeleteVpcInput{VpcId: awssdk.String(externalRef)}); err != nil {
-		if isNotFound(err) {
-			return nil // ensure-destroy: already gone is success
+	return naclID, nil
+}
+
+// --- Networks (subnets within the team VPC) -------------------------------
+
+func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (string, error) {
+	if spec.CIDR == "" {
+		return "", fmt.Errorf("network %q has no CIDR -- AWS requires one for the subnet", spec.ExternalName)
+	}
+	vpcID, err := b.ensureTeamVPC(ctx, spec.Team, spec.CIDR)
+	if err != nil {
+		return "", err
+	}
+	igwID, err := b.ensureInternetGateway(ctx, vpcID, spec.Team)
+	if err != nil {
+		return "", err
+	}
+	rtID, err := b.ensureTeamRouteTable(ctx, vpcID, spec.Team, igwID)
+	if err != nil {
+		return "", err
+	}
+	naclID, err := b.ensureTeamNACL(ctx, vpcID, spec.Team)
+	if err != nil {
+		return "", err
+	}
+	// Ensure the VPC carries this network's CIDR (the first network seeded the
+	// VPC's primary CIDR; the rest are secondary associations).
+	if err := b.ensureVPCCIDR(ctx, vpcID, spec.CIDR); err != nil {
+		return "", err
+	}
+
+	// Ensure: adopt a subnet already tagged with this network's ExternalName.
+	subnetID, err := b.findSubnet(ctx, spec.ExternalName)
+	if err != nil {
+		return "", err
+	}
+	if subnetID == "" {
+		created, err := b.ec2.CreateSubnet(ctx, &ec2.CreateSubnetInput{
+			VpcId:             awssdk.String(vpcID),
+			CidrBlock:         awssdk.String(spec.CIDR),
+			TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeSubnet, spec.ExternalName, spec.Team, spec.DisplayName)},
+		})
+		if err != nil {
+			return "", fmt.Errorf("creating subnet for %q: %w", spec.ExternalName, err)
 		}
-		return fmt.Errorf("deleting VPC %s: %w", externalRef, err)
+		subnetID = awssdk.ToString(created.Subnet.SubnetId)
+	}
+	if b.cfg.AssignPublicIP {
+		if _, err := b.ec2.ModifySubnetAttribute(ctx, &ec2.ModifySubnetAttributeInput{
+			SubnetId: awssdk.String(subnetID), MapPublicIpOnLaunch: &ec2types.AttributeBooleanValue{Value: awssdk.Bool(true)},
+		}); err != nil {
+			return "", fmt.Errorf("enabling public IPs on subnet %s: %w", subnetID, err)
+		}
+	}
+	if _, err := b.ec2.AssociateRouteTable(ctx, &ec2.AssociateRouteTableInput{
+		RouteTableId: awssdk.String(rtID), SubnetId: awssdk.String(subnetID),
+	}); err != nil && !isDuplicate(err) && !alreadyAssociated(err) {
+		return "", fmt.Errorf("associating route table with subnet %s: %w", subnetID, err)
+	}
+	if err := b.associateNACL(ctx, naclID, subnetID); err != nil {
+		return "", err
+	}
+	return subnetID, nil
+}
+
+// ensureVPCCIDR associates cidr with the VPC unless it is already one of its
+// CIDR blocks.
+func (b *Builder) ensureVPCCIDR(ctx context.Context, vpcID, cidr string) error {
+	out, err := b.ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{VpcIds: []string{vpcID}})
+	if err != nil || len(out.Vpcs) == 0 {
+		return fmt.Errorf("describing VPC %s: %w", vpcID, err)
+	}
+	for _, a := range out.Vpcs[0].CidrBlockAssociationSet {
+		if awssdk.ToString(a.CidrBlock) == cidr {
+			return nil
+		}
+	}
+	if _, err := b.ec2.AssociateVpcCidrBlock(ctx, &ec2.AssociateVpcCidrBlockInput{
+		VpcId: awssdk.String(vpcID), CidrBlock: awssdk.String(cidr),
+	}); err != nil && !isDuplicate(err) {
+		return fmt.Errorf("associating CIDR %s with VPC %s (VPC CIDR-block quota is 5 by default -- raise it for >5 networks per team): %w", cidr, vpcID, err)
 	}
 	return nil
 }
 
-func (b *Builder) findVPC(ctx context.Context, externalName string) (string, error) {
-	out, err := b.ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{Filters: []ec2types.Filter{nameFilter(externalName)}})
+// associateNACL points the subnet at the team NACL by replacing its current
+// (default) association. Idempotent: a subnet already on this NACL is skipped.
+func (b *Builder) associateNACL(ctx context.Context, naclID, subnetID string) error {
+	out, err := b.ec2.DescribeNetworkAcls(ctx, &ec2.DescribeNetworkAclsInput{
+		Filters: []ec2types.Filter{filter("association.subnet-id", subnetID)},
+	})
 	if err != nil {
-		return "", fmt.Errorf("looking up VPC %q: %w", externalName, err)
+		return fmt.Errorf("looking up NACL association for subnet %s: %w", subnetID, err)
 	}
-	if len(out.Vpcs) > 0 {
-		return awssdk.ToString(out.Vpcs[0].VpcId), nil
+	for _, nacl := range out.NetworkAcls {
+		if awssdk.ToString(nacl.NetworkAclId) == naclID {
+			return nil // already ours
+		}
+		for _, a := range nacl.Associations {
+			if awssdk.ToString(a.SubnetId) == subnetID {
+				if _, err := b.ec2.ReplaceNetworkAclAssociation(ctx, &ec2.ReplaceNetworkAclAssociationInput{
+					AssociationId: a.NetworkAclAssociationId, NetworkAclId: awssdk.String(naclID),
+				}); err != nil {
+					return fmt.Errorf("associating NACL %s with subnet %s: %w", naclID, subnetID, err)
+				}
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+func (b *Builder) DestroyNetwork(ctx context.Context, team, externalRef string) error {
+	// externalRef is the subnet id. Find its VPC (for teardown) before deleting.
+	vpcID := ""
+	if sub, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{SubnetIds: []string{externalRef}}); err == nil && len(sub.Subnets) > 0 {
+		vpcID = awssdk.ToString(sub.Subnets[0].VpcId)
+	}
+	if _, err := b.ec2.DeleteSubnet(ctx, &ec2.DeleteSubnetInput{SubnetId: awssdk.String(externalRef)}); err != nil && !isNotFound(err) {
+		return fmt.Errorf("deleting subnet %s: %w", externalRef, err)
+	}
+	if vpcID == "" {
+		if id, err := b.findTeamVPC(ctx, team); err == nil {
+			vpcID = id
+		}
+	}
+	if vpcID == "" {
+		return nil
+	}
+	// Tear the team VPC down only once its last managed subnet is gone.
+	remaining, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{
+		Filters: []ec2types.Filter{filter("vpc-id", vpcID), managedFilter},
+	})
+	if err == nil && len(remaining.Subnets) == 0 {
+		b.teardownTeamVPC(ctx, vpcID)
+	}
+	return nil
+}
+
+// teardownTeamVPC removes the IGW, route tables, custom NACLs and the VPC
+// itself, best-effort (a not-found at any step is fine -- ensure-destroy).
+func (b *Builder) teardownTeamVPC(ctx context.Context, vpcID string) {
+	if igws, err := b.ec2.DescribeInternetGateways(ctx, &ec2.DescribeInternetGatewaysInput{
+		Filters: []ec2types.Filter{filter("attachment.vpc-id", vpcID)},
+	}); err == nil {
+		for _, igw := range igws.InternetGateways {
+			_, _ = b.ec2.DetachInternetGateway(ctx, &ec2.DetachInternetGatewayInput{InternetGatewayId: igw.InternetGatewayId, VpcId: awssdk.String(vpcID)})
+			_, _ = b.ec2.DeleteInternetGateway(ctx, &ec2.DeleteInternetGatewayInput{InternetGatewayId: igw.InternetGatewayId})
+		}
+	}
+	if rts, err := b.ec2.DescribeRouteTables(ctx, &ec2.DescribeRouteTablesInput{
+		Filters: []ec2types.Filter{filter("vpc-id", vpcID), managedFilter},
+	}); err == nil {
+		for _, rt := range rts.RouteTables {
+			_, _ = b.ec2.DeleteRouteTable(ctx, &ec2.DeleteRouteTableInput{RouteTableId: rt.RouteTableId})
+		}
+	}
+	if nacls, err := b.ec2.DescribeNetworkAcls(ctx, &ec2.DescribeNetworkAclsInput{
+		Filters: []ec2types.Filter{filter("vpc-id", vpcID), managedFilter},
+	}); err == nil {
+		for _, n := range nacls.NetworkAcls {
+			_, _ = b.ec2.DeleteNetworkAcl(ctx, &ec2.DeleteNetworkAclInput{NetworkAclId: n.NetworkAclId})
+		}
+	}
+	_, _ = b.ec2.DeleteVpc(ctx, &ec2.DeleteVpcInput{VpcId: awssdk.String(vpcID)})
+}
+
+func (b *Builder) findSubnet(ctx context.Context, externalName string) (string, error) {
+	out, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{Filters: []ec2types.Filter{nameFilter(externalName)}})
+	if err != nil {
+		return "", fmt.Errorf("looking up subnet %q: %w", externalName, err)
+	}
+	if len(out.Subnets) > 0 {
+		return awssdk.ToString(out.Subnets[0].SubnetId), nil
 	}
 	return "", nil
 }
 
-func (b *Builder) subnetForNetwork(ctx context.Context, networkExternalName string) (string, error) {
+// subnetForNetwork resolves a network's ExternalName to its subnet id and VPC id
+// (a security group is VPC-scoped, so callers need both).
+func (b *Builder) subnetForNetwork(ctx context.Context, networkExternalName string) (subnetID, vpcID string, err error) {
 	out, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{Filters: []ec2types.Filter{nameFilter(networkExternalName)}})
 	if err != nil {
-		return "", fmt.Errorf("looking up subnet for network %q: %w", networkExternalName, err)
+		return "", "", fmt.Errorf("looking up subnet for network %q: %w", networkExternalName, err)
 	}
 	if len(out.Subnets) == 0 {
-		return "", fmt.Errorf("no subnet found for network %q -- its DeployNetwork may not have run yet", networkExternalName)
+		return "", "", fmt.Errorf("no subnet found for network %q -- its DeployNetwork may not have run yet", networkExternalName)
 	}
-	return awssdk.ToString(out.Subnets[0].SubnetId), nil
+	return awssdk.ToString(out.Subnets[0].SubnetId), awssdk.ToString(out.Subnets[0].VpcId), nil
 }
 
 // --- Hosts ----------------------------------------------------------------
@@ -215,11 +555,11 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	if !ok {
 		return "", fmt.Errorf("no instance-type mapping for size %q (configure the builder's size map)", spec.Size)
 	}
-	subnetID, err := b.subnetForNetwork(ctx, spec.Network)
+	subnetID, vpcID, err := b.subnetForNetwork(ctx, spec.Network)
 	if err != nil {
 		return "", err
 	}
-	sgID, err := b.ensureTeamSecurityGroup(ctx, spec.Team, subnetID)
+	sgID, err := b.ensureObjectSecurityGroup(ctx, spec.ExternalName, spec.Team, vpcID)
 	if err != nil {
 		return "", err
 	}
@@ -239,9 +579,8 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 		in.PrivateIpAddress = awssdk.String(spec.Address)
 	}
 	if spec.CloudInitUserData != "" {
-		// EC2 user-data must be base64; cloud-init on Linux and cloudbase-init
-		// on Windows both consume it the same way the Incus builder's
-		// cloud-init.user-data key does.
+		// EC2 user-data must be base64; cloud-init (Linux) and cloudbase-init
+		// (Windows) consume it the same way the Incus cloud-init.user-data key does.
 		in.UserData = awssdk.String(base64.StdEncoding.EncodeToString([]byte(spec.CloudInitUserData)))
 	}
 	out, err := b.ec2.RunInstances(ctx, in)
@@ -251,15 +590,18 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	if len(out.Instances) == 0 {
 		return "", fmt.Errorf("RunInstances for %q returned no instance", spec.ExternalName)
 	}
-	return awssdk.ToString(out.Instances[0].InstanceId), nil
+	ref := awssdk.ToString(out.Instances[0].InstanceId)
+	// Tag the object SG with the ref so ConfigureNetworkAccess/ExternalAccess can
+	// find it from the externalRef the runner hands back (they don't get the name).
+	b.tagSGWithRef(ctx, sgID, ref)
+	return ref, nil
 }
 
-// DeployContainer / DestroyContainer live in fargate.go (containers on AWS are
-// ECS/Fargate tasks, a different shape from EC2 VMs).
-
 func (b *Builder) DestroyHost(ctx context.Context, team, externalRef string) error {
-	_, err := b.ec2.TerminateInstances(ctx, &ec2.TerminateInstancesInput{InstanceIds: []string{externalRef}})
-	if err != nil && !isNotFound(err) {
+	// Release any Elastic IP we attached for external access, so a teardown
+	// doesn't leak (and keep paying for) an allocation.
+	b.releaseEIPForRef(ctx, externalRef)
+	if _, err := b.ec2.TerminateInstances(ctx, &ec2.TerminateInstancesInput{InstanceIds: []string{externalRef}}); err != nil && !isNotFound(err) {
 		return fmt.Errorf("terminating instance %s: %w", externalRef, err)
 	}
 	return nil
@@ -268,7 +610,7 @@ func (b *Builder) DestroyHost(ctx context.Context, team, externalRef string) err
 func (b *Builder) findInstance(ctx context.Context, externalName string) (string, error) {
 	out, err := b.ec2.DescribeInstances(ctx, &ec2.DescribeInstancesInput{Filters: []ec2types.Filter{
 		nameFilter(externalName),
-		{Name: awssdk.String("instance-state-name"), Values: []string{"pending", "running", "stopping", "stopped"}},
+		filter("instance-state-name", "pending", "running", "stopping", "stopped"),
 	}})
 	if err != nil {
 		return "", fmt.Errorf("looking up instance %q: %w", externalName, err)
@@ -284,15 +626,17 @@ func (b *Builder) findInstance(ctx context.Context, externalName string) (string
 // --- Inspect --------------------------------------------------------------
 
 func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
-	managed := ec2types.Filter{Name: awssdk.String("tag:" + laforgeManagedTag), Values: []string{"true"}}
 	var out []builder.Resource
 
-	insts, err := b.ec2.DescribeInstances(ctx, &ec2.DescribeInstancesInput{Filters: []ec2types.Filter{managed}})
+	insts, err := b.ec2.DescribeInstances(ctx, &ec2.DescribeInstancesInput{Filters: []ec2types.Filter{managedFilter}})
 	if err != nil {
 		return nil, fmt.Errorf("describing instances: %w", err)
 	}
 	for _, r := range insts.Reservations {
 		for _, inst := range r.Instances {
+			if inst.State != nil && inst.State.Name == ec2types.InstanceStateNameTerminated {
+				continue
+			}
 			out = append(out, builder.Resource{
 				ExternalRef: awssdk.ToString(inst.InstanceId),
 				Kind:        "host",
@@ -301,12 +645,13 @@ func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 		}
 	}
 
-	vpcs, err := b.ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{Filters: []ec2types.Filter{managed}})
+	// A network is a subnet now, not a VPC.
+	subnets, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{Filters: []ec2types.Filter{managedFilter}})
 	if err != nil {
-		return nil, fmt.Errorf("describing VPCs: %w", err)
+		return nil, fmt.Errorf("describing subnets: %w", err)
 	}
-	for _, v := range vpcs.Vpcs {
-		out = append(out, builder.Resource{ExternalRef: awssdk.ToString(v.VpcId), Kind: "network"})
+	for _, s := range subnets.Subnets {
+		out = append(out, builder.Resource{ExternalRef: awssdk.ToString(s.SubnetId), Kind: "network"})
 	}
 	return out, nil
 }
@@ -325,102 +670,106 @@ func mapInstanceState(s *ec2types.InstanceState) string {
 	}
 }
 
-// --- Access (per-team security group) -------------------------------------
+// --- Per-object security group (the port firewall's handle) ---------------
 
-// ensureTeamSecurityGroup returns the id of this team's security group in the
-// subnet's VPC, creating it if absent. Ingress rules are managed by
-// Open/CloseAccess; a freshly created group has no ingress (closed by
-// default), which is the safe starting state.
-func (b *Builder) ensureTeamSecurityGroup(ctx context.Context, team, subnetID string) (string, error) {
-	sub, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{SubnetIds: []string{subnetID}})
-	if err != nil || len(sub.Subnets) == 0 {
-		return "", fmt.Errorf("resolving VPC for subnet %s: %w", subnetID, err)
-	}
-	vpcID := awssdk.ToString(sub.Subnets[0].VpcId)
-
-	name := "laforge-team-" + team
+// ensureObjectSecurityGroup returns the id of this object's own security group
+// in the VPC, creating it (closed: no ingress, default egress allow-all) if
+// absent. ConfigureNetworkAccess converges its ingress rules later; a host with
+// no declared ports stays reachable on nothing.
+func (b *Builder) ensureObjectSecurityGroup(ctx context.Context, externalName, team, vpcID string) (string, error) {
 	existing, err := b.ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{Filters: []ec2types.Filter{
-		{Name: awssdk.String("group-name"), Values: []string{name}},
-		{Name: awssdk.String("vpc-id"), Values: []string{vpcID}},
+		nameFilter(externalName), filter("vpc-id", vpcID),
 	}})
 	if err == nil && len(existing.SecurityGroups) > 0 {
 		return awssdk.ToString(existing.SecurityGroups[0].GroupId), nil
 	}
 	created, err := b.ec2.CreateSecurityGroup(ctx, &ec2.CreateSecurityGroupInput{
-		GroupName:   awssdk.String(name),
-		Description: awssdk.String("LaForge team " + team + " ingress control"),
-		VpcId:       awssdk.String(vpcID),
-		TagSpecifications: []ec2types.TagSpecification{
-			b.tagSpec(ec2types.ResourceTypeSecurityGroup, "team-"+team, team, name),
-		},
+		GroupName:         awssdk.String("laforge-" + sanitizeECSName(externalName)),
+		Description:       awssdk.String("LaForge per-object firewall for " + externalName),
+		VpcId:             awssdk.String(vpcID),
+		TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeSecurityGroup, externalName, team, "")},
 	})
 	if err != nil {
-		return "", fmt.Errorf("creating security group for team %s: %w", team, err)
+		return "", fmt.Errorf("creating security group for %q: %w", externalName, err)
 	}
 	return awssdk.ToString(created.GroupId), nil
 }
 
-// teamSecurityGroups finds every LaForge security group for a team (across
-// VPCs), for Open/CloseAccess to act on all of them.
-func (b *Builder) teamSecurityGroups(ctx context.Context, team string) ([]string, error) {
+func (b *Builder) tagSGWithRef(ctx context.Context, sgID, ref string) {
+	_, _ = b.ec2.CreateTags(ctx, &ec2.CreateTagsInput{Resources: []string{sgID}, Tags: []ec2types.Tag{tag(laforgeExternalRefTag, ref)}})
+}
+
+// sgForRef finds an object's security group from the externalRef the runner
+// hands ConfigureNetworkAccess/ExternalAccess (DeployHost/Container tagged it).
+func (b *Builder) sgForRef(ctx context.Context, ref string) (string, error) {
 	out, err := b.ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{Filters: []ec2types.Filter{
-		{Name: awssdk.String("tag:" + laforgeTeamTag), Values: []string{team}},
-		{Name: awssdk.String("tag:" + laforgeManagedTag), Values: []string{"true"}},
+		filter("tag:"+laforgeExternalRefTag, ref), managedFilter,
 	}})
 	if err != nil {
-		return nil, fmt.Errorf("listing team %s security groups: %w", team, err)
+		return "", fmt.Errorf("looking up security group for ref %s: %w", ref, err)
 	}
-	ids := make([]string, 0, len(out.SecurityGroups))
-	for _, g := range out.SecurityGroups {
-		ids = append(ids, awssdk.ToString(g.GroupId))
+	if len(out.SecurityGroups) == 0 {
+		return "", nil
+	}
+	return awssdk.ToString(out.SecurityGroups[0].GroupId), nil
+}
+
+func (b *Builder) securityGroupIngress(ctx context.Context, sgID string) ([]ec2types.IpPermission, error) {
+	out, err := b.ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{GroupIds: []string{sgID}})
+	if err != nil || len(out.SecurityGroups) == 0 {
+		return nil, err
+	}
+	return out.SecurityGroups[0].IpPermissions, nil
+}
+
+// --- Access schedule (per-team NACL deny toggle) --------------------------
+
+func (b *Builder) teamNACLs(ctx context.Context, team string) ([]string, error) {
+	out, err := b.ec2.DescribeNetworkAcls(ctx, &ec2.DescribeNetworkAclsInput{Filters: []ec2types.Filter{teamFilter(team), managedFilter}})
+	if err != nil {
+		return nil, fmt.Errorf("listing team %s network ACLs: %w", team, err)
+	}
+	ids := make([]string, 0, len(out.NetworkAcls))
+	for _, n := range out.NetworkAcls {
+		ids = append(ids, awssdk.ToString(n.NetworkAclId))
 	}
 	return ids, nil
 }
 
-// allIngress is the rule Open/CloseAccess adds/removes: allow all inbound.
-// The real event policy would scope this to scored ports; a draft opens
-// everything so "open == reachable" is unambiguous.
-func allIngress() []ec2types.IpPermission {
-	return []ec2types.IpPermission{{
-		IpProtocol: awssdk.String("-1"),
-		IpRanges:   []ec2types.IpRange{{CidrIp: awssdk.String("0.0.0.0/0")}},
-	}}
-}
-
-func (b *Builder) OpenAccess(ctx context.Context, team string) error {
-	sgs, err := b.teamSecurityGroups(ctx, team)
+// CloseAccess blocks all ingress to the team's subnets and, because a NACL is
+// stateless, drops already-established flows too -- not merely new ones, as a
+// (stateful) security-group revoke would. OpenAccess removes the deny.
+func (b *Builder) CloseAccess(ctx context.Context, team string) error {
+	nacls, err := b.teamNACLs(ctx, team)
 	if err != nil {
 		return err
 	}
-	for _, sg := range sgs {
-		_, err := b.ec2.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
-			GroupId: awssdk.String(sg), IpPermissions: allIngress(),
+	for _, n := range nacls {
+		_, err := b.ec2.CreateNetworkAclEntry(ctx, &ec2.CreateNetworkAclEntryInput{
+			NetworkAclId: awssdk.String(n), RuleNumber: awssdk.Int32(denyIngressRuleNumber),
+			Protocol: awssdk.String("-1"), RuleAction: ec2types.RuleActionDeny,
+			Egress: awssdk.Bool(false), CidrBlock: awssdk.String("0.0.0.0/0"),
 		})
 		if err != nil && !isDuplicate(err) {
-			return fmt.Errorf("opening access on %s: %w", sg, err)
+			return fmt.Errorf("closing access on NACL %s: %w", n, err)
 		}
 	}
 	return nil
 }
 
-func (b *Builder) CloseAccess(ctx context.Context, team string) error {
-	sgs, err := b.teamSecurityGroups(ctx, team)
+func (b *Builder) OpenAccess(ctx context.Context, team string) error {
+	nacls, err := b.teamNACLs(ctx, team)
 	if err != nil {
 		return err
 	}
-	for _, sg := range sgs {
-		_, err := b.ec2.RevokeSecurityGroupIngress(ctx, &ec2.RevokeSecurityGroupIngressInput{
-			GroupId: awssdk.String(sg), IpPermissions: allIngress(),
+	for _, n := range nacls {
+		_, err := b.ec2.DeleteNetworkAclEntry(ctx, &ec2.DeleteNetworkAclEntryInput{
+			NetworkAclId: awssdk.String(n), RuleNumber: awssdk.Int32(denyIngressRuleNumber), Egress: awssdk.Bool(false),
 		})
 		if err != nil && !isNotFound(err) {
-			return fmt.Errorf("closing access on %s: %w", sg, err)
+			return fmt.Errorf("opening access on NACL %s: %w", n, err)
 		}
 	}
-	// NOTE(untested): revoking ingress blocks NEW connections immediately;
-	// AWS security groups are stateful, so already-established flows can
-	// linger until they idle out. "Terminate established connections" (the
-	// contract's requirement) would need a Network ACL deny or forcing the
-	// instances' interfaces down -- deferred until testable.
 	return nil
 }
 
@@ -458,41 +807,20 @@ func wrapPower(action, ref string, err error) error {
 	return nil
 }
 
-// --- Network access (visible_from) ----------------------------------------
+// --- Network access (visible_from + ports) --------------------------------
 
-// ConfigureNetworkAccess enforces a team's `visible_from` + `ports:` policy with
-// per-host security groups -- the AWS analogue of the Incus/MicroCloud per-host
-// NIC ACL (see internal/builder/incus's proven
-// mechanics). For each host it ensures a security group whose inbound rules allow
-// exactly the host's declared TCP/UDP ports, and only from its own network's CIDR
-// (same-network siblings) plus the CIDRs of its `visible_from` networks
-// (cross-network); it then makes that SG the instance's group. A host that
-// declared no ports gets an SG with no inbound rules -- reachable on nothing.
-// Because security groups are stateful and evaluated per-ENI, this filters
-// same-subnet traffic too, so no separate same-network handling is needed (unlike
-// OVN's network ACLs).
-//
-// DRAFT: never run against a real account. Two known gaps, both documented here
-// rather than guessed at:
-//   - Cross-network reachability still needs ROUTING between the team's networks.
-//     Today each network is its own VPC (see DeployNetwork), so cross-network
-//     traffic needs VPC peering + route-table entries, which this does not yet
-//     create -- the intended end state is one VPC per team with a subnet per
-//     network, which route for free. Until that exists, the visible_from CIDR
-//     rules are correct but cross-network packets won't route to be evaluated.
-//   - This makes the per-host SG the instance's authoritative group, so the
-//     legacy per-team OpenAccess/CloseAccess SG no longer governs these hosts.
-//     Reconciling the access schedule with the port firewall on AWS is an open
-//     design question (the OVN builders keep them separate via NIC removal).
+// ConfigureNetworkAccess enforces a team's `visible_from` + `ports:` policy via
+// each object's own security group. All of a team's networks are subnets in the
+// one team VPC, so they route to each other for free; the per-object SG (stateful,
+// per-ENI) then filters both cross-subnet and same-subnet traffic to exactly the
+// host's declared ports from its own network + its `visible_from` networks. A
+// host with no declared ports gets no ingress -- reachable on nothing.
 func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, networks []builder.NetworkAccess) error {
 	cidrByName := make(map[string]string, len(networks))
 	for _, na := range networks {
 		cidrByName[na.ExternalName] = na.CIDR
 	}
 	for _, na := range networks {
-		// Allowed sources: this host's own network (same-net) + every
-		// visible_from network's CIDR (cross-net). A visible_from naming a
-		// network not in this set is a content error the loader already reports.
 		sources := []string{na.CIDR}
 		for _, from := range na.VisibleFrom {
 			if c := cidrByName[from]; c != "" {
@@ -501,104 +829,54 @@ func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, netwo
 		}
 		for _, h := range na.Hosts {
 			if h.ExternalRef == "" {
-				continue // not yet deployed; a later pass will configure it
+				continue // not deployed yet; a later pass configures it
 			}
-			if err := b.ensureHostFirewall(ctx, team, h, sources); err != nil {
-				return fmt.Errorf("configuring host firewall for %s (team %s): %w", h.ExternalRef, team, err)
+			if err := b.convergeHostFirewall(ctx, h, sources); err != nil {
+				return fmt.Errorf("configuring firewall for %s (team %s): %w", h.ExternalRef, team, err)
 			}
 		}
 	}
 	return nil
 }
 
-// ensureHostFirewall creates/updates the host's own security group (inbound =
-// its declared ports from the allowed source CIDRs, default-deny otherwise) and
-// makes it the instance's group. Idempotent: rules are replaced each pass so an
-// edited policy converges.
-func (b *Builder) ensureHostFirewall(ctx context.Context, team string, h builder.HostAccess, sources []string) error {
-	// Resolve the instance's VPC (a security group is VPC-scoped).
-	desc, err := b.ec2.DescribeInstances(ctx, &ec2.DescribeInstancesInput{InstanceIds: []string{h.ExternalRef}})
-	if err != nil {
-		return fmt.Errorf("describing instance %s: %w", h.ExternalRef, err)
-	}
-	var vpcID string
-	for _, r := range desc.Reservations {
-		for _, inst := range r.Instances {
-			vpcID = awssdk.ToString(inst.VpcId)
-		}
-	}
-	if vpcID == "" {
-		return fmt.Errorf("instance %s has no VPC yet", h.ExternalRef)
-	}
-
-	name := "laforge-hostfw-" + h.ExternalRef
-	sgID, err := b.ensureNamedSecurityGroup(ctx, team, vpcID, name, "LaForge host firewall for "+h.ExternalRef)
+// convergeHostFirewall replaces the object SG's ingress with exactly the current
+// declared-port-from-allowed-source set. Idempotent: rules are rebuilt each pass
+// so an edited policy converges. Works for EC2 and Fargate alike -- it edits the
+// SG's rules, never which SG the object has (fixed at launch for Fargate).
+func (b *Builder) convergeHostFirewall(ctx context.Context, h builder.HostAccess, sources []string) error {
+	sgID, err := b.sgForRef(ctx, h.ExternalRef)
 	if err != nil {
 		return err
 	}
-
-	// Converge the inbound rules: revoke whatever's there, then authorize the
-	// current declared-port-from-allowed-source set. Revoke of an empty/foreign
-	// rule set is a no-op we tolerate.
+	if sgID == "" {
+		return nil // object SG not tagged yet (deploy mid-flight); a later pass retries
+	}
 	if cur, err := b.securityGroupIngress(ctx, sgID); err == nil && len(cur) > 0 {
-		_, _ = b.ec2.RevokeSecurityGroupIngress(ctx, &ec2.RevokeSecurityGroupIngressInput{
+		if _, err := b.ec2.RevokeSecurityGroupIngress(ctx, &ec2.RevokeSecurityGroupIngressInput{
 			GroupId: awssdk.String(sgID), IpPermissions: cur,
-		})
+		}); err != nil && !isNotFound(err) {
+			return fmt.Errorf("clearing ingress on %s: %w", sgID, err)
+		}
 	}
 	perms := portPermissions(sources, h.TCPPorts, h.UDPPorts)
 	if len(perms) > 0 {
 		if _, err := b.ec2.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
 			GroupId: awssdk.String(sgID), IpPermissions: perms,
 		}); err != nil && !isDuplicate(err) {
-			return fmt.Errorf("authorizing host firewall rules on %s: %w", sgID, err)
+			return fmt.Errorf("authorizing firewall rules on %s: %w", sgID, err)
 		}
-	}
-
-	// Make this SG the instance's group, so the firewall is what governs it.
-	if _, err := b.ec2.ModifyInstanceAttribute(ctx, &ec2.ModifyInstanceAttributeInput{
-		InstanceId: awssdk.String(h.ExternalRef), Groups: []string{sgID},
-	}); err != nil {
-		return fmt.Errorf("attaching host firewall SG to %s: %w", h.ExternalRef, err)
 	}
 	return nil
 }
 
-// ensureNamedSecurityGroup adopts or creates a security group by name in a VPC.
-func (b *Builder) ensureNamedSecurityGroup(ctx context.Context, team, vpcID, name, desc string) (string, error) {
-	existing, err := b.ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{Filters: []ec2types.Filter{
-		{Name: awssdk.String("group-name"), Values: []string{name}},
-		{Name: awssdk.String("vpc-id"), Values: []string{vpcID}},
-	}})
-	if err == nil && len(existing.SecurityGroups) > 0 {
-		return awssdk.ToString(existing.SecurityGroups[0].GroupId), nil
-	}
-	created, err := b.ec2.CreateSecurityGroup(ctx, &ec2.CreateSecurityGroupInput{
-		GroupName:   awssdk.String(name),
-		Description: awssdk.String(desc),
-		VpcId:       awssdk.String(vpcID),
-		TagSpecifications: []ec2types.TagSpecification{
-			b.tagSpec(ec2types.ResourceTypeSecurityGroup, name, team, name),
-		},
-	})
-	if err != nil {
-		return "", fmt.Errorf("creating security group %s: %w", name, err)
-	}
-	return awssdk.ToString(created.GroupId), nil
-}
-
-// securityGroupIngress returns a security group's current inbound permissions.
-func (b *Builder) securityGroupIngress(ctx context.Context, sgID string) ([]ec2types.IpPermission, error) {
-	out, err := b.ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{GroupIds: []string{sgID}})
-	if err != nil || len(out.SecurityGroups) == 0 {
-		return nil, err
-	}
-	return out.SecurityGroups[0].IpPermissions, nil
-}
-
 // portPermissions turns declared TCP/UDP ports and allowed source CIDRs into EC2
-// ingress permissions: one permission per port (range) per protocol, from all
-// the source CIDRs. An empty port set yields nothing (default-deny).
+// ingress permissions: one permission per port(-range) per protocol, from all the
+// source CIDRs. An empty port set yields nothing (default-deny). Pure, so it is
+// unit-tested offline (see aws_test.go).
 func portPermissions(sources []string, tcp, udp []string) []ec2types.IpPermission {
+	if len(sources) == 0 {
+		return nil
+	}
 	ranges := make([]ec2types.IpRange, 0, len(sources))
 	for _, s := range sources {
 		ranges = append(ranges, ec2types.IpRange{CidrIp: awssdk.String(s)})
@@ -640,20 +918,6 @@ func parsePortRange(p string) (int32, int32, bool) {
 		return 0, 0, false
 	}
 	return int32(n), int32(n), true
-}
-
-// --- DNS ------------------------------------------------------------------
-
-// Compile-time check that the draft satisfies the full Builder contract.
-// ConfigureExternalAccess (DRAFT) would make each host reachable from outside
-// the environment on its `public:` ports. On AWS this is the simple case the
-// per-builder design calls out: associate a public IP (or Elastic IP) with the
-// instance and authorize those ports in its security group, so the endpoint is
-// just <public-ip>:<port> with no remap. Not implemented yet -- returns a clear
-// error rather than silently exposing nothing, same honest-DRAFT stance as this
-// builder's security-group network access.
-func (b *Builder) ConfigureExternalAccess(ctx context.Context, team string, hosts []builder.ExternalHost) ([]builder.ExternalEndpoint, error) {
-	return nil, fmt.Errorf("external access (public: ports) on the AWS builder is not implemented yet -- it needs a public IP per host plus a security-group ingress rule per public port")
 }
 
 var _ builder.Builder = (*Builder)(nil)
