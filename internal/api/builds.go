@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/ingest"
@@ -53,6 +54,15 @@ func (s *Server) handleCreateConfiguredBuild(w http.ResponseWriter, r *http.Requ
 		RepositoryID: repo.ID, Branch: req.Branch, EnvironmentPath: req.EnvironmentPath, BuilderConfigName: req.BuilderConfigName,
 	})
 	if err != nil {
+		// The (repository, branch, environment_path, builder) uniqueness -- a
+		// configured build already tracks this exact branch+environment+builder
+		// (the same branch+environment on a DIFFERENT builder is allowed). Report
+		// it as a clear conflict, not a raw 500/SQLSTATE.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			writeError(w, http.StatusConflict, fmt.Errorf("a configured build already exists for branch %q, environment %q, and builder %q in this repository", req.Branch, req.EnvironmentPath, req.BuilderConfigName))
+			return
+		}
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}

@@ -707,10 +707,10 @@ ALTER TABLE ONLY public.builder_image_build
 ALTER TABLE ONLY public.configured_build
     ADD CONSTRAINT configured_build_pkey PRIMARY KEY (id);
 --
--- Name: configured_build configured_build_repository_id_branch_environment_path_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: configured_build configured_build_repo_branch_env_builder_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 ALTER TABLE ONLY public.configured_build
-    ADD CONSTRAINT configured_build_repository_id_branch_environment_path_key UNIQUE (repository_id, branch, environment_path);
+    ADD CONSTRAINT configured_build_repo_branch_env_builder_key UNIQUE (repository_id, branch, environment_path, builder_config_name);
 --
 -- Name: container container_content_revision_id_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
