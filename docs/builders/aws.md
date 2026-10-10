@@ -41,14 +41,14 @@ Everything below lives in **one AWS account**. Two pieces:
 
 ## Fastest path: the CloudFormation template
 
-[`deploy/aws/laforge-iam.yaml`](../../deploy/aws/laforge-iam.yaml) provisions the
-runner IAM user (with the policy below) **and** the ECS task execution role in one
-stack. Deploy it, create an access key for the runner user, and paste the key +
-the role ARN (a stack Output) into the wizard:
+[`laforge-iam.yaml`](laforge-iam.yaml) (next to this doc) provisions the runner
+IAM user (with the policy below) **and** the ECS task execution role in one stack.
+Deploy it, create an access key for the runner user, and paste the key + the role
+ARN (a stack Output) into the wizard:
 
 ```bash
 aws cloudformation deploy --stack-name laforge-iam \
-  --template-file deploy/aws/laforge-iam.yaml \
+  --template-file docs/builders/laforge-iam.yaml \
   --capabilities CAPABILITY_NAMED_IAM --region <your-region>
 aws cloudformation describe-stacks --stack-name laforge-iam \
   --query 'Stacks[0].Outputs' --region <your-region>
@@ -178,8 +178,12 @@ secret is never returned to the browser again.
 - **VPC CIDR-block quota.** Each team network adds its CIDR to the team VPC as a
   secondary block; AWS allows **5 per VPC** by default. For teams with more than 5
   networks, raise the quota (Service Quotas → VPC → "IPv4 CIDR blocks per VPC").
-- **Compose containers are not supported** on AWS yet (a compose `container:` is
-  rejected at deploy).
+- **Compose containers** run on an EC2 instance booted from the `compose-host`
+  image (the agent runs `docker compose up` on it, same as the other builders) —
+  so map `compose-host` to a Docker-capable AMI in the Images step. This is one
+  EC2 instance per compose container; single-image containers stay on Fargate.
+  (Packing compose projects onto shared EC2-backed ECS capacity is a possible
+  future density optimization, not built.)
 - **Close = full isolation.** Closing a team's access adds a deny-all ingress NACL
   entry; because NACLs are stateless this also severs the in-guest agent's return
   traffic, i.e. a closed team is fully dark, matching the OVN builders.

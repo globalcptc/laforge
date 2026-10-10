@@ -1,22 +1,27 @@
-// Containers on AWS are ECS/Fargate tasks, not EC2 VMs -- a different shape from
-// the rest of this builder. This file is a DRAFT: it has never run against a real
-// AWS account. The model mirrors the Incus native-container path (the LaForge
-// agent runs as the container's supervising entrypoint so a container checks in
-// and runs steps/validators like a host), adapted to Fargate's constraints:
+// Containers on AWS take two shapes. A single-image container runs as an
+// ECS/Fargate task (this file); a compose container runs the same way as on every
+// other builder -- on a Docker-capable machine the agent runs `docker compose up`
+// on -- which here is an EC2 instance booted from the `compose-host` image (see
+// DeployContainer's ComposeHost branch), because Fargate forbids the nested Docker
+// a real compose project needs.
+//
+// The Fargate model mirrors the Incus native-container path (the LaForge agent
+// runs as the container's supervising entrypoint so a container checks in and runs
+// steps/validators like a host), adapted to Fargate's constraints:
 //
 //   - Fargate pulls the image and runs it -- there's no file API to push the
 //     agent in -- so the agent is DOWNLOADED at start: an init container
 //     (a small public image) fetches the patched agent by its one-time-token URL
 //     onto a shared volume, and the app container runs it as its entrypoint.
-//   - Fargate doesn't hand back the image's own entrypoint (Incus did), so the
-//     command the agent supervises comes from the content `command:` if set,
-//     else is fetched from the image's registry config (imageEntrypoint).
+//   - Fargate doesn't hand back the image's own entrypoint, so the command the
+//     agent supervises comes from the content `command:` if set, else is fetched
+//     from the image's registry config (imageEntrypoint).
 //
-// Account-specific inputs (ECS cluster, task execution role, log group) come from
-// the environment -- see Config. Known DRAFT gaps: a static Address isn't applied
-// (Fargate's ENI gets a dynamic IP); the app image must have a shell for the
-// agent's `sh -c`; the one-time download token won't survive a task restart;
-// imageEntrypoint only does anonymous Docker Hub pulls.
+// Not yet exercised against a real AWS account. Known Fargate (single-image)
+// limits: a static Address isn't applied (the ENI gets a dynamic IP); the app
+// image must have a shell for the agent's `sh -c`; the one-time download token
+// won't survive a task restart; imageEntrypoint only does anonymous Docker Hub
+// pulls (set `command:` to avoid it).
 package aws
 
 import (
@@ -44,7 +49,13 @@ const (
 // is the task ARN. DRAFT -- see the file header.
 func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpec) (string, error) {
 	if spec.ComposeHost {
-		return "", fmt.Errorf("compose containers are not supported on this builder yet")
+		// A compose project needs a real Docker daemon, which Fargate can't give
+		// (no privileged/nested Docker). So -- exactly like the other builders --
+		// it runs on a Docker-capable machine the agent runs `docker compose up`
+		// on; on AWS that machine is an EC2 instance booted from the `compose-host`
+		// image. DeployHost gives it its per-object SG, agent delivery, firewall
+		// and external-access handling for free.
+		return b.DeployHost(ctx, spec.ComposeHostSpec())
 	}
 	if b.cfg.ExecutionRoleARN == "" {
 		return "", fmt.Errorf("AWS Fargate needs an ECS task execution role -- set AWS_ECS_EXECUTION_ROLE_ARN")
@@ -175,6 +186,11 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 func (b *Builder) DestroyContainer(ctx context.Context, team, externalRef string) error {
 	if externalRef == "" {
 		return nil
+	}
+	// A compose container is an EC2 instance (see DeployContainer's ComposeHost
+	// branch); its ref is an instance id, not a task ARN. Route it to DestroyHost.
+	if strings.HasPrefix(externalRef, "i-") {
+		return b.DestroyHost(ctx, team, externalRef)
 	}
 	_, err := b.ecs.StopTask(ctx, &ecs.StopTaskInput{
 		Cluster: awssdk.String(b.cfg.Cluster),

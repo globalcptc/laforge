@@ -18,9 +18,8 @@ const KINDS: { kind: Kind; title: string; body: string; icon: typeof Server; dra
   {
     kind: 'aws',
     title: 'AWS (EC2)',
-    body: 'Amazon EC2: a per-team VPC/subnet, instances from your AMIs. Credentials and region come from the runner’s AWS environment (AWS_* / AWS_REGION).',
+    body: 'Amazon EC2 + Fargate: a per-team VPC with a subnet per network, instances from your AMIs. Enter an access key and pick the region, AMIs and instance types here.',
     icon: Cloud,
-    draft: true,
   },
   {
     kind: 'openstack',
@@ -34,10 +33,10 @@ const KINDS: { kind: Kind; title: string; body: string; icon: typeof Server; dra
   // something an operator sets up for a real event.
 ]
 
-// The cloud builders are real code but have never been exercised against a live
-// account, and don't yet wire external reachability (VPC egress / floating IPs)
-// or terminate established connections on close -- so they're marked Draft here
-// rather than presented as production-ready.
+// OpenStack is real code but hasn't been exercised against a live account and
+// still reads its credential from the runner environment, so it's marked Draft
+// rather than presented as production-ready. (AWS was promoted out of Draft once
+// its wizard, discovery, external access and access-schedule landed.)
 const DRAFT_KINDS = new Set<Kind>(KINDS.filter((k) => k.draft).map((k) => k.kind))
 
 export const NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/

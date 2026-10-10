@@ -359,8 +359,10 @@ you beyond this one-time builder setup:
 - **Store registry credentials** (Admin → Infrastructure → Docker Registry Credentials)
   for any private registry the projects pull from. The machine logs in before pulling.
   Images are pulled, never built.
-- **Supported builders:** Incus and MicroCloud. AWS and OpenStack reject a compose
-  container at deploy time.
+- **Supported builders:** Incus, MicroCloud, and AWS. On AWS a compose container
+  runs on an EC2 instance booted from the builder's `compose-host` image (map it to
+  a Docker-capable AMI), the same agent-runs-`docker compose` model as the others.
+  OpenStack still rejects a compose container at deploy time.
 
 A project's files — its `.env`, any certificates — live in the content repo and are
 copied to the machine over the agent's mTLS channel; they are also held in the LaForge

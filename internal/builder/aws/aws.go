@@ -175,6 +175,18 @@ func ConfigFromInput(in ConfigInput, images, sizes map[string]string) Config {
 	}
 }
 
+// ImageNames satisfies internal/orchestrator's imageCatalog interface: the os/
+// image names this builder has an AMI configured for (Config.Images), checked
+// before a build starts. A compose container needs an entry named
+// builder.ComposeHostImage ("compose-host") mapped to a Docker-capable AMI.
+func (b *Builder) ImageNames() map[string]bool {
+	names := make(map[string]bool, len(b.cfg.Images))
+	for name := range b.cfg.Images {
+		names[name] = true
+	}
+	return names
+}
+
 func envOr(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
