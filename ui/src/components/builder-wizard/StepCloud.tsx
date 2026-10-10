@@ -98,6 +98,18 @@ function infoBox(children: React.ReactNode) {
   )
 }
 
+// Field is a labelled input with a one-line explanation under it, so every AWS
+// setting says what it is and where to get it inline (not only in the doc).
+function Field({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1 text-xs text-fg-muted">
+      {label}
+      {children}
+      <span className="text-fg-subtle">{hint}</span>
+    </label>
+  )
+}
+
 // StepCloudConnect enrolls the AWS access key (validated + stored server-side;
 // the wizard keeps only the credential id). It must happen first -- every later
 // step discovers against this credential.
@@ -233,32 +245,35 @@ export function StepCloudRegion({
           </div>
           {loading && <Spinner />}
         </div>
+        <div className="mt-1 text-xs text-fg-subtle">Where this builder deploys. The AMIs and instance types in the next steps are discovered for the region you pick.</div>
         {error && <div className="mt-2 text-xs text-danger">{error}</div>}
       </section>
 
       <section>
         <div className="mb-1 text-sm font-medium text-fg">AWS Account</div>
-        <div className="mb-2 text-xs text-fg-muted">The execution role is required to run containers; the rest have sane defaults.</div>
+        <div className="mb-2 text-xs text-fg-muted">
+          The execution role is required to run containers; the rest have sane defaults. Full field-by-field guidance
+          (and the CloudFormation template that outputs the role ARN) is in <code className="font-mono">docs/builders/aws.md</code>.
+        </div>
         <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-xs text-fg-muted">
-            ECS Cluster
+          <Field label="ECS Cluster" hint="The ECS cluster Fargate containers run in. Every account has one named “default” — leave it unless you made a dedicated cluster. Only used for container: objects.">
             <Input value={aws.ecs_cluster ?? ''} onChange={(e) => setAws({ ecs_cluster: e.target.value })} placeholder="default" className="font-mono" />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-fg-muted">
-            Task Execution Role ARN
-            <Input value={aws.execution_role_arn ?? ''} onChange={(e) => setAws({ execution_role_arn: e.target.value })} placeholder="arn:aws:iam::123456789012:role/ecsTaskExecutionRole" className="font-mono" />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-fg-muted">
-            CloudWatch Log Group
+          </Field>
+          <Field label="Task Execution Role ARN" hint="IAM role Fargate assumes to pull images and ship logs. Required for containers. It's the ExecutionRoleArn output of the aws-iam.yaml CloudFormation stack — paste it verbatim.">
+            <Input value={aws.execution_role_arn ?? ''} onChange={(e) => setAws({ execution_role_arn: e.target.value })} placeholder="arn:aws:iam::123456789012:role/laforge-runner-ecs-exec" className="font-mono" />
+          </Field>
+          <Field label="CloudWatch Log Group" hint="Where Fargate task logs go when an environment sets no container_logs of its own. Optional — leave blank for none.">
             <Input value={aws.log_group ?? ''} onChange={(e) => setAws({ log_group: e.target.value })} placeholder="/laforge/containers (optional)" className="font-mono" />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-fg-muted">
-            Agent Init Image
+          </Field>
+          <Field label="Agent Init Image" hint="Small public image a Fargate container runs once to download the agent. Default alpine:3.20 — change only if you can't pull from Docker Hub.">
             <Input value={aws.agent_init_image ?? ''} onChange={(e) => setAws({ agent_init_image: e.target.value })} placeholder="alpine:3.20" className="font-mono" />
-          </label>
-          <label className="flex items-center gap-2 text-xs text-fg">
-            <input type="checkbox" checked={aws.assign_public_ip !== false} onChange={(e) => setAws({ assign_public_ip: e.target.checked })} className="h-4 w-4 rounded-token-sm border-border accent-accent" />
-            Assign a public IP to hosts (needed for egress to the LaForge control plane without a NAT)
+          </Field>
+          <label className="flex items-start gap-2 text-xs text-fg">
+            <input type="checkbox" checked={aws.assign_public_ip !== false} onChange={(e) => setAws({ assign_public_ip: e.target.checked })} className="mt-0.5 h-4 w-4 rounded-token-sm border-border accent-accent" />
+            <span>
+              Assign a public IP to hosts
+              <span className="block text-fg-subtle">Instances need outbound reach to the LaForge API/gateway to check in. Leave on unless you've added a NAT gateway for egress.</span>
+            </span>
           </label>
         </div>
       </section>

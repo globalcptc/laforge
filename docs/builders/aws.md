@@ -160,18 +160,67 @@ secret is never returned to the browser again.
 > blank — LaForge then uses the ambient role. That's AWS's recommended practice,
 > but it means the credential isn't managed in the wizard.
 
-## Settings (all in the wizard)
+## Settings — what each one is and how to get it
 
-| Setting                   | Notes                                                                 |
-| ------------------------- | --------------------------------------------------------------------- |
-| Region                    | e.g. `us-east-1`.                                                     |
-| ECS cluster               | default `default`.                                                   |
-| Task execution role ARN   | required for containers.                                             |
-| CloudWatch log group      | optional; default task logging.                                     |
-| Agent init image          | public image the agent-download init container runs; default `alpine:3.20`. |
-| Assign public IP to hosts | default on — hosts need egress to the LaForge API/gateway to check in (this, or add a NAT). |
-| Images                    | map each LaForge `os` name → an **AMI id**.                           |
-| Sizes                     | map each `size` name → an EC2 **instance type** (e.g. `t3.medium`); for a Fargate container a `"cpu/memory"` pair (e.g. `"512/1024"`). |
+The wizard walks these in order: **Connect → Region → Images → Sizes → Review**.
+If you deployed `aws-iam.yaml`, two of these are stack Outputs you paste in; the
+rest are discovered for you or have sane defaults.
+
+### Connect step
+
+- **Access Key ID / Secret Access Key** — an IAM access key LaForge authenticates
+  as (the runner identity). *Required.* Create one for the runner user:
+  ```bash
+  aws iam create-access-key --user-name laforge-runner
+  ```
+  (the `laforge-runner` user is created by `aws-iam.yaml`). Paste the
+  `AccessKeyId` and `SecretAccessKey` and click **Connect** — LaForge validates it
+  with `sts:GetCallerIdentity` and stores it; you won't see the secret again. No
+  region here — this step is global.
+
+### Region step
+
+- **Region** — where this builder deploys (VPC, instances, AMIs are all here).
+  *Required.* **Autocompleted**: the dropdown is populated by `DescribeRegions`
+  from your account; just pick one (e.g. `us-east-1`). Everything in the next two
+  steps is discovered for the region you choose.
+- **ECS Cluster** — the ECS cluster Fargate containers run in. *Optional, default
+  `default`.* Every account has a cluster named `default`; leave it unless you
+  made a dedicated one (`aws ecs list-clusters` shows their names). Only matters if
+  you deploy `container:` objects.
+- **Task Execution Role ARN** — the IAM role Fargate assumes to pull images and
+  ship logs. *Required only if you deploy containers.* This is the
+  **`ExecutionRoleArn` Output** of the `aws-iam.yaml` stack — copy it verbatim:
+  ```bash
+  aws cloudformation describe-stacks --stack-name laforge-iam \
+    --query "Stacks[0].Outputs[?OutputKey=='ExecutionRoleArn'].OutputValue" --output text
+  ```
+  (It looks like `arn:aws:iam::<account>:role/laforge-runner-ecs-exec`.)
+- **CloudWatch Log Group** — where Fargate task logs go when an environment
+  doesn't set its own `container_logs`. *Optional.* Leave blank for no default log
+  forwarding, or create one (`aws logs create-log-group --log-group-name
+  /laforge/containers`) and enter its name.
+- **Agent Init Image** — a small public image a Fargate container runs once to
+  download the LaForge agent. *Optional, default `alpine:3.20`.* Leave it unless
+  your account can't pull from Docker Hub (then point it at an ECR mirror).
+- **Assign a public IP to hosts** — *default on.* Instances need outbound reach to
+  the LaForge API/gateway to check in; a public IP is the simplest way. Turn it off
+  only if you've added a NAT gateway for egress.
+
+### Images step
+
+- **Images** — map each LaForge `os` name (as your content uses it, e.g.
+  `ubuntu22`, `windows2022`) to an **AMI**. *At least one required.* **Autocompleted**:
+  your own AMIs are listed; type a name (e.g. "ubuntu", "Windows Server 2022") to
+  search Amazon/Canonical/Microsoft catalogs for the chosen region. For compose
+  containers, also map `compose-host` to a Docker-capable Linux AMI.
+
+### Sizes step
+
+- **Sizes** — map each LaForge `size` name (e.g. `small`, `large`) to an EC2
+  **instance type**. *At least one required.* **Autocompleted** from the region's
+  `DescribeInstanceTypes` (e.g. `t3.medium`). A Fargate `container:` instead reads
+  a `"cpu/memory"` pair (e.g. `"512/1024"`) from this map.
 
 ## Limits and notes
 
