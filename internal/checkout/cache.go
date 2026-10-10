@@ -88,13 +88,28 @@ func redactToken(s string) string {
 	return tokenInURL.ReplaceAllString(s, "x-access-token:***@")
 }
 
-func (c *Cache) Dir(ctx context.Context, cloneURL string, repositoryID pgtype.UUID, ref, commitSHA string) (string, error) {
+// cachedDir returns the already-fetched checkout for (repositoryID,
+// commitSHA) if it exists on disk, touching it so Evict's "last used"
+// cutoff sees it as live. This is the warm path: a commit SHA is
+// immutable, so once its content is cached there is nothing to re-fetch
+// and -- crucially -- no reason to contact GitHub at all (no token mint,
+// no GetRepo). The steady state of reconcile/dispatch is re-resolving the
+// same unchanged commit over and over, so this is the common case.
+func (c *Cache) cachedDir(repositoryID pgtype.UUID, commitSHA string) (string, bool) {
 	final := c.keyDir(repositoryID, commitSHA)
 	if info, err := os.Stat(final); err == nil && info.IsDir() {
 		now := time.Now()
 		os.Chtimes(final, now, now) // touch -- Evict's own "last used" cutoff reads this
+		return final, true
+	}
+	return "", false
+}
+
+func (c *Cache) Dir(ctx context.Context, cloneURL string, repositoryID pgtype.UUID, ref, commitSHA string) (string, error) {
+	if final, ok := c.cachedDir(repositoryID, commitSHA); ok {
 		return final, nil
 	}
+	final := c.keyDir(repositoryID, commitSHA)
 
 	if err := os.MkdirAll(c.BaseDir, 0o755); err != nil {
 		return "", fmt.Errorf("creating cache base dir: %w", err)
@@ -181,6 +196,13 @@ func (c *Cache) ForBuild(ctx context.Context, buildID pgtype.UUID) (string, erro
 	repo, err := c.Q.GetRepository(ctx, rev.RepositoryID)
 	if err != nil {
 		return "", fmt.Errorf("loading repository: %w", err)
+	}
+	// Warm cache: if we already have this exact commit checked out, return
+	// it without touching GitHub at all. Only a genuine miss (a commit we
+	// haven't fetched yet) needs a clone URL -- i.e. "connect to GitHub
+	// only when actually pulling," not on every reconcile pass.
+	if dir, ok := c.cachedDir(repo.ID, rev.CommitSha); ok {
+		return dir, nil
 	}
 	cloneURL, err := c.resolveCloneURL(ctx, repo)
 	if err != nil {

@@ -119,6 +119,34 @@ func (c *Client) CreateInstallationToken(ctx context.Context, appJWT string, ins
 	return &out, nil
 }
 
+// Installation is one GitHub App installation as GET /app/installations
+// reports it: which account installed the App and the current numeric id.
+type Installation struct {
+	ID      int64 `json:"id"`
+	Account struct {
+		Login string `json:"login"`
+		Type  string `json:"type"`
+	} `json:"account"`
+	RepositorySelection string `json:"repository_selection"`
+}
+
+// ListInstallations lists every installation of this App, authenticated
+// with an app JWT. The authoritative way to rediscover installations
+// after a missed `installation` webhook -- GitHub sends the one-time
+// `created` event once and never resends it, so an endpoint that wasn't
+// reachable at install time would otherwise never learn the installation
+// exists. Used by the admin resync. Requests up to 100 in a single page
+// (far more than any real deployment has); pagination beyond that is a
+// deliberate non-goal.
+func (c *Client) ListInstallations(ctx context.Context, appJWT string) ([]Installation, error) {
+	u := fmt.Sprintf("%s/app/installations?per_page=100", c.APIBaseURL)
+	var out []Installation
+	if err := c.doJSON(ctx, http.MethodGet, u, appJWT, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // cachedInstallationToken is one installation's memoized access token;
 // see InstallationToken.
 type cachedInstallationToken struct {

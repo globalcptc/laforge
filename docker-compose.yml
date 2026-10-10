@@ -95,6 +95,14 @@ services:
       # key file that doesn't exist inside this container at all, and
       # fail loudly at startup.
       - ./.certs:/.certs:ro
+      # Persist the per-{repository,commit} checkout cache across restarts
+      # (it defaults to /tmp inside the container -- an `up --build` would
+      # otherwise wipe it and force a full re-fetch, which means a GitHub
+      # token mint + clone for every build on the next pass). Shared with
+      # the runner on purpose: a commit SHA is immutable content, so one
+      # fetch serves both, and Dir()'s temp-dir-then-rename publish is
+      # race-safe for concurrent writers.
+      - laforge-checkouts:/tmp/laforge-checkouts
     command: ["-db-url", "host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable", "-repo", "/content"]
     depends_on:
       migrate:
@@ -110,6 +118,8 @@ services:
     volumes:
       - ./examples/lm-test:/content:ro
       - ./.certs:/.certs:ro
+      # Shared checkout cache -- see the orchestrator service's own note.
+      - laforge-checkouts:/tmp/laforge-checkouts
     environment:
       # Agent auto-delivery (internal/agentdelivery): the addresses a
       # DEPLOYED HOST reaches back on -- NOT localhost, but an address real
@@ -184,3 +194,7 @@ services:
 
 volumes:
   laforge-db:
+  # Persistent per-{repository,commit} checkout cache, shared by the
+  # orchestrator and runner so GitHub is contacted only to fetch a commit
+  # not already on disk -- not on every reconcile pass.
+  laforge-checkouts:
