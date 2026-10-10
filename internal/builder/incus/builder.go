@@ -358,16 +358,11 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 		"server": b.Config.ociRegistryOrDefault(), "alias": spec.Image,
 	}
 	// Create (stopped) -- the agent has to be planted before first start.
-	_, err := b.Client.post(ctx, "/1.0/instances", map[string]interface{}{
+	err := b.Client.createInstance(ctx, name, map[string]interface{}{
 		"name": name, "type": "container", "source": source, "config": config, "devices": devices,
 	})
 	if err != nil {
-		var apiErr *APIError
-		if !(errors.As(err, &apiErr) && apiErr.AlreadyExists()) {
-			return name, fmt.Errorf("creating OCI container %s (image %q from %s): %w", name, spec.Image, b.Config.ociRegistryOrDefault(), err)
-		}
-		// "adopt if already there" -- fall through to ensure the agent is
-		// planted and it's started.
+		return name, fmt.Errorf("creating OCI container %s (image %q from %s): %w", name, spec.Image, b.Config.ociRegistryOrDefault(), err)
 	}
 
 	if len(spec.AgentBinary) > 0 {
@@ -547,7 +542,7 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	default:
 		source = map[string]interface{}{"type": "image", "alias": img.Alias, "server": img.Server, "protocol": img.Protocol}
 	}
-	_, err := b.Client.post(ctx, "/1.0/instances", map[string]interface{}{
+	err := b.Client.createInstance(ctx, name, map[string]interface{}{
 		"name":    name,
 		"type":    instanceType,
 		"source":  source,
@@ -555,16 +550,8 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		"devices": devices,
 	})
 	if err != nil {
-		var apiErr *APIError
-		if !(errors.As(err, &apiErr) && apiErr.AlreadyExists()) {
-			// Return the (deterministic) name even on failure: the instance
-			// may have been partially created at the hoster, and the runner
-			// records this ref so teardown can still destroy the orphan --
-			// otherwise a config-drive/create failure leaves an untracked
-			// instance nothing can clean up (found live on MicroCloud/Ceph).
-			return name, fmt.Errorf("creating instance %s (from %s): %w", name, externalName, err)
-		}
-		// "adopt if already there" -- fall through to ensure it's started.
+		// Keep the deterministic ref for cleanup when creation is uncertain.
+		return name, fmt.Errorf("creating instance %s (from %s): %w", name, externalName, err)
 	}
 
 	if img.IsSnapshot() {
@@ -666,6 +653,9 @@ func (b *Builder) DestroyContainer(ctx context.Context, team, externalRef string
 }
 
 func (b *Builder) destroyInstance(ctx context.Context, name string) error {
+	if err := b.Client.waitForInstanceCreation(ctx, name); err != nil {
+		return err
+	}
 	_, err := b.Client.put(ctx, "/1.0/instances/"+name+"/state", map[string]interface{}{
 		"action": "stop", "timeout": 30, "force": true,
 	})

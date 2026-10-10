@@ -394,7 +394,10 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 	// this can't just be c.HTTPClient's own Timeout field.
 	ctx, cancel := context.WithTimeout(ctx, c.OperationTimeout+10*time.Second)
 	defer cancel()
-	u := fmt.Sprintf("%s%s/wait?timeout=%d", c.BaseURL, opPath, int(c.OperationTimeout.Seconds()))
+	u, err := c.operationWaitURL(opPath)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
@@ -443,4 +446,20 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 
 func pemEncodeCert(der []byte) []byte {
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+}
+
+// Build operation wait URLs without losing project/target query parameters.
+func (c *Client) operationWaitURL(opPath string) (string, error) {
+	u, err := url.Parse(opPath)
+	if err != nil {
+		return "", err
+	}
+	u.Path = strings.TrimSuffix(u.Path, "/") + "/wait"
+	query := u.Query()
+	query.Set("timeout", fmt.Sprint(max(1, int(c.OperationTimeout.Seconds()))))
+	if query.Get("project") == "" && c.Project != "" {
+		query.Set("project", c.Project)
+	}
+	u.RawQuery = query.Encode()
+	return c.BaseURL + u.RequestURI(), nil
 }

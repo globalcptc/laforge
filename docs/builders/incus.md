@@ -81,7 +81,7 @@ the first two rows is in the `default` project.
 | Images | `POST /1.0/images` (pull, publish), `GET /1.0/images`, `GET`/`DELETE /1.0/images/aliases/…` | Pulling builder images from simplestreams/OCI registries; publishing the docker base image. |
 | Networks | `POST`/`GET`/`PATCH`/`DELETE /1.0/networks…`, `POST /1.0/networks/{n}/peers` | Team OVN networks, peering, attaching ACLs. Creating an OVN network uses the uplink network. |
 | Network ACLs | `POST`/`PUT`/`DELETE /1.0/network-acls…` | `visible_from` and `ports:` enforcement. |
-| Operations | `GET /1.0/operations/{id}/wait` | Waiting for the above to finish. |
+| Operations | `GET /1.0/operations?recursion=1`, `GET /1.0/operations/{id}/wait` | Finding unfinished instance creation after a retry/restart, and waiting for operations to finish. |
 
 It does **not** touch server configuration, other projects, profiles, cluster
 membership, other certificates, or the uplink network's own configuration.
@@ -242,6 +242,24 @@ containers are then deployed from it like a host.
 - **Everything is in the `default` project.** See [Permissions](#permissions).
 - **OVN network creation can stall** while the host is busy creating or deleting other
   networks; it is retried by the runner.
+- **Slow instance creation:** a VM may show `STOPPED` while its `Creating instance`
+  operation is still running (for example, while converting a large image). LaForge
+  continues polling that same operation across operation-timeout windows until it
+  finishes or the runner's context is cancelled. An expired polling window does not
+  trigger another create or replace the instance's config drive. After a runner
+  restart or a deployment retry, LaForge checks the project's active operations
+  before adopting an instance, replacing its config drive, or deleting it. Real
+  creation failures and connection errors still surface as errors. Use
+  `incus operation list` and `incus operation show ID` to check progress.
+- **LVM thin clones fall back to full image conversion when the requested VM
+  disk is smaller than the cached image volume.** A pool with `volume.size=100GiB`
+  creates 100 GiB image volumes; a host with `disk_gb: 60` requests only 60 GB.
+  Incus cannot shrink the cloned block volume and unpacks the image again. Check
+  `incus storage show POOL` and `lvs -o lv_name,origin,lv_size`: clones have an
+  image origin, while independent conversions do not. Keep the image-cache size
+  no larger than the smallest requested disk that uses it, or request larger
+  disks. Changing the pool's default can regenerate image caches on subsequent
+  creates, so plan that change outside an active build.
 - **"no image configured for os …"** — map that `os:` name in the builder's images.
 - **"no docker base image yet"** — build it (above), or add a `compose-host` image.
 - **Agents never check in** — the instance can't reach `GATEWAY_PUBLIC_ADDR` or
