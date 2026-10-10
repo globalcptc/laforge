@@ -48,7 +48,8 @@ LIMIT 1;
 SELECT build.*,
        content_revision.commit_sha,
        content_revision.commit_message,
-       content_revision.committed_at
+       content_revision.committed_at,
+       content_revision.ref AS branch
 FROM build
 JOIN content_revision ON content_revision.id = build.content_revision_id
 WHERE content_revision.repository_id = $1

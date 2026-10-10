@@ -85,6 +85,9 @@ export interface Build {
   commit_message?: string | null
   committed_at?: string | null
   auto_built?: boolean
+  // The ref (branch) of the build's commit, from its content_revision -- survives
+  // even if the configured build is gone. May be "refs/heads/<branch>" or null.
+  branch?: string | null
 }
 
 export interface Team {

@@ -1088,7 +1088,8 @@ const listBuildsByRepository = `-- name: ListBuildsByRepository :many
 SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error, build.created_by_account_id,
        content_revision.commit_sha,
        content_revision.commit_message,
-       content_revision.committed_at
+       content_revision.committed_at,
+       content_revision.ref AS branch
 FROM build
 JOIN content_revision ON content_revision.id = build.content_revision_id
 WHERE content_revision.repository_id = $1
@@ -1108,6 +1109,7 @@ type ListBuildsByRepositoryRow struct {
 	CommitSha          string             `json:"commit_sha"`
 	CommitMessage      *string            `json:"commit_message"`
 	CommittedAt        pgtype.Timestamptz `json:"committed_at"`
+	Branch             *string            `json:"branch"`
 }
 
 // "Every build of this repository" (Build → Builds) --
@@ -1136,6 +1138,7 @@ func (q *Queries) ListBuildsByRepository(ctx context.Context, repositoryID pgtyp
 			&i.CommitSha,
 			&i.CommitMessage,
 			&i.CommittedAt,
+			&i.Branch,
 		); err != nil {
 			return nil, err
 		}

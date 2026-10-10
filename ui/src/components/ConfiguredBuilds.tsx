@@ -423,6 +423,11 @@ function buildStatusColor(status: Build['status']): string {
 // Builds with no configured build behind them (older builds, or ones
 // triggered before the branch was configured) -- kept visible in their own
 // collapsible bucket rather than dropped.
+// shortBranch trims a `refs/heads/` prefix for display; '' when unknown.
+function shortBranch(ref?: string | null): string {
+  return ref ? ref.replace(/^refs\/heads\//, '') : ''
+}
+
 function UnassociatedBuilds({ builds, repoId }: { builds: Build[]; repoId: string }) {
   const fmt = useTimeFormat()
   const key = `unassociated:${repoId}`
@@ -445,6 +450,7 @@ function UnassociatedBuilds({ builds, repoId }: { builds: Build[]; repoId: strin
               <thead>
                 <tr>
                   <Th className="pl-4">Environment</Th>
+                  <Th>Branch</Th>
                   <Th>State</Th>
                   <Th className="pr-4">Created</Th>
                 </tr>
@@ -457,6 +463,7 @@ function UnassociatedBuilds({ builds, repoId }: { builds: Build[]; repoId: strin
                         {b.environment_name}
                       </Link>
                     </Td>
+                    <Td className="font-mono text-xs text-fg-muted">{shortBranch(b.branch) || '—'}</Td>
                     <Td>
                       <StatusBadge status={b.status} />
                     </Td>
