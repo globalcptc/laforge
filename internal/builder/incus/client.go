@@ -181,6 +181,12 @@ func (e *APIError) AlreadyExists() bool {
 	return strings.Contains(e.Message, "already exists")
 }
 
+// VolumeInUse is Incus's refusal to delete a volume still referenced by an
+// instance or profile, including a stopped VM's attached config drive.
+func (e *APIError) VolumeInUse() bool {
+	return strings.Contains(strings.ToLower(e.Message), "storage volume is still in use")
+}
+
 func (e *APIError) NotFound() bool {
 	return e.HTTPStatus == http.StatusNotFound || strings.Contains(strings.ToLower(e.Message), "not found")
 }
@@ -343,6 +349,26 @@ type operationResult struct {
 	Err        string `json:"err"`
 }
 
+// operationPendingError retains the operation URL so config-drive recovery
+// can resume waiting instead of racing a second mutation against the first.
+type operationPendingError struct {
+	Path    string
+	Status  string
+	Timeout time.Duration
+	Cause   error
+}
+
+func (e *operationPendingError) Error() string {
+	return fmt.Sprintf("operation %s is unconfirmed (%s, wait limit %s): %v", e.Path, e.Status, e.Timeout, e.Unwrap())
+}
+
+func (e *operationPendingError) Unwrap() error {
+	if e.Cause != nil {
+		return e.Cause
+	}
+	return context.DeadlineExceeded
+}
+
 // waitForOperation blocks on a real async Incus operation and returns
 // its own result once it reaches a terminal state. Found live, not
 // assumed: this used to only check the outer sync/async envelope's own
@@ -375,12 +401,12 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("waiting for operation %s: %w", opPath, err)
+		return nil, &operationPendingError{Path: opPath, Status: "unknown", Timeout: c.OperationTimeout, Cause: err}
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, &operationPendingError{Path: opPath, Status: "unknown", Timeout: c.OperationTimeout, Cause: err}
 	}
 	var ar apiResponse
 	if err := json.Unmarshal(data, &ar); err != nil {
@@ -402,6 +428,15 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 			msg = op.Status
 		}
 		return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: op.StatusCode, Message: msg}
+	}
+	// /wait returns the operation's current state when its server-side
+	// timeout expires. HTTP 200 with status 103 still means "Running";
+	// continuing here can race an unfinished stop/delete with an ISO import.
+	if op.StatusCode >= 100 && op.StatusCode < 200 {
+		return nil, &operationPendingError{Path: opPath, Status: op.Status, Timeout: c.OperationTimeout}
+	}
+	if op.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("operation %s returned unexpected status %d (%s)", opPath, op.StatusCode, op.Status)
 	}
 	return ar.Metadata, nil
 }

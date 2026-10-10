@@ -263,7 +263,10 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	if img.VM {
 		instanceType = "virtual-machine"
 	}
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, spec.CloudInitUserData, spec.CloudInitViaISO)
+	// A custom compose-host system image still runs Docker inside Incus.
+	// VMs and ordinary host images do not need container nesting enabled.
+	nesting := !img.VM && spec.OS == builder.ComposeHostImage
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, nesting, spec.CloudInitUserData, spec.CloudInitViaISO)
 }
 
 // deployComposeHost deploys the machine a compose container's project runs on:
@@ -516,23 +519,8 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 			return name, fmt.Errorf("building config drive for %s: %w", name, err)
 		}
 		volName := cidataVolName(name)
-		if err := b.Client.importISOVolume(ctx, b.Config.storagePoolOrDefault(), volName, iso); err != nil {
-			// A config-drive volume left behind by an earlier attempt that
-			// timed out mid-create is still attached to that partial
-			// instance, so importISOVolume's own delete-then-create couldn't
-			// replace it ("volume already exists"). The drive carries a
-			// fresh one-time agent token every attempt, so it must be
-			// REPLACED, never adopted -- tear the partial instance and its
-			// volume down (destroyInstance removes both), then re-import.
-			var apiErr *APIError
-			if errors.As(err, &apiErr) && apiErr.AlreadyExists() {
-				_ = b.destroyInstance(ctx, name)
-				if err := b.Client.importISOVolume(ctx, b.Config.storagePoolOrDefault(), volName, iso); err != nil {
-					return name, fmt.Errorf("importing config drive for %s (after clearing a stale one): %w", name, err)
-				}
-			} else {
-				return name, fmt.Errorf("importing config drive for %s: %w", name, err)
-			}
+		if err := b.importConfigDrive(ctx, name, iso); err != nil {
+			return name, err
 		}
 		devices["cidata"] = map[string]string{"type": "disk", "pool": b.Config.storagePoolOrDefault(), "source": volName}
 	}
@@ -699,8 +687,11 @@ func (b *Builder) destroyInstance(ctx context.Context, name string) error {
 		}
 	}
 	// Remove the config-drive volume, if this instance had one (Windows).
-	// A no-op when there wasn't one; never fails the destroy.
-	_ = b.Client.deleteVolume(ctx, b.Config.storagePoolOrDefault(), cidataVolName(name))
+	// A missing volume is a no-op; other errors must remain visible so
+	// deployment retries cannot import over a drive that still exists.
+	if err := b.Client.deleteVolume(ctx, b.Config.storagePoolOrDefault(), cidataVolName(name)); err != nil {
+		return fmt.Errorf("deleting config drive for %s: %w", name, err)
+	}
 	// Remove this instance's per-host port-firewall ACL now that the instance
 	// (its only user) is gone -- otherwise it lingers orphaned. Best-effort.
 	_, _ = b.Client.delete(ctx, "/1.0/network-acls/"+hostACLName(name))
