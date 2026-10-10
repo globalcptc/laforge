@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/kdomanski/iso9660"
 )
@@ -46,6 +47,75 @@ func buildCidataISO(instanceID, userData string) ([]byte, error) {
 		return nil, fmt.Errorf("writing ISO: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+// importConfigDrive gives transient cleanup conflicts three chances to settle.
+// If a previous request is still running, wait on that same operation before
+// issuing another mutation. Every attempt reuses the fresh ISO and agent token.
+func (b *Builder) importConfigDrive(ctx context.Context, name string, iso []byte) error {
+	const maxAttempts = 3
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		var err error
+		var pending *operationPendingError
+		if errors.As(lastErr, &pending) {
+			_, err = b.Client.waitForOperation(ctx, pending.Path)
+			if err != nil {
+				err = fmt.Errorf("waiting for config-drive operation for %s: %w", name, err)
+			}
+		}
+		if err == nil {
+			err = b.replaceConfigDrive(ctx, name, iso)
+		}
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		var apiErr *APIError
+		retryable := errors.As(err, &pending) || errors.Is(err, context.DeadlineExceeded) ||
+			(errors.As(err, &apiErr) && (apiErr.Busy() || apiErr.AlreadyExists() || apiErr.VolumeInUse() ||
+				apiErr.HTTPStatus == http.StatusTooManyRequests || apiErr.HTTPStatus == http.StatusServiceUnavailable))
+		if !retryable {
+			return err
+		}
+		if attempt < maxAttempts {
+			timer := time.NewTimer(time.Duration(attempt) * 500 * time.Millisecond)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return ctx.Err()
+			case <-timer.C:
+			}
+		}
+	}
+	return fmt.Errorf("preparing config drive for %s after %d attempts: %w", name, maxAttempts, lastErr)
+}
+
+func (b *Builder) replaceConfigDrive(ctx context.Context, name string, iso []byte) error {
+	pool, volume := b.Config.storagePoolOrDefault(), cidataVolName(name)
+	err := b.Client.importISOVolume(ctx, pool, volume, iso)
+	if err == nil {
+		return nil
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || !(apiErr.AlreadyExists() || apiErr.VolumeInUse()) {
+		return fmt.Errorf("importing config drive for %s: %w", name, err)
+	}
+	// A partial instance can retain the previous config drive. Both must be
+	// removed successfully before importing the new one-time agent token.
+	if err := b.destroyInstance(ctx, name); err != nil {
+		return fmt.Errorf("clearing stale config drive for %s: %w", name, err)
+	}
+	if err := b.Client.importISOVolume(ctx, pool, volume, iso); err != nil {
+		return fmt.Errorf("importing config drive for %s after cleanup: %w", name, err)
+	}
+	return nil
 }
 
 // pushFile writes content into an instance at path with the given octal mode,
@@ -100,7 +170,9 @@ func (c *Client) pushFile(ctx context.Context, instance, path string, mode int, 
 // cleanly.
 func (c *Client) importISOVolume(ctx context.Context, pool, name string, iso []byte) error {
 	// Replace any stale volume from a previous attempt first.
-	_ = c.deleteVolume(ctx, pool, name)
+	if err := c.deleteVolume(ctx, pool, name); err != nil {
+		return fmt.Errorf("removing previous ISO volume %s: %w", name, err)
+	}
 
 	u := c.BaseURL + "/1.0/storage-pools/" + url.PathEscape(pool) + "/volumes/custom"
 	if c.Project != "" {
