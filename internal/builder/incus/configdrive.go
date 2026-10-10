@@ -53,6 +53,9 @@ func buildCidataISO(instanceID, userData string) ([]byte, error) {
 // If a previous request is still running, wait on that same operation before
 // issuing another mutation. Every attempt reuses the fresh ISO and agent token.
 func (b *Builder) importConfigDrive(ctx context.Context, name string, iso []byte) error {
+	if err := b.Client.waitForInstanceCreation(ctx, name); err != nil {
+		return err
+	}
 	const maxAttempts = 3
 	var lastErr error
 	for attempt := 1; attempt <= maxAttempts; attempt++ {

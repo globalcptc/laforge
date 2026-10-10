@@ -90,6 +90,8 @@ func TestDeployConfigDriveRetry(t *testing.T) {
 			imports, creates := 0, 0
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				switch {
+				case r.Method == http.MethodGet && r.URL.Path == "/1.0/operations":
+					configDriveResponse(w, http.StatusOK, "")
 				case r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/volumes/custom/"):
 					if instanceExists {
 						configDriveResponse(w, http.StatusBadRequest, "The storage volume is still in use")
@@ -193,6 +195,10 @@ func TestConfigDriveRecoveryRetries(t *testing.T) {
 			defer cancel()
 			deletes, imports := 0, 0
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodGet && r.URL.Path == "/1.0/operations" {
+					configDriveResponse(w, http.StatusOK, "")
+					return
+				}
 				if r.Method == http.MethodDelete {
 					deletes++
 					if deletes <= test.failures {
@@ -236,6 +242,10 @@ func TestConfigDriveRecoveryWaitsForPendingDeletion(t *testing.T) {
 	deletes, waits, imports := 0, 0, 0
 	pending := true
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/1.0/operations" {
+			configDriveResponse(w, http.StatusOK, "")
+			return
+		}
 		switch r.Method {
 		case http.MethodDelete:
 			deletes++
