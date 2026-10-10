@@ -317,7 +317,7 @@ export function StepCloudImages({
 
   return (
     <div className="flex flex-col gap-4">
-      {infoBox('Map each os name content uses to an AMI. Your own AMIs are listed; type a name (e.g. “ubuntu”, “Windows”) to search Amazon, Canonical and Microsoft images for this region.')}
+      {infoBox('Map each os name content uses to an AMI. Your own AMIs are listed; type a name (e.g. “ubuntu”, “Windows”, “kali”) to search Amazon, Canonical, Microsoft and Marketplace images for this region. Or paste an exact AMI id and pick “Use …” — handy for a Marketplace image (which may need you to accept its terms in the account first).')}
       <div className="flex flex-col gap-2">
         {images.map((img, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -330,9 +330,10 @@ export function StepCloudImages({
                 onChange={(v) => setImage(i, { fingerprint: v })}
                 onSearch={search}
                 loading={searching}
-                placeholder="Choose or search an AMI"
-                searchPlaceholder="Search AMIs by name…"
-                emptyLabel="No AMIs — type to search"
+                allowCustom
+                placeholder="Choose, search, or paste an AMI id"
+                searchPlaceholder="Search by name, or paste ami-…"
+                emptyLabel="No matches — type a name to search, or paste an AMI id"
               />
             </div>
             <Button variant="ghost" size="icon" onClick={() => onImages(images.filter((_, idx) => idx !== i))} aria-label="Remove image">

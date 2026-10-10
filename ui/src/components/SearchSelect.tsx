@@ -25,6 +25,7 @@ export function SearchSelect({
   loading = false,
   emptyLabel = 'No matches',
   minSearchChars = 2,
+  allowCustom = false,
 }: {
   value: string
   options: SearchOption[]
@@ -35,6 +36,10 @@ export function SearchSelect({
   loading?: boolean
   emptyLabel?: string
   minSearchChars?: number
+  // allowCustom lets the typed text be chosen as the value even if it isn't in
+  // `options` (a "Use <text>" row). For the AMI picker: paste any id -- e.g. a
+  // Marketplace AMI that search didn't surface.
+  allowCustom?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -74,7 +79,14 @@ export function SearchSelect({
   const q = search.trim().toLowerCase()
   // With a server search the list is already scoped; client-filter only in the
   // default (no onSearch) mode.
-  const shown = onSearch ? options : options.filter((o) => !q || o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q) || (o.hint ?? '').toLowerCase().includes(q))
+  const filtered = onSearch ? options : options.filter((o) => !q || o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q) || (o.hint ?? '').toLowerCase().includes(q))
+  // allowCustom: offer the typed text itself as a choice (when it isn't already
+  // an option), so a value the list doesn't contain can still be entered.
+  const typed = search.trim()
+  const shown =
+    allowCustom && typed !== '' && !filtered.some((o) => o.value === typed)
+      ? [{ value: typed, label: `Use "${typed}"` } as SearchOption, ...filtered]
+      : filtered
 
   // Remember every label we've seen so the trigger keeps showing the chosen
   // option's name even after a later server search drops it from `options`

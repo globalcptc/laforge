@@ -208,9 +208,13 @@ rest are discovered for you or have sane defaults.
 
 - **Images** — map each LaForge `os` name (as your content uses it, e.g.
   `ubuntu22`, `windows2022`) to an **AMI**. *At least one required.* **Autocompleted**:
-  your own AMIs are listed; type a name (e.g. "ubuntu", "Windows Server 2022") to
-  search Amazon/Canonical/Microsoft catalogs for the chosen region. For compose
-  containers, also map `compose-host` to a Docker-capable Linux AMI.
+  your own AMIs are listed; type a name (e.g. "ubuntu", "Windows Server 2022",
+  "kali") to search the Amazon/Canonical/Microsoft **and AWS Marketplace** catalogs
+  for the chosen region. If search doesn't surface the exact image you want, **paste
+  its AMI id** and pick "Use …" — the field accepts any id. (A Marketplace AMI may
+  require accepting its terms / subscribing in the account before it will launch;
+  do that in the AWS console once.) For compose containers, also map `compose-host`
+  to a Docker-capable Linux AMI.
 
 ### Sizes step
 

@@ -24,6 +24,14 @@ import (
 // images -- the catalogs a lab actually launches from.
 var amiSearchOwners = []string{"self", "amazon", "099720109477", "801119661308"}
 
+// amiMarketplaceOwner is searched as a second, lower-priority pass: AWS
+// Marketplace AMIs (Kali, pfSense, appliance images, ...) live under the
+// aws-marketplace alias, not the official owners above. Searched only with a
+// name term and capped like everything else, so the catalog doesn't flood the
+// list. Note: launching a Marketplace AMI may require accepting its terms /
+// subscribing in the account first -- discovery lists it either way.
+const amiMarketplaceOwner = "aws-marketplace"
+
 // maxDiscoveredImages caps how many AMIs a single search returns, so a broad term
 // ("a") can't drag back thousands or spin pagination.
 const maxDiscoveredImages = 100
@@ -72,7 +80,10 @@ func (onboarder) Rediscover(ctx context.Context, conn builder.Connection) (*buil
 	d.InstanceTypes = discoverInstanceTypes(ctx, c, d)
 	appendImages(ctx, c, d, []string{"self"}, "")
 	if q := strings.TrimSpace(conn.ImageQuery); q != "" {
+		// Official owners first (they fill the cap before Marketplace noise),
+		// then a Marketplace pass for whatever slots remain.
 		appendImages(ctx, c, d, amiSearchOwners, q)
+		appendImages(ctx, c, d, []string{amiMarketplaceOwner}, q)
 	}
 	return d, nil
 }
@@ -100,6 +111,10 @@ func appendImages(ctx context.Context, c *ec2.Client, d *builder.Discovery, owne
 	in := &ec2.DescribeImagesInput{Owners: owners}
 	if nameQuery != "" {
 		in.Filters = []ec2types.Filter{{Name: awssdk.String("name"), Values: []string{"*" + nameQuery + "*"}}}
+		// Bound the server response -- a Marketplace name match can be enormous;
+		// we only keep up to maxDiscoveredImages anyway. (No MaxResults on the
+		// owned, unfiltered call: an account's own AMIs are few.)
+		in.MaxResults = awssdk.Int32(maxDiscoveredImages)
 	}
 	out, err := c.DescribeImages(ctx, in)
 	if err != nil {
