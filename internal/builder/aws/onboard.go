@@ -32,7 +32,11 @@ func (onboarder) Onboard(ctx context.Context, req builder.OnboardRequest) (*buil
 	if (req.AWSAccessKeyID == "") != (req.AWSSecretAccessKey == "") {
 		return nil, fmt.Errorf("%w: provide both an AWS access key id and secret access key, or neither (to use the runner's instance role)", builder.ErrInvalidOnboardRequest)
 	}
-	opts := []func(*awsconfig.LoadOptions) error{}
+	// STS (like every v2 client) needs a region to resolve its endpoint, even
+	// though GetCallerIdentity is global. The wizard picks the real region in a
+	// later step, so for this credential check just use AWS_REGION if the runner
+	// has one, else a default -- the identity answer is the same from any region.
+	opts := []func(*awsconfig.LoadOptions) error{awsconfig.WithRegion(envOr("AWS_REGION", "us-east-1"))}
 	if req.AWSAccessKeyID != "" {
 		opts = append(opts, awsconfig.WithCredentialsProvider(
 			credentials.NewStaticCredentialsProvider(req.AWSAccessKeyID, req.AWSSecretAccessKey, "")))

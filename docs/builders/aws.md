@@ -41,14 +41,14 @@ Everything below lives in **one AWS account**. Two pieces:
 
 ## Fastest path: the CloudFormation template
 
-[`laforge-iam.yaml`](laforge-iam.yaml) (next to this doc) provisions the runner
+[`aws-iam.yaml`](aws-iam.yaml) (next to this doc) provisions the runner
 IAM user (with the policy below) **and** the ECS task execution role in one stack.
 Deploy it, create an access key for the runner user, and paste the key + the role
 ARN (a stack Output) into the wizard:
 
 ```bash
 aws cloudformation deploy --stack-name laforge-iam \
-  --template-file docs/builders/laforge-iam.yaml \
+  --template-file docs/builders/aws-iam.yaml \
   --capabilities CAPABILITY_NAMED_IAM --region <your-region>
 aws cloudformation describe-stacks --stack-name laforge-iam \
   --query 'Stacks[0].Outputs' --region <your-region>
