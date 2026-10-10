@@ -72,13 +72,30 @@ func DispatchDueScheduledTasks(ctx context.Context, pool *pgxpool.Pool, resolve 
 	}
 
 	byBuild := make(map[string]buildContext)
+	failed := make(map[string]bool)
 	for _, st := range due {
 		buildKey := st.BuildID.String()
+		// A build whose context already failed to load this pass: don't
+		// re-attempt it per row (that would resolve content + mint a
+		// GitHub token once per due row), just back the row off with the
+		// rest.
+		if failed[buildKey] {
+			backoffScheduledTask(ctx, q, st)
+			continue
+		}
 		bc, ok := byBuild[buildKey]
 		if !ok {
 			bc, err = loadBuildContext(ctx, q, resolve, st.BuildID)
 			if err != nil {
 				log.Printf("scheduled_task %s: loading build %s: %v", st.ID, buildKey, err)
+				failed[buildKey] = true
+				// Push next_fire_at out so a persistently-unresolvable
+				// build (content gone, GitHub rate-limited, torn down
+				// before its rows were canceled) stops being retried every
+				// dispatch pass -- which is itself what was hammering the
+				// token mint endpoint. A transient failure simply fires a
+				// few minutes late on the next attempt.
+				backoffScheduledTask(ctx, q, st)
 				continue
 			}
 			byBuild[buildKey] = bc
@@ -88,6 +105,25 @@ func DispatchDueScheduledTasks(ctx context.Context, pool *pgxpool.Pool, resolve 
 		}
 	}
 	return nil
+}
+
+// scheduleBackoff is how far a due row's next_fire_at is pushed out when
+// its build won't load, so a broken or torn-down build's rows retry on
+// the order of minutes instead of every dispatch pass.
+const scheduleBackoff = 5 * time.Minute
+
+// backoffScheduledTask delays a row that couldn't be dispatched this pass
+// rather than leaving it due (next_fire_at in the past), where the
+// dispatch loop would re-select and re-attempt it every tick. The row
+// stays pending; it just fires later. Reuses RescheduleScheduledTask,
+// the same move a recurring row makes to its next real occurrence.
+func backoffScheduledTask(ctx context.Context, q *db.Queries, st db.ScheduledTask) {
+	if _, err := q.RescheduleScheduledTask(ctx, db.RescheduleScheduledTaskParams{
+		ID:         st.ID,
+		NextFireAt: pgtype.Timestamptz{Time: time.Now().Add(scheduleBackoff), Valid: true},
+	}); err != nil {
+		log.Printf("scheduled_task %s: backing off: %v", st.ID, err)
+	}
 }
 
 // buildContext is one build's own resolved checkout, content, and

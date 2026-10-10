@@ -61,6 +61,14 @@ UPDATE scheduled_task SET status = 'canceled', updated_at = now()
 WHERE id = $1 AND build_id = $2 AND status = 'pending'
 RETURNING *;
 
+-- name: CancelScheduledTasksForBuild :execrows
+-- Cancel every still-pending scheduled task for a build in one shot --
+-- called when the build is torn down or reaches a terminal status, so
+-- its `schedule:` rows stop coming due (and stop driving content
+-- resolves + GitHub token mints) forever after it is gone.
+UPDATE scheduled_task SET status = 'canceled', updated_at = now()
+WHERE build_id = $1 AND status = 'pending';
+
 -- name: ListScheduledTasksByBuild :many
 SELECT * FROM scheduled_task WHERE build_id = $1 ORDER BY created_at DESC;
 

@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -534,11 +533,7 @@ func (s *Server) repoGithubToken(ctx context.Context, sess authSession, repo db.
 	if err != nil {
 		return "", err
 	}
-	jwt, err := ghclient.GenerateAppJWT(s.AppID, s.AppPrivateKey, time.Now())
-	if err != nil {
-		return "", fmt.Errorf("signing app jwt: %w", err)
-	}
-	tok, err := s.GH.CreateInstallationToken(ctx, jwt, inst.InstallationID)
+	tok, err := s.GH.InstallationToken(ctx, s.AppID, s.AppPrivateKey, inst.InstallationID)
 	if err != nil {
 		return "", fmt.Errorf("minting installation token: %w", err)
 	}

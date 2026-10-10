@@ -47,6 +47,23 @@ func (q *Queries) CancelScheduledTask(ctx context.Context, arg CancelScheduledTa
 	return i, err
 }
 
+const cancelScheduledTasksForBuild = `-- name: CancelScheduledTasksForBuild :execrows
+UPDATE scheduled_task SET status = 'canceled', updated_at = now()
+WHERE build_id = $1 AND status = 'pending'
+`
+
+// Cancel every still-pending scheduled task for a build in one shot --
+// called when the build is torn down or reaches a terminal status, so
+// its `schedule:` rows stop coming due (and stop driving content
+// resolves + GitHub token mints) forever after it is gone.
+func (q *Queries) CancelScheduledTasksForBuild(ctx context.Context, buildID pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, cancelScheduledTasksForBuild, buildID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const createAdHocScheduledTask = `-- name: CreateAdHocScheduledTask :one
 INSERT INTO scheduled_task (build_id, source, target, when_expr, command, payload, anchor, fires_once, next_fire_at, created_by)
 VALUES ($1, 'adhoc', $2, $3, $4, $5, $6, $7, $8, $9)

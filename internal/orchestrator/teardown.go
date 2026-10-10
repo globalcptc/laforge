@@ -78,6 +78,13 @@ func Teardown(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID) erro
 		if _, err := q.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: buildID, Status: "torn_down"}); err != nil {
 			return fmt.Errorf("marking build torn down: %w", err)
 		}
+		// Stop this build's `schedule:` rows from coming due forever now
+		// that it's gone -- otherwise they stay pending and overdue, and
+		// the dispatch loop keeps resolving the torn-down build's content
+		// (and minting a GitHub token) every pass trying to fire them.
+		if _, err := q.CancelScheduledTasksForBuild(ctx, buildID); err != nil {
+			return fmt.Errorf("canceling scheduled tasks for torn-down build: %w", err)
+		}
 	}
 	return nil
 }

@@ -237,6 +237,17 @@ func finalizeBuildStatus(ctx context.Context, q *db.Queries, buildID pgtype.UUID
 		if _, err := q.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: buildID, Status: status}); err != nil {
 			return false, fmt.Errorf("marking build %s: %w", status, err)
 		}
+		// A failed build is terminal and will never run its schedule:
+		// rows, so cancel them -- otherwise they stay pending and overdue
+		// and the dispatch loop keeps resolving content + minting a GitHub
+		// token every pass. Deliberately NOT done for "finished": a
+		// finished build is the competition running, when schedule: and
+		// access: windows are exactly what should keep firing.
+		if status == "failed" {
+			if _, err := q.CancelScheduledTasksForBuild(ctx, buildID); err != nil {
+				return false, fmt.Errorf("canceling scheduled tasks for failed build: %w", err)
+			}
+		}
 	}
 	return terminal, nil
 }

@@ -115,3 +115,65 @@ func TestCreateInstallationToken(t *testing.T) {
 		t.Fatalf("ExpiresAt = %v, want %v", tok.ExpiresAt, want)
 	}
 }
+
+// TestInstallationTokenCachesUntilNearExpiry is the regression test for the
+// rate-limit incident: minting a fresh installation token on every call
+// tripped GitHub's secondary rate limit on the access_tokens endpoint.
+// InstallationToken must reuse a still-valid token (no second network
+// call) and only re-mint when the cached one is within the expiry margin.
+func TestInstallationTokenCachesUntilNearExpiry(t *testing.T) {
+	key := testRSAKey(t)
+	var mints int
+	// expiresAt is controlled per response so the test can drive the
+	// cache from "comfortably valid" to "inside the expiry margin".
+	expiresAt := time.Now().Add(time.Hour)
+	c := testClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mints++
+		json.NewEncoder(w).Encode(map[string]string{
+			"token":      "ghs_token",
+			"expires_at": expiresAt.UTC().Format(time.RFC3339),
+		})
+	}), nil)
+
+	// First call mints.
+	if _, err := c.InstallationToken(context.Background(), "app-id", key, 42); err != nil {
+		t.Fatalf("InstallationToken (first): %v", err)
+	}
+	// Several more calls while the token is comfortably valid must all be
+	// served from cache -- still exactly one mint.
+	for i := 0; i < 5; i++ {
+		if _, err := c.InstallationToken(context.Background(), "app-id", key, 42); err != nil {
+			t.Fatalf("InstallationToken (cached): %v", err)
+		}
+	}
+	if mints != 1 {
+		t.Fatalf("minted %d times, want 1 (the rest must be cache hits)", mints)
+	}
+
+	// A different installation is a separate cache entry -- it mints.
+	if _, err := c.InstallationToken(context.Background(), "app-id", key, 99); err != nil {
+		t.Fatalf("InstallationToken (other installation): %v", err)
+	}
+	if mints != 2 {
+		t.Fatalf("minted %d times, want 2 (one per installation)", mints)
+	}
+
+	// A token that comes back already inside the expiry margin must never
+	// be treated as a usable cache entry: every call for installation 7
+	// re-mints, because the token it just got is too close to expiry to
+	// reuse. (This is what guarantees correctness near the boundary -- it
+	// trades an extra mint for never handing out a token about to lapse.)
+	expiresAt = time.Now().Add(installationTokenExpiryMargin / 2)
+	if _, err := c.InstallationToken(context.Background(), "app-id", key, 7); err != nil {
+		t.Fatalf("InstallationToken (near-expiry mint): %v", err)
+	}
+	if mints != 3 {
+		t.Fatalf("minted %d times, want 3", mints)
+	}
+	if _, err := c.InstallationToken(context.Background(), "app-id", key, 7); err != nil {
+		t.Fatalf("InstallationToken (near-expiry re-mint): %v", err)
+	}
+	if mints != 4 {
+		t.Fatalf("minted %d times, want 4 (a near-expiry token is never cached as usable)", mints)
+	}
+}

@@ -240,11 +240,11 @@ func (c *Cache) resolveToken(ctx context.Context, repo db.Repository) (string, e
 		inst, err := c.Q.GetRepositoryInstallation(ctx, repo.ID)
 		switch {
 		case err == nil:
-			jwt, err := ghclient.GenerateAppJWT(c.AppID, c.AppPrivateKey, time.Now())
-			if err != nil {
-				return "", fmt.Errorf("signing app jwt: %w", err)
-			}
-			tok, err := c.GH.CreateInstallationToken(ctx, jwt, inst.InstallationID)
+			// Cached per installation (ghclient), so this hot path --
+			// called once per build on every orchestrator reconcile and
+			// scheduled-task dispatch pass -- mints at most once per
+			// installation per ~hour instead of every pass.
+			tok, err := c.GH.InstallationToken(ctx, c.AppID, c.AppPrivateKey, inst.InstallationID)
 			if err != nil {
 				return "", fmt.Errorf("minting installation token: %w", err)
 			}

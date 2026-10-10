@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -39,6 +40,12 @@ type Client struct {
 	// sleep is used only between device-flow polls, pluggable so tests
 	// don't burn real wall-clock time waiting out GitHub's interval.
 	sleep func(time.Duration)
+
+	// tokenMu guards tokens, the per-installation installation-token
+	// cache (see InstallationToken in app.go). Zero value is ready to
+	// use; the map is created lazily on first mint.
+	tokenMu sync.Mutex
+	tokens  map[int64]cachedInstallationToken
 }
 
 func New() *Client {

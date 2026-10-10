@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -358,11 +357,7 @@ func authenticatedCloneURL(cloneURL, token string) (string, error) {
 
 func (s *Server) resolveCloneURL(ctx context.Context, owner, repoName string, installationID int64) (string, error) {
 	if installationID != 0 && s.AppID != "" && s.AppPrivateKey != nil {
-		jwt, err := ghclient.GenerateAppJWT(s.AppID, s.AppPrivateKey, time.Now())
-		if err != nil {
-			return "", fmt.Errorf("signing app jwt: %w", err)
-		}
-		tok, err := s.GH.CreateInstallationToken(ctx, jwt, installationID)
+		tok, err := s.GH.InstallationToken(ctx, s.AppID, s.AppPrivateKey, installationID)
 		if err != nil {
 			return "", fmt.Errorf("minting installation token: %w", err)
 		}
@@ -399,11 +394,7 @@ func (s *Server) listAllRepositoriesForInstallation(ctx context.Context, install
 	if s.AppID == "" || s.AppPrivateKey == nil {
 		return nil, fmt.Errorf("cannot list an \"all repositories\" installation's real repositories: no GitHub App configured")
 	}
-	jwt, err := ghclient.GenerateAppJWT(s.AppID, s.AppPrivateKey, time.Now())
-	if err != nil {
-		return nil, fmt.Errorf("signing app jwt: %w", err)
-	}
-	tok, err := s.GH.CreateInstallationToken(ctx, jwt, installationID)
+	tok, err := s.GH.InstallationToken(ctx, s.AppID, s.AppPrivateKey, installationID)
 	if err != nil {
 		return nil, fmt.Errorf("minting installation token: %w", err)
 	}
