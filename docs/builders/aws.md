@@ -100,7 +100,8 @@ want least privilege (see the note after the policy).
       "Action": [
         "ecs:RegisterTaskDefinition", "ecs:DeregisterTaskDefinition", "ecs:ListTaskDefinitions",
         "ecs:RunTask", "ecs:StopTask",
-        "ecs:DescribeClusters", "ecs:CreateCluster", "ecs:TagResource"
+        "ecs:DescribeClusters", "ecs:CreateCluster", "ecs:TagResource",
+        "logs:CreateLogGroup"
       ],
       "Resource": "*",
       "Condition": { "StringEquals": { "aws:RequestedRegion": "us-east-1" } }

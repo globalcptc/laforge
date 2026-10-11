@@ -80,3 +80,9 @@ func isMalformed(err error) bool {
 func isECSClusterNotFound(err error) bool {
 	return apiErrorCode(err) == "ClusterNotFoundException"
 }
+
+// isLogGroupExists is CloudWatch Logs' "that group already exists", so
+// ensure-creating a log group on a later deploy is a no-op success.
+func isLogGroupExists(err error) bool {
+	return apiErrorCode(err) == "ResourceAlreadyExistsException"
+}

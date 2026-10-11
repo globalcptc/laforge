@@ -37,6 +37,7 @@ var requiredActions = []string{
 	"ec2:DescribeRegions", "ec2:DescribeInstanceTypes", "ec2:DescribeImages",
 	"ecs:RegisterTaskDefinition", "ecs:DeregisterTaskDefinition", "ecs:ListTaskDefinitions",
 	"ecs:RunTask", "ecs:StopTask", "ecs:DescribeClusters", "ecs:CreateCluster", "ecs:TagResource",
+	"logs:CreateLogGroup", // ensure the Fargate awslogs group exists
 }
 
 // checkPermissions simulates requiredActions against the caller and returns a

@@ -102,6 +102,7 @@ Resources:
               - ecs:DescribeClusters
               - ecs:CreateCluster
               - ecs:TagResource
+              - logs:CreateLogGroup  # ensure the Fargate awslogs group exists
             Resource: '*'
             Condition:
               StringEquals:

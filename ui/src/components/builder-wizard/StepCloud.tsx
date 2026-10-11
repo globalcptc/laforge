@@ -277,8 +277,8 @@ export function StepCloudRegion({
           <Field label="Task Execution Role ARN" hint="IAM role Fargate assumes to pull images and ship logs. Required for containers. It's the ExecutionRoleArn output of the aws-iam.yaml CloudFormation stack — paste it verbatim.">
             <Input value={aws.execution_role_arn ?? ''} onChange={(e) => setAws({ execution_role_arn: e.target.value })} placeholder="arn:aws:iam::123456789012:role/laforge-runner-ecs-exec" className="font-mono" />
           </Field>
-          <Field label="CloudWatch Log Group" hint="Where Fargate task logs go when an environment sets no container_logs of its own. Optional — leave blank for none.">
-            <Input value={aws.log_group ?? ''} onChange={(e) => setAws({ log_group: e.target.value })} placeholder="/laforge/containers (optional)" className="font-mono" />
+          <Field label="CloudWatch Log Group" hint="Where Fargate task logs go when an environment sets no container_logs of its own. LaForge ensure-creates it; leave blank to use the default (/laforge/fargate) so a crashing container is never a black box.">
+            <Input value={aws.log_group ?? ''} onChange={(e) => setAws({ log_group: e.target.value })} placeholder="/laforge/fargate (default)" className="font-mono" />
           </Field>
           <Field label="Agent Init Image" hint="Small public image a Fargate container runs once to download the agent. Default alpine:3.20 — change only if you can't pull from Docker Hub.">
             <Input value={aws.agent_init_image ?? ''} onChange={(e) => setAws({ agent_init_image: e.target.value })} placeholder="alpine:3.20" className="font-mono" />

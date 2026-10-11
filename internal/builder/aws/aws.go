@@ -43,6 +43,7 @@ import (
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
@@ -110,9 +111,10 @@ type Config struct {
 
 // Builder is the EC2/VPC + ECS/Fargate builder.
 type Builder struct {
-	ec2 *ec2.Client
-	ecs *ecs.Client
-	cfg Config
+	ec2  *ec2.Client
+	ecs  *ecs.Client
+	logs *cloudwatchlogs.Client
+	cfg  Config
 }
 
 // New constructs the builder from the ambient AWS credential/region chain,
@@ -147,12 +149,21 @@ func New(ctx context.Context, cfg Config) (*Builder, error) {
 		cfg.ExecutionRoleARN = os.Getenv("AWS_ECS_EXECUTION_ROLE_ARN")
 	}
 	if cfg.LogGroup == "" {
-		cfg.LogGroup = os.Getenv("AWS_ECS_LOG_GROUP")
+		// Always capture Fargate container output somewhere -- a container that
+		// exits should never be a black box ("essential container exited, exit
+		// code 1" with no logs). The builder ensure-creates this group; an
+		// environment's own container_logs still overrides per container.
+		cfg.LogGroup = envOr("AWS_ECS_LOG_GROUP", "/laforge/fargate")
 	}
 	if cfg.AgentInitImage == "" {
 		cfg.AgentInitImage = envOr("AWS_ECS_AGENT_INIT_IMAGE", "alpine:3.20")
 	}
-	return &Builder{ec2: ec2.NewFromConfig(awsCfg), ecs: ecs.NewFromConfig(awsCfg), cfg: cfg}, nil
+	return &Builder{
+		ec2:  ec2.NewFromConfig(awsCfg),
+		ecs:  ecs.NewFromConfig(awsCfg),
+		logs: cloudwatchlogs.NewFromConfig(awsCfg),
+		cfg:  cfg,
+	}, nil
 }
 
 // ConfigFromInput merges a stored/wizard ConfigInput with the image/size maps

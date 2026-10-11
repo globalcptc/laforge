@@ -31,6 +31,7 @@ import (
 	"strings"
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 
@@ -66,6 +67,15 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 	if err := b.ensureCluster(ctx); err != nil {
 		return "", err
 	}
+	// Ensure the CloudWatch log group exists so the awslogs driver can write --
+	// otherwise Fargate fails the container at startup (or, with no group
+	// configured at all, a crash leaves no logs). Only for the default awslogs
+	// path; an environment's own container_logs driver manages its own sink.
+	if spec.LogDriver == "" {
+		if err := b.ensureLogGroup(ctx); err != nil {
+			return "", err
+		}
+	}
 	subnetID, vpcID, err := b.subnetForNetwork(ctx, spec.Network)
 	if err != nil {
 		return "", fmt.Errorf("resolving subnet for container %q: %w", spec.ExternalName, err)
@@ -80,7 +90,9 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 
 	// The command the agent supervises: content Command if set, else the image's
 	// own entrypoint (Fargate doesn't expose it, so fetch it from the registry).
-	supervise := strings.Join(spec.Command, " ")
+	// Shell-quote each argv element -- the agent runs this via `sh -c`, so a
+	// space-join would re-split a multi-word arg (e.g. nginx's "daemon off;").
+	supervise := imagemeta.ShellJoin(spec.Command)
 	if supervise == "" && len(spec.AgentDownloadURL) > 0 {
 		ep, err := imagemeta.Entrypoint(ctx, spec.Image)
 		if err != nil {
@@ -211,6 +223,26 @@ func (b *Builder) ensureCluster(ctx context.Context) error {
 		Tags:        []ecstypes.Tag{{Key: awssdk.String(laforgeManagedTag), Value: awssdk.String("true")}},
 	}); err != nil {
 		return fmt.Errorf("ensuring ECS cluster %q exists: %w", name, err)
+	}
+	return nil
+}
+
+// ensureLogGroup makes sure the awslogs target log group exists, creating it if
+// absent. The ECS task execution role (AWS-managed AmazonECSTaskExecutionRolePolicy)
+// can write streams + events but NOT create the group, and the awslogs driver
+// won't create a missing group on its own -- so without this a container either
+// fails to start or (with no group configured) crashes with no captured output.
+// Idempotent: a ResourceAlreadyExists is success. No-op if logging isn't awslogs.
+func (b *Builder) ensureLogGroup(ctx context.Context) error {
+	if b.logs == nil || b.cfg.LogGroup == "" {
+		return nil
+	}
+	_, err := b.logs.CreateLogGroup(ctx, &cloudwatchlogs.CreateLogGroupInput{
+		LogGroupName: awssdk.String(b.cfg.LogGroup),
+		Tags:         map[string]string{laforgeManagedTag: "true"},
+	})
+	if err != nil && !isLogGroupExists(err) {
+		return fmt.Errorf("ensuring CloudWatch log group %q exists: %w", b.cfg.LogGroup, err)
 	}
 	return nil
 }

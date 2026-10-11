@@ -20,3 +20,20 @@ func TestParseDockerRef(t *testing.T) {
 		}
 	}
 }
+
+func TestShellJoin(t *testing.T) {
+	// The nginx regression: ["nginx","-g","daemon off;"] must survive `sh -c`
+	// re-splitting as three args, not split "daemon off;" into two.
+	got := ShellJoin([]string{"/docker-entrypoint.sh", "nginx", "-g", "daemon off;"})
+	want := `'/docker-entrypoint.sh' 'nginx' '-g' 'daemon off;'`
+	if got != want {
+		t.Errorf("ShellJoin nginx = %q, want %q", got, want)
+	}
+	// An embedded single quote is escaped so the quoting can't be broken out of.
+	if got := ShellJoin([]string{"echo", "it's"}); got != `'echo' 'it'\''s'` {
+		t.Errorf("ShellJoin quote-escape = %q", got)
+	}
+	if got := ShellJoin(nil); got != "" {
+		t.Errorf("ShellJoin(nil) = %q, want empty", got)
+	}
+}
