@@ -447,6 +447,65 @@ func (q *Queries) CreateScript(ctx context.Context, arg CreateScriptParams) (Scr
 	return i, err
 }
 
+const deleteContainersByRevision = `-- name: DeleteContainersByRevision :exec
+DELETE FROM container WHERE content_revision_id = $1
+`
+
+func (q *Queries) DeleteContainersByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteContainersByRevision, contentRevisionID)
+	return err
+}
+
+const deleteEnvironmentsByRevision = `-- name: DeleteEnvironmentsByRevision :exec
+DELETE FROM environment WHERE content_revision_id = $1
+`
+
+func (q *Queries) DeleteEnvironmentsByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteEnvironmentsByRevision, contentRevisionID)
+	return err
+}
+
+const deleteHostsByRevision = `-- name: DeleteHostsByRevision :exec
+DELETE FROM host WHERE content_revision_id = $1
+`
+
+func (q *Queries) DeleteHostsByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteHostsByRevision, contentRevisionID)
+	return err
+}
+
+const deleteNetworksByRevision = `-- name: DeleteNetworksByRevision :exec
+
+DELETE FROM network WHERE content_revision_id = $1
+`
+
+// The six persisted-content child tables of a content_revision, deleted by
+// revision so re-validation (ingest.ValidateAndStore) can rebuild them to match
+// a changed verdict. person and placement are not listed: they cascade from
+// people_source and environment respectively (ON DELETE CASCADE).
+func (q *Queries) DeleteNetworksByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteNetworksByRevision, contentRevisionID)
+	return err
+}
+
+const deletePeopleSourcesByRevision = `-- name: DeletePeopleSourcesByRevision :exec
+DELETE FROM people_source WHERE content_revision_id = $1
+`
+
+func (q *Queries) DeletePeopleSourcesByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deletePeopleSourcesByRevision, contentRevisionID)
+	return err
+}
+
+const deleteScriptsByRevision = `-- name: DeleteScriptsByRevision :exec
+DELETE FROM script WHERE content_revision_id = $1
+`
+
+func (q *Queries) DeleteScriptsByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteScriptsByRevision, contentRevisionID)
+	return err
+}
+
 const getContainerByRevisionAndName = `-- name: GetContainerByRevisionAndName :one
 SELECT id, content_revision_id, path, name, image, size, ports, depends_on, steps, vars, tags, findings, people, extends, schedule FROM container WHERE content_revision_id = $1 AND name = $2
 `

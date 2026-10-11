@@ -54,6 +54,7 @@ const (
 	laforgeExternalNameTag = "laforge:external-name"
 	laforgeExternalRefTag  = "laforge:external-ref"
 	laforgeTeamTag         = "laforge:team"
+	laforgeBuildTag        = "laforge:build" // the build uuid, so a team's VPC is scoped per-build, not shared by team number across builds
 	laforgeManagedTag      = "laforge:managed" // "true" on everything we create, for Inspect's filter
 
 	// NACL rule numbers. A custom NACL is deny-by-default, so every team subnet
@@ -218,7 +219,29 @@ func teamFilter(team string) ec2types.Filter {
 	return filter("tag:"+laforgeTeamTag, team)
 }
 
+func buildFilter(build string) ec2types.Filter {
+	return filter("tag:"+laforgeBuildTag, build)
+}
+
 var managedFilter = filter("tag:"+laforgeManagedTag, "true")
+
+// buildFromExternalName extracts the build uuid from a deterministic
+// ExternalName ("build-<uuid>-team-<n>-<kind>-<name>" -- see
+// internal/runner.deterministicExternalName). Returns "" when name isn't in that
+// form (so the caller falls back to a team-only scope, e.g. a pre-build-scoping
+// legacy resource during teardown).
+func buildFromExternalName(name string) string {
+	const prefix = "build-"
+	if !strings.HasPrefix(name, prefix) {
+		return ""
+	}
+	rest := name[len(prefix):]
+	i := strings.Index(rest, "-team-")
+	if i <= 0 {
+		return ""
+	}
+	return rest[:i]
+}
 
 // --- team VPC + egress + NACL (the per-team scaffolding) ------------------
 
@@ -283,8 +306,8 @@ func validateVPCCIDR(cidr string) error {
 // with no secondary CIDR association. A describe-before-create guard plus a
 // lowest-id dedup makes a concurrent create (networks deploy in parallel)
 // converge on one VPC.
-func (b *Builder) ensureTeamVPC(ctx context.Context, team, seedCIDR, vpcCIDR string) (string, error) {
-	if id, err := b.findTeamVPC(ctx, team); err != nil {
+func (b *Builder) ensureTeamVPC(ctx context.Context, build, team, seedCIDR, vpcCIDR string) (string, error) {
+	if id, err := b.findTeamVPC(ctx, build, team); err != nil {
 		return "", err
 	} else if id != "" {
 		return id, nil
@@ -303,9 +326,15 @@ func (b *Builder) ensureTeamVPC(ctx context.Context, team, seedCIDR, vpcCIDR str
 		}
 		vpcCIDR = inferred
 	}
+	// Tag the VPC with the build uuid so it's scoped per-build: two builds that
+	// happen to share a team number must NOT share (or tear down) one VPC.
+	vpcTags := b.tagSpec(ec2types.ResourceTypeVpc, "team-"+team+"-vpc", team, "laforge-team-"+team)
+	if build != "" {
+		vpcTags.Tags = append(vpcTags.Tags, tag(laforgeBuildTag, build))
+	}
 	out, err := b.ec2.CreateVpc(ctx, &ec2.CreateVpcInput{
 		CidrBlock:         awssdk.String(vpcCIDR),
-		TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeVpc, "team-"+team+"-vpc", team, "laforge-team-"+team)},
+		TagSpecifications: []ec2types.TagSpecification{vpcTags},
 	})
 	if err != nil {
 		return "", fmt.Errorf("creating VPC for team %s: %w", team, err)
@@ -313,7 +342,7 @@ func (b *Builder) ensureTeamVPC(ctx context.Context, team, seedCIDR, vpcCIDR str
 	created := awssdk.ToString(out.Vpc.VpcId)
 	// Dedup a parallel-create race: adopt the lowest id, best-effort delete the
 	// freshly-created extras (they have no subnets yet).
-	id, err := b.findTeamVPC(ctx, team)
+	id, err := b.findTeamVPC(ctx, build, team)
 	if err != nil || id == "" {
 		return created, nil // describe hiccup -- use what we just made
 	}
@@ -323,8 +352,16 @@ func (b *Builder) ensureTeamVPC(ctx context.Context, team, seedCIDR, vpcCIDR str
 	return id, nil
 }
 
-func (b *Builder) findTeamVPC(ctx context.Context, team string) (string, error) {
-	out, err := b.ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{Filters: []ec2types.Filter{teamFilter(team), managedFilter}})
+// findTeamVPC returns the managed VPC for a build's team. When build is set it
+// scopes to that build's own VPC (the normal case); when build is "" it falls
+// back to team-only, which only matters during teardown of a legacy VPC created
+// before VPCs were build-scoped.
+func (b *Builder) findTeamVPC(ctx context.Context, build, team string) (string, error) {
+	filters := []ec2types.Filter{teamFilter(team), managedFilter}
+	if build != "" {
+		filters = append(filters, buildFilter(build))
+	}
+	out, err := b.ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{Filters: filters})
 	if err != nil {
 		return "", fmt.Errorf("looking up VPC for team %s: %w", team, err)
 	}
@@ -434,7 +471,7 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	if spec.CIDR == "" {
 		return "", fmt.Errorf("network %q has no CIDR -- AWS requires one for the subnet", spec.ExternalName)
 	}
-	vpcID, err := b.ensureTeamVPC(ctx, spec.Team, spec.CIDR, spec.VPCCIDR)
+	vpcID, err := b.ensureTeamVPC(ctx, buildFromExternalName(spec.ExternalName), spec.Team, spec.CIDR, spec.VPCCIDR)
 	if err != nil {
 		return "", err
 	}
@@ -585,10 +622,17 @@ func (b *Builder) DestroyNetwork(ctx context.Context, team, externalRef string) 
 	// Even with no subnet of our own, the team VPC may still be out there (a
 	// partial deploy that created the VPC then failed), so find it by tag and
 	// tear it down once no managed subnets remain -- that's what reclaims an
-	// orphaned VPC instead of leaking it.
+	// orphaned VPC instead of leaking it. Scope to this build when the ref still
+	// carries its ExternalName; fall back to team-only to also reclaim a legacy
+	// VPC created before VPCs were build-scoped.
 	if vpcID == "" {
-		if id, err := b.findTeamVPC(ctx, team); err == nil {
+		build := buildFromExternalName(externalRef)
+		if id, err := b.findTeamVPC(ctx, build, team); err == nil && id != "" {
 			vpcID = id
+		} else if build != "" {
+			if id, err := b.findTeamVPC(ctx, "", team); err == nil {
+				vpcID = id
+			}
 		}
 	}
 	if vpcID == "" {

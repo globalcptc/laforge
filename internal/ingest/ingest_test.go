@@ -228,3 +228,76 @@ func TestValidateAndStoreOnInvalidContent(t *testing.T) {
 		t.Fatalf("ListEnvironmentsByRevision = %+v, want none persisted for invalid content", envs)
 	}
 }
+
+// TestValidateAndStoreRevalidatesStaleVerdict proves a commit's STORED verdict
+// is refreshed when the validator changes under it. A revision recorded invalid
+// (as an older, stricter schema would have) is re-validated on the next ingest
+// and, because the content now passes, flipped to valid with its content
+// re-persisted in place -- so deploying a schema fix actually lets a
+// previously-rejected commit be adopted, instead of serving the stale "invalid"
+// forever (the exact failure that stranded an environment-cidr commit in prod).
+func TestValidateAndStoreRevalidatesStaleVerdict(t *testing.T) {
+	q, pool, closeDB := openTestQueries(t)
+	defer closeDB()
+
+	cloneURL, sha := pushDirAsRepo(t, "../../examples/lm-test")
+	repo := createTestRepository(t, q, "lm-test-revalidate")
+
+	dir, _, cleanup, err := FetchCommit(context.Background(), cloneURL, "main")
+	if err != nil {
+		t.Fatalf("FetchCommit: %v", err)
+	}
+	defer cleanup()
+
+	// First ingest: the real example repo is valid, so children are persisted.
+	first, err := ValidateAndStore(context.Background(), pool, repo.ID, sha, "refs/heads/main", dir)
+	if err != nil {
+		t.Fatalf("first ValidateAndStore: %v", err)
+	}
+	if !first.Valid {
+		t.Fatalf("first ingest Valid=false, want true; issues: %+v", first.Issues)
+	}
+
+	// Simulate the state an OLDER, stricter validator would have left: the same
+	// commit recorded invalid, its persisted content cleared (persistContent runs
+	// only for valid revisions).
+	if _, err := q.SetContentRevisionValidation(context.Background(), db.SetContentRevisionValidationParams{
+		ID: first.Revision.ID, Valid: false,
+		ValidationErrors: []byte(`[{"file":"x.yaml","line":1,"message":"stale: additionalProperties not allowed"}]`),
+	}); err != nil {
+		t.Fatalf("seeding stale verdict: %v", err)
+	}
+	if err := clearPersistedContent(context.Background(), q, first.Revision.ID); err != nil {
+		t.Fatalf("clearing children: %v", err)
+	}
+
+	// Re-ingest the SAME sha. The fresh validation passes, disagreeing with the
+	// stored invalid verdict, so it must re-record valid and re-persist content --
+	// in place, keeping the same revision id other rows may reference.
+	second, err := ValidateAndStore(context.Background(), pool, repo.ID, sha, "refs/heads/main", dir)
+	if err != nil {
+		t.Fatalf("second ValidateAndStore: %v", err)
+	}
+	if !second.Valid {
+		t.Fatalf("re-validate Valid=false, want true (stale verdict not refreshed); issues: %+v", second.Issues)
+	}
+	if second.Revision.ID != first.Revision.ID {
+		t.Fatalf("re-validate created a new revision (%v) instead of updating in place (%v)", second.Revision.ID, first.Revision.ID)
+	}
+
+	// Children rebuilt, and the stored row now reflects valid with no errors.
+	envs, err := q.ListEnvironmentsByRevision(context.Background(), first.Revision.ID)
+	if err != nil {
+		t.Fatalf("ListEnvironmentsByRevision: %v", err)
+	}
+	if len(envs) != 1 || envs[0].Name != "lm-test" {
+		t.Fatalf("children not re-persisted: envs=%+v", envs)
+	}
+	got, err := q.GetContentRevision(context.Background(), first.Revision.ID)
+	if err != nil {
+		t.Fatalf("GetContentRevision: %v", err)
+	}
+	if !got.Valid {
+		t.Fatal("stored valid=false after revalidate, want true")
+	}
+}

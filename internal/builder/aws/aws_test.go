@@ -125,11 +125,11 @@ func TestToImageInfo(t *testing.T) {
 
 func TestVPCCIDRFor(t *testing.T) {
 	cases := map[string]string{
-		"10.0.1.0/24":   "10.0.0.0/16",
-		"10.0.2.0/24":   "10.0.0.0/16",
-		"10.0.3.0/24":   "10.0.0.0/16",
-		"172.16.5.0/24": "172.16.0.0/16",
-		"10.5.0.0/16":   "10.5.0.0/16",
+		"10.0.1.0/24":       "10.0.0.0/16",
+		"10.0.2.0/24":       "10.0.0.0/16",
+		"10.0.3.0/24":       "10.0.0.0/16",
+		"172.16.5.0/24":     "172.16.0.0/16",
+		"10.5.0.0/16":       "10.5.0.0/16",
 		"192.168.50.128/25": "192.168.0.0/16",
 	}
 	for in, want := range cases {
@@ -144,6 +144,22 @@ func TestVPCCIDRFor(t *testing.T) {
 	}
 	if _, err := vpcCIDRFor("not-a-cidr"); err == nil {
 		t.Error("vpcCIDRFor(garbage) should error")
+	}
+}
+
+func TestBuildFromExternalName(t *testing.T) {
+	cases := map[string]string{
+		"build-b81339b3-7d8a-40f3-b5f8-9ff8bf2b2f7e-team-1-network-lab": "b81339b3-7d8a-40f3-b5f8-9ff8bf2b2f7e",
+		"build-abc-team-10-host-win01":                                  "abc",
+		"lftest-net-a":                                                  "", // not a deterministic build name
+		"build-team-1-network-lab":                                      "", // empty uuid segment
+		"":                                                              "",
+		"team-1-vpc":                                                    "",
+	}
+	for in, want := range cases {
+		if got := buildFromExternalName(in); got != want {
+			t.Errorf("buildFromExternalName(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 

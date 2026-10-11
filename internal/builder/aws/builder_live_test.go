@@ -76,7 +76,7 @@ func TestLiveNetworkLifecycle(t *testing.T) {
 
 	// The scaffolding exists: a managed VPC for the team, an attached IGW, a
 	// default route to it, and a custom NACL.
-	vpcID, err := b.findTeamVPC(ctx, liveTeam)
+	vpcID, err := b.findTeamVPC(ctx, buildFromExternalName(spec.ExternalName), liveTeam)
 	if err != nil || vpcID == "" {
 		t.Fatalf("team VPC not found: %q, %v", vpcID, err)
 	}
