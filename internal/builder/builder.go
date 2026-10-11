@@ -276,6 +276,12 @@ type Metric struct {
 const (
 	MetricTimeseries = "timeseries"
 	MetricGauge      = "gauge"
+	// MetricCounter is a monotonically-increasing total (e.g. cumulative network
+	// bytes). Value carries the raw counter; the API turns consecutive samples
+	// into a per-second rate for the chart, so the builder never has to compute a
+	// rate itself (and a single live sample simply yields no rate yet). Unit is
+	// the DISPLAY unit of that rate, e.g. "bytes/s".
+	MetricCounter = "counter"
 )
 
 // Stats is a builder's current reading of its own backend health -- a flat list

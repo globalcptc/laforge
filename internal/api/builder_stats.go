@@ -113,9 +113,15 @@ func (s *Server) liveBuilderStats(ctx context.Context, row db.BuilderConfig) (bu
 			resp.Gauges = append(resp.Gauges, metricGauge{Key: m.Key, Label: m.Label, Node: m.Node, Unit: m.Unit, Value: m.Value, Max: max})
 			continue
 		}
+		// A counter's rate needs two samples; a single live reading has none yet,
+		// so show the block at 0 rather than plotting the raw cumulative total.
+		v := m.Value
+		if m.Kind == builder.MetricCounter {
+			v = 0
+		}
 		resp.Series = append(resp.Series, metricSeries{
 			Key: m.Key, Label: m.Label, Node: m.Node, Unit: m.Unit,
-			Points: []metricPoint{{T: now, V: m.Value}},
+			Points: []metricPoint{{T: now, V: v}},
 		})
 	}
 	resp.Warnings = stats.Warnings
@@ -202,6 +208,7 @@ func groupBuilderStats(samples []db.ListBuilderMetricSamplesRow) builderStatsRes
 	resp := builderStatsResponse{Series: []metricSeries{}, Gauges: []metricGauge{}}
 	seriesIdx := map[gk]int{}
 	gaugeIdx := map[gk]int{}
+	counter := map[gk]bool{} // series built from monotonic counters -> rate at the end
 	for _, s := range samples {
 		k := gk{s.Key, s.Node}
 		if s.Kind == builder.MetricGauge {
@@ -214,6 +221,9 @@ func groupBuilderStats(samples []db.ListBuilderMetricSamplesRow) builderStatsRes
 			}
 			continue
 		}
+		if s.Kind == builder.MetricCounter {
+			counter[k] = true
+		}
 		i, ok := seriesIdx[k]
 		if !ok {
 			i = len(resp.Series)
@@ -222,5 +232,34 @@ func groupBuilderStats(samples []db.ListBuilderMetricSamplesRow) builderStatsRes
 		}
 		resp.Series[i].Points = append(resp.Series[i].Points, metricPoint{T: s.SampledAt.Time, V: s.Value})
 	}
+	// A counter is stored raw; the chart wants a per-second rate, so replace each
+	// counter series' cumulative points with deltas over their own interval.
+	for k := range counter {
+		i := seriesIdx[k]
+		resp.Series[i].Points = ratePoints(resp.Series[i].Points)
+	}
 	return resp
+}
+
+// ratePoints turns a monotonic counter's cumulative points into per-second rates
+// between consecutive samples. Fewer than two points yields none (no interval to
+// rate over yet); a negative delta (the counter reset, e.g. a daemon restart) is
+// clamped to 0 rather than drawn as a huge spike.
+func ratePoints(pts []metricPoint) []metricPoint {
+	if len(pts) < 2 {
+		return []metricPoint{}
+	}
+	out := make([]metricPoint, 0, len(pts)-1)
+	for i := 1; i < len(pts); i++ {
+		dt := pts[i].T.Sub(pts[i-1].T).Seconds()
+		if dt <= 0 {
+			continue
+		}
+		d := pts[i].V - pts[i-1].V
+		if d < 0 {
+			d = 0
+		}
+		out = append(out, metricPoint{T: pts[i].T, V: d / dt})
+	}
+	return out
 }

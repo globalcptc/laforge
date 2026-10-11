@@ -21,14 +21,14 @@ export function BuilderInfo() {
   const gauges = stats.data?.gauges ?? []
   const warnings = stats.data?.warnings ?? []
 
-  // Edit actions are brand-owned (violet) per the CPTC design system -- never the
-  // neutral/white `secondary` variant. See feedback-buttons-use-color.
-  const editBtn = (label: string, section: string) => (
+  // Each edit action gets its own color so the three read apart at a glance (and
+  // never the neutral/white `secondary` default). See feedback-buttons-use-color.
+  const editBtn = (label: string, section: string, variant: 'brand' | 'primary' | 'coral') => (
     <Link
       to="/admin/infrastructure/$name/edit"
       params={{ name }}
       search={{ section }}
-      className={buttonClass({ variant: 'brand', size: 'sm' })}
+      className={buttonClass({ variant, size: 'sm' })}
     >
       <Pencil size={13} /> {label}
     </Link>
@@ -41,9 +41,9 @@ export function BuilderInfo() {
         description="Backend health and capacity for this builder."
         actions={
           <>
-            {editBtn('Config', 'config')}
-            {editBtn('Images', 'images')}
-            {editBtn('Sizes', 'sizes')}
+            {editBtn('Config', 'config', 'brand')}
+            {editBtn('Images', 'images', 'primary')}
+            {editBtn('Sizes', 'sizes', 'coral')}
           </>
         }
       />

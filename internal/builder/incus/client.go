@@ -226,6 +226,39 @@ func (e *APIError) Busy() bool {
 func (c *Client) get(ctx context.Context, path string) (json.RawMessage, error) {
 	return c.do(ctx, http.MethodGet, path, nil)
 }
+// getRaw does a GET and returns the untouched response body, for endpoints that
+// don't speak the LXD JSON envelope -- notably /1.0/metrics, which is OpenMetrics
+// text. The normal do()/get() path would fail trying to json.Unmarshal it.
+func (c *Client) getRaw(ctx context.Context, path string) ([]byte, error) {
+	reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+	defer cancel()
+	u := c.BaseURL + path
+	if c.Project != "" {
+		sep := "?"
+		if strings.Contains(path, "?") {
+			sep = "&"
+		}
+		u += sep + "project=" + url.QueryEscape(c.Project)
+	}
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GET %s: %w", u, err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GET %s: HTTP %d", u, resp.StatusCode)
+	}
+	return data, nil
+}
+
 func (c *Client) post(ctx context.Context, path string, body interface{}) (json.RawMessage, error) {
 	return c.do(ctx, http.MethodPost, path, body)
 }

@@ -36,6 +36,31 @@ func ts(sec int) pgtype.Timestamptz {
 
 func f(v float64) *float64 { return &v }
 
+// TestGroupBuilderStatsCounterRate checks that a monotonic counter series is
+// turned into per-second rates between consecutive samples.
+func TestGroupBuilderStatsCounterRate(t *testing.T) {
+	samples := []db.ListBuilderMetricSamplesRow{
+		{Key: "net", Label: "Network", Node: "n1", Kind: builder.MetricCounter, Unit: "bytes/s", Value: 1000, SampledAt: ts(100)},
+		{Key: "net", Label: "Network", Node: "n1", Kind: builder.MetricCounter, Unit: "bytes/s", Value: 1600, SampledAt: ts(160)},
+		{Key: "net", Label: "Network", Node: "n1", Kind: builder.MetricCounter, Unit: "bytes/s", Value: 1300, SampledAt: ts(220)}, // reset -> 0
+	}
+	resp := groupBuilderStats(samples)
+	if len(resp.Series) != 1 {
+		t.Fatalf("series = %d, want 1", len(resp.Series))
+	}
+	pts := resp.Series[0].Points
+	// Two intervals: (1600-1000)/60 = 10 bytes/s; (1300-1600) clamped to 0.
+	if len(pts) != 2 {
+		t.Fatalf("points = %d, want 2", len(pts))
+	}
+	if pts[0].V != 10 {
+		t.Errorf("rate[0] = %v, want 10", pts[0].V)
+	}
+	if pts[1].V != 0 {
+		t.Errorf("rate[1] = %v, want 0 (counter reset clamped)", pts[1].V)
+	}
+}
+
 // TestGroupBuilderStats checks the fold: time-series accumulate points per
 // (key,node) in order; gauges keep the latest (samples are ascending).
 func TestGroupBuilderStats(t *testing.T) {

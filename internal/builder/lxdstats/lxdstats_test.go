@@ -50,7 +50,7 @@ func TestHostClustered(t *testing.T) {
 		"/1.0/storage-pools/default/state?target=node1": `{"space":{"used":20,"total":40}}`,
 		"/1.0/storage-pools/default/state?target=node2": `{"space":{"used":10,"total":40}}`,
 	})
-	stats, err := Host(context.Background(), get, "default")
+	stats, err := Host(context.Background(), get, nil, "default")
 	if err != nil {
 		t.Fatalf("Host: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestHostStandaloneOmitsCPU(t *testing.T) {
 		"/1.0/resources":                   `{"memory":{"used":25,"total":100}}`,
 		"/1.0/storage-pools/default/state": `{"space":{"used":10,"total":100}}`,
 	})
-	stats, err := Host(context.Background(), get, "default")
+	stats, err := Host(context.Background(), get, nil, "default")
 	if err != nil {
 		t.Fatalf("Host: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestHostDegradesOnPartialFailure(t *testing.T) {
 		"/1.0":                             `{"environment":{"server_name":"n","server_clustered":false}}`,
 		"/1.0/storage-pools/default/state": `{"space":{"used":30,"total":60}}`,
 	})
-	stats, err := Host(context.Background(), get, "default")
+	stats, err := Host(context.Background(), get, nil, "default")
 	if err != nil {
 		t.Fatalf("Host should not hard-fail on a sub-metric error: %v", err)
 	}
@@ -115,7 +115,55 @@ func TestHostDegradesOnPartialFailure(t *testing.T) {
 }
 
 func TestHostHardFailsWhenAPIDown(t *testing.T) {
-	if _, err := Host(context.Background(), fakeGet(map[string]string{}), "default"); err == nil {
+	if _, err := Host(context.Background(), fakeGet(map[string]string{}), nil, "default"); err == nil {
 		t.Error("want an error when the API probe fails")
+	}
+}
+
+// fakeGetRaw serves a canned /1.0/metrics body.
+func fakeGetRaw(body string) RawGetter {
+	return func(_ context.Context, _ string) ([]byte, error) { return []byte(body), nil }
+}
+
+func TestHostNetworkFromMetrics(t *testing.T) {
+	get := fakeGet(map[string]string{
+		"/1.0":                             `{"environment":{"server_name":"solo","server_clustered":false}}`,
+		"/1.0/resources":                   `{"memory":{"used":25,"total":100}}`,
+		"/1.0/storage-pools/default/state": `{"space":{"used":10,"total":100}}`,
+	})
+	metrics := `# HELP lxd_network_receive_bytes_total received
+# TYPE lxd_network_receive_bytes_total counter
+lxd_network_receive_bytes_total{device="eth0",name="c1",type="container"} 100
+lxd_network_transmit_bytes_total{device="eth0",name="c1",type="container"} 50
+lxd_network_receive_bytes_total{device="lo",name="c1",type="container"} 9999
+lxd_network_receive_bytes_total{device="eth0",name="v2",type="virtual-machine"} 400
+`
+	stats, err := Host(context.Background(), get, fakeGetRaw(metrics), "default")
+	if err != nil {
+		t.Fatalf("Host: %v", err)
+	}
+	// 100 + 50 + 400 = 550; loopback (9999) excluded.
+	m, ok := metricFor(stats, "net", "solo")
+	if !ok {
+		t.Fatal("missing net metric")
+	}
+	if m.Kind != builder.MetricCounter || m.Value != 550 {
+		t.Errorf("net = %+v, want counter value 550", m)
+	}
+}
+
+func TestSumNetworkBytes(t *testing.T) {
+	// Values after the label set, loopback skipped, a non-network line ignored,
+	// and an optional trailing timestamp tolerated.
+	body := `lxd_network_receive_bytes_total{device="eth0",name="a"} 10 1700000000000
+lxd_network_transmit_bytes_total{device="eth0",name="a"} 5
+lxd_cpu_seconds_total{name="a"} 123
+lxd_network_receive_bytes_total{device="lo",name="a"} 77`
+	total, ok := sumNetworkBytes([]byte(body))
+	if !ok || total != 15 {
+		t.Errorf("sumNetworkBytes = %v, %v; want 15, true", total, ok)
+	}
+	if _, ok := sumNetworkBytes([]byte("# no counters here\n")); ok {
+		t.Error("want ok=false when no network counters present")
 	}
 }

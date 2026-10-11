@@ -17,5 +17,5 @@ var _ builder.MetricProvider = (*Builder)(nil)
 
 // Stats implements builder.MetricProvider for a single Incus host.
 func (b *Builder) Stats(ctx context.Context) (builder.Stats, error) {
-	return lxdstats.Host(ctx, b.Client.get, b.Config.storagePoolOrDefault())
+	return lxdstats.Host(ctx, b.Client.get, b.Client.getRaw, b.Config.storagePoolOrDefault())
 }

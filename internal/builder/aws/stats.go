@@ -52,51 +52,54 @@ func (b *Builder) Stats(ctx context.Context) (builder.Stats, error) {
 			ids = append(ids, awssdk.ToString(i.InstanceId))
 		}
 	}
-	if len(ids) > 0 {
-		b.appendCloudWatch(ctx, ids, &stats)
-	}
+	b.appendCloudWatch(ctx, ids, &stats)
 	b.appendQuotaGauges(ctx, &stats)
 	return stats, nil
 }
 
 // appendCloudWatch batches one GetMetricData across all running instances (five
 // per-instance EC2 metrics) and appends the aggregated CPU/network/disk-ops
-// time-series. Best-effort: a CloudWatch failure warns and omits those charts.
+// time-series. The three charts are ALWAYS published -- at 0 when no instances
+// are running -- so an idle region still shows its CPU/Network/Disk blocks
+// (nothing-in-use is itself useful) rather than collapsing to just API latency.
+// Best-effort: a CloudWatch failure warns and the charts read 0 for this sample.
 func (b *Builder) appendCloudWatch(ctx context.Context, ids []string, stats *builder.Stats) {
-	end := time.Now()
-	queries := buildMetricQueries(ids)
 	latest := map[string]float64{}
-	var next *string
-	for {
-		out, err := b.cw.GetMetricData(ctx, &cloudwatch.GetMetricDataInput{
-			StartTime:         awssdk.Time(end.Add(-15 * time.Minute)),
-			EndTime:           awssdk.Time(end),
-			MetricDataQueries: queries,
-			NextToken:         next,
-		})
-		if err != nil {
-			stats.Warnings = append(stats.Warnings, "cloudwatch: "+err.Error())
-			return
-		}
-		for _, r := range out.MetricDataResults {
-			if len(r.Values) > 0 { // results are newest-first (ScanBy default)
-				if _, seen := latest[awssdk.ToString(r.Id)]; !seen {
-					latest[awssdk.ToString(r.Id)] = r.Values[0]
+	if len(ids) > 0 {
+		end := time.Now()
+		queries := buildMetricQueries(ids)
+		var next *string
+		for {
+			out, err := b.cw.GetMetricData(ctx, &cloudwatch.GetMetricDataInput{
+				StartTime:         awssdk.Time(end.Add(-15 * time.Minute)),
+				EndTime:           awssdk.Time(end),
+				MetricDataQueries: queries,
+				NextToken:         next,
+			})
+			if err != nil {
+				stats.Warnings = append(stats.Warnings, "cloudwatch: "+err.Error())
+				break
+			}
+			for _, r := range out.MetricDataResults {
+				if len(r.Values) > 0 { // results are newest-first (ScanBy default)
+					if _, seen := latest[awssdk.ToString(r.Id)]; !seen {
+						latest[awssdk.ToString(r.Id)] = r.Values[0]
+					}
 				}
 			}
+			if out.NextToken == nil {
+				break
+			}
+			next = out.NextToken
 		}
-		if out.NextToken == nil {
-			break
-		}
-		next = out.NextToken
 	}
 	cpu, netBps, opsPerS := aggregateInstanceMetrics(ids, latest)
+	cpuVal := 0.0
 	if cpu != nil {
-		stats.Metrics = append(stats.Metrics, builder.Metric{
-			Key: "cpu", Label: "CPU (avg)", Kind: builder.MetricTimeseries, Unit: "%", Value: *cpu,
-		})
+		cpuVal = *cpu
 	}
 	stats.Metrics = append(stats.Metrics,
+		builder.Metric{Key: "cpu", Label: "CPU (avg)", Kind: builder.MetricTimeseries, Unit: "%", Value: cpuVal},
 		builder.Metric{Key: "net", Label: "Network", Kind: builder.MetricTimeseries, Unit: "bytes/s", Value: netBps},
 		builder.Metric{Key: "disk_ops", Label: "Disk R/W ops", Kind: builder.MetricTimeseries, Unit: "ops/s", Value: opsPerS},
 	)
