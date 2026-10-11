@@ -130,24 +130,29 @@ func parsePrivateKey(keyPEM []byte) (crypto.Signer, error) {
 	return nil, fmt.Errorf("unrecognized private key format")
 }
 
-// Delivery is one host's ready-to-store result.
+// Delivery is one host's ready-to-store result: the neutral agent-install intent.
+// It deliberately does NOT carry pre-rendered user-data -- the user-data format
+// (cloud-init / cloudbase-init / EC2Launch) depends on the image and hoster, so
+// each builder renders it from DownloadURL + Platform using the exported
+// renderers in userdata.go (LinuxUserData / WindowsCloudbaseUserData /
+// WindowsEC2LaunchUserData).
 type Delivery struct {
 	Platform Platform
 	Binary   []byte
-	UserData string
 	// DownloadURL is the one-time-token URL a deployed object fetches its patched
-	// binary from ({APIBaseURL}/agent-binary/{id}?token=…). UserData embeds it for
-	// a VM; a container platform that can't take a pushed binary (Fargate, Zun)
-	// uses it directly to pull the agent at start.
+	// binary from ({APIBaseURL}/agent-binary/{id}?token=…). A VM's user-data embeds
+	// it (via a renderer); a container platform that can't take a pushed binary
+	// (Fargate, Zun) uses it directly to pull the agent at start.
 	DownloadURL string
 }
 
-// Build produces the per-host binary and its cloud-init user-data.
-// objectID is the deployed object's id (the agent cert's CommonName and
-// the download path); token is the one-time capability the user-data uses
-// to fetch the binary; os is the content OS name, only used to pick a
-// platform; debug is the environment's agent-debug flag, baked into the binary
-// so it can't be flipped on a captured box (off = the agent is silent locally).
+// Build produces the per-host patched binary and the neutral download intent
+// (DownloadURL + Platform); the builder renders that into its own user-data
+// format. objectID is the deployed object's id (the agent cert's CommonName and
+// the download path); token is the one-time capability used to fetch the binary;
+// os is the content OS name, only used to pick a platform; debug is the
+// environment's agent-debug flag, baked into the binary so it can't be flipped on
+// a captured box (off = the agent is silent locally).
 func (c *Config) Build(objectID, token, os string, debug bool) (Delivery, error) {
 	platform := PlatformFor(os)
 	base, err := c.baseBinary(platform)
@@ -172,11 +177,7 @@ func (c *Config) Build(objectID, token, os string, debug bool) (Delivery, error)
 		return Delivery{}, fmt.Errorf("patching agent identity: %w", err)
 	}
 	url := fmt.Sprintf("%s/agent-binary/%s?token=%s", c.APIBaseURL, objectID, token)
-	userData := linuxUserData(url)
-	if platform == Windows {
-		userData = windowsUserData(url)
-	}
-	return Delivery{Platform: platform, Binary: patched, UserData: userData, DownloadURL: url}, nil
+	return Delivery{Platform: platform, Binary: patched, DownloadURL: url}, nil
 }
 
 func (c *Config) baseBinary(p Platform) ([]byte, error) {

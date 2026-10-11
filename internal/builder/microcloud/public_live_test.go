@@ -138,7 +138,9 @@ func TestMicrocloudPublicNICLive(t *testing.T) {
 		if index == 1 {
 			userPath = input.WindowsUserDataPath
 		}
-		spec := builder.HostSpec{ExternalName: run + "-" + osName, DisplayName: "publictest-" + osName, Team: run, OS: osName, Size: "test", Network: netSpec.ExternalName, NetworkDisplayName: netSpec.DisplayName, Address: fmt.Sprintf("172.16.231.%d", 10+index), DiskGB: 80, CloudInitUserData: string(read(userPath))}
+		// The builder now renders user-data from a download URL; this live-test
+		// input file holds that agent-binary URL (trimmed of trailing newline).
+		spec := builder.HostSpec{ExternalName: run + "-" + osName, DisplayName: "publictest-" + osName, Team: run, OS: osName, Size: "test", Network: netSpec.ExternalName, NetworkDisplayName: netSpec.DisplayName, Address: fmt.Sprintf("172.16.231.%d", 10+index), DiskGB: 80, AgentDownloadURL: strings.TrimSpace(string(read(userPath)))}
 		name := instanceName(spec.DisplayName, spec.ExternalName)
 		names = append(names, name)
 		t.Logf("Deploying %s (%s)", name, osName)

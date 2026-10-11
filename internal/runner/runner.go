@@ -484,7 +484,7 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			ExternalName: externalName, DisplayName: displayName, Team: team,
 			Network: networkExternalName(task.BuildID, teamNumber, obj), NetworkDisplayName: networkDisplayName(teamNumber, db.StrOrEmpty(obj.NetworkName)), Address: addr,
 			OS: h.OS, Size: h.Size, DiskGB: h.Disk, TCPPorts: h.Ports.TCP, UDPPorts: h.Ports.UDP,
-			CloudInitUserData: del.UserData, CloudInitViaISO: del.Platform == agentdelivery.Windows,
+			AgentDownloadURL: del.DownloadURL,
 		}
 		// MicroCloud alone implements this: the second NIC and its guest
 		// configuration must exist before the first Linux/Windows boot.
@@ -526,7 +526,6 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			// every builder (native OCI: oci.entrypoint; nesting: a bind-mounted
 			// --entrypoint). Cloud (Fargate/Zun): downloaded at start from its
 			// URL. Each builder takes what it needs; the others are ignored.
-			CloudInitUserData: del.UserData, CloudInitViaISO: del.Platform == agentdelivery.Windows,
 			AgentBinary: del.Binary, AgentDownloadURL: del.DownloadURL,
 		}
 		// Native container-log forwarding (environment container_logs): the
@@ -551,7 +550,11 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			if cspec.DiskGB == 0 {
 				cspec.DiskGB = builder.DefaultComposeDiskGB
 			}
-			cspec.AgentBinary, cspec.AgentDownloadURL = nil, ""
+			// A compose container is a VM, not a planted-into OCI container, so the
+			// planted AgentBinary doesn't apply -- but AgentDownloadURL stays: it's
+			// how the VM's own user-data (rendered by the builder) installs the
+			// agent on first boot, exactly like a host.
+			cspec.AgentBinary = nil
 		} else if cred := r.registryCredFor(ctx, q, ct.Image); cred != nil {
 			cspec.RegistryHost, cspec.RegistryUser, cspec.RegistrySecret = cred.RegistryHost, cred.Username, cred.Secret
 		}
@@ -610,9 +613,10 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 }
 
 // deliverAgent, when delivery is configured, builds this object's per-object
-// agent binary and the cloud-init user-data that fetches and runs it, stores the
-// binary for the api to serve (keyed by a fresh one-time token), and returns the
-// whole delivery. A host uses del.UserData (cloud-init); a native OCI container
+// agent binary and the neutral download intent (del.DownloadURL + Platform),
+// stores the binary for the api to serve (keyed by a fresh one-time token), and
+// returns the whole delivery. A host passes del.DownloadURL to the builder,
+// which renders it into its image's user-data format; a native OCI container
 // uses del.Binary directly (pushed in, agent as entrypoint -- see the incus
 // builder). When delivery isn't configured it returns a zero Delivery -- the
 // object deploys without an agent, exactly as before. Delivery must not fail a

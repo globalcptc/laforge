@@ -111,13 +111,15 @@ type HostSpec struct {
 	DiskGB             int
 	TCPPorts           []string
 	UDPPorts           []string
-	// CloudInitUserData, when set, is delivered to the instance at
-	// create time (Incus: the cloud-init.user-data config key). Agents
-	// aren't baked into images -- this is how a fresh host installs and
-	// starts its own agent on first boot. Empty means no agent delivery
-	// (a build still deploys).
-	CloudInitUserData string
-	CloudInitViaISO   bool
+	// AgentDownloadURL is the one-time-token URL the fresh instance fetches its
+	// own agent binary from on first boot (agentdelivery.Delivery.DownloadURL).
+	// Agents aren't baked into images -- this is how a host installs and starts
+	// its agent. Empty means no agent delivery (a build still deploys). The
+	// BUILDER renders this into its image's user-data format using the renderers
+	// in internal/agentdelivery (LinuxUserData / WindowsCloudbaseUserData /
+	// WindowsEC2LaunchUserData), choosing by agentdelivery.PlatformFor(OS) -- the
+	// format is a property of the image/hoster, so the builder owns it.
+	AgentDownloadURL string
 }
 
 // DockerBaseAlias is the image alias a builder's "docker base image" job
@@ -158,7 +160,7 @@ func (s ContainerSpec) ComposeHostSpec() HostSpec {
 		Network: s.Network, NetworkDisplayName: s.NetworkDisplayName, Address: s.Address,
 		OS: ComposeHostImage, Size: s.Size, DiskGB: s.DiskGB,
 		TCPPorts: s.TCPPorts, UDPPorts: s.UDPPorts,
-		CloudInitUserData: s.CloudInitUserData, CloudInitViaISO: s.CloudInitViaISO,
+		AgentDownloadURL: s.AgentDownloadURL,
 	}
 }
 
@@ -182,7 +184,7 @@ type ContainerSpec struct {
 	// ComposeHost marks a container that runs a Docker Compose project rather
 	// than one image. The builder gives it a Docker-capable Linux machine --
 	// booted from its ComposeHostImage, with DiskGB of disk and the agent
-	// delivered by CloudInitUserData like any host -- and nothing else: the
+	// delivered via AgentDownloadURL like any host -- and nothing else: the
 	// project is unpacked and started by the agent, as the container's first
 	// commands. Image, Env, Command and the registry fields are empty.
 	ComposeHost bool
@@ -193,12 +195,10 @@ type ContainerSpec struct {
 	Image string
 	Size  string
 	// Env and Command are the container's environment and command override.
-	Env               map[string]string
-	Command           []string
-	TCPPorts          []string
-	UDPPorts          []string
-	CloudInitUserData string
-	CloudInitViaISO   bool
+	Env      map[string]string
+	Command  []string
+	TCPPorts []string
+	UDPPorts []string
 	// AgentBinary is the object's patched LaForge agent (a static musl-linux
 	// binary). It is planted so the agent is the application container's own
 	// entrypoint, supervising the image's real command -- making a container

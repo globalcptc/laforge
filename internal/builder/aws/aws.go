@@ -47,6 +47,7 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 
+	"github.com/globalcptc/laforge/internal/agentdelivery"
 	"github.com/globalcptc/laforge/internal/builder"
 )
 
@@ -759,10 +760,19 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	if spec.Address != "" {
 		in.PrivateIpAddress = awssdk.String(spec.Address)
 	}
-	if spec.CloudInitUserData != "" {
-		// EC2 user-data must be base64; cloud-init (Linux) and cloudbase-init
-		// (Windows) consume it the same way the Incus cloud-init.user-data key does.
-		in.UserData = awssdk.String(base64.StdEncoding.EncodeToString([]byte(spec.CloudInitUserData)))
+	if spec.AgentDownloadURL != "" {
+		// Render the agent install for THIS image's mechanism: a stock AWS Linux
+		// AMI runs cloud-init, a stock AWS Windows AMI runs EC2Launch
+		// (<powershell>), NOT cloudbase-init -- so a Windows box would boot clean
+		// but never install the agent if handed the cloudbase form. EC2 user-data
+		// must be base64.
+		var data string
+		if agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows {
+			data = agentdelivery.WindowsEC2LaunchUserData(spec.AgentDownloadURL)
+		} else {
+			data = agentdelivery.LinuxUserData(spec.AgentDownloadURL)
+		}
+		in.UserData = awssdk.String(base64.StdEncoding.EncodeToString([]byte(data)))
 	}
 	out, err := b.ec2.RunInstances(ctx, in)
 	if err != nil {

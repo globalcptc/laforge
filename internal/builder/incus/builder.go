@@ -11,9 +11,26 @@ import (
 	"strings"
 	"time"
 
+	"github.com/globalcptc/laforge/internal/agentdelivery"
 	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/render"
 )
+
+// agentUserData renders the agent-install user-data for an instance from the
+// neutral download URL, choosing the format this image consumes: cloud-init for
+// Linux, cloudbase-init for Windows. viaISO is true for Windows, where
+// cloudbase-init can't read the lxd socket so the user-data is delivered as a
+// NoCloud config-drive ISO instead of the cloud-init.user-data key. An empty url
+// (agent delivery off) yields no user-data.
+func agentUserData(url, os string) (userData string, viaISO bool) {
+	if url == "" {
+		return "", false
+	}
+	if agentdelivery.PlatformFor(os) == agentdelivery.Windows {
+		return agentdelivery.WindowsCloudbaseUserData(url), true
+	}
+	return agentdelivery.LinuxUserData(url), false
+}
 
 // Builder implements internal/builder.Builder against one real Incus
 // server. Team isolation is network-level: every NetworkSpec becomes its
@@ -266,7 +283,8 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	// A custom compose-host system image still runs Docker inside Incus.
 	// VMs and ordinary host images do not need container nesting enabled.
 	nesting := !img.VM && spec.OS == builder.ComposeHostImage
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, nesting, spec.CloudInitUserData, spec.CloudInitViaISO)
+	cloudInit, viaISO := agentUserData(spec.AgentDownloadURL, spec.OS)
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, nesting, cloudInit, viaISO)
 }
 
 // deployComposeHost deploys the machine a compose container's project runs on:
@@ -287,7 +305,10 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 	if !ok {
 		return "", fmt.Errorf("no size configured for %q", spec.Size)
 	}
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Alias: builder.DockerBaseAlias}, size, spec.DiskGB, true, spec.CloudInitUserData, false)
+	// A compose host is always this Linux docker-base container, so its agent is
+	// delivered by cloud-init (never the Windows ISO path).
+	cloudInit, _ := agentUserData(spec.AgentDownloadURL, "linux")
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Alias: builder.DockerBaseAlias}, size, spec.DiskGB, true, cloudInit, false)
 }
 
 // laforgeAgentPath is where the LaForge agent is planted inside a native OCI

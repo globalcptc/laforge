@@ -150,8 +150,8 @@ func TestDeployConfigDriveRetry(t *testing.T) {
 			client := &Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: time.Second}
 			b := New(client, Config{Images: map[string]ImageRef{"windows": {Alias: "win2019", VM: true}}, Sizes: map[string]SizeSpec{"small": {}}})
 			ref, err := b.DeployHost(context.Background(), builder.HostSpec{
-				ExternalName: "test-dc", OS: "windows", Size: "small", CloudInitViaISO: true,
-				CloudInitUserData: "fresh one-time token",
+				ExternalName: "test-dc", OS: "windows", Size: "small",
+				AgentDownloadURL: "http://api/agent-binary/test-dc?token=t",
 			})
 			if ref == "" {
 				t.Fatal("failed deploy lost its cleanup reference")

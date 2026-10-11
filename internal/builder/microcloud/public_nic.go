@@ -49,7 +49,7 @@ func (b *Builder) DeployHostWithPublicPorts(ctx context.Context, spec builder.Ho
 	if !ok {
 		return "", fmt.Errorf("no size configured for %q", spec.Size)
 	}
-	windows := spec.CloudInitViaISO || agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows
+	windows := agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows
 	if windows && !img.VM {
 		return name, fmt.Errorf("Windows public NIC requires a VM image")
 	}
@@ -70,7 +70,8 @@ func (b *Builder) DeployHostWithPublicPorts(ctx context.Context, spec builder.Ho
 	if img.VM {
 		instanceType = "virtual-machine"
 	}
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, spec.CloudInitUserData, windows, plan)
+	cloudInit, _ := agentUserData(spec.AgentDownloadURL, spec.OS)
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, cloudInit, windows, plan)
 }
 
 func (b *Builder) publicProject() string {
