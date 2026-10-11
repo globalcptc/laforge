@@ -52,6 +52,8 @@ func main() {
 		err = runCheck(os.Args[2:])
 	case "stats":
 		err = runStats(os.Args[2:])
+	case "networks":
+		err = runNetworks(os.Args[2:])
 	case "convert":
 		err = runConvert(os.Args[2:])
 	case "login":
@@ -129,6 +131,12 @@ func usage() {
       Profile what an environment deploys: hosts/containers counts, broken
       down by os image, size and network, and how many are public -- per team
       and in total. Defaults to every environment.
+
+  laforge networks [--environment <name>] [--repo <path>]
+      Print the networking layout as a tree: the environment cidr, each network
+      with its cidr, and under it every placed host/container with its last
+      octet and resolved address. Flags any network outside the environment
+      cidr. Defaults to every environment.
 
   laforge convert <old-hcl-repo> <new-repo-out>
       One-shot: convert an existing HCL content repository into the new
