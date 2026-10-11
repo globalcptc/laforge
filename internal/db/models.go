@@ -232,6 +232,7 @@ type Environment struct {
 	Extends           *string            `json:"extends"`
 	AgentDebug        bool               `json:"agent_debug"`
 	ContainerLogs     json.RawMessage    `json:"container_logs"`
+	Cidr              *string            `json:"cidr"`
 }
 
 type Event struct {

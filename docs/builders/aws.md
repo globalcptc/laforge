@@ -14,7 +14,8 @@ ECS/Fargate for containers. LaForge talks to the AWS APIs directly (no Terraform
 | LaForge          | AWS                                                                 |
 | ---------------- | ------------------------------------------------------------------- |
 | team             | one **VPC** (the isolation boundary) + internet gateway + a public route table + a custom Network ACL |
-| network          | a **subnet** in the team VPC (its CIDR added as a VPC CIDR block)    |
+| environment `cidr:` | the **VPC's CIDR** — the one address range that holds every network (see below) |
+| network          | a **subnet** carved from the team VPC's CIDR                         |
 | host             | an **EC2 instance** in that subnet, with a per-object security group |
 | container        | an **ECS/Fargate task** with the same per-object security group     |
 | `visible_from:` + `ports:` | per-object security-group ingress rules (same VPC routes for free) |
@@ -225,9 +226,33 @@ rest are discovered for you or have sane defaults.
 
 ## Limits and notes
 
-- **VPC CIDR-block quota.** Each team network adds its CIDR to the team VPC as a
-  secondary block; AWS allows **5 per VPC** by default. For teams with more than 5
-  networks, raise the quota (Service Quotas → VPC → "IPv4 CIDR blocks per VPC").
+- **One address range per team (environment `cidr:`).** AWS puts a whole team in
+  one VPC, and a VPC's CIDR is a single contiguous range that can't mix RFC1918
+  families (a `10.x` VPC can't also hold `192.168.x`). So declare the team's whole
+  address space once, at the environment level:
+
+  ```yaml
+  environment:
+    name: regionals
+    teams: 10
+    cidr: 10.0.0.0/16   # the team VPC; every network's subnet carves from it
+    networks:
+      lan: { ... }
+      dmz: { ... }
+  ```
+
+  `laforge check` (and the editor LSP, and build creation in the UI) verify that
+  **every network fits inside this range**, so a cross-family topology is caught
+  before deploy instead of failing half-built. The range must be a valid VPC CIDR,
+  `/16` (the max) to `/28`. It's builder-agnostic — Incus/MicroCloud give each
+  network its own bridge and ignore it — so you can set it on an environment you
+  also run on-prem. If you omit it, AWS falls back to inferring the `/16` that
+  contains the first network it deploys, which only works when all networks share
+  that one `/16`.
+- **VPC CIDR-block quota.** With an environment `cidr:` the VPC is that single
+  block and no secondary blocks are used. In the inference fallback (no `cidr:`), a
+  network in a different `/16` adds a secondary block, and AWS allows **5 per VPC**
+  by default (Service Quotas → VPC → "IPv4 CIDR blocks per VPC" to raise it).
 - **Compose containers** run on an EC2 instance booted from the `compose-host`
   image (the agent runs `docker compose up` on it, same as the other builders) —
   so map `compose-host` to a Docker-capable AMI in the Images step. This is one

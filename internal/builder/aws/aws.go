@@ -34,6 +34,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net"
 	"os"
 	"sort"
 	"strconv"
@@ -221,22 +222,89 @@ var managedFilter = filter("tag:"+laforgeManagedTag, "true")
 
 // --- team VPC + egress + NACL (the per-team scaffolding) ------------------
 
+// vpcCIDRFor returns the /16 that contains a network's CIDR. The team VPC is
+// created as that /16 so each network's subnet carves straight out of it with NO
+// secondary CIDR association -- which is both the standard AWS pattern and the
+// fix for "InvalidVpc.Range: CIDR is restricted": AWS rejects adding a /24
+// secondary that's really a sub-block of the same /16 as the primary, which is
+// exactly what per-/24 association did. A /16 holds up to 256 /24s, so a team's
+// networks in one /16 need no association at all (and no CIDR-quota headroom).
+// IPv4 only; a network larger than a /16 can't be an AWS VPC and is rejected.
+func vpcCIDRFor(networkCIDR string) (string, error) {
+	_, ipnet, err := net.ParseCIDR(networkCIDR)
+	if err != nil {
+		return "", fmt.Errorf("parsing network CIDR %q: %w", networkCIDR, err)
+	}
+	ip4 := ipnet.IP.To4()
+	if ip4 == nil {
+		return "", fmt.Errorf("network CIDR %q is not IPv4 (AWS builder is IPv4-only)", networkCIDR)
+	}
+	if ones, _ := ipnet.Mask.Size(); ones < 16 {
+		return "", fmt.Errorf("network CIDR %q is larger than a /16, which exceeds the AWS VPC maximum", networkCIDR)
+	}
+	return ip4.Mask(net.CIDRMask(16, 32)).String() + "/16", nil
+}
+
+// cidrWithin reports whether inner is contained in outer (same or more-specific).
+func cidrWithin(inner, outer string) bool {
+	innerIP, innerNet, err1 := net.ParseCIDR(inner)
+	_, outerNet, err2 := net.ParseCIDR(outer)
+	if err1 != nil || err2 != nil {
+		return false
+	}
+	io, _ := innerNet.Mask.Size()
+	oo, _ := outerNet.Mask.Size()
+	return io >= oo && outerNet.Contains(innerIP)
+}
+
+// validateVPCCIDR checks an operator-declared environment supernet is a usable
+// AWS VPC CIDR: IPv4, and between /16 (the VPC maximum) and /28 (the minimum).
+// Unlike vpcCIDRFor it keeps the declared block as-is rather than rounding to a
+// /16, since the operator chose the team's whole address space deliberately.
+func validateVPCCIDR(cidr string) error {
+	_, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return fmt.Errorf("parsing environment cidr %q: %w", cidr, err)
+	}
+	if ipnet.IP.To4() == nil {
+		return fmt.Errorf("environment cidr %q is not IPv4 (AWS builder is IPv4-only)", cidr)
+	}
+	ones, _ := ipnet.Mask.Size()
+	if ones < 16 || ones > 28 {
+		return fmt.Errorf("environment cidr %q is /%d, outside the AWS VPC range of /16 to /28", cidr, ones)
+	}
+	return nil
+}
+
 // ensureTeamVPC finds or creates the team's VPC (one per team) and returns its
-// id. seedCIDR is only used as the primary CIDR block when the VPC is first
-// created; later networks add their CIDRs as secondary associations in
-// DeployNetwork. A describe-before-create guard plus a lowest-id dedup makes a
-// concurrent create (networks deploy in parallel) converge on one VPC.
-func (b *Builder) ensureTeamVPC(ctx context.Context, team, seedCIDR string) (string, error) {
+// id. When the environment declares an overall address space (vpcCIDR, from
+// Environment.CIDR) the VPC is created with exactly that; otherwise the VPC is
+// the /16 containing seedCIDR. Either way a team's networks become subnets of it
+// with no secondary CIDR association. A describe-before-create guard plus a
+// lowest-id dedup makes a concurrent create (networks deploy in parallel)
+// converge on one VPC.
+func (b *Builder) ensureTeamVPC(ctx context.Context, team, seedCIDR, vpcCIDR string) (string, error) {
 	if id, err := b.findTeamVPC(ctx, team); err != nil {
 		return "", err
 	} else if id != "" {
 		return id, nil
 	}
-	if seedCIDR == "" {
-		return "", fmt.Errorf("team %s VPC has no CIDR to seed from -- a network needs a CIDR", team)
+	if vpcCIDR != "" {
+		if err := validateVPCCIDR(vpcCIDR); err != nil {
+			return "", err
+		}
+	} else {
+		if seedCIDR == "" {
+			return "", fmt.Errorf("team %s VPC has no CIDR to seed from -- a network needs a CIDR", team)
+		}
+		inferred, err := vpcCIDRFor(seedCIDR)
+		if err != nil {
+			return "", err
+		}
+		vpcCIDR = inferred
 	}
 	out, err := b.ec2.CreateVpc(ctx, &ec2.CreateVpcInput{
-		CidrBlock:         awssdk.String(seedCIDR),
+		CidrBlock:         awssdk.String(vpcCIDR),
 		TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeVpc, "team-"+team+"-vpc", team, "laforge-team-"+team)},
 	})
 	if err != nil {
@@ -366,7 +434,7 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	if spec.CIDR == "" {
 		return "", fmt.Errorf("network %q has no CIDR -- AWS requires one for the subnet", spec.ExternalName)
 	}
-	vpcID, err := b.ensureTeamVPC(ctx, spec.Team, spec.CIDR)
+	vpcID, err := b.ensureTeamVPC(ctx, spec.Team, spec.CIDR, spec.VPCCIDR)
 	if err != nil {
 		return "", err
 	}
@@ -382,10 +450,17 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	if err != nil {
 		return "", err
 	}
-	// Ensure the VPC carries this network's CIDR (the first network seeded the
-	// VPC's primary CIDR; the rest are secondary associations).
-	if err := b.ensureVPCCIDR(ctx, vpcID, spec.CIDR); err != nil {
-		return "", err
+	// Ensure the VPC carries this network's CIDR. When the environment declared
+	// an overall supernet (spec.VPCCIDR), the VPC already spans it and the loader
+	// has verified every network fits inside it, so the subnet carves straight
+	// out -- no association needed (and none wanted: a network outside the
+	// declared space is a content bug we'd rather surface at subnet creation than
+	// paper over). Only in the inference path (no supernet) might a network land
+	// in a different /16 and need its containing block associated.
+	if spec.VPCCIDR == "" {
+		if err := b.ensureVPCCIDR(ctx, vpcID, spec.CIDR); err != nil {
+			return "", err
+		}
 	}
 
 	// Ensure: adopt a subnet already tagged with this network's ExternalName.
@@ -427,22 +502,30 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	return subnetID, nil
 }
 
-// ensureVPCCIDR associates cidr with the VPC unless it is already one of its
-// CIDR blocks.
+// ensureVPCCIDR makes sure the VPC has a CIDR block that CONTAINS the network's
+// CIDR, so the subnet can be carved from it. The common case -- the network is
+// inside the VPC's /16 (every /24 of a team that lives in one /16) -- needs
+// nothing. Only a network in a different /16 triggers an association, and of its
+// containing /16 (not the /24), since AWS forbids a /24 secondary that's a
+// sub-block of the primary's /16.
 func (b *Builder) ensureVPCCIDR(ctx context.Context, vpcID, cidr string) error {
 	out, err := b.ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{VpcIds: []string{vpcID}})
 	if err != nil || len(out.Vpcs) == 0 {
 		return fmt.Errorf("describing VPC %s: %w", vpcID, err)
 	}
 	for _, a := range out.Vpcs[0].CidrBlockAssociationSet {
-		if awssdk.ToString(a.CidrBlock) == cidr {
-			return nil
+		if cidrWithin(cidr, awssdk.ToString(a.CidrBlock)) {
+			return nil // already covered -- the subnet carves from this block
 		}
 	}
+	block, err := vpcCIDRFor(cidr) // the containing /16, not the /24
+	if err != nil {
+		return err
+	}
 	if _, err := b.ec2.AssociateVpcCidrBlock(ctx, &ec2.AssociateVpcCidrBlockInput{
-		VpcId: awssdk.String(vpcID), CidrBlock: awssdk.String(cidr),
+		VpcId: awssdk.String(vpcID), CidrBlock: awssdk.String(block),
 	}); err != nil && !isDuplicate(err) {
-		return fmt.Errorf("associating CIDR %s with VPC %s (VPC CIDR-block quota is 5 by default -- raise it for >5 networks per team): %w", cidr, vpcID, err)
+		return fmt.Errorf("associating CIDR %s with VPC %s (VPC CIDR-block quota is 5 /16 blocks by default -- raise it for networks spanning >5 /16 ranges per team): %w", block, vpcID, err)
 	}
 	return nil
 }

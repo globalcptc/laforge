@@ -286,7 +286,8 @@ CREATE TABLE public.environment (
     findings jsonb DEFAULT '[]'::jsonb NOT NULL,
     extends text,
     agent_debug boolean DEFAULT false NOT NULL,
-    container_logs jsonb
+    container_logs jsonb,
+    cidr text
 );
 --
 -- Name: event; Type: TABLE; Schema: public; Owner: -

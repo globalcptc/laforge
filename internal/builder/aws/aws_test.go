@@ -122,3 +122,58 @@ func TestToImageInfo(t *testing.T) {
 		t.Errorf("properties = %+v", got.Properties)
 	}
 }
+
+func TestVPCCIDRFor(t *testing.T) {
+	cases := map[string]string{
+		"10.0.1.0/24":   "10.0.0.0/16",
+		"10.0.2.0/24":   "10.0.0.0/16",
+		"10.0.3.0/24":   "10.0.0.0/16",
+		"172.16.5.0/24": "172.16.0.0/16",
+		"10.5.0.0/16":   "10.5.0.0/16",
+		"192.168.50.128/25": "192.168.0.0/16",
+	}
+	for in, want := range cases {
+		got, err := vpcCIDRFor(in)
+		if err != nil || got != want {
+			t.Errorf("vpcCIDRFor(%q) = %q,%v want %q", in, got, err, want)
+		}
+	}
+	// A block larger than /16 can't be an AWS VPC.
+	if _, err := vpcCIDRFor("10.0.0.0/8"); err == nil {
+		t.Error("vpcCIDRFor(/8) should error (exceeds AWS /16 VPC max)")
+	}
+	if _, err := vpcCIDRFor("not-a-cidr"); err == nil {
+		t.Error("vpcCIDRFor(garbage) should error")
+	}
+}
+
+func TestValidateVPCCIDR(t *testing.T) {
+	// Accepted: IPv4 blocks from /16 (the VPC max) down to /28 (the min), kept
+	// as declared rather than rounded to a /16.
+	for _, ok := range []string{"10.0.0.0/16", "10.0.0.0/20", "192.168.0.0/24", "172.16.0.0/28"} {
+		if err := validateVPCCIDR(ok); err != nil {
+			t.Errorf("validateVPCCIDR(%q) = %v, want nil", ok, err)
+		}
+	}
+	// Rejected: larger than /16, smaller than /28, non-IPv4, garbage.
+	for _, bad := range []string{"10.0.0.0/8", "10.0.0.0/30", "::/64", "nonsense"} {
+		if err := validateVPCCIDR(bad); err == nil {
+			t.Errorf("validateVPCCIDR(%q) = nil, want an error", bad)
+		}
+	}
+}
+
+func TestCIDRWithin(t *testing.T) {
+	if !cidrWithin("10.0.1.0/24", "10.0.0.0/16") {
+		t.Error("10.0.1.0/24 should be within 10.0.0.0/16")
+	}
+	if !cidrWithin("10.0.0.0/16", "10.0.0.0/16") {
+		t.Error("a /16 is within itself")
+	}
+	if cidrWithin("10.1.0.0/24", "10.0.0.0/16") {
+		t.Error("10.1.0.0/24 is NOT within 10.0.0.0/16")
+	}
+	if cidrWithin("10.0.0.0/16", "10.0.1.0/24") {
+		t.Error("a /16 is not within a /24 (wrong direction)")
+	}
+}

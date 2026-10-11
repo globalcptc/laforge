@@ -193,6 +193,17 @@ type Environment struct {
 	Schema      int               `yaml:"schema,omitempty" json:"schema,omitempty"`
 	Description string            `yaml:"description,omitempty" json:"description,omitempty"`
 	Teams       int               `yaml:"teams" json:"teams"`
+	// CIDR is the overall address space of one team's topology: the supernet
+	// that every network in this environment must fit inside. Optional and
+	// builder-agnostic -- the on-prem builders (Incus/MicroCloud) ignore it
+	// because they give each network its own bridge and never need a containing
+	// range. A cloud builder that puts a whole team in one VPC (AWS) uses it as
+	// that VPC's CIDR and carves each network's subnet out of it, which is why a
+	// team's networks must all live within one range there. When set, the loader
+	// enforces that every network this environment places fits within it (see
+	// checks.go checkEnvironmentCIDR); when unset, AWS falls back to inferring a
+	// containing /16 from the first network it deploys.
+	CIDR string `yaml:"cidr,omitempty" json:"cidr,omitempty"`
 	RootPass    string            `yaml:"root_password,omitempty" json:"root_password,omitempty"`
 	Start       string            `yaml:"start,omitempty" json:"start,omitempty"`
 	Stop        string            `yaml:"stop,omitempty" json:"stop,omitempty"`

@@ -2,6 +2,7 @@ package loader
 
 import (
 	"fmt"
+	"net"
 	"path"
 	"path/filepath"
 	"sort"
@@ -27,6 +28,7 @@ func (c *Content) crossCheck() {
 	c.checkNameCollisions()
 	c.checkDependsOn()
 	c.checkEnvironmentTopology()
+	c.checkEnvironmentCIDR()
 	c.checkPublicPorts()
 	c.checkPeopleReferences()
 	c.checkNetworkVisibility()
@@ -221,6 +223,62 @@ func (c *Content) checkEnvironmentTopology() {
 			}
 		}
 	}
+}
+
+// checkEnvironmentCIDR enforces the environment-level `cidr:` supernet when one
+// is set: it must parse, and every network the environment places must fit
+// inside it. This is what lets a cloud builder host a whole team in one VPC
+// (AWS) -- the networks have to share one address range. It is builder-agnostic
+// here (no VPC-size limit; that is the AWS builder's own rule), and skipped
+// entirely when an environment declares no cidr, since the on-prem builders
+// don't need one.
+func (c *Content) checkEnvironmentCIDR() {
+	nets := make(map[string]string, len(c.Networks)) // network name -> cidr
+	for _, n := range c.Networks {
+		nets[n.Name] = n.CIDR
+	}
+	for _, e := range c.Environments {
+		if e.CIDR == "" {
+			continue
+		}
+		_, super, err := net.ParseCIDR(e.CIDR)
+		if err != nil {
+			c.addf(e.SourceFile, 0, "environment %q cidr %q is not a valid CIDR: %v", e.Name, e.CIDR, err)
+			continue
+		}
+		// Deterministic order so the error list is stable across runs.
+		used := make([]string, 0, len(e.Networks))
+		for netName := range e.Networks {
+			used = append(used, netName)
+		}
+		sort.Strings(used)
+		for _, netName := range used {
+			cidr, ok := nets[netName]
+			if !ok || cidr == "" {
+				continue // missing network / cidr is reported by other checks
+			}
+			if !cidrContains(super, cidr) {
+				c.addf(e.SourceFile, 0, "environment %q cidr %q does not contain network %q (%s) -- every network in an environment with a cidr must fit within it", e.Name, e.CIDR, netName, cidr)
+			}
+		}
+	}
+}
+
+// cidrContains reports whether the network inner (a CIDR string) fits entirely
+// within outer: inner's base address is inside outer and inner is the same size
+// or smaller. A malformed inner is treated as "doesn't fit" (its own format is
+// caught by the per-document schema).
+func cidrContains(outer *net.IPNet, inner string) bool {
+	innerIP, innerNet, err := net.ParseCIDR(inner)
+	if err != nil {
+		return false
+	}
+	if !outer.Contains(innerIP) {
+		return false
+	}
+	oo, _ := outer.Mask.Size()
+	io, _ := innerNet.Mask.Size()
+	return io >= oo
 }
 
 // portInterval parses one port token -- a single port ("80") or an inclusive

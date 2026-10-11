@@ -56,6 +56,13 @@ type NetworkSpec struct {
 	DisplayName  string // "t<team><network>", for a readable hoster name -- see incus.networkName
 	Team         string
 	CIDR         string
+	// VPCCIDR is the environment's overall address space (Environment.CIDR):
+	// the supernet every network fits inside. A cloud builder that hosts a whole
+	// team in one VPC (AWS) creates that VPC with exactly this CIDR and carves
+	// each network's subnet from it. Empty when the environment declares none --
+	// the on-prem builders (Incus/MicroCloud) ignore it regardless, and AWS then
+	// falls back to inferring a containing /16 from CIDR.
+	VPCCIDR string
 }
 
 // Network, like Team, was found missing while proving a real two-team

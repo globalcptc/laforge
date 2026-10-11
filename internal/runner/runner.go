@@ -454,8 +454,18 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		if net == nil {
 			return fmt.Errorf("network %q not found in content", obj.ObjectName)
 		}
+		// The environment's overall address space (Environment.CIDR), threaded
+		// to the builder so a cloud builder can size the per-team VPC to hold
+		// every network. Best-effort: an env with no cidr (or a load hiccup)
+		// leaves it empty and the builder falls back to its own inference.
+		var vpcCIDR string
+		if build, berr := q.GetBuild(ctx, task.BuildID); berr == nil {
+			if env := findEnvironment(c, build.EnvironmentName); env != nil {
+				vpcCIDR = env.CIDR
+			}
+		}
 		externalRef, err = b.DeployNetwork(ctx, builder.NetworkSpec{
-			ExternalName: externalName, DisplayName: networkDisplayName(teamNumber, obj.ObjectName), Team: team, CIDR: net.CIDR,
+			ExternalName: externalName, DisplayName: networkDisplayName(teamNumber, obj.ObjectName), Team: team, CIDR: net.CIDR, VPCCIDR: vpcCIDR,
 		})
 	case "host":
 		h := findHost(c, obj.ObjectName)
