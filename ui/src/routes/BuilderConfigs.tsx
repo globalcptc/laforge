@@ -96,10 +96,13 @@ export function BuilderConfigs() {
 function serverSummary(bc: BuilderConfig): string {
   if (bc.kind === 'fake') return '—'
   if (bc.kind === 'aws') {
+    // Region-first: an AWS builder's credential is nearly always an IAM key, so
+    // saying so adds nothing. Append the account id when captured (it says WHICH
+    // account you deploy into, which is actually useful).
     const region = bc.aws_config?.region
     const account = bc.aws_config?.account
-    const identity = account ? `account ${account}` : bc.aws_credential_id ? 'IAM key' : 'instance role'
-    return region ? `${region} · ${identity}` : identity
+    if (region && account) return `${region} · account ${account}`
+    return region || (account ? `account ${account}` : '—')
   }
   if (bc.kind === 'openstack') return 'runner env creds'
   if (bc.kind === 'incus') return `${bc.incus_hosts.length} host${bc.incus_hosts.length === 1 ? '' : 's'}`
