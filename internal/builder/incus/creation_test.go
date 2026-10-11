@@ -71,13 +71,19 @@ func TestDeployWaitsBeyondCreationPollingWindow(t *testing.T) {
 			}))
 			defer srv.Close()
 			b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client(), Project: "competition", OperationTimeout: time.Second}, Config{
-				Images: map[string]ImageRef{"linux": {VM: true, Alias: "linux"}}, Sizes: map[string]SizeSpec{"small": {}},
+				Images: map[string]ImageRef{"linux": {VM: true, Alias: "linux"}, "windows": {VM: true, Alias: "win"}}, Sizes: map[string]SizeSpec{"small": {}},
 			})
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			var err error
 			if kind != "oci" {
-				_, err = b.DeployHost(ctx, builder.HostSpec{ExternalName: "box", OS: "linux", Size: "small", CloudInitViaISO: kind == "windows", CloudInitUserData: "same one-time token"})
+				// The builder derives the Windows config-drive-ISO path from the OS
+				// now, not a spec flag; agent delivery is signalled by AgentDownloadURL.
+				os := "linux"
+				if kind == "windows" {
+					os = "windows"
+				}
+				_, err = b.DeployHost(ctx, builder.HostSpec{ExternalName: "box", OS: os, Size: "small", AgentDownloadURL: "http://api/agent-binary/box?token=t"})
 			} else {
 				_, err = b.DeployContainer(ctx, builder.ContainerSpec{ExternalName: "box", Image: "alpine", Size: "small"})
 			}

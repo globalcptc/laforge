@@ -11,12 +11,63 @@ import (
 	"strings"
 	"time"
 
+	"github.com/globalcptc/laforge/internal/agentdelivery"
 	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/render"
 )
 
 // Builder provisions native Linux bridges or legacy OVN networks on one Incus host.
 // Bridge networks route and NAT through the host and require non-overlapping subnets.
+// agentUserData renders the agent-install user-data for an instance from the
+// neutral download URL, choosing the format this image consumes: cloud-init for
+// Linux, cloudbase-init for Windows. viaISO is true for Windows, where
+// cloudbase-init can't read the lxd socket so the user-data is delivered as a
+// NoCloud config-drive ISO instead of the cloud-init.user-data key. An empty url
+// (agent delivery off) yields no user-data.
+func agentUserData(url, os string) (userData string, viaISO bool) {
+	if url == "" {
+		return "", false
+	}
+	if agentdelivery.PlatformFor(os) == agentdelivery.Windows {
+		return agentdelivery.WindowsCloudbaseUserData(url), true
+	}
+	return agentdelivery.LinuxUserData(url), false
+}
+
+// Builder implements internal/builder.Builder against one real Incus
+// server. Team isolation is network-level: every NetworkSpec becomes its
+// own Incus OVN logical network.
+//
+// OVN, not a plain Incus bridge, because "every team gets exactly the
+// same network" (same CIDR, same
+// addresses, for every team) was tested live against two plain bridges
+// carrying the identical CIDR and does not work: a *managed* bridge with
+// the same ipv4.address on two different Incus networks fails outright
+// ("dnsmasq: failed to create listening socket for 10.0.1.1: Address
+// already in use" -- both networks' dnsmasq trying to bind the same
+// gateway IP), and the alternative -- unmanaged bridges (no
+// ipv4.address) with the IP assigned by hand -- creates two identical
+// routes in the HOST's own single routing table, one per bridge; `ip
+// route get 10.0.1.11` on the host resolves to whichever bridge was
+// created first, regardless of which team's traffic it actually is, so
+// return/NAT traffic for the second team's identically-addressed host
+// silently goes to the first team's bridge instead. Neither is a config
+// mistake fixable by tuning; both are the host having exactly one
+// routing table for however many teams share it.
+//
+// OVN sidesteps this by design: each OVN network is its own isolated
+// logical switch/router with its own address space, and Incus's own docs
+// name identical subnets across multiple OVN networks as a supported
+// case ("useful for labs and multi-tenant environments where the same
+// logical subnets are used in multiple discrete networks"). Not
+// live-verified end to end in this session's own test daemon: the
+// Docker-Desktop-on-Mac Linux kernel this environment runs under has no
+// openvswitch.ko (confirmed: `modprobe openvswitch` fails, "Module
+// openvswitch not found"), so no real OVN control plane could be brought
+// up here to test against, only the plain-bridge collision above and the
+// OVN network-create call's own "OVN isn't currently available" error
+// with no OVN control plane behind it (see builder_test.go). A real
+// MicroCloud cluster's own OVN setup is what this now depends on.
 type Builder struct {
 	Client *Client
 	Config Config
@@ -200,7 +251,8 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	// A custom compose-host system image still runs Docker inside Incus.
 	// VMs and ordinary host images do not need container nesting enabled.
 	nesting := !img.VM && spec.OS == builder.ComposeHostImage
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, nesting, spec.CloudInitUserData, spec.CloudInitViaISO)
+	cloudInit, viaISO := agentUserData(spec.AgentDownloadURL, spec.OS)
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, nesting, cloudInit, viaISO)
 }
 
 // deployComposeHost deploys the machine a compose container's project runs on:
@@ -221,7 +273,10 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 	if !ok {
 		return "", fmt.Errorf("no size configured for %q", spec.Size)
 	}
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Alias: builder.DockerBaseAlias}, size, spec.DiskGB, true, spec.CloudInitUserData, false)
+	// A compose host is always this Linux docker-base container, so its agent is
+	// delivered by cloud-init (never the Windows ISO path).
+	cloudInit, _ := agentUserData(spec.AgentDownloadURL, "linux")
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Alias: builder.DockerBaseAlias}, size, spec.DiskGB, true, cloudInit, false)
 }
 
 // laforgeAgentPath is where the LaForge agent is planted inside a native OCI

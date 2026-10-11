@@ -13,9 +13,25 @@ import (
 	"strings"
 	"time"
 
+	"github.com/globalcptc/laforge/internal/agentdelivery"
 	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/render"
 )
+
+// agentUserData renders the agent-install user-data for an instance from the
+// neutral download URL, choosing the format this image consumes: cloud-init for
+// Linux, cloudbase-init for Windows. viaISO is true for Windows, where
+// cloudbase-init can't read the lxd socket so the user-data is delivered as a
+// NoCloud config-drive ISO. An empty url (agent delivery off) yields nothing.
+func agentUserData(url, os string) (userData string, viaISO bool) {
+	if url == "" {
+		return "", false
+	}
+	if agentdelivery.PlatformFor(os) == agentdelivery.Windows {
+		return agentdelivery.WindowsCloudbaseUserData(url), true
+	}
+	return agentdelivery.LinuxUserData(url), false
+}
 
 // Builder implements internal/builder.Builder against one real Incus
 // server. Team isolation is network-level: every NetworkSpec becomes its
@@ -306,7 +322,8 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	if img.VM {
 		instanceType = "virtual-machine"
 	}
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, spec.CloudInitUserData, spec.CloudInitViaISO)
+	cloudInit, viaISO := agentUserData(spec.AgentDownloadURL, spec.OS)
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, cloudInit, viaISO)
 }
 
 // DeployContainer runs a LaForge `container:` as a nested Docker container. LXD
@@ -366,7 +383,10 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 	if !ok {
 		return "", fmt.Errorf("no size configured for %q", spec.Size)
 	}
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Fingerprint: b.Config.DockerBaseFingerprint}, size, spec.DiskGB, true, spec.CloudInitUserData, false)
+	// A compose host is always this Linux docker-base container, so its agent is
+	// delivered by cloud-init (never the Windows ISO path).
+	cloudInit, _ := agentUserData(spec.AgentDownloadURL, "linux")
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Fingerprint: b.Config.DockerBaseFingerprint}, size, spec.DiskGB, true, cloudInit, false)
 }
 
 // teamConfigKey is the Incus instance config key OpenAccess/CloseAccess

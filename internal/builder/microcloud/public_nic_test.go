@@ -164,7 +164,7 @@ func TestPublicNICLinuxWindowsAndLifecycle(t *testing.T) {
 	ctx := context.Background()
 	ips := map[string]bool{}
 	for _, os := range []string{"linux", "win2019"} {
-		spec := builder.HostSpec{ExternalName: "same-team-" + os, Team: "1", OS: os, Size: "small", Network: "primary", Address: "172.16.0.10", CloudInitUserData: "test user data"}
+		spec := builder.HostSpec{ExternalName: "same-team-" + os, Team: "1", OS: os, Size: "small", Network: "primary", Address: "172.16.0.10", AgentDownloadURL: "http://api/agent-binary/x?token=t"}
 		name, err := b.DeployHostWithPublicPorts(ctx, spec, []string{"22", "3389"}, []string{"53"})
 		if err != nil {
 			t.Fatal(err)

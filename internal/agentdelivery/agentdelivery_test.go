@@ -64,11 +64,19 @@ func TestBuildIssuesAChainedCertAndRealUserData(t *testing.T) {
 	if del.Platform != Linux || len(del.Binary) == 0 {
 		t.Fatalf("delivery = %+v, want a linux binary", del)
 	}
-	if !strings.Contains(del.UserData, "agent-binary/"+objID+"?token=tok-abc") {
-		t.Fatalf("user-data missing the download URL: %s", del.UserData)
+	if !strings.Contains(del.DownloadURL, "agent-binary/"+objID+"?token=tok-abc") {
+		t.Fatalf("delivery missing the download URL: %s", del.DownloadURL)
 	}
-	if !strings.Contains(del.UserData, "systemd") {
-		t.Fatalf("linux user-data should install a systemd service")
+	// The builder renders the format; the renderers must embed the URL and the
+	// right install mechanism per platform.
+	if ud := LinuxUserData(del.DownloadURL); !strings.Contains(ud, del.DownloadURL) || !strings.Contains(ud, "systemd") {
+		t.Fatalf("linux user-data should install a systemd service from the URL: %s", ud)
+	}
+	if ud := WindowsCloudbaseUserData(del.DownloadURL); !strings.HasPrefix(ud, "#ps1_sysnative") || !strings.Contains(ud, "schtasks") {
+		t.Fatalf("windows cloudbase user-data malformed: %s", ud)
+	}
+	if ud := WindowsEC2LaunchUserData(del.DownloadURL); !strings.HasPrefix(ud, "<powershell>") || !strings.Contains(ud, "schtasks") {
+		t.Fatalf("windows EC2Launch user-data malformed: %s", ud)
 	}
 
 	// The issued cert must verify against the CA, with the object id as CN.
