@@ -68,11 +68,11 @@ export function BuilderInfo() {
 
       {series.length === 0 ? (
         <EmptyState
-          title={stats.isLoading ? 'Loading metrics…' : 'No metrics yet'}
+          title={stats.isLoading ? 'Loading metrics…' : 'No metrics for this builder'}
           description={
             stats.isLoading
               ? ''
-              : 'This builder publishes no backend health, or the collector has no samples yet (it polls every ~2 minutes). OpenStack does not report host metrics.'
+              : 'This builder reports no backend health, or its stack is unreachable right now. OpenStack does not report host metrics.'
           }
         />
       ) : (
@@ -86,6 +86,21 @@ export function BuilderInfo() {
   )
 }
 
+// The resource kinds a builder can deploy. Always shown (even at 0/0) so an idle
+// builder reads as "nothing in use" rather than hiding the counts entirely --
+// seeing a capacity sit empty is itself useful.
+const RESOURCE_KINDS = ['host', 'container', 'network'] as const
+
+// mergeResourceKinds overlays the live counts onto the canonical kind list, so
+// every kind always appears -- unused ones as 0/0. Any extra kind the backend
+// reports (e.g. dns) is appended after the canonical three.
+function mergeResourceKinds(resources: UsageResource[]): UsageResource[] {
+  const byKind = new Map(resources.map((r) => [r.kind, r]))
+  const base = RESOURCE_KINDS.map((kind) => byKind.get(kind) ?? { kind, running: 0, total: 0 })
+  const extra = resources.filter((r) => !RESOURCE_KINDS.includes(r.kind as (typeof RESOURCE_KINDS)[number]))
+  return [...base, ...extra]
+}
+
 // StatusPanel shows the builder's current load: how many builds are live on it
 // and how many resources of each kind are up.
 function StatusPanel({ builds, resources }: { builds: UsageBuild[]; resources: UsageResource[] }) {
@@ -97,19 +112,15 @@ function StatusPanel({ builds, resources }: { builds: UsageBuild[]; resources: U
           <span className="font-mono text-lg text-fg">{builds.length}</span>{' '}
           <span className="text-fg-muted">active build{builds.length === 1 ? '' : 's'}</span>
         </div>
-        {resources.length > 0 ? (
-          <div className="flex flex-wrap gap-x-5 gap-y-1">
-            {resources.map((r) => (
-              <span key={r.kind}>
-                <span className="text-fg-muted">{r.kind}s </span>
-                <span className="font-mono text-fg">{r.running}</span>
-                <span className="text-fg-subtle">/{r.total}</span>
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div className="text-xs text-fg-subtle">No resources deployed.</div>
-        )}
+        <div className="flex flex-wrap gap-x-5 gap-y-1">
+          {mergeResourceKinds(resources).map((r) => (
+            <span key={r.kind}>
+              <span className="text-fg-muted">{r.kind}s </span>
+              <span className="font-mono text-fg">{r.running}</span>
+              <span className="text-fg-subtle">/{r.total}</span>
+            </span>
+          ))}
+        </div>
         {builds.length > 0 && (
           <ul className="mt-3 space-y-1 border-t border-border pt-2 text-xs">
             {builds.slice(0, 6).map((b) => (
@@ -217,11 +228,17 @@ function MetricChart({ label, unit, lines }: { label: string; unit: string; line
       <div className="p-4 pt-3">
         <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full" style={{ height }}>
           {lines.map((l, i) => {
-            if (l.points.length < 2) return null
-            const step = width / (l.points.length - 1)
-            const d = l.points
-              .map((v, j) => `${j === 0 ? 'M' : 'L'} ${(j * step).toFixed(1)} ${(height - ((v - min) / span) * height).toFixed(1)}`)
-              .join(' ')
+            if (l.points.length === 0) return null
+            const y = (v: number) => (height - ((v - min) / span) * height).toFixed(1)
+            // A single sample (e.g. the first live reading before any history is
+            // collected) still gets a flat line across the card, so the block is
+            // visibly "here, currently N" rather than blank.
+            const d =
+              l.points.length === 1
+                ? `M 0 ${y(l.points[0])} L ${width} ${y(l.points[0])}`
+                : l.points
+                    .map((v, j) => `${j === 0 ? 'M' : 'L'} ${((j * width) / (l.points.length - 1)).toFixed(1)} ${y(v)}`)
+                    .join(' ')
             return <path key={l.node || i} d={d} fill="none" stroke={palette[i % palette.length]} strokeWidth={2} vectorEffect="non-scaling-stroke" />
           })}
         </svg>

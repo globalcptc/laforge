@@ -1,12 +1,14 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/globalcptc/laforge/internal/builder"
+	"github.com/globalcptc/laforge/internal/builderconfig"
 	"github.com/globalcptc/laforge/internal/db"
 )
 
@@ -67,7 +69,52 @@ func (s *Server) handleGetBuilderConfigStats(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, groupBuilderStats(samples))
+	resp := groupBuilderStats(samples)
+	// No stored history yet (a freshly-added builder, or one looked at before the
+	// first 120s collection) -- seed the blocks from one live reading so a
+	// builder's health charts always appear instead of a bare "no metrics yet".
+	// Only on the empty case, so steady state still reads the collected history
+	// and never hits the hoster on every page load.
+	if len(resp.Series) == 0 && len(resp.Gauges) == 0 {
+		if live, ok := s.liveBuilderStats(r.Context(), row); ok {
+			resp = live
+		}
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// liveBuilderStats does a one-shot Stats() against the builder and shapes it like
+// the stored-sample response: each time-series metric as a single-point series
+// (so its chart renders at its current value), each gauge as a gauge. Returns
+// ok=false when the builder publishes no stats (OpenStack, fake) or can't be
+// reached -- the caller then falls back to the empty state.
+func (s *Server) liveBuilderStats(ctx context.Context, row db.BuilderConfig) (builderStatsResponse, bool) {
+	resp := builderStatsResponse{Series: []metricSeries{}, Gauges: []metricGauge{}}
+	bldr, err := builderconfig.Resolve(s.Pool, row)
+	if err != nil {
+		return resp, false
+	}
+	mp, ok := bldr.(builder.MetricProvider)
+	if !ok {
+		return resp, false
+	}
+	stats, err := mp.Stats(ctx)
+	if err != nil {
+		return resp, false
+	}
+	now := time.Now()
+	for _, m := range stats.Metrics {
+		if m.Kind == builder.MetricGauge {
+			max := m.Max
+			resp.Gauges = append(resp.Gauges, metricGauge{Key: m.Key, Label: m.Label, Node: m.Node, Unit: m.Unit, Value: m.Value, Max: max})
+			continue
+		}
+		resp.Series = append(resp.Series, metricSeries{
+			Key: m.Key, Label: m.Label, Node: m.Node, Unit: m.Unit,
+			Points: []metricPoint{{T: now, V: m.Value}},
+		})
+	}
+	return resp, len(resp.Series) > 0 || len(resp.Gauges) > 0
 }
 
 // usageResource is a per-kind rollup (hosts/containers/networks): how many are
