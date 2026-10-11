@@ -43,10 +43,12 @@ import (
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/servicequotas"
 
 	"github.com/globalcptc/laforge/internal/agentdelivery"
 	"github.com/globalcptc/laforge/internal/builder"
@@ -111,10 +113,12 @@ type Config struct {
 
 // Builder is the EC2/VPC + ECS/Fargate builder.
 type Builder struct {
-	ec2  *ec2.Client
-	ecs  *ecs.Client
-	logs *cloudwatchlogs.Client
-	cfg  Config
+	ec2    *ec2.Client
+	ecs    *ecs.Client
+	logs   *cloudwatchlogs.Client
+	cw     *cloudwatch.Client
+	quotas *servicequotas.Client
+	cfg    Config
 }
 
 // New constructs the builder from the ambient AWS credential/region chain,
@@ -159,10 +163,12 @@ func New(ctx context.Context, cfg Config) (*Builder, error) {
 		cfg.AgentInitImage = envOr("AWS_ECS_AGENT_INIT_IMAGE", "alpine:3.20")
 	}
 	return &Builder{
-		ec2:  ec2.NewFromConfig(awsCfg),
-		ecs:  ecs.NewFromConfig(awsCfg),
-		logs: cloudwatchlogs.NewFromConfig(awsCfg),
-		cfg:  cfg,
+		ec2:    ec2.NewFromConfig(awsCfg),
+		ecs:    ecs.NewFromConfig(awsCfg),
+		logs:   cloudwatchlogs.NewFromConfig(awsCfg),
+		cw:     cloudwatch.NewFromConfig(awsCfg),
+		quotas: servicequotas.NewFromConfig(awsCfg),
+		cfg:    cfg,
 	}, nil
 }
 

@@ -1,8 +1,8 @@
 --
 -- PostgreSQL database dump
 --
--- Dumped from database version 17.11 (Debian 17.11-1.pgdg13+2)
--- Dumped by pg_dump version 17.11 (Debian 17.11-1.pgdg13+2)
+-- Dumped from database version 17.11
+-- Dumped by pg_dump version 17.11
 --
 -- Name: laforge_notify_event(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -136,6 +136,7 @@ CREATE TABLE public.builder_config (
     microcloud_public_access jsonb,
     aws_config jsonb,
     aws_credential_id uuid,
+    incus_one_team_per_host boolean DEFAULT false NOT NULL,
     CONSTRAINT builder_config_kind_check CHECK ((kind = ANY (ARRAY['fake'::text, 'incus'::text, 'microcloud'::text, 'aws'::text, 'openstack'::text])))
 );
 --
@@ -149,9 +150,9 @@ CREATE TABLE public.builder_credential (
     server_cert_pem text NOT NULL,
     client_cert_pem text NOT NULL,
     client_key_pem text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
     aws_access_key_id text DEFAULT ''::text NOT NULL,
-    aws_secret_access_key text DEFAULT ''::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    aws_secret_access_key text DEFAULT ''::text NOT NULL
 );
 --
 -- Name: builder_image_build; Type: TABLE; Schema: public; Owner: -
@@ -191,6 +192,21 @@ CREATE SEQUENCE public.builder_image_build_log_id_seq
 -- Name: builder_image_build_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 ALTER SEQUENCE public.builder_image_build_log_id_seq OWNED BY public.builder_image_build_log.id;
+--
+-- Name: builder_metric_sample; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.builder_metric_sample (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    builder_config_id uuid NOT NULL,
+    key text NOT NULL,
+    label text DEFAULT ''::text NOT NULL,
+    node text DEFAULT ''::text NOT NULL,
+    kind text NOT NULL,
+    unit text DEFAULT ''::text NOT NULL,
+    value double precision NOT NULL,
+    max double precision,
+    sampled_at timestamp with time zone DEFAULT now() NOT NULL
+);
 --
 -- Name: configured_build; Type: TABLE; Schema: public; Owner: -
 --
@@ -703,6 +719,11 @@ ALTER TABLE ONLY public.builder_image_build_log
 ALTER TABLE ONLY public.builder_image_build
     ADD CONSTRAINT builder_image_build_pkey PRIMARY KEY (id);
 --
+-- Name: builder_metric_sample builder_metric_sample_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.builder_metric_sample
+    ADD CONSTRAINT builder_metric_sample_pkey PRIMARY KEY (id);
+--
 -- Name: configured_build configured_build_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 ALTER TABLE ONLY public.configured_build
@@ -772,6 +793,11 @@ ALTER TABLE ONLY public.fake_dns_record
 --
 ALTER TABLE ONLY public.fake_hoster_resource
     ADD CONSTRAINT fake_hoster_resource_pkey PRIMARY KEY (external_ref);
+--
+-- Name: github_installation github_installation_account_login_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.github_installation
+    ADD CONSTRAINT github_installation_account_login_key UNIQUE (account_login);
 --
 -- Name: github_installation github_installation_installation_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -967,6 +993,14 @@ CREATE UNIQUE INDEX builder_image_build_log_seq_idx ON public.builder_image_buil
 --
 CREATE INDEX builder_image_build_pending_idx ON public.builder_image_build USING btree (created_at) WHERE (status = 'pending'::text);
 --
+-- Name: builder_metric_sample_lookup; Type: INDEX; Schema: public; Owner: -
+--
+CREATE INDEX builder_metric_sample_lookup ON public.builder_metric_sample USING btree (builder_config_id, key, node, sampled_at DESC);
+--
+-- Name: builder_metric_sample_sampled_at; Type: INDEX; Schema: public; Owner: -
+--
+CREATE INDEX builder_metric_sample_sampled_at ON public.builder_metric_sample USING btree (sampled_at);
+--
 -- Name: deployed_object_identity_idx; Type: INDEX; Schema: public; Owner: -
 --
 CREATE UNIQUE INDEX deployed_object_identity_idx ON public.deployed_object USING btree (team_id, kind, COALESCE(as_name, object_name));
@@ -1068,15 +1102,15 @@ ALTER TABLE ONLY public.build
 ALTER TABLE ONLY public.build
     ADD CONSTRAINT build_created_by_account_id_fkey FOREIGN KEY (created_by_account_id) REFERENCES public.account(id) ON DELETE SET NULL;
 --
--- Name: builder_config builder_config_incus_credential_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-ALTER TABLE ONLY public.builder_config
-    ADD CONSTRAINT builder_config_incus_credential_id_fkey FOREIGN KEY (incus_credential_id) REFERENCES public.builder_credential(id);
---
 -- Name: builder_config builder_config_aws_credential_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 ALTER TABLE ONLY public.builder_config
     ADD CONSTRAINT builder_config_aws_credential_id_fkey FOREIGN KEY (aws_credential_id) REFERENCES public.builder_credential(id);
+--
+-- Name: builder_config builder_config_incus_credential_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.builder_config
+    ADD CONSTRAINT builder_config_incus_credential_id_fkey FOREIGN KEY (incus_credential_id) REFERENCES public.builder_credential(id);
 --
 -- Name: builder_image_build builder_image_build_builder_config_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
@@ -1087,6 +1121,11 @@ ALTER TABLE ONLY public.builder_image_build
 --
 ALTER TABLE ONLY public.builder_image_build_log
     ADD CONSTRAINT builder_image_build_log_build_id_fkey FOREIGN KEY (build_id) REFERENCES public.builder_image_build(id) ON DELETE CASCADE;
+--
+-- Name: builder_metric_sample builder_metric_sample_builder_config_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.builder_metric_sample
+    ADD CONSTRAINT builder_metric_sample_builder_config_id_fkey FOREIGN KEY (builder_config_id) REFERENCES public.builder_config(id) ON DELETE CASCADE;
 --
 -- Name: configured_build configured_build_current_content_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
@@ -1245,5 +1284,3 @@ ALTER TABLE ONLY public.validator_result
 --
 -- PostgreSQL database dump complete
 --
-
-ALTER TABLE public.builder_config ADD COLUMN incus_one_team_per_host boolean NOT NULL DEFAULT false;

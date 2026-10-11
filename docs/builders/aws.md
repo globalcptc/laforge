@@ -116,7 +116,10 @@ want least privilege (see the note after the policy).
     {
       "Sid": "LaForgeIdentityCheck",
       "Effect": "Allow",
-      "Action": ["sts:GetCallerIdentity", "iam:SimulatePrincipalPolicy"],
+      "Action": [
+        "sts:GetCallerIdentity", "iam:SimulatePrincipalPolicy",
+        "cloudwatch:GetMetricData", "servicequotas:GetServiceQuota"
+      ],
       "Resource": "*"
     }
   ]

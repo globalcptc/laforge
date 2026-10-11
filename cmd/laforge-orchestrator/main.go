@@ -48,6 +48,7 @@ func main() {
 	heartbeatRetention := flag.Duration("heartbeat-retention", 72*time.Hour, "how long to keep agent_heartbeat rows (an append-only log with no other retention policy -- see migrations/00007's own doc comment); 0 disables cleanup")
 	scheduleInterval := flag.Duration("schedule-interval", 5*time.Second, "how often to check for due scheduled_task rows (schedule: entries and ad-hoc scheduled tasks)")
 	accessInterval := flag.Duration("access-interval", 15*time.Second, "how often to enforce each live build's authored access: windows (open/close teams on schedule)")
+	builderMetricsInterval := flag.Duration("builder-metrics-interval", 120*time.Second, "how often to sample each builder's backend health (CPU/mem/disk/net/API-latency/quotas) for the builder page; 0 disables it. 120s keeps hoster/cluster load low -- see docs/plans/builder-monitoring.md")
 	once := flag.Bool("once", false, "reconcile every non-terminal build exactly once, then exit (for scripting/tests)")
 	flag.Parse()
 
@@ -244,10 +245,16 @@ func main() {
 			log.Printf("listing builds for instance-state poll: %v", err)
 			return
 		}
+		// Refresh live power states for every build in one pass that does
+		// Inspect ONCE per builder, not once per build -- many builds share a
+		// builder, and a builder's Inspect returns all of its resources, so the
+		// old per-build loop re-scanned the same hoster N times each cycle.
+		ids := make([]pgtype.UUID, len(builds))
+		for i, b := range builds {
+			ids[i] = b.ID
+		}
+		orchestrator.PollInstanceStatesForBuilds(ctx, pool, ids)
 		for _, b := range builds {
-			if err := orchestrator.PollInstanceStates(ctx, pool, b.ID); err != nil {
-				log.Printf("polling instance states for build %s: %v", b.ID, err)
-			}
 			// Backstop the object/build lifecycle advance on this slow cadence
 			// too: once a build leaves reconcileAll's list (it stops watching
 			// planned/deploying/building once terminal), this is the loop that
@@ -259,6 +266,31 @@ func main() {
 			if _, err := orchestrator.AdvanceBuildStatus(ctx, pool, b.ID); err != nil {
 				log.Printf("advancing build status for build %s: %v", b.ID, err)
 			}
+		}
+	}
+
+	// collectBuilderMetrics samples every builder's own backend health on its own
+	// slow cadence (one gather per builder, not per build). cleanupBuilderMetrics
+	// ages the samples out on the same retention window as agent_heartbeat.
+	collectBuilderMetrics := func() {
+		if *builderMetricsInterval <= 0 {
+			return
+		}
+		if err := orchestrator.CollectBuilderMetrics(ctx, pool); err != nil {
+			log.Printf("collecting builder metrics: %v", err)
+		}
+	}
+	cleanupBuilderMetrics := func() {
+		if *heartbeatRetention <= 0 {
+			return
+		}
+		n, err := orchestrator.CleanupBuilderMetricSamples(ctx, pool, time.Now().Add(-*heartbeatRetention))
+		if err != nil {
+			log.Printf("cleaning up builder_metric_sample: %v", err)
+			return
+		}
+		if n > 0 {
+			log.Printf("cleaned up %d builder_metric_sample row(s) older than %s", n, *heartbeatRetention)
 		}
 	}
 
@@ -301,6 +333,7 @@ func main() {
 	reconcileAccess()
 	pollInstanceStates()
 	dispatchImageBuilds()
+	collectBuilderMetrics()
 	cleanupCheckouts()
 	if *once {
 		return
@@ -330,6 +363,15 @@ func main() {
 	const imageBuildPollInterval = 10 * time.Second
 	imageBuildTicker := time.NewTicker(imageBuildPollInterval)
 	defer imageBuildTicker.Stop()
+	// Builder health sampling on its own slow cadence (default 120s) so it never
+	// rides the hoster API every reconcile. A zero interval disables it; use a
+	// harmless 1h placeholder ticker in that case (the case body no-ops).
+	builderMetricsEvery := *builderMetricsInterval
+	if builderMetricsEvery <= 0 {
+		builderMetricsEvery = time.Hour
+	}
+	builderMetricsTicker := time.NewTicker(builderMetricsEvery)
+	defer builderMetricsTicker.Stop()
 	for {
 		select {
 		case <-t.C:
@@ -339,6 +381,7 @@ func main() {
 		case <-heartbeatTicker.C:
 			cleanupHeartbeats()
 			cleanupSessions()
+			cleanupBuilderMetrics()
 		case <-scheduleTicker.C:
 			dispatchScheduledTasks()
 		case <-accessTicker.C:
@@ -347,6 +390,8 @@ func main() {
 			pollInstanceStates()
 		case <-imageBuildTicker.C:
 			dispatchImageBuilds()
+		case <-builderMetricsTicker.C:
+			collectBuilderMetrics()
 		}
 	}
 }

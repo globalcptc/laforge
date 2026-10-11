@@ -9,6 +9,9 @@ import type {
   RebuildResponse,
   AdHocTarget,
   AgentHeartbeat,
+  BuilderStats,
+  BuilderUsage,
+  BuildReadiness,
   Build,
   BuildDetail,
   BuilderConfig,
@@ -938,4 +941,37 @@ export function useLiveEvents(buildId: string | undefined, onEvent?: (ev: LFEven
   }, [buildId])
 
   return { connected }
+}
+
+// Builder backend-health stats, polled a little faster than the 120s collector
+// writes so the page stays reasonably live. Disabled until a builder name is set.
+export function useBuilderStats(name: string | undefined) {
+  return useQuery<BuilderStats>({
+    queryKey: ['builder-stats', name],
+    queryFn: () => api.get(`/builder-configs/${encodeURIComponent(name ?? '')}/stats`),
+    enabled: !!name,
+    refetchInterval: 60_000,
+  })
+}
+
+// Builder usage summary (active builds, resource counts, public endpoints).
+export function useBuilderUsage(name: string | undefined) {
+  return useQuery<BuilderUsage>({
+    queryKey: ['builder-usage', name],
+    queryFn: () => api.get(`/builder-configs/${encodeURIComponent(name ?? '')}/usage`),
+    enabled: !!name,
+    refetchInterval: 30_000,
+  })
+}
+
+// Pre-deploy readiness: whether this build's demand would exceed its builder's
+// account quotas (AWS only; other kinds return checked=false). Advisory -- shown
+// next to Deploy, never blocks it. Fetched once; quotas don't move minute to
+// minute, so no refetch interval.
+export function useBuildReadiness(buildId: string | undefined, enabled = true) {
+  return useQuery<BuildReadiness>({
+    queryKey: ['build-readiness', buildId],
+    queryFn: () => api.get(`/builds/${buildId}/readiness`),
+    enabled: !!buildId && enabled,
+  })
 }

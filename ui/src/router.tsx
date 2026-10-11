@@ -18,6 +18,7 @@ import { RepoPeople } from './routes/RepoPeople'
 import { RepoAccess } from './routes/RepoAccess'
 import { InstalledRepositories } from './routes/InstalledRepositories'
 import { BuilderConfigs } from './routes/BuilderConfigs'
+import { BuilderInfo } from './routes/BuilderInfo'
 import { InstanceAdmins } from './routes/InstanceAdmins'
 import { BuilderWizard } from './routes/BuilderWizard'
 import { useMe } from './api/hooks'
@@ -159,9 +160,24 @@ const newBuilderRoute = createRoute({
   ),
 })
 
-const editBuilderRoute = createRoute({
+const builderInfoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/infrastructure/$name',
+  component: () => (
+    <RequireAuth>
+      <BuilderInfo />
+    </RequireAuth>
+  ),
+})
+
+const editBuilderRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/infrastructure/$name/edit',
+  // ?section=config|images|sizes lets the builder info page's edit buttons jump
+  // the wizard straight to that part of the config.
+  validateSearch: (s: Record<string, unknown>): { section?: string } => ({
+    section: typeof s.section === 'string' ? s.section : undefined,
+  }),
   component: () => (
     <RequireAuth>
       <BuilderWizard />
@@ -189,6 +205,7 @@ const routeTree = rootRoute.addChildren([
   instanceAdminsRoute,
   builderConfigsRoute,
   newBuilderRoute,
+  builderInfoRoute,
   editBuilderRoute,
   repoAccessRoute,
   buildLayoutRoute.addChildren([buildIndexRoute, buildHostsRoute, buildAccessRoute, buildExternalAccessRoute, buildLogsRoute, buildFindingsRoute, buildScheduleRoute, buildTopologyRoute, buildArtifactsRoute, buildTerminalRoute]),

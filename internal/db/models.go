@@ -125,9 +125,9 @@ type BuilderCredential struct {
 	ServerCertPem      string             `json:"server_cert_pem"`
 	ClientCertPem      string             `json:"client_cert_pem"`
 	ClientKeyPem       string             `json:"client_key_pem"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	AwsAccessKeyID     string             `json:"aws_access_key_id"`
 	AwsSecretAccessKey string             `json:"aws_secret_access_key"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 }
 
 type BuilderImageBuild struct {
@@ -148,6 +148,19 @@ type BuilderImageBuildLog struct {
 	Seq       int32              `json:"seq"`
 	Line      string             `json:"line"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type BuilderMetricSample struct {
+	ID              pgtype.UUID        `json:"id"`
+	BuilderConfigID pgtype.UUID        `json:"builder_config_id"`
+	Key             string             `json:"key"`
+	Label           string             `json:"label"`
+	Node            string             `json:"node"`
+	Kind            string             `json:"kind"`
+	Unit            string             `json:"unit"`
+	Value           float64            `json:"value"`
+	Max             *float64           `json:"max"`
+	SampledAt       pgtype.Timestamptz `json:"sampled_at"`
 }
 
 type ConfiguredBuild struct {

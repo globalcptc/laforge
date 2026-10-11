@@ -258,6 +258,72 @@ const (
 	PowerStateOther   = "other" // exists but neither cleanly running nor stopped (frozen, error, starting...)
 )
 
+// Metric is one self-describing stat a builder publishes about its own backend
+// (the hoster/stack, NOT the deployed guests). The UI renders generically from
+// these, so a builder can add a metric and have it appear with no UI change:
+// Kind "timeseries" draws a chart from stored history, "gauge" draws a
+// usage-vs-limit bar. See docs/plans/builder-monitoring.md.
+type Metric struct {
+	Key   string   `json:"key"`   // stable id: "cpu", "mem", "disk_ops", "net", "api_latency", "quota:vpcs"
+	Label string   `json:"label"` // human label for display
+	Node  string   `json:"node"`  // "" = builder-wide; a server/member name for per-node (Incus)
+	Kind  string   `json:"kind"`  // MetricTimeseries | MetricGauge
+	Unit  string   `json:"unit"`  // "%", "ops/s", "ms", "count", "bytes/s", ...
+	Value float64  `json:"value"`
+	Max   *float64 `json:"max,omitempty"` // set only for a gauge (the quota limit); nil = unbounded series
+}
+
+const (
+	MetricTimeseries = "timeseries"
+	MetricGauge      = "gauge"
+)
+
+// Stats is a builder's current reading of its own backend health -- a flat list
+// of self-describing Metrics plus any best-effort warnings (a node that couldn't
+// be read, a quota near its limit). Sampled on an interval by the collector and
+// stored for the time-series history; gauges are shown at their latest value.
+type Stats struct {
+	Metrics  []Metric `json:"metrics"`
+	Warnings []string `json:"warnings,omitempty"`
+}
+
+// MetricProvider is the OPTIONAL stats contract: a builder that can report its
+// stack's health implements it, and is probed for it (b.(MetricProvider)) the
+// same way the other optional builder capabilities are. A builder that doesn't
+// (OpenStack, the fake builder) simply has no stats UI.
+type MetricProvider interface {
+	Stats(ctx context.Context) (Stats, error)
+}
+
+// Demand is what an environment will need from its builder, estimated across all
+// teams BEFORE any hoster call, so a quota wall is caught up front instead of
+// mid-deploy (the sibling of the AWS IAM pre-flight check). Builder-agnostic: it
+// carries LaForge concepts (teams, public hosts, size names), and the builder
+// translates them into its own units -- on AWS, Teams -> VPCs, PublicHosts ->
+// Elastic IPs, and each size -> an instance type whose vCPUs count toward the
+// region vCPU quota. See docs/plans/builder-monitoring.md.
+type Demand struct {
+	Teams          int            // one isolated network per team (one VPC on AWS)
+	PublicHosts    int            // total across teams -- each needs an external address (an EIP on AWS)
+	InstanceCounts map[string]int // size name -> number of host instances across all teams
+}
+
+// Readiness is a ReadinessChecker's verdict: human-readable warnings about limits
+// the build would exceed. Empty Warnings means clear to deploy. It's advisory --
+// the check never blocks a deploy, it surfaces what a quota would.
+type Readiness struct {
+	Warnings []string `json:"warnings,omitempty"`
+}
+
+// ReadinessChecker is the OPTIONAL pre-deploy capacity contract: a builder whose
+// backend enforces account limits implements it and is probed for it
+// (b.(ReadinessChecker)), the same way MetricProvider is. Only AWS implements it
+// today -- it's the one hoster where a quota silently breaks a deploy. A builder
+// that doesn't simply has no pre-deploy readiness warnings.
+type ReadinessChecker interface {
+	CheckReadiness(ctx context.Context, d Demand) (Readiness, error)
+}
+
 // Builder is the contract. Every Deploy*/Destroy* call must be an
 // "ensure": safe to call more than once for the same ExternalName /
 // externalRef without creating a second resource or erroring on a

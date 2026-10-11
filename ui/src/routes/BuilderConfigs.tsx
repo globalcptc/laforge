@@ -160,7 +160,7 @@ function BuilderRow({ bc, onOpenConsole }: { bc: BuilderConfig; onOpenConsole: (
       </Td>
       <Td className="text-right">
         <Link
-          to="/admin/infrastructure/$name"
+          to="/admin/infrastructure/$name/edit"
           params={{ name: bc.name }}
           className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'text-brand hover:bg-brand-soft hover:text-brand')}
         >

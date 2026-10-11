@@ -204,7 +204,7 @@ func (q *Queries) GetBuilderConfigByName(ctx context.Context, name string) (Buil
 }
 
 const getBuilderCredential = `-- name: GetBuilderCredential :one
-SELECT id, api_url, server_name, server_fingerprint, server_cert_pem, client_cert_pem, client_key_pem, aws_access_key_id, aws_secret_access_key, created_at FROM builder_credential WHERE id = $1
+SELECT id, api_url, server_name, server_fingerprint, server_cert_pem, client_cert_pem, client_key_pem, created_at, aws_access_key_id, aws_secret_access_key FROM builder_credential WHERE id = $1
 `
 
 func (q *Queries) GetBuilderCredential(ctx context.Context, id pgtype.UUID) (BuilderCredential, error) {
@@ -218,9 +218,9 @@ func (q *Queries) GetBuilderCredential(ctx context.Context, id pgtype.UUID) (Bui
 		&i.ServerCertPem,
 		&i.ClientCertPem,
 		&i.ClientKeyPem,
+		&i.CreatedAt,
 		&i.AwsAccessKeyID,
 		&i.AwsSecretAccessKey,
-		&i.CreatedAt,
 	)
 	return i, err
 }

@@ -5,6 +5,8 @@ import (
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+
+	"github.com/globalcptc/laforge/internal/builder"
 )
 
 func TestParsePortRange(t *testing.T) {
@@ -144,6 +146,42 @@ func TestVPCCIDRFor(t *testing.T) {
 	}
 	if _, err := vpcCIDRFor("not-a-cidr"); err == nil {
 		t.Error("vpcCIDRFor(garbage) should error")
+	}
+}
+
+func TestAggregateInstanceMetrics(t *testing.T) {
+	// Two instances: CPU 40 & 60 -> mean 50; net (in+out) 300+600+... summed and
+	// divided by the 300s period; disk ops likewise.
+	ids := []string{"i-a", "i-b"}
+	latest := map[string]float64{
+		"cpu_0": 40, "nin_0": 300, "nout_0": 300, "rops_0": 150, "wops_0": 150,
+		"cpu_1": 60, "nin_1": 600, "nout_1": 0, "rops_1": 0, "wops_1": 0,
+	}
+	cpu, netBps, opsPerS := aggregateInstanceMetrics(ids, latest)
+	if cpu == nil || *cpu != 50 {
+		t.Errorf("cpu = %v, want 50", cpu)
+	}
+	// net bytes = (300+300)+(600+0) = 1200; /300 = 4 bytes/s.
+	if netBps != 4 {
+		t.Errorf("netBps = %v, want 4", netBps)
+	}
+	// ops = (150+150)+(0+0) = 300; /300 = 1 op/s.
+	if opsPerS != 1 {
+		t.Errorf("opsPerS = %v, want 1", opsPerS)
+	}
+	// No CPU datapoints at all -> nil (so it's omitted, not reported as 0%).
+	if cpu, _, _ := aggregateInstanceMetrics([]string{"i-x"}, map[string]float64{}); cpu != nil {
+		t.Errorf("cpu with no data = %v, want nil", cpu)
+	}
+}
+
+func TestQuotaGauge(t *testing.T) {
+	g := quotaGauge("vpcs", "VPCs (region)", 4, 5)
+	if g.Key != "quota:vpcs" || g.Kind != builder.MetricGauge || g.Value != 4 {
+		t.Errorf("gauge = %+v", g)
+	}
+	if g.Max == nil || *g.Max != 5 {
+		t.Errorf("gauge max = %v, want 5", g.Max)
 	}
 }
 

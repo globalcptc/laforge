@@ -38,6 +38,8 @@ var requiredActions = []string{
 	"ecs:RegisterTaskDefinition", "ecs:DeregisterTaskDefinition", "ecs:ListTaskDefinitions",
 	"ecs:RunTask", "ecs:StopTask", "ecs:ListTasks", "ecs:DescribeClusters", "ecs:CreateCluster", "ecs:TagResource",
 	"logs:CreateLogGroup", "logs:TagResource", // ensure (and tag) the Fargate awslogs group
+	"cloudwatch:GetMetricData",      // builder-page health time-series
+	"servicequotas:GetServiceQuota", // builder-page quota gauges
 }
 
 // checkPermissions simulates requiredActions against the caller and returns a

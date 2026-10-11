@@ -121,6 +121,8 @@ Resources:
             Action:
               - sts:GetCallerIdentity
               - iam:SimulatePrincipalPolicy  # powers the connect-time pre-flight permission check
+              - cloudwatch:GetMetricData     # builder-page health time-series
+              - servicequotas:GetServiceQuota # builder-page quota gauges
             Resource: '*'
 
   RunnerUser:

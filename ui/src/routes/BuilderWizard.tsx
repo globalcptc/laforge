@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from '@tanstack/react-router'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { builderConnectionPath, useBuilderConfigs, useCreateBuilderConfig, useUpdateBuilderConfig } from '../api/hooks'
 import { ApiError, api } from '../api/client'
@@ -27,6 +27,22 @@ import { StepCloud, StepCloudConnect, StepCloudRegion, StepCloudImages, StepClou
 import { StepReview } from '../components/builder-wizard/StepReview'
 
 type StepId = 'type' | 'connect' | 'placement' | 'images' | 'sizes' | 'cloud' | 'cloud-connect' | 'cloud-region' | 'cloud-images' | 'cloud-sizes' | 'review'
+
+// sectionStepIndex maps a ?section= hint from the info page's edit buttons to the
+// matching step for the current builder kind (config = connection/infra settings,
+// images, sizes). Returns -1 when no step fits.
+function sectionStepIndex(section: string, steps: StepId[]): number {
+  const candidates: Record<string, StepId[]> = {
+    config: ['cloud-region', 'cloud-connect', 'placement', 'connect', 'cloud'],
+    images: ['cloud-images', 'images'],
+    sizes: ['cloud-sizes', 'sizes'],
+  }
+  for (const id of candidates[section] ?? []) {
+    const i = steps.indexOf(id)
+    if (i >= 0) return i
+  }
+  return -1
+}
 
 const STEP_TITLE: Record<StepId, string> = {
   type: 'Type',
@@ -83,6 +99,7 @@ function awsSizeBlocker(d: Draft): string | null {
 export function BuilderWizard() {
   const params = useParams({ strict: false }) as { name?: string }
   const editingName = params.name
+  const search = useSearch({ strict: false }) as { section?: string }
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -155,6 +172,20 @@ export function BuilderWizard() {
           ? ['type', 'cloud', 'review']
           : ['type', 'connect', 'placement', 'images', 'sizes', 'review']
   const step = steps[Math.min(stepIndex, steps.length - 1)]
+
+  // The info page's Config/Images/Sizes buttons deep-link via ?section=; once the
+  // edited builder is loaded (so the steps match its kind), jump there once.
+  const sectionJumped = useRef(false)
+  useEffect(() => {
+    if (sectionJumped.current || !editingName || !initialized || !search.section) return
+    const i = sectionStepIndex(search.section, steps)
+    if (i >= 0) {
+      setStepIndex(i)
+      setFurthest((f) => Math.max(f, i))
+      sectionJumped.current = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingName, initialized, search.section, draft.kind])
 
   function setKind(kind: Kind) {
     setDraft((d) => ({

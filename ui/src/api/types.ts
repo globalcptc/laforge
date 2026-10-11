@@ -917,3 +917,65 @@ export interface AttentionItem {
   category: string
   reason: string
 }
+
+// Builder backend-health stats (GET /builder-configs/{name}/stats) -- see
+// docs/plans/builder-monitoring.md. Series are time-series for charts; gauges
+// are the latest usage-vs-limit for quota bars.
+export interface MetricPoint {
+  t: string
+  v: number
+}
+export interface MetricSeries {
+  key: string
+  label: string
+  node: string
+  unit: string
+  points: MetricPoint[]
+}
+export interface MetricGauge {
+  key: string
+  label: string
+  node: string
+  unit: string
+  value: number
+  max?: number
+}
+export interface BuilderStats {
+  series: MetricSeries[]
+  gauges: MetricGauge[]
+}
+
+// Builder usage summary (GET /builder-configs/{name}/usage).
+export interface UsageBuild {
+  id: string
+  status: string
+  environment_name: string
+  created_at: string
+}
+export interface UsageResource {
+  kind: string
+  running: number
+  total: number
+}
+export interface UsagePublic {
+  public_address: string
+  protocol: string
+  external_port: string
+  object_name: string
+  as_name?: string | null
+  team_number: number
+  build_id: string
+}
+export interface BuilderUsage {
+  active_builds: UsageBuild[]
+  resources: UsageResource[]
+  public: UsagePublic[]
+}
+
+// BuildReadiness is the pre-deploy quota check for a build's builder. checked is
+// false when the builder has no quota check (every kind but AWS); warnings lists
+// the account limits this build would exceed. See GET /builds/{id}/readiness.
+export interface BuildReadiness {
+  checked: boolean
+  warnings: string[]
+}
