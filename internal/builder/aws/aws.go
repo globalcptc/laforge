@@ -902,6 +902,17 @@ func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 	for _, s := range subnets.Subnets {
 		out = append(out, builder.Resource{ExternalRef: awssdk.ToString(s.SubnetId), Kind: "network"})
 	}
+
+	// Single-image containers are Fargate TASKS, not EC2 instances, so list them
+	// too -- otherwise the power-state poll (which marks any object whose
+	// external_ref Inspect doesn't return as "missing") reports every running
+	// container as missing. (A compose container is an EC2 instance and is already
+	// covered by the DescribeInstances pass above.)
+	tasks, err := b.inspectTasks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, tasks...)
 	return out, nil
 }
 

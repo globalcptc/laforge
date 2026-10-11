@@ -227,6 +227,41 @@ func (b *Builder) ensureCluster(ctx context.Context) error {
 	return nil
 }
 
+// inspectTasks lists the cluster's running LaForge Fargate tasks as container
+// Resources, so the power-state poll finds a deployed container by its task ARN
+// (external_ref) instead of marking it missing. StartedBy="laforge" scopes to
+// our own tasks; desired-status RUNNING means a stopped/failed task is correctly
+// absent (reported missing). A not-yet-created cluster simply has no tasks.
+func (b *Builder) inspectTasks(ctx context.Context) ([]builder.Resource, error) {
+	cluster := b.cfg.Cluster
+	if cluster == "" {
+		cluster = "default"
+	}
+	var out []builder.Resource
+	var next *string
+	for {
+		list, err := b.ecs.ListTasks(ctx, &ecs.ListTasksInput{
+			Cluster:       awssdk.String(cluster),
+			StartedBy:     awssdk.String("laforge"),
+			DesiredStatus: ecstypes.DesiredStatusRunning,
+			NextToken:     next,
+		})
+		if err != nil {
+			if isECSClusterNotFound(err) {
+				return out, nil // no cluster yet -> no tasks
+			}
+			return nil, fmt.Errorf("listing ECS tasks: %w", err)
+		}
+		for _, arn := range list.TaskArns {
+			out = append(out, builder.Resource{ExternalRef: arn, Kind: "container", State: builder.PowerStateRunning})
+		}
+		if list.NextToken == nil {
+			return out, nil
+		}
+		next = list.NextToken
+	}
+}
+
 // ensureLogGroup makes sure the awslogs target log group exists, creating it if
 // absent. The ECS task execution role (AWS-managed AmazonECSTaskExecutionRolePolicy)
 // can write streams + events but NOT create the group, and the awslogs driver

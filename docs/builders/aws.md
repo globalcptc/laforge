@@ -99,9 +99,9 @@ want least privilege (see the note after the policy).
       "Effect": "Allow",
       "Action": [
         "ecs:RegisterTaskDefinition", "ecs:DeregisterTaskDefinition", "ecs:ListTaskDefinitions",
-        "ecs:RunTask", "ecs:StopTask",
+        "ecs:RunTask", "ecs:StopTask", "ecs:ListTasks",
         "ecs:DescribeClusters", "ecs:CreateCluster", "ecs:TagResource",
-        "logs:CreateLogGroup"
+        "logs:CreateLogGroup", "logs:TagResource"
       ],
       "Resource": "*",
       "Condition": { "StringEquals": { "aws:RequestedRegion": "us-east-1" } }
