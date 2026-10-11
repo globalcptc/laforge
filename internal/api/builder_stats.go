@@ -43,6 +43,10 @@ type metricGauge struct {
 type builderStatsResponse struct {
 	Series []metricSeries `json:"series"`
 	Gauges []metricGauge  `json:"gauges"`
+	// Warnings explain metrics a live read couldn't produce (e.g. a quota the
+	// credential isn't allowed to read), so "no quotas showing" isn't silent.
+	// Only populated on the live path -- stored samples carry no warnings.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 func (s *Server) handleGetBuilderConfigStats(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +118,10 @@ func (s *Server) liveBuilderStats(ctx context.Context, row db.BuilderConfig) (bu
 			Points: []metricPoint{{T: now, V: m.Value}},
 		})
 	}
-	return resp, len(resp.Series) > 0 || len(resp.Gauges) > 0
+	resp.Warnings = stats.Warnings
+	// Warnings alone (e.g. every quota read denied) are still worth returning so
+	// the page can say why nothing but api_latency showed up.
+	return resp, len(resp.Series) > 0 || len(resp.Gauges) > 0 || len(resp.Warnings) > 0
 }
 
 // usageResource is a per-kind rollup (hosts/containers/networks): how many are

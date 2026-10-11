@@ -1,5 +1,5 @@
 import { Link, useParams } from '@tanstack/react-router'
-import { Pencil } from 'lucide-react'
+import { Pencil, TriangleAlert } from 'lucide-react'
 import { useBuilderStats, useBuilderUsage, useBuilderConfigs } from '../api/hooks'
 import type { MetricSeries, MetricGauge, UsageResource, UsagePublic, UsageBuild } from '../api/types'
 import { BuilderKindBadge } from '../components/BuilderKindBadge'
@@ -19,13 +19,16 @@ export function BuilderInfo() {
 
   const series = stats.data?.series ?? []
   const gauges = stats.data?.gauges ?? []
+  const warnings = stats.data?.warnings ?? []
 
+  // Edit actions are brand-owned (violet) per the CPTC design system -- never the
+  // neutral/white `secondary` variant. See feedback-buttons-use-color.
   const editBtn = (label: string, section: string) => (
     <Link
       to="/admin/infrastructure/$name/edit"
       params={{ name }}
       search={{ section }}
-      className={buttonClass({ variant: 'secondary', size: 'sm' })}
+      className={buttonClass({ variant: 'brand', size: 'sm' })}
     >
       <Pencil size={13} /> {label}
     </Link>
@@ -50,10 +53,24 @@ export function BuilderInfo() {
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Status spans the full width -- it's the at-a-glance summary. */}
+      <div className="mb-4">
         <StatusPanel builds={usage.data?.active_builds ?? []} resources={usage.data?.resources ?? []} />
-        <PublicPanel endpoints={usage.data?.public ?? []} />
       </div>
+
+      {warnings.length > 0 && (
+        <div className="mb-4 flex items-start gap-2.5 rounded-token border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-sm text-warning">
+          <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <div className="font-medium">Some metrics couldn’t be read</div>
+            <ul className="mt-1 list-disc space-y-0.5 pl-4 text-warning/90">
+              {warnings.map((warn, i) => (
+                <li key={i} className="break-words">{warn}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {gauges.length > 0 && (
         <Card className="mb-4">
@@ -82,6 +99,11 @@ export function BuilderInfo() {
           ))}
         </div>
       )}
+
+      {/* Public endpoints last: a full-width list grouped by team. */}
+      <div className="mt-4">
+        <PublicPanel endpoints={usage.data?.public ?? []} />
+      </div>
     </div>
   )
 }
@@ -137,8 +159,10 @@ function StatusPanel({ builds, resources }: { builds: UsageBuild[]; resources: U
 }
 
 // PublicPanel lists the externally-reachable endpoints across the builder's
-// builds -- the address:port a team connects to for a public: host.
+// builds -- the address:port a team connects to for a public: host -- grouped by
+// team so each team's exposed surface reads together.
 function PublicPanel({ endpoints }: { endpoints: UsagePublic[] }) {
+  const teams = groupByTeam(endpoints)
   return (
     <Card>
       <CardHeader title="Public endpoints" />
@@ -146,20 +170,36 @@ function PublicPanel({ endpoints }: { endpoints: UsagePublic[] }) {
         {endpoints.length === 0 ? (
           <div className="text-xs text-fg-subtle">No public endpoints exposed.</div>
         ) : (
-          <ul className="space-y-1">
-            {endpoints.slice(0, 12).map((e, i) => (
-              <li key={i} className="flex items-center justify-between gap-2">
-                <span className="truncate text-fg-muted">
-                  t{e.team_number} · {e.as_name || e.object_name}
-                </span>
-                <span className="font-mono text-xs text-fg">{e.public_address}</span>
-              </li>
+          <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+            {teams.map((t) => (
+              <div key={t.team}>
+                <div className="mb-1 text-xs font-medium uppercase tracking-wide text-fg-muted">Team {t.team}</div>
+                <ul className="space-y-1">
+                  {t.endpoints.map((e, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2">
+                      <span className="truncate text-fg-muted">{e.as_name || e.object_name}</span>
+                      <span className="font-mono text-xs text-fg">{e.public_address}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </div>
     </Card>
   )
+}
+
+// groupByTeam buckets endpoints under their team number, teams in ascending order.
+function groupByTeam(endpoints: UsagePublic[]): { team: number; endpoints: UsagePublic[] }[] {
+  const byTeam = new Map<number, UsagePublic[]>()
+  for (const e of endpoints) {
+    const list = byTeam.get(e.team_number) ?? []
+    list.push(e)
+    byTeam.set(e.team_number, list)
+  }
+  return [...byTeam.entries()].sort((a, b) => a[0] - b[0]).map(([team, eps]) => ({ team, endpoints: eps }))
 }
 
 // GaugeBar is a quota usage-vs-limit bar; it reddens as it nears the limit.

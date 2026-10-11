@@ -943,6 +943,7 @@ export interface MetricGauge {
 export interface BuilderStats {
   series: MetricSeries[]
   gauges: MetricGauge[]
+  warnings?: string[]
 }
 
 // Builder usage summary (GET /builder-configs/{name}/usage).
