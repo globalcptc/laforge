@@ -38,7 +38,8 @@ import (
 // aggregates across all of them for Inspect (which isn't team-scoped) --
 // see hostForTeam's own doc comment for the routing rule.
 type Pool struct {
-	Hosts []*incus.Builder
+	OneTeamPerHost bool
+	Hosts          []*incus.Builder
 	// Images is the pool-wide os/image catalog (see migration 00014's own
 	// doc comment: content's os/image/size names are pool-wide, not
 	// per-host) -- exposed via ImageNames so
@@ -84,6 +85,9 @@ func (p *Pool) hostForTeam(team string) (*incus.Builder, error) {
 	n, err := strconv.Atoi(team)
 	if err != nil || n < 1 {
 		return nil, fmt.Errorf("incus pool: team %q is not a valid team number", team)
+	}
+	if err := p.ValidateTeamCount(n); err != nil {
+		return nil, err
 	}
 	return p.Hosts[(n-1)%len(p.Hosts)], nil
 }
@@ -197,4 +201,21 @@ func (p *Pool) ConfigureExternalAccess(ctx context.Context, team string, hosts [
 		return nil, err
 	}
 	return h.ConfigureExternalAccess(ctx, team, hosts)
+}
+
+// ValidateTeamCount is called before reconciliation queues any deployment tasks.
+func (p *Pool) ValidateTeamCount(teams int) error {
+	if len(p.Hosts) == 0 {
+		return errors.New("incus pool has no hosts configured")
+	}
+	if p.OneTeamPerHost && teams > len(p.Hosts) {
+		return fmt.Errorf("one team per host requires %d distinct Incus hosts, but only %d are configured", teams, len(p.Hosts))
+	}
+	// Content repeats the same subnets for every team; a native bridge host cannot take a second copy.
+	for n := len(p.Hosts); n < teams; n++ {
+		if p.Hosts[n%len(p.Hosts)].Config.NetworkMode() == "bridge" {
+			return fmt.Errorf("team %d would reuse a bridge host's subnets: configure at least %d distinct hosts for %d teams", n+1, teams, teams)
+		}
+	}
+	return nil
 }

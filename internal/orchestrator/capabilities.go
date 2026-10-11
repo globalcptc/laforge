@@ -1,11 +1,5 @@
-// This file is Reconcile's pre-build validation of the one thing that is NOT a
-// capability opt-out: every os/image a host references must have a concrete
-// image mapped in the builder config, so "uses windows-server-2022, which the
-// builder has no image for" fails before the build starts rather than mid-deploy.
-// There is deliberately no
-// capability check -- content is builder-agnostic; a builder either implements
-// the whole contract or it isn't a valid builder (see internal/builder's own doc
-// comment). Runs once per Reconcile pass, before any team/deployed_object work.
+// Build preflight validates image mappings and the configured team placement
+// before reconciliation creates teams, deployed objects, or deployment tasks.
 package orchestrator
 
 import (
@@ -36,7 +30,7 @@ type imageCatalog interface {
 // os/image names it has configured, for a builder kind that exposes one, plus
 // the builder's name. A build with no configured_build at all (the ad-hoc/test
 // path) returns nil images and an empty name -- nothing to check.
-func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool, build db.Build) (images map[string]bool, builderName string, err error) {
+func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool, build db.Build, teamCount int) (images map[string]bool, builderName string, err error) {
 	if !build.ConfiguredBuildID.Valid {
 		return nil, "", nil
 	}
@@ -55,6 +49,11 @@ func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool
 	if err != nil {
 		return nil, cb.BuilderConfigName, fmt.Errorf("resolving builder %q: %w", cb.BuilderConfigName, err)
 	}
+	if placement, ok := b.(interface{ ValidateTeamCount(int) error }); ok {
+		if err := placement.ValidateTeamCount(teamCount); err != nil {
+			return nil, cb.BuilderConfigName, err
+		}
+	}
 	if ic, ok := b.(imageCatalog); ok {
 		images = ic.ImageNames()
 	}
@@ -71,12 +70,9 @@ func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool
 	return images, cb.BuilderConfigName, nil
 }
 
-// checkBuilderCompatibility validates that every os/image the environment
-// references is mapped in the resolved builder's config. There is no capability
-// gating -- content never varies by builder -- so this is purely the
-// image-completeness check.
+// checkBuilderCompatibility validates image mappings and team placement.
 func checkBuilderCompatibility(ctx context.Context, q *db.Queries, pool *pgxpool.Pool, build db.Build, c *loader.Content, env *loader.Environment, containerNames map[string]bool) error {
-	images, builderName, err := resolveBuilderImages(ctx, q, pool, build)
+	images, builderName, err := resolveBuilderImages(ctx, q, pool, build, env.Teams)
 	if err != nil {
 		return err
 	}

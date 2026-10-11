@@ -266,6 +266,10 @@ func (c *Client) exec(ctx context.Context, instance string, command ...string) (
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body interface{}) (json.RawMessage, error) {
+	return c.doWithHeaders(ctx, method, path, body, nil, nil)
+}
+
+func (c *Client) doWithHeaders(ctx context.Context, method, path string, body interface{}, headers http.Header, responseHeaders *http.Header) (json.RawMessage, error) {
 	// reqCtx, not a reassigned ctx: waitForOperation below needs the
 	// ORIGINAL, undecorated ctx this function was called with, not this
 	// request's own short-lived deadline -- a child context can never
@@ -302,11 +306,17 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 		req.Header.Set("Content-Type", "application/json")
 	}
 
+	for key, values := range headers {
+		req.Header[key] = values
+	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%s %s: %w", method, u, err)
 	}
 	defer resp.Body.Close()
+	if responseHeaders != nil {
+		*responseHeaders = resp.Header.Clone()
+	}
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err

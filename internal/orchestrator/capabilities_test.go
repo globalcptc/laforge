@@ -1,6 +1,13 @@
 package orchestrator
 
 import (
+	"context"
+	"encoding/json"
+	"github.com/globalcptc/laforge/internal/agentpki"
+	"github.com/globalcptc/laforge/internal/builder/incus"
+	"github.com/globalcptc/laforge/internal/db"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -55,5 +62,35 @@ func TestCheckEnvironmentImagesSkipsWhenNilImages(t *testing.T) {
 	c, env := lmTestEnv(t)
 	if err := checkEnvironmentImages(env, c, containerNamesOf(c), nil); err != nil {
 		t.Errorf("expected no error when images is nil, got: %v", err)
+	}
+}
+
+func TestPlacementOverflowFailsBeforeDeploymentTasks(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	q := db.New(pool)
+	build := newTestBuildWithFakeBuilder(t, pool, "bridge-capacity")
+	ca, err := agentpki.GenerateCA("placement-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert, key := filepath.Join(t.TempDir(), "client.crt"), filepath.Join(t.TempDir(), "client.key")
+	if err := os.WriteFile(cert, ca.CertPEM, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(key, ca.KeyPEM, 0600); err != nil {
+		t.Fatal(err)
+	}
+	hosts, _ := json.Marshal([]incus.HostConfig{{APIURL: "https://unused.invalid:8443", ClientCertPath: cert, ClientKeyPath: key, ServerCertPEM: string(ca.CertPEM), NetworkType: "bridge"}})
+	if _, err := pool.Exec(ctx, "UPDATE builder_config SET kind='incus', incus_hosts=$1, incus_one_team_per_host=true WHERE name='bridge-capacity-builder'", hosts); err != nil {
+		t.Fatal(err)
+	}
+	err = Reconcile(ctx, pool, "../../examples/lm-test", build.ID)
+	if err == nil || !strings.Contains(err.Error(), "one team per host") {
+		t.Fatalf("want placement error, got %v", err)
+	}
+	tasks, err := q.ListTasksByBuild(ctx, build.ID)
+	if err != nil || len(tasks) != 0 {
+		t.Fatalf("impossible layout queued deployment work: %d tasks, %v", len(tasks), err)
 	}
 }

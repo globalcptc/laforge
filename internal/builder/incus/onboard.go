@@ -82,8 +82,16 @@ func discoverResources(ctx context.Context, c *Client) (builder.Discovery, error
 	if err != nil {
 		warn("instance snapshots", err)
 	}
+	supported, supportErr := c.bridgeACLSupported(ctx)
+	var bridgeSupport *bool
+	if supportErr != nil {
+		warnings = append(warnings, supportErr.Error())
+	} else {
+		bridgeSupport = &supported
+	}
 	return builder.Discovery{
-		StoragePools: orEmpty(pools), Networks: orEmpty(networks), NetworkNames: orEmpty(networkNames),
+		NativeBridgeSupported: bridgeSupport,
+		StoragePools:          orEmpty(pools), Networks: orEmpty(networks), NetworkNames: orEmpty(networkNames),
 		Images: orEmpty(images), Projects: []builder.ProjectInfo{}, Snapshots: orEmpty(snapshots), Warnings: orEmpty(warnings),
 	}, nil
 }

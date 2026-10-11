@@ -201,6 +201,14 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 		return nil
 	}
 
+	if errors.Is(execErr, builder.ErrExternalAccessNotReady) && task.Kind == "configure_external_access" {
+		_, err := q.DeferTask(ctx, db.DeferTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Column4: db.Interval(r.RetryBackoff(1))})
+		if err != nil {
+			return fmt.Errorf("deferring external access: %w", err)
+		}
+		r.logEvent(ctx, q, task.BuildID, task.ID, "task.waiting", execErr.Error())
+		return nil
+	}
 	if execErr != nil {
 		if task.Attempts >= MaxAttempts {
 			q.FailTask(ctx, db.FailTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error())})
@@ -952,10 +960,12 @@ func (r *Runner) executeConfigureExternalAccess(ctx context.Context, q *db.Queri
 			continue
 		}
 		ref := db.StrOrEmpty(o.ExternalRef)
-		if ref == "" {
-			continue // not deployed at the hoster yet
-		}
-		if reconcileEmpty && o.Status != "running" && o.Status != "building" && o.Status != "finished" && o.Status != "deployed" {
+		if ref == "" || !builder.ExternalAccessDeployReady(o.Status) {
+			// Incus allocates ports in sorted instance order. Wait for the full
+			// public set so a later VM cannot move an existing VM's mapping.
+			if !reconcileEmpty {
+				return fmt.Errorf("%w: public target %s has not completed deployment", builder.ErrExternalAccessNotReady, o.ObjectName)
+			}
 			continue
 		}
 		rctx, err := render.Resolve(c, build.EnvironmentName, db.StrOrEmpty(o.AsName), int(teamNum))

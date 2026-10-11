@@ -98,7 +98,7 @@ func (f *fakeIncus) handle(w http.ResponseWriter, r *http.Request) {
 		if trusted {
 			auth = "trusted"
 		}
-		reply(map[string]interface{}{"auth": auth, "api_extensions": []string{"explicit_trust_token"}, "environment": map[string]string{"server_name": "fake-incus"}})
+		reply(map[string]interface{}{"auth": auth, "api_extensions": []string{"explicit_trust_token", "network_bridge_acl_devices"}, "environment": map[string]string{"server_name": "fake-incus", "firewall": "nftables"}})
 	case r.URL.Path == "/1.0/certificates" && r.Method == http.MethodPost:
 		var body struct {
 			TrustToken string `json:"trust_token"`
@@ -115,9 +115,19 @@ func (f *fakeIncus) handle(w http.ResponseWriter, r *http.Request) {
 	case !trusted:
 		deny()
 	case r.URL.Path == "/1.0/storage-pools":
-		reply([]map[string]string{{"name": "default", "driver": "zfs"}, {"name": "fast", "driver": "lvm"}})
+		reply([]string{"/1.0/storage-pools/default", "/1.0/storage-pools/fast"})
+	case r.URL.Path == "/1.0/storage-pools/default":
+		reply(map[string]string{"name": "default", "driver": "zfs"})
+	case r.URL.Path == "/1.0/storage-pools/fast":
+		reply(map[string]string{"name": "fast", "driver": "lvm"})
 	case r.URL.Path == "/1.0/networks":
-		reply([]map[string]interface{}{{"name": "UPLINK", "type": "physical", "managed": true}, {"name": "incusbr0", "type": "bridge", "managed": true}})
+		reply([]string{"/1.0/networks/UPLINK", "/1.0/networks/incusbr0"})
+	case r.URL.Path == "/1.0/networks/UPLINK":
+		reply(map[string]interface{}{"name": "UPLINK", "type": "physical", "managed": true})
+	case r.URL.Path == "/1.0/networks/incusbr0":
+		reply(map[string]interface{}{"name": "incusbr0", "type": "bridge", "managed": true, "config": map[string]string{"ipv4.address": "10.61.220.1/24", "bridge.driver": "native"}})
+	case r.URL.Path == "/1.0/instances":
+		reply([]string{})
 	case r.URL.Path == "/1.0/images":
 		reply(f.images)
 	default:
@@ -299,4 +309,36 @@ func TestBuilderImagesMustExistOnEveryHost(t *testing.T) {
 	if status != http.StatusBadRequest || !strings.Contains(msg, "win2019") || !strings.Contains(msg, "host 2") {
 		t.Fatalf("image missing on host 2: status = %d: %s -- want a 400 naming the image and the host", status, msg)
 	}
+}
+
+func TestIncusConnectionDiscoversBridgeSupport(t *testing.T) {
+	env := setupAPITest(t)
+	env.server.AdminLogins = []string{"exchanged-bridge-connect-admin"}
+	admin := signedInClient(t, env, "bridge-connect-admin")
+	daemon := newFakeIncus(t)
+	body, _ := json.Marshal(connectBuilderRequest{Kind: "incus", Token: daemon.token})
+	resp, err := admin.Post(env.httpURL+"/builder-connections", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("connect status %d", resp.StatusCode)
+	}
+	var view connectionView
+	if err := json.NewDecoder(resp.Body).Decode(&view); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		env.server.Pool.Exec(context.Background(), "DELETE FROM builder_credential WHERE id=$1", view.Credential.ID)
+	})
+	if view.Discovery.NativeBridgeSupported == nil || !*view.Discovery.NativeBridgeSupported {
+		t.Fatal("bridge capability missing from API discovery")
+	}
+	for _, n := range view.Discovery.Networks {
+		if n.Name == "incusbr0" && n.Config["ipv4.address"] == "10.61.220.1/24" {
+			return
+		}
+	}
+	t.Fatal("bridge subnet missing from network discovery")
 }

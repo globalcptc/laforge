@@ -12,16 +12,10 @@ type Config struct {
 	Images map[string]ImageRef
 	// Sizes maps a content `size` field to concrete resource limits.
 	Sizes map[string]SizeSpec
-	// OVNUplinkNetwork is the name of the physical/unmanaged network on
-	// the Incus cluster that OVN routes external traffic through --
-	// Canonical's own MicroCloud/OVN setup docs call this "UPLINK" by
-	// convention, but it's whatever the cluster operator named it when
-	// they ran `incus network create <name> --type=physical` (or bridge)
-	// during cluster bring-up, so it's a per-cluster builder config value,
-	// not a constant. Required: every DeployNetwork call creates an OVN
-	// logical network with this as its `network` (uplink) key. See
-	// Builder's own doc comment for why OVN, not a plain bridge, is what
-	// DeployNetwork uses.
+	// NetworkType selects native host-routed bridges or legacy OVN networks.
+	// Empty preserves old configurations with an OVN uplink; without one it uses bridges.
+	NetworkType string
+	// OVNUplinkNetwork is only used with OVN networking.
 	OVNUplinkNetwork string
 	// StoragePool is the Incus storage pool a host's root disk device is
 	// created on -- defaults to "default" (this package's own single-node
@@ -103,7 +97,8 @@ type HostConfig struct {
 	ClientCertPath          string `json:"client_cert_path"`
 	ClientKeyPath           string `json:"client_key_path"`
 	ServerCertPEM           string `json:"server_cert_pem"`
-	OVNUplinkNetwork        string `json:"ovn_uplink_network"`
+	NetworkType             string `json:"network_type,omitempty"`
+	OVNUplinkNetwork        string `json:"ovn_uplink_network,omitempty"`
 	StoragePool             string `json:"storage_pool"`
 	OperationTimeoutSeconds int    `json:"operation_timeout_seconds,omitempty"`
 }
@@ -157,4 +152,15 @@ type SizeSpec struct {
 	// The image/size maps are shared columns across every builder kind, so
 	// this rides alongside CPU/Memory rather than in a separate column.
 	Type string `json:"type,omitempty"`
+}
+
+// NetworkMode resolves legacy configurations without silently migrating an existing deployment.
+func (c Config) NetworkMode() string {
+	if c.NetworkType != "" {
+		return c.NetworkType
+	}
+	if c.OVNUplinkNetwork != "" {
+		return "ovn"
+	}
+	return "bridge"
 }

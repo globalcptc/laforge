@@ -1245,3 +1245,5 @@ ALTER TABLE ONLY public.validator_result
 --
 -- PostgreSQL database dump complete
 --
+
+ALTER TABLE public.builder_config ADD COLUMN incus_one_team_per_host boolean NOT NULL DEFAULT false;

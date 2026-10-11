@@ -59,6 +59,7 @@ export function StepReview({ draft }: { draft: Draft }) {
       {draft.kind !== 'fake' && !cloud && (
         <>
           <Section title={draft.kind === 'incus' ? `Hosts (${draft.hosts.length})` : 'Cluster'}>
+            {draft.kind === 'incus' && <Row label="Team placement">{draft.oneTeamPerHost ? 'One team per host; reject builds exceeding host count' : 'Round-robin (bridge hosts cannot share team subnets)'}</Row>}
             {draft.hosts.map((h, i) => (
               <Row key={h.key} label={draft.kind === 'incus' ? `Host ${i + 1}` : 'Server'}>
                 <div>
@@ -70,7 +71,7 @@ export function StepReview({ draft }: { draft: Draft }) {
                       project <span className="font-mono">{h.project || 'default'}</span> ·{' '}
                     </>
                   )}
-                  pool <span className="font-mono">{h.storagePool || '—'}</span> · uplink <span className="font-mono">{h.uplink || '—'}</span>
+                  pool <span className="font-mono">{h.storagePool || '—'}</span> · {draft.kind === 'incus' && h.networkType === 'bridge' ? 'native bridges' : <>OVN uplink <span className="font-mono">{h.uplink || '—'}</span></>}
                 </div>
               </Row>
             ))}

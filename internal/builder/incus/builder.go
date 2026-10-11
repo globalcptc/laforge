@@ -15,40 +15,8 @@ import (
 	"github.com/globalcptc/laforge/internal/render"
 )
 
-// Builder implements internal/builder.Builder against one real Incus
-// server. Team isolation is network-level: every NetworkSpec becomes its
-// own Incus OVN logical network.
-//
-// OVN, not a plain Incus bridge, because "every team gets exactly the
-// same network" (same CIDR, same
-// addresses, for every team) was tested live against two plain bridges
-// carrying the identical CIDR and does not work: a *managed* bridge with
-// the same ipv4.address on two different Incus networks fails outright
-// ("dnsmasq: failed to create listening socket for 10.0.1.1: Address
-// already in use" -- both networks' dnsmasq trying to bind the same
-// gateway IP), and the alternative -- unmanaged bridges (no
-// ipv4.address) with the IP assigned by hand -- creates two identical
-// routes in the HOST's own single routing table, one per bridge; `ip
-// route get 10.0.1.11` on the host resolves to whichever bridge was
-// created first, regardless of which team's traffic it actually is, so
-// return/NAT traffic for the second team's identically-addressed host
-// silently goes to the first team's bridge instead. Neither is a config
-// mistake fixable by tuning; both are the host having exactly one
-// routing table for however many teams share it.
-//
-// OVN sidesteps this by design: each OVN network is its own isolated
-// logical switch/router with its own address space, and Incus's own docs
-// name identical subnets across multiple OVN networks as a supported
-// case ("useful for labs and multi-tenant environments where the same
-// logical subnets are used in multiple discrete networks"). Not
-// live-verified end to end in this session's own test daemon: the
-// Docker-Desktop-on-Mac Linux kernel this environment runs under has no
-// openvswitch.ko (confirmed: `modprobe openvswitch` fails, "Module
-// openvswitch not found"), so no real OVN control plane could be brought
-// up here to test against, only the plain-bridge collision above and the
-// OVN network-create call's own "OVN isn't currently available" error
-// with no OVN control plane behind it (see builder_test.go). A real
-// MicroCloud cluster's own OVN setup is what this now depends on.
+// Builder provisions native Linux bridges or legacy OVN networks on one Incus host.
+// Bridge networks route and NAT through the host and require non-overlapping subnets.
 type Builder struct {
 	Client *Client
 	Config Config
@@ -175,42 +143,8 @@ func sanitizeName(s string) string {
 	return strings.TrimRight(b.String(), "-")
 }
 
-func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (string, error) {
-	if b.Config.OVNUplinkNetwork == "" {
-		return "", fmt.Errorf("this builder config has no OVNUplinkNetwork set -- every DeployNetwork call needs an uplink to route OVN logical networks through")
-	}
-	name := networkName(spec.DisplayName, spec.ExternalName)
-	bridgeAddr, err := bridgeAddressCIDR(spec.CIDR)
-	if err != nil {
-		return "", fmt.Errorf("computing gateway address for %s: %w", spec.CIDR, err)
-	}
-	_, err = b.Client.post(ctx, "/1.0/networks", map[string]interface{}{
-		"name": name,
-		"type": "ovn",
-		"config": map[string]string{
-			"network":      b.Config.OVNUplinkNetwork,
-			"ipv4.address": bridgeAddr,
-			"ipv4.nat":     "true",
-			// IPv6 off: LaForge is IPv4-only, and leaving OVN to auto-assign an
-			// IPv6 subnet requires the uplink to carry an IPv6 range too -- when
-			// it doesn't, LXD rejects any later config change (e.g. attaching an
-			// ACL) with "Uplink address key volatile.network.ipv6.address cannot
-			// be empty when network address key ipv6.address is populated".
-			"ipv6.address": "none",
-		},
-	})
-	if err != nil {
-		var apiErr *APIError
-		if errors.As(err, &apiErr) && apiErr.AlreadyExists() {
-			return name, nil // adopt
-		}
-		return "", fmt.Errorf("creating network %s (from %s): %w", name, spec.ExternalName, err)
-	}
-	return name, nil
-}
-
 // bridgeAddressCIDR turns a content network's own CIDR (e.g.
-// "10.0.1.0/24" -- the network address itself) into the address the OVN network's own logical router/gateway
+// "10.0.1.0/24" -- the network address itself) into the address the network gateway
 // needs, in CIDR notation (e.g. "10.0.1.1/24"). Found by testing the
 // equivalent plain-bridge case against a live daemon (OVN itself isn't
 // available in this session's environment -- see Builder's own doc
@@ -685,6 +619,7 @@ func (b *Builder) destroyInstance(ctx context.Context, name string) error {
 	// Remove this instance's per-host port-firewall ACL now that the instance
 	// (its only user) is gone -- otherwise it lingers orphaned. Best-effort.
 	_, _ = b.Client.delete(ctx, "/1.0/network-acls/"+hostACLName(name))
+	_, _ = b.Client.delete(ctx, "/1.0/network-acls/"+publicACLName(name))
 	return nil
 }
 
