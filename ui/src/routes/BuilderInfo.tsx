@@ -35,7 +35,7 @@ export function BuilderInfo() {
   )
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
+    <div className="mx-auto max-w-7xl px-4 py-6">
       <PageHeader
         title={name}
         description="Backend health and capacity for this builder."
@@ -75,7 +75,7 @@ export function BuilderInfo() {
       {gauges.length > 0 && (
         <Card className="mb-4">
           <CardHeader title="Quotas" />
-          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
             {gauges.map((g) => (
               <GaugeBar key={g.key + g.node} gauge={g} />
             ))}
@@ -93,7 +93,7 @@ export function BuilderInfo() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {groupByKey(series).map((group) => (
             <MetricChart key={group.key} label={group.label} unit={group.unit} lines={group.lines} />
           ))}
@@ -170,7 +170,7 @@ function PublicPanel({ endpoints }: { endpoints: UsagePublic[] }) {
         {endpoints.length === 0 ? (
           <div className="text-xs text-fg-subtle">No public endpoints exposed.</div>
         ) : (
-          <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
             {teams.map((t) => (
               <div key={t.team}>
                 <div className="mb-1 text-xs font-medium uppercase tracking-wide text-fg-muted">Team {t.team}</div>

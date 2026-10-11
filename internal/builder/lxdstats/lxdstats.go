@@ -65,50 +65,136 @@ func Host(ctx context.Context, get Getter, getRaw RawGetter, pool string) (build
 	} else {
 		singleHostMetrics(ctx, get, pool, node, &stats)
 	}
-	addNetwork(ctx, getRaw, node, &stats)
+	addMetricsStats(ctx, getRaw, node, &stats)
+	addWarnings(ctx, get, &stats)
+	addStoragePoolHealth(ctx, get, &stats)
 	return stats, nil
 }
 
-// addNetwork reports total network throughput from the daemon's own
-// /1.0/metrics (OpenMetrics), summing every instance's receive+transmit byte
-// counters -- real traffic the LXD daemon itself measures on the host-side
-// interfaces, not anything asked of the guests' agents. Reported as a COUNTER so
-// the API turns the cumulative bytes into a per-second rate across samples.
-// Best-effort: an unreachable/empty metrics endpoint warns and omits the chart.
-func addNetwork(ctx context.Context, getRaw RawGetter, node string, stats *builder.Stats) {
+// addWarnings reports the count of unresolved LXD warnings as a trend line and
+// surfaces each one as a stats warning, so an operator sees the daemon's own
+// health notices (a degraded pool, a failed task) on the builder page. Works on
+// a standalone host and a cluster alike. Best-effort.
+func addWarnings(ctx context.Context, get Getter, stats *builder.Stats) {
+	raw, err := get(ctx, "/1.0/warnings?recursion=1")
+	if err != nil {
+		stats.Warnings = append(stats.Warnings, "warnings: "+err.Error())
+		return
+	}
+	var warnings []struct {
+		Status      string `json:"status"`
+		Severity    string `json:"severity"`
+		Location    string `json:"location"`
+		LastMessage string `json:"last_message"`
+	}
+	if json.Unmarshal(raw, &warnings) != nil {
+		return
+	}
+	unresolved := 0
+	for _, w := range warnings {
+		if strings.EqualFold(w.Status, "resolved") {
+			continue
+		}
+		unresolved++
+		if unresolved <= 10 { // don't flood the UI if a cluster is very unhappy
+			loc := w.Location
+			if loc == "" {
+				loc = "cluster"
+			}
+			stats.Warnings = append(stats.Warnings, fmt.Sprintf("LXD warning (%s/%s): %s", w.Severity, loc, w.LastMessage))
+		}
+	}
+	stats.Metrics = append(stats.Metrics, builder.Metric{
+		Key: "lxd_warnings", Label: "Unresolved warnings", Kind: builder.MetricTimeseries, Unit: "count", Value: float64(unresolved),
+	})
+}
+
+// addStoragePoolHealth surfaces any storage pool not in the "Created" state as a
+// warning -- a pool stuck Pending/Errored means deploys to it will fail. Config
+// status only (it doesn't probe Ceph/OVN dataplane health). Best-effort.
+func addStoragePoolHealth(ctx context.Context, get Getter, stats *builder.Stats) {
+	raw, err := get(ctx, "/1.0/storage-pools?recursion=1")
+	if err != nil {
+		stats.Warnings = append(stats.Warnings, "storage pools: "+err.Error())
+		return
+	}
+	var pools []struct {
+		Name   string `json:"name"`
+		Status string `json:"status"`
+	}
+	if json.Unmarshal(raw, &pools) != nil {
+		return
+	}
+	for _, p := range pools {
+		if p.Status != "" && p.Status != "Created" {
+			stats.Warnings = append(stats.Warnings, fmt.Sprintf("storage pool %s is %s, not Created", p.Name, p.Status))
+		}
+	}
+}
+
+// addMetricsStats reads the daemon's OWN OpenMetrics endpoint (/1.0/metrics) once
+// and derives host-level trend lines from the per-instance counters it exposes --
+// crucially, these are available even on a STANDALONE (non-clustered) host that
+// has no cluster member-state: total network throughput and total guest CPU
+// usage. Both are real measurements the daemon makes (not the guest agent), and
+// both are COUNTERs the API turns into per-second rates (bytes/s) / cores. This
+// is how a standalone Incus-pool host still gets a CPU and a Network chart even
+// though its load-average/swap/process sysinfo isn't exposed without clustering.
+// Best-effort: an unreachable endpoint warns and omits these charts.
+func addMetricsStats(ctx context.Context, getRaw RawGetter, node string, stats *builder.Stats) {
 	if getRaw == nil {
 		return
 	}
 	raw, err := getRaw(ctx, "/1.0/metrics")
 	if err != nil {
-		stats.Warnings = append(stats.Warnings, "network metrics: "+err.Error())
+		stats.Warnings = append(stats.Warnings, "metrics endpoint: "+err.Error())
 		return
 	}
-	total, ok := sumNetworkBytes(raw)
-	if !ok {
-		return // endpoint returned no network counters -- nothing to chart
+	text := string(raw)
+	if v, ok := sumOpenMetric(text, []string{"lxd_network_receive_bytes_total", "lxd_network_transmit_bytes_total"}, []string{`device="lo"`}); ok {
+		stats.Metrics = append(stats.Metrics, builder.Metric{
+			Key: "net", Label: "Network", Node: node, Kind: builder.MetricCounter, Unit: "bytes/s", Value: v,
+		})
 	}
-	stats.Metrics = append(stats.Metrics, builder.Metric{
-		Key: "net", Label: "Network", Node: node, Kind: builder.MetricCounter, Unit: "bytes/s", Value: total,
-	})
+	// Busy CPU-seconds across every instance (all modes except idle/iowait); rated
+	// by the API this reads as cores-in-use -- a CPU chart even where there's no
+	// host load average (a standalone host).
+	if v, ok := sumOpenMetric(text, []string{"lxd_cpu_seconds_total"}, []string{`mode="idle"`, `mode="iowait"`}); ok {
+		stats.Metrics = append(stats.Metrics, builder.Metric{
+			Key: "cpu", Label: "CPU (guest cores)", Node: node, Kind: builder.MetricCounter, Unit: "cores", Value: v,
+		})
+	}
 }
 
-// sumNetworkBytes totals the lxd_network_{receive,transmit}_bytes_total counters
-// across every instance in an OpenMetrics text body, excluding loopback. Returns
-// ok=false when no such counter line is present. Parses by hand (the body is tiny
-// and the format simple) to avoid a Prometheus-parser dependency.
-func sumNetworkBytes(raw []byte) (total float64, ok bool) {
-	for _, line := range strings.Split(string(raw), "\n") {
+// sumOpenMetric totals the value of every OpenMetrics sample line whose name
+// starts with any of prefixes and whose label set contains none of skip. Returns
+// ok=false when no matching line is present. Hand-parsed (the body is small and
+// the format simple) to avoid a Prometheus-parser dependency.
+func sumOpenMetric(text string, prefixes, skip []string) (total float64, ok bool) {
+	for _, line := range strings.Split(text, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		if !strings.HasPrefix(line, "lxd_network_receive_bytes_total") &&
-			!strings.HasPrefix(line, "lxd_network_transmit_bytes_total") {
+		matched := false
+		for _, p := range prefixes {
+			if strings.HasPrefix(line, p) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
 			continue
 		}
-		if strings.Contains(line, `device="lo"`) {
-			continue // loopback isn't real network traffic
+		skipLine := false
+		for _, s := range skip {
+			if strings.Contains(line, s) {
+				skipLine = true
+				break
+			}
+		}
+		if skipLine {
+			continue
 		}
 		// The value follows the label set `{...}`; an optional trailing timestamp
 		// is dropped by taking only the first token after it.
@@ -150,8 +236,10 @@ func singleHostMetrics(ctx context.Context, get Getter, pool, node string, stats
 	addDisk(ctx, get, pool, node, "", stats)
 }
 
-// clusterMetrics reports memory, CPU load and disk for EVERY cluster member, from
-// each member's state (sysinfo carries total/free RAM and the load averages).
+// clusterMetrics reports per-member health for EVERY cluster member from its
+// state (sysinfo: load averages, RAM, swap, process count) plus the member's
+// storage-pool usage, and a cluster-wide online-member count. Each member's
+// readings are tagged with its server name so the page reads per-node.
 func clusterMetrics(ctx context.Context, get Getter, pool string, stats *builder.Stats) {
 	raw, err := get(ctx, "/1.0/cluster/members?recursion=1")
 	if err != nil {
@@ -160,12 +248,19 @@ func clusterMetrics(ctx context.Context, get Getter, pool string, stats *builder
 	}
 	var members []struct {
 		ServerName string `json:"server_name"`
+		Status     string `json:"status"`
 	}
 	if json.Unmarshal(raw, &members) != nil {
 		return
 	}
+	online := 0
 	for _, m := range members {
 		node := m.ServerName
+		if strings.EqualFold(m.Status, "online") {
+			online++
+		} else if m.Status != "" {
+			stats.Warnings = append(stats.Warnings, fmt.Sprintf("cluster member %s is %s, not online", node, m.Status))
+		}
 		stateRaw, err := get(ctx, "/1.0/cluster/members/"+url.PathEscape(node)+"/state")
 		if err != nil {
 			stats.Warnings = append(stats.Warnings, "member "+node+": "+err.Error())
@@ -176,24 +271,47 @@ func clusterMetrics(ctx context.Context, get Getter, pool string, stats *builder
 				LoadAverages []float64 `json:"load_averages"`
 				TotalRAM     uint64    `json:"total_ram"`
 				FreeRAM      uint64    `json:"free_ram"`
+				TotalSwap    uint64    `json:"total_swap"`
+				FreeSwap     uint64    `json:"free_swap"`
+				Processes    int64     `json:"processes"`
 			} `json:"sysinfo"`
 		}
 		if json.Unmarshal(stateRaw, &st) != nil {
 			continue
 		}
-		if st.SysInfo.TotalRAM > 0 {
-			used := st.SysInfo.TotalRAM - st.SysInfo.FreeRAM
-			stats.Metrics = append(stats.Metrics, memMetric(node, used, st.SysInfo.TotalRAM))
+		si := st.SysInfo
+		if si.TotalRAM > 0 {
+			stats.Metrics = append(stats.Metrics, memMetric(node, si.TotalRAM-si.FreeRAM, si.TotalRAM))
 		}
-		if len(st.SysInfo.LoadAverages) > 0 {
+		if si.TotalSwap > 0 {
 			stats.Metrics = append(stats.Metrics, builder.Metric{
-				Key: "cpu_load", Label: "CPU load (1m)", Node: node,
-				Kind: builder.MetricTimeseries, Unit: "load", Value: st.SysInfo.LoadAverages[0],
+				Key: "swap", Label: "Swap", Node: node, Kind: builder.MetricTimeseries, Unit: "%",
+				Value: float64(si.TotalSwap-si.FreeSwap) / float64(si.TotalSwap) * 100,
+			})
+		}
+		for _, l := range []struct {
+			key, label string
+			idx        int
+		}{{"cpu_load", "CPU load (1m)", 0}, {"cpu_load_5m", "CPU load (5m)", 1}, {"cpu_load_15m", "CPU load (15m)", 2}} {
+			if len(si.LoadAverages) > l.idx {
+				stats.Metrics = append(stats.Metrics, builder.Metric{
+					Key: l.key, Label: l.label, Node: node, Kind: builder.MetricTimeseries, Unit: "load", Value: si.LoadAverages[l.idx],
+				})
+			}
+		}
+		if si.Processes > 0 {
+			stats.Metrics = append(stats.Metrics, builder.Metric{
+				Key: "processes", Label: "Processes", Node: node, Kind: builder.MetricTimeseries, Unit: "count", Value: float64(si.Processes),
 			})
 		}
 		// Per-member storage pool usage (targeted at that member).
 		addDisk(ctx, get, pool, node, node, stats)
 	}
+	// Cluster-wide: how many members are online (a drop below the member count
+	// is a real outage, surfaced as both a trend line and a warning above).
+	stats.Metrics = append(stats.Metrics, builder.Metric{
+		Key: "members_online", Label: "Cluster members online", Kind: builder.MetricTimeseries, Unit: "count", Value: float64(online),
+	})
 }
 
 func memMetric(node string, used, total uint64) builder.Metric {

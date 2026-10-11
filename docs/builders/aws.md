@@ -77,6 +77,8 @@ want least privilege (see the note after the policy).
       "Action": [
         "ec2:DescribeVpcs", "ec2:CreateVpc", "ec2:DeleteVpc", "ec2:AssociateVpcCidrBlock",
         "ec2:DescribeSubnets", "ec2:CreateSubnet", "ec2:DeleteSubnet", "ec2:ModifySubnetAttribute",
+        "ec2:DescribeNetworkInterfaces",
+
         "ec2:DescribeInternetGateways", "ec2:CreateInternetGateway", "ec2:AttachInternetGateway",
         "ec2:DetachInternetGateway", "ec2:DeleteInternetGateway",
         "ec2:DescribeRouteTables", "ec2:CreateRouteTable", "ec2:DeleteRouteTable",

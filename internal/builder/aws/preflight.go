@@ -35,6 +35,7 @@ var requiredActions = []string{
 	"ec2:RunInstances", "ec2:TerminateInstances", "ec2:DescribeInstances", "ec2:CreateTags",
 	"ec2:AllocateAddress", "ec2:AssociateAddress", "ec2:DisassociateAddress", "ec2:ReleaseAddress", "ec2:DescribeAddresses",
 	"ec2:DescribeRegions", "ec2:DescribeInstanceTypes", "ec2:DescribeImages",
+	"ec2:DescribeNetworkInterfaces", // builder-page quota gauge (ENIs per region / SGs per NIC)
 	"ecs:RegisterTaskDefinition", "ecs:DeregisterTaskDefinition", "ecs:ListTaskDefinitions",
 	"ecs:RunTask", "ecs:StopTask", "ecs:ListTasks", "ecs:DescribeClusters", "ecs:CreateCluster", "ecs:TagResource",
 	"logs:CreateLogGroup", "logs:TagResource", // ensure (and tag) the Fargate awslogs group

@@ -160,26 +160,25 @@ func aggregateInstanceMetrics(ids []string, latest map[string]float64) (cpu *flo
 	return cpu, netBytes / cwPeriod, ops / cwPeriod
 }
 
-// appendQuotaGauges reports usage-vs-limit for the account quotas that actually
-// break a deploy. Usage is counted account-wide (the quota is account-wide), the
-// limit from Service Quotas. Best-effort per quota: a failed read warns and
-// omits that gauge.
+// appendQuotaGauges reports usage-vs-limit for every quota in the registry
+// (quotaGaugeSpecs). The limit comes from Service Quotas -- which returns the
+// account's APPLIED value, so a quota the operator raised above the default is
+// reflected automatically. Best-effort per quota: a failed usage count, an
+// unknown quota code, or a missing permission warns and omits just that one
+// gauge, so adding a speculative quota can't break the others.
 func (b *Builder) appendQuotaGauges(ctx context.Context, stats *builder.Stats) {
-	// VPCs per region (default 5; LaForge makes one per team).
-	if vpcs, err := b.ec2.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{}); err != nil {
-		stats.Warnings = append(stats.Warnings, "vpc count: "+err.Error())
-	} else if limit, err := b.quotaLimit(ctx, "vpc", "L-F678F1CE"); err != nil {
-		stats.Warnings = append(stats.Warnings, "vpc quota: "+err.Error())
-	} else {
-		stats.Metrics = append(stats.Metrics, quotaGauge("vpcs", "VPCs (region)", float64(len(vpcs.Vpcs)), limit))
-	}
-	// Elastic IPs (default 5; one per public: host).
-	if addrs, err := b.ec2.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{}); err != nil {
-		stats.Warnings = append(stats.Warnings, "eip count: "+err.Error())
-	} else if limit, err := b.quotaLimit(ctx, "ec2", "L-0263D0A3"); err != nil {
-		stats.Warnings = append(stats.Warnings, "eip quota: "+err.Error())
-	} else {
-		stats.Metrics = append(stats.Metrics, quotaGauge("eips", "Elastic IPs", float64(len(addrs.Addresses)), limit))
+	for _, s := range b.quotaGaugeSpecs() {
+		used, err := s.usage(ctx)
+		if err != nil {
+			stats.Warnings = append(stats.Warnings, fmt.Sprintf("%s usage: %s", s.key, err.Error()))
+			continue
+		}
+		limit, err := b.quotaLimit(ctx, s.service, s.code)
+		if err != nil {
+			stats.Warnings = append(stats.Warnings, fmt.Sprintf("%s quota (%s/%s): %s", s.key, s.service, s.code, err.Error()))
+			continue
+		}
+		stats.Metrics = append(stats.Metrics, quotaGauge(s.key, s.label, used, limit))
 	}
 }
 

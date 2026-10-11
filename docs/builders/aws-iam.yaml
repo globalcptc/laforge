@@ -50,6 +50,7 @@ Resources:
               - ec2:CreateSubnet
               - ec2:DeleteSubnet
               - ec2:ModifySubnetAttribute
+              - ec2:DescribeNetworkInterfaces   # builder-page quota gauges (ENIs per region, SGs per NIC)
               - ec2:DescribeInternetGateways
               - ec2:CreateInternetGateway
               - ec2:AttachInternetGateway
