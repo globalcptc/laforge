@@ -111,6 +111,50 @@ func shortName(externalName string) string {
 	return "lf-" + hex.EncodeToString(sum[:])[:12]
 }
 
+// LXD socket-path budget. When LXD starts a VM it opens a Unix control socket at
+//
+//	<lxdLogsDir><project>_<instance>/qemu.monitor
+//
+// and Go's Linux Unix-socket address buffer (sun_path) is 108 bytes INCLUDING a
+// trailing NUL, so that whole path must be <= 107 bytes or the connect fails with
+// a bare "invalid argument" (EINVAL) -- long after the instance name passed the
+// 63-char instance limit. MicroCloud is always the LXD snap, so its runtime logs
+// live under the snap's common dir. We budget the generated instance name against
+// this so a long project + long placement name can't produce a VM that passes
+// creation but can never start. See issue #63.
+const (
+	lxdSnapLogsDir    = "/var/snap/lxd/common/lxd/logs/"
+	qemuMonitorSuffix = "/qemu.monitor"
+	unixSocketPathMax = 107 // 108-byte sun_path minus the trailing NUL
+	minInstanceName   = len("lf-") + 12 // shortName is always "lf-"+12 hex = 15 bytes
+)
+
+// maxInstanceNameLen is the longest instance name that keeps the qemu-monitor
+// socket path within the Unix-socket limit for this project, also honoring the
+// 63-char cap the derived cidata volume ("<name>-cidata") needs. Can go negative
+// for an absurdly long project; validateInstanceNameBudget catches that.
+func maxInstanceNameLen(project string) int {
+	socketCap := unixSocketPathMax - len(lxdSnapLogsDir) - len(project) - len("_") - len(qemuMonitorSuffix)
+	cidataCap := 63 - len("-cidata")
+	if socketCap < cidataCap {
+		return socketCap
+	}
+	return cidataCap
+}
+
+// validateInstanceNameBudget rejects, before any resource is created, a project
+// so long that not even the minimal hashed instance name fits the socket path --
+// a permanent configuration error (retrying can't shorten the project), reported
+// with the computed length and the limit so the operator can act.
+func validateInstanceNameBudget(project string) error {
+	if maxInstanceNameLen(project) < minInstanceName {
+		minPath := len(lxdSnapLogsDir) + len(project) + len("_") + minInstanceName + len(qemuMonitorSuffix)
+		return fmt.Errorf("%w: LXD project %q (%d chars) leaves no room for a valid instance name: even the shortest %d-char name yields a %d-byte VM socket path, over the %d-byte limit. Use a shorter project name.",
+			builder.ErrPermanentConfig, project, len(project), minInstanceName, minPath, unixSocketPathMax)
+	}
+	return nil
+}
+
 // instanceName is shortName's readable counterpart for hosts and
 // containers (not networks, which are stuck with the 15-char cap and so
 // keep the pure hash): "lf-<branch>-t<team>-<host>-<6 hex>". The hex
@@ -118,16 +162,24 @@ func shortName(externalName string) string {
 // deterministic (idempotent adopt-on-retry recomputes the exact same name)
 // and collision-free across two live builds of the same branch+host on one
 // hoster, which the readable part alone can't guarantee. Falls back to
-// shortName when there's no display hint at all. Capped so the derived
-// cidata volume name ("<name>-cidata") still fits Incus's 63-char limit.
-func instanceName(displayName, externalName string) string {
+// shortName when there's no display hint at all. Capped to fit BOTH the
+// cidata volume's 63-char limit AND the full qemu-monitor socket path for
+// project (see maxInstanceNameLen), so the generated name can never be a VM
+// that creates fine but can't start.
+func instanceName(displayName, externalName, project string) string {
 	base := sanitizeName(displayName)
 	if base == "" {
 		return shortName(externalName)
 	}
 	sum := sha256.Sum256([]byte(externalName))
 	suffix := hex.EncodeToString(sum[:])[:6]
-	const maxBase = 48 // 63 - len("-cidata") - len("-<6 hex>"), rounded down
+	maxBase := maxInstanceNameLen(project) - len("-") - len(suffix)
+	if maxBase < len("lf-") {
+		// No room for a readable base once the project eats the budget; the pure
+		// hash (15 bytes) is the shortest deterministic name. A project too long
+		// for even that is rejected up front by validateInstanceNameBudget.
+		return shortName(externalName)
+	}
 	if len(base) > maxBase {
 		base = strings.TrimRight(base[:maxBase], "-")
 	}
@@ -398,7 +450,10 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 const teamConfigKey = "user.laforge_team"
 
 func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool, publicPlans ...*publicNICPlan) (string, error) {
-	name := instanceName(displayName, externalName)
+	if err := validateInstanceNameBudget(b.Client.Project); err != nil {
+		return "", err
+	}
+	name := instanceName(displayName, externalName, b.Client.Project)
 	slog.InfoContext(ctx, "MicroCloud deploying instance", "project", b.Client.Project, "instance", name, "external_name", externalName, "team", team, "instance_type", instanceType, "snapshot", img.IsSnapshot())
 
 	var public *publicNICPlan
@@ -661,7 +716,7 @@ func (b *Builder) DestroyHostForDeployment(ctx context.Context, team, externalRe
 // HostReference resolves the same name as DeployHost when a rebuild reset has
 // already cleared external_ref. Only this builder exposes this optional hook.
 func (b *Builder) HostReference(externalName, displayName string) string {
-	return instanceName(displayName, externalName)
+	return instanceName(displayName, externalName, b.Client.Project)
 }
 
 type destroyOptions struct {

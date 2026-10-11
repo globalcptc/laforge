@@ -40,7 +40,12 @@ func (b *Builder) DeployHostWithPublicPorts(ctx context.Context, spec builder.Ho
 	if !b.PublicNICEnabled() || len(tcp)+len(udp) == 0 {
 		return b.DeployHost(ctx, spec)
 	}
-	name := instanceName(spec.DisplayName, spec.ExternalName)
+	// Fail fast before preparePublicNIC creates anything if the project leaves no
+	// room for a valid instance name within the LXD socket-path limit (issue #63).
+	if err := validateInstanceNameBudget(b.Client.Project); err != nil {
+		return "", err
+	}
+	name := instanceName(spec.DisplayName, spec.ExternalName, b.Client.Project)
 	img, ok := b.Config.Images[spec.OS]
 	if !ok {
 		return "", fmt.Errorf("no image configured for os %q", spec.OS)

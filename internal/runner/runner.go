@@ -210,7 +210,11 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 		return nil
 	}
 	if execErr != nil {
-		if task.Attempts >= MaxAttempts {
+		// A permanent configuration error (e.g. a project name too long for the
+		// hoster's socket-path limit) can't be fixed by retrying -- fail it now
+		// instead of burning the whole retry budget on a deterministic failure.
+		permanent := errors.Is(execErr, builder.ErrPermanentConfig)
+		if permanent || task.Attempts >= MaxAttempts {
 			q.FailTask(ctx, db.FailTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error())})
 			// Only a failed DEPLOY task marks the object deploy_failed -- a
 			// failed destroy leaves the object in 'destroying' for a later
@@ -219,7 +223,11 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 			if task.DeployedObjectID.Valid && strings.HasPrefix(task.Kind, "deploy_") {
 				q.MarkDeployedObjectDeployFailed(ctx, db.MarkDeployedObjectDeployFailedParams{ID: task.DeployedObjectID, LastError: db.StrPtr(execErr.Error())})
 			}
-			r.logEvent(ctx, q, task.BuildID, task.ID, "task.failed", fmt.Sprintf("%s: %v (attempt %d, giving up)", task.Kind, execErr, task.Attempts))
+			reason := fmt.Sprintf("attempt %d, giving up", task.Attempts)
+			if permanent {
+				reason = "permanent configuration error, not retrying"
+			}
+			r.logEvent(ctx, q, task.BuildID, task.ID, "task.failed", fmt.Sprintf("%s: %v (%s)", task.Kind, execErr, reason))
 		} else {
 			backoff := r.RetryBackoff(task.Attempts)
 			q.RetryTask(ctx, db.RetryTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Column4: db.Interval(backoff)})
