@@ -46,6 +46,7 @@ func (onboarder) Onboard(ctx context.Context, req builder.OnboardRequest) (*buil
 	if err != nil {
 		return nil, fmt.Errorf("%w: loading AWS credentials: %v", builder.ErrInvalidOnboardRequest, err)
 	}
+	region := envOr("AWS_REGION", "us-east-1")
 	who, err := sts.NewFromConfig(cfg).GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return nil, fmt.Errorf("%w: those AWS credentials are not usable: %v", builder.ErrInvalidOnboardRequest, err)
@@ -57,7 +58,11 @@ func (onboarder) Onboard(ctx context.Context, req builder.OnboardRequest) (*buil
 		AWSAccessKeyID: req.AWSAccessKeyID, AWSSecretAccessKey: req.AWSSecretAccessKey,
 		ServerName: awssdk.ToString(who.Account),
 	}
-	return &builder.Onboarding{Connection: conn}, nil
+	// Pre-flight: surface any IAM permission the credential is missing NOW, as
+	// connection warnings, rather than one raw 400 per deploy. Best-effort and
+	// non-fatal -- an otherwise-valid credential still enrolls.
+	warnings := checkPermissions(ctx, cfg, awssdk.ToString(who.Arn), region)
+	return &builder.Onboarding{Connection: conn, Discovery: builder.Discovery{Warnings: warnings}}, nil
 }
 
 // Rediscover is implemented in discover.go.

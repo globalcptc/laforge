@@ -98,7 +98,9 @@ want least privilege (see the note after the policy).
       "Sid": "LaForgeECS",
       "Effect": "Allow",
       "Action": [
-        "ecs:RegisterTaskDefinition", "ecs:RunTask", "ecs:StopTask"
+        "ecs:RegisterTaskDefinition", "ecs:DeregisterTaskDefinition", "ecs:ListTaskDefinitions",
+        "ecs:RunTask", "ecs:StopTask",
+        "ecs:DescribeClusters", "ecs:CreateCluster", "ecs:TagResource"
       ],
       "Resource": "*",
       "Condition": { "StringEquals": { "aws:RequestedRegion": "us-east-1" } }
@@ -113,12 +115,17 @@ want least privilege (see the note after the policy).
     {
       "Sid": "LaForgeIdentityCheck",
       "Effect": "Allow",
-      "Action": "sts:GetCallerIdentity",
+      "Action": ["sts:GetCallerIdentity", "iam:SimulatePrincipalPolicy"],
       "Resource": "*"
     }
   ]
 }
 ```
+
+`iam:SimulatePrincipalPolicy` powers the connect-time **pre-flight check**: LaForge
+simulates the actions above against this credential and reports any that are
+missing up front, instead of failing one deploy at a time. It's optional — if you
+omit it, enrollment still works, with a single warning that the check couldn't run.
 
 Replace `us-east-1` with your region and the `iam:PassRole` resource with your
 task execution role ARN. Drop the `LaForgeECS` / `LaForgePassExecutionRole`
@@ -186,9 +193,11 @@ rest are discovered for you or have sane defaults.
   from your account; just pick one (e.g. `us-east-1`). Everything in the next two
   steps is discovered for the region you choose.
 - **ECS Cluster** — the ECS cluster Fargate containers run in. *Optional, default
-  `default`.* Every account has a cluster named `default`; leave it unless you
-  made a dedicated one (`aws ecs list-clusters` shows their names). Only matters if
-  you deploy `container:` objects.
+  `default`.* You do **not** need to pre-create it: LaForge ensure-creates the
+  named cluster on the first container deploy (AWS does not auto-create one, not
+  even `default`), and a Fargate cluster has no instances and no standing cost.
+  Set a dedicated name only to keep LaForge's containers separate from other ECS
+  workloads in the account. Only matters if you deploy `container:` objects.
 - **Task Execution Role ARN** — the IAM role Fargate assumes to pull images and
   ship logs. *Required only if you deploy containers.* This is the
   **`ExecutionRoleArn` Output** of the `aws-iam.yaml` stack — copy it verbatim:

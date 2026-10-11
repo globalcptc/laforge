@@ -58,7 +58,13 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 		return b.DeployHost(ctx, spec.ComposeHostSpec())
 	}
 	if b.cfg.ExecutionRoleARN == "" {
-		return "", fmt.Errorf("AWS Fargate needs an ECS task execution role -- set AWS_ECS_EXECUTION_ROLE_ARN")
+		return "", fmt.Errorf("AWS Fargate needs an ECS task execution role -- set the builder's execution role ARN")
+	}
+	// Ensure the ECS cluster exists before RunTask -- AWS does NOT auto-create a
+	// cluster (not even "default"), so a missing one is a flat
+	// ClusterNotFoundException. Like the VPC/IGW/SG, the builder provisions it.
+	if err := b.ensureCluster(ctx); err != nil {
+		return "", err
 	}
 	subnetID, vpcID, err := b.subnetForNetwork(ctx, spec.Network)
 	if err != nil {
@@ -179,6 +185,34 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 	// the externalRef the runner hands back (it never gets the ExternalName).
 	b.tagSGWithRef(ctx, sgID, arn)
 	return arn, nil
+}
+
+// ensureCluster makes sure the configured ECS cluster exists, creating it if
+// absent. A plain Fargate cluster has no instances and no standing cost, so --
+// like the VPC/IGW/SG the builder already ensure-creates -- LaForge provisions
+// it rather than making the operator pre-create one. AWS does NOT auto-create
+// any cluster, including "default" (the config default), so even that name needs
+// this. The cluster is account/region-scoped and SHARED across every team and
+// build, so teardown never deletes it (a Fargate cluster at rest is free).
+func (b *Builder) ensureCluster(ctx context.Context) error {
+	name := b.cfg.Cluster
+	if name == "" {
+		name = "default"
+	}
+	if out, err := b.ecs.DescribeClusters(ctx, &ecs.DescribeClustersInput{Clusters: []string{name}}); err == nil {
+		for _, c := range out.Clusters {
+			if awssdk.ToString(c.Status) == "ACTIVE" {
+				return nil
+			}
+		}
+	}
+	if _, err := b.ecs.CreateCluster(ctx, &ecs.CreateClusterInput{
+		ClusterName: awssdk.String(name),
+		Tags:        []ecstypes.Tag{{Key: awssdk.String(laforgeManagedTag), Value: awssdk.String("true")}},
+	}); err != nil {
+		return fmt.Errorf("ensuring ECS cluster %q exists: %w", name, err)
+	}
+	return nil
 }
 
 // DestroyContainer stops the Fargate task and removes what the deploy created

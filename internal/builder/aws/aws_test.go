@@ -147,6 +147,25 @@ func TestVPCCIDRFor(t *testing.T) {
 	}
 }
 
+func TestPolicySourceARN(t *testing.T) {
+	cases := map[string]string{
+		// user / role ARNs pass through unchanged
+		"arn:aws:iam::677302527522:user/laforge-runner": "arn:aws:iam::677302527522:user/laforge-runner",
+		"arn:aws:iam::677302527522:role/laforge-runner": "arn:aws:iam::677302527522:role/laforge-runner",
+		// an assumed-role session ARN is rewritten to its role ARN
+		"arn:aws:sts::677302527522:assumed-role/LaForgeRunner/i-0abc": "arn:aws:iam::677302527522:role/LaForgeRunner",
+		// unexpected principals (root, garbage) -> skip
+		"arn:aws:iam::677302527522:root": "",
+		"nonsense":                       "",
+		"":                               "",
+	}
+	for in, want := range cases {
+		if got := policySourceARN(in); got != want {
+			t.Errorf("policySourceARN(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestBuildFromExternalName(t *testing.T) {
 	cases := map[string]string{
 		"build-b81339b3-7d8a-40f3-b5f8-9ff8bf2b2f7e-team-1-network-lab": "b81339b3-7d8a-40f3-b5f8-9ff8bf2b2f7e",

@@ -118,11 +118,15 @@ export function StepCloudConnect({ credentialId, account, onConnected }: { crede
   const [keyId, setKeyId] = useState('')
   const [secret, setSecret] = useState('')
   const [error, setError] = useState<string | null>(null)
+  // Pre-flight permission warnings from the connect response (the builder
+  // simulates its required IAM actions against the key and reports any missing).
+  const [warnings, setWarnings] = useState<string[]>([])
 
   async function onConnect() {
     setError(null)
     try {
       const conn = await connect.mutateAsync({ kind: 'aws', aws_access_key_id: keyId.trim(), aws_secret_access_key: secret.trim() })
+      setWarnings(conn.discovery?.warnings ?? [])
       // credential.server_name carries the AWS account id (captured by STS at connect).
       onConnected(conn.credential.id, conn.credential.server_name || undefined)
       setKeyId('')
@@ -142,14 +146,24 @@ export function StepCloudConnect({ credentialId, account, onConnected }: { crede
         </>,
       )}
       {credentialId ? (
-        <div className="flex items-center justify-between gap-2 rounded-token border border-success/40 bg-success-soft px-3 py-2 text-xs">
-          <span className="flex items-center gap-2 text-fg">
-            <Check size={14} className="text-success" /> Access key connected and stored{account ? ` (account ${account})` : ''}.
-          </span>
-          <Button variant="ghost" size="sm" onClick={() => onConnected(undefined, undefined)}>
-            Change
-          </Button>
-        </div>
+        <>
+          <div className="flex items-center justify-between gap-2 rounded-token border border-success/40 bg-success-soft px-3 py-2 text-xs">
+            <span className="flex items-center gap-2 text-fg">
+              <Check size={14} className="text-success" /> Access key connected and stored{account ? ` (account ${account})` : ''}.
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => onConnected(undefined, undefined)}>
+              Change
+            </Button>
+          </div>
+          {warnings.length > 0 && (
+            <div className="rounded-token border border-warning/40 bg-warning-soft px-3 py-2 text-xs text-fg">
+              <div className="mb-1 font-medium">Permission check</div>
+              {warnings.map((w) => (
+                <div key={w} className="text-fg-muted">{w}</div>
+              ))}
+            </div>
+          )}
+        </>
       ) : (
         <div className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-xs text-fg-muted">
@@ -257,7 +271,7 @@ export function StepCloudRegion({
           (and the CloudFormation template that outputs the role ARN) is in <code className="font-mono">docs/builders/aws.md</code>.
         </div>
         <div className="flex flex-col gap-3">
-          <Field label="ECS Cluster" hint="The ECS cluster Fargate containers run in. Every account has one named “default” — leave it unless you made a dedicated cluster. Only used for container: objects.">
+          <Field label="ECS Cluster" hint="The ECS cluster Fargate containers run in. You don't need to pre-create it — LaForge makes the named cluster on first container deploy (default: “default”). Set a dedicated name only to isolate from other ECS workloads. Only used for container: objects.">
             <Input value={aws.ecs_cluster ?? ''} onChange={(e) => setAws({ ecs_cluster: e.target.value })} placeholder="default" className="font-mono" />
           </Field>
           <Field label="Task Execution Role ARN" hint="IAM role Fargate assumes to pull images and ship logs. Required for containers. It's the ExecutionRoleArn output of the aws-iam.yaml CloudFormation stack — paste it verbatim.">

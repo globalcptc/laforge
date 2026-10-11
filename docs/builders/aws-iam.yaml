@@ -95,8 +95,13 @@ Resources:
             Effect: Allow
             Action:
               - ecs:RegisterTaskDefinition
+              - ecs:DeregisterTaskDefinition
+              - ecs:ListTaskDefinitions
               - ecs:RunTask
               - ecs:StopTask
+              - ecs:DescribeClusters
+              - ecs:CreateCluster
+              - ecs:TagResource
             Resource: '*'
             Condition:
               StringEquals:
@@ -110,7 +115,9 @@ Resources:
                 iam:PassedToService: ecs-tasks.amazonaws.com
           - Sid: LaForgeIdentityCheck
             Effect: Allow
-            Action: sts:GetCallerIdentity
+            Action:
+              - sts:GetCallerIdentity
+              - iam:SimulatePrincipalPolicy  # powers the connect-time pre-flight permission check
             Resource: '*'
 
   RunnerUser:
