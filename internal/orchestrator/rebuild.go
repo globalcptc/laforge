@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -70,8 +71,17 @@ func Rebuild(ctx context.Context, pool *pgxpool.Pool, build db.Build, content *l
 	}
 
 	for _, o := range affected {
+		// Capture the real hoster reference INTO the destroy payload before the
+		// reset below clears it, so the runner tears down the actual recorded
+		// instance (e.g. Incus's `lf-...-efc5c7`) rather than falling back to the
+		// logical name and "succeeding" as a no-op against a name that doesn't
+		// exist -- which left the original VM running (the rebuild bug).
+		payload, err := json.Marshal(map[string]any{"remove": false, "external_ref": db.StrOrEmpty(o.ExternalRef)})
+		if err != nil {
+			return nil, fmt.Errorf("building rebuild destroy payload for %s: %w", o.ID.String(), err)
+		}
 		if _, err := q.CreateTaskIfNoneOpen(ctx, db.CreateTaskIfNoneOpenParams{
-			BuildID: build.ID, DeployedObjectID: o.ID, Kind: "destroy_" + o.Kind, Payload: []byte(`{"remove":false}`),
+			BuildID: build.ID, DeployedObjectID: o.ID, Kind: "destroy_" + o.Kind, Payload: payload,
 		}); err != nil {
 			return nil, fmt.Errorf("enqueuing rebuild destroy for %s: %w", o.ID.String(), err)
 		}

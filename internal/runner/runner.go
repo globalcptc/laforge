@@ -680,10 +680,24 @@ func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task
 		// -- the object stays destroyed, not deleted and not reset for a
 		// redeploy that a torn-down build will never ask for again.
 		Terminal bool `json:"terminal"`
+		// ExternalRef is the hoster reference captured when the task was
+		// enqueued, carried in the payload so a rebuild destroys the ACTUAL
+		// recorded instance even though Rebuild clears the row's external_ref
+		// synchronously (to hold the build in the deploy phase) before the
+		// runner reads it. Without this the destroy fell back to the logical
+		// name, which an Incus builder renders differently from the real
+		// `lf-...` instance, so destroyInstance "succeeded" as a no-op on a
+		// non-existent name and left the original VM running.
+		ExternalRef string `json:"external_ref"`
 	}
 	json.Unmarshal(task.Payload, &payload)
 
 	ref := db.StrOrEmpty(obj.ExternalRef)
+	if ref == "" && payload.ExternalRef != "" {
+		// A rebuild cleared the row's ref before this ran; use the one captured
+		// at enqueue time so we delete the real instance, not a guessed name.
+		ref = payload.ExternalRef
+	}
 	if ref == "" {
 		// Defensive: a destroy was requested for something never actually
 		// deployed (e.g. removed from content before its deploy task ever

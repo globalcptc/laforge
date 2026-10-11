@@ -133,6 +133,14 @@ func instanceName(displayName, externalName string) string {
 	return base + "-" + suffix
 }
 
+// HostReference reconstructs the same instance name DeployHost produced, so a
+// destroy whose recorded external_ref was cleared (a rebuild) still targets the
+// real `lf-...` instance instead of the logical external name. Deterministic from
+// the identical inputs -- the optional hook the runner probes for on destroy.
+func (b *Builder) HostReference(externalName, displayName string) string {
+	return instanceName(displayName, externalName)
+}
+
 // networkName is instanceName's counterpart for networks, which are held
 // to a much tighter 15-char cap (an Incus network name becomes a real
 // Linux interface name). It keeps the "lf-" prefix -- Inspect identifies

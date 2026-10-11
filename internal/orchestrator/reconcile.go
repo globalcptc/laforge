@@ -203,7 +203,12 @@ func finalizeBuildStatus(ctx context.Context, q *db.Queries, buildID pgtype.UUID
 	infraPending, agentWorking, live, failed := 0, 0, 0, 0
 	for _, o := range objs {
 		switch o.Status {
-		case "pending", "deploying":
+		case "pending", "deploying", "destroying":
+			// "destroying" counts as infra-in-progress too: during a rebuild the
+			// runner briefly marks the object destroying before resetting it to
+			// pending, and the build must not be judged finished/failed in that
+			// window -- otherwise a concurrent pass advances it past the deploy
+			// phase and the pending replacement is never redeployed.
 			infraPending++
 		case "running", "building":
 			agentWorking++
@@ -215,9 +220,18 @@ func finalizeBuildStatus(ctx context.Context, q *db.Queries, buildID pgtype.UUID
 			live++
 		}
 	}
-	// Infra still being created, or nothing actually stood up (an
+	// Infra still being created/destroyed, or nothing actually stood up (an
 	// all-teardown or empty build) -- not a deploy to advance yet.
 	if infraPending > 0 || live == 0 {
+		// Recover an active build that left the deploy phase but now has infra
+		// pending again (a rebuild reset an object to pending while the build was
+		// already "building"). Reconcile only queues deploy tasks in "deploying",
+		// so without this the pending replacement strands indefinitely.
+		if infraPending > 0 && current == "building" {
+			if _, err := q.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: buildID, Status: "deploying"}); err != nil {
+				return false, fmt.Errorf("re-entering deploy phase for pending infra: %w", err)
+			}
+		}
 		return false, nil
 	}
 

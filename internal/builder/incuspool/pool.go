@@ -132,6 +132,18 @@ func (p *Pool) DestroyHost(ctx context.Context, team, externalRef string) error 
 	return h.DestroyHost(ctx, team, externalRef)
 }
 
+// HostReference forwards the optional name-reconstruction hook the runner probes
+// on destroy. Every pool host computes the instance name identically (it's a pure
+// function of display/external name), so any host answers -- the pool just needs
+// to expose the method so the destroy fallback can rebuild the real `lf-...` name
+// instead of the logical external name. See the incus builder's HostReference.
+func (p *Pool) HostReference(externalName, displayName string) string {
+	if len(p.Hosts) == 0 {
+		return externalName
+	}
+	return p.Hosts[0].HostReference(externalName, displayName)
+}
+
 func (p *Pool) DestroyContainer(ctx context.Context, team, externalRef string) error {
 	h, err := p.hostForTeam(team)
 	if err != nil {
