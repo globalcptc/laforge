@@ -1,8 +1,8 @@
 # Incus builder
 
 The Incus builder (`kind: incus`) deploys LaForge builds onto one or more **independent
-Incus servers**. It is a pool: each host has its own connection, storage pool and OVN
-uplink, the hosts share nothing, and every team is placed on exactly one of them
+Incus servers**. It is a pool: each host has its own connection, storage pool and
+network mode. The hosts share nothing, and every team is placed on exactly one of them
 (team *N* goes to host `(N-1) % hosts`), so a team's networks, hosts and containers
 always live together.
 
@@ -26,12 +26,12 @@ hash so builds never collide.
 
 | Content | On Incus |
 | --- | --- |
-| `network:` | An OVN network (`type: ovn`) routed out through the host's uplink network, one per team per network. IPv4 only. |
-| `host:` | A system container, or a VM when the builder image is marked VM (Windows always is), with a NIC on the team's OVN network at its `last_octet` address. The agent arrives through cloud-init (Linux) or a NoCloud config-drive ISO imported as a custom storage volume (Windows). |
+| `network:` | A native managed bridge with host routing, DHCP and IPv4 NAT, one per deployment subnet. Legacy OVN mode creates logical networks through an OVN uplink. IPv4 only. |
+| `host:` | A system container, or a VM when the builder image is marked VM (Windows always is), with a NIC on the team's network at its `last_octet` address. The agent arrives through cloud-init (Linux) or a NoCloud config-drive ISO imported as a custom storage volume (Windows). |
 | `container:` with `image:` | A native OCI application container pulled straight from the registry, with the LaForge agent pushed in as its entrypoint. |
 | `container:` with `compose:` | A nesting system container booted from the builder's [docker base image](#the-docker-base-image), with the agent delivered by cloud-init. |
-| `visible_from` / `ports:` | OVN network peers between a team's own networks, and a network ACL per network allowing only the declared sources and ports. |
-| `public:` | A NAT proxy device on the instance, listening on the builder's external IP at a per-team port. |
+| `visible_from` / `ports:` | Per-instance NIC ACLs allow declared ports from the same subnet and `visible_from` subnets. OVN mode also creates network peers. |
+| `public:` | A NAT proxy device on each running instance, listening on the assigned host external IP at a per-team port, plus a NIC ACL allowing its public ports. Use native bridge networking for this. |
 
 Every instance carries `user.laforge_team`, which is how access windows find a team's
 instances.
@@ -44,11 +44,13 @@ Each Incus server in the pool needs:
   image are tested on 7.5.
 - **The HTTPS API listening** — `incus config set core.https_address=:8443` — and
   reachable from the LaForge runner, orchestrator and API.
-- **OVN, with an uplink network** for OVN networks to route through (conventionally named
-  `UPLINK`), with a range for OVN router addresses (`ipv4.ovn.ranges`). Each OVN network
-  takes one address from that range, and a team typically has one network per content
-  network, so size the range for *teams × networks* — a range of 91 addresses runs out
-  around 15 teams of 6 networks.
+- **Native bridge NIC ACL support and the nftables firewall** for bridge mode.
+  LaForge detects `network_bridge_acl_devices` in the server's API extensions and
+  `environment.firewall=nftables`; this is available on the tested Incus 7.5.1 hosts.
+  No OVN services or uplink network are needed. Incus creates the subnet bridges,
+  and traffic uses the host's existing default route.
+- For **legacy OVN mode only**, OVN services and a managed physical/bridge uplink
+  (usually `UPLINK`) with enough `ipv4.ovn.ranges` addresses for all logical networks.
 - **A storage pool** for instance disks. Keep it off the root filesystem: a loop-file
   pool on `/` fills it.
 - **Outbound internet** (or mirrors) for the image server, registries, and — if any
@@ -79,7 +81,7 @@ the first two rows is in the `default` project.
 | Storage volumes | `POST`/`DELETE /1.0/storage-pools/{pool}/volumes/custom/…` | Windows config-drive ISOs only. |
 | Instances | create (from an image, or as a copy of a snapshot — `source.type: copy`), `GET` snapshots, `GET`, `PUT`/`PATCH` (config and devices), delete; `PUT …/state` (start, stop, restart); `POST …/exec`; `POST …/files` | Deploying and powering instances; access windows (closing one detaches the instance's NIC and stores it in the instance's config; opening restores it); external-access proxy devices; pushing the agent into OCI containers; the docker base image build. |
 | Images | `POST /1.0/images` (pull, publish), `GET /1.0/images`, `GET`/`DELETE /1.0/images/aliases/…` | Pulling builder images from simplestreams/OCI registries; publishing the docker base image. |
-| Networks | `POST`/`GET`/`PATCH`/`DELETE /1.0/networks…`, `POST /1.0/networks/{n}/peers` | Team OVN networks, peering, attaching ACLs. Creating an OVN network uses the uplink network. |
+| Networks | `POST`/`GET`/`PATCH`/`DELETE /1.0/networks…`, `POST /1.0/networks/{n}/peers` | Team bridges or OVN networks and attaching ACLs. Peers and the uplink are used only in OVN mode. |
 | Network ACLs | `POST`/`PUT`/`DELETE /1.0/network-acls…` | `visible_from` and `ports:` enforcement. |
 | Operations | `GET /1.0/operations?recursion=1`, `GET /1.0/operations/{id}/wait` | Finding unfinished instance creation after a retry/restart, and waiting for operations to finish. |
 
@@ -117,7 +119,7 @@ store.
 > (notably listing storage pools — connecting the builder fails if LaForge can't, since
 > the wizard's pool and uplink choices come from that list — and creating OVN networks
 > on the uplink). Before relying
-> on it, connect a builder with a restricted token and run one build that has an OVN
+> on it, connect a builder with a restricted token and run one build that has a deployment
 > network, a Linux host, a Windows host, a compose container and a `public:` port. Any
 > denied call fails that build with Incus's own "not authorized" error.
 
@@ -131,7 +133,9 @@ If you set `restricted=true` on the `default` project (unusual), also allow:
 
 - `restricted.containers.nesting=allow` — compose containers and the docker base image
   run Docker inside a nesting container.
-- `restricted.networks.uplinks=<your uplink>` — OVN networks route through it.
+- `restricted.networks.uplinks=<your uplink>` — only for OVN mode. Native managed
+  bridge creation requires permission to create host networks; a restricted project
+  may refuse it.
 - `restricted.devices.proxy=allow` — `public:` ports are proxy devices.
 - `restricted.virtual-machines.lowlevel=allow` — VMs are created with
   `security.secureboot=false`.
@@ -143,8 +147,13 @@ If you set `restricted=true` on the `default` project (unusual), also allow:
    and paste each one. LaForge checks the token's server fingerprint, enrolls its own
    client certificate, and reads the host's storage pools, networks and images for you
    to pick from.
-3. Pick each host's **storage pool** and **OVN uplink network**, map the **images** and
-   **sizes** content uses, and save.
+3. Pick each host's **storage pool** and **Deployment networking**. Choose **Native
+   bridges** on supported hosts; no uplink value is needed. Existing bridges and their
+   subnets are shown to help avoid overlaps. OVN mode shows managed physical/bridge
+   uplink suggestions, with the network type and address beside each name.
+4. Enable **One team per configured host**, map the **images** and **sizes**, and save.
+   A build with more teams than distinct configured hosts fails before deployment.
+   Fewer teams than hosts is allowed; hosts are assigned in their configured order.
 
 A token is single-use and expires; if enrollment fails, generate a new one.
 
@@ -152,7 +161,8 @@ A token is single-use and expires; if enrollment fails, generate a new one.
 
 | Setting | Per | What it is |
 | --- | --- | --- |
-| Hosts | builder | One entry per Incus server: its connection (from enrollment), storage pool, OVN uplink network, and an optional operation timeout. |
+| Hosts | builder | One entry per Incus server: its connection (from enrollment), storage pool, `network_type` (`bridge` or `ovn`), optional OVN uplink, and operation timeout. |
+| One team per configured host | builder | `incus_one_team_per_host`: at most one team per host **within a build**. Rejects insufficient capacity and duplicate endpoint/server identities; does not reserve hosts across separate builds. |
 | Images | builder | Content `os:` names (and `compose-host`, optionally) mapped to an image (alias + simplestreams server, or a fingerprint already on every host) or to an instance snapshot to copy (see [Images or snapshots](#images-or-snapshots)); mark VM images (Windows) as VM. |
 | Sizes | builder | Content `size:` names mapped to `limits.cpu` / `limits.memory`. |
 | External access IP and port range | builder | For `public:` ports: the address proxy devices listen on, and the window of external ports (default 40000–50000, 100 per team). |
@@ -160,6 +170,43 @@ A token is single-use and expires; if enrollment fails, generate a new one.
 A build fails validation before deploying anything if content uses an `os:` with no
 image mapped, or has a compose container and the builder has neither a built docker base
 image nor a `compose-host` image.
+
+## Bridge placement and migration
+
+Team content repeats the same subnets. Native bridges share the host routing table,
+so each team needs a different server even if the one-team checkbox is unchecked.
+LaForge rejects a layout that would reuse a bridge host, and checks each requested
+subnet against existing managed bridges before creating it. Another active build
+using the same CIDRs must be torn down or assigned different servers. Keep the host
+list and its order unchanged while a build is deployed.
+
+Saved configurations with an OVN uplink and no `network_type` keep using OVN.
+To migrate, tear down the old deployment, select native bridges for each host, and
+rebuild. Changing the selection does not convert existing logical networks. Bridge
+mode does not attach team VMs to `incusbr0`; it creates a bridge for each content
+subnet. The default profile's `incusbr0` can still provide internet to image-build
+containers, and its subnet must not overlap deployment subnets.
+
+## Public port mappings
+
+Set **External IPs** to addresses owned by/reachable through the selected Incus hosts.
+For one team per host, list one address per host in the **same order** as the host
+list. For two hosts, team 1 uses the first address on host 1 and team 2 uses the
+second address on host 2. The field does not route an address from one host to another.
+Allow the configured port range through any upstream firewall.
+
+Forwarding waits for the public target set to finish deploying and for Incus to
+report each target `Running`. Waiting for startup does not consume failure retries.
+New or replaced public VMs trigger reconciliation. Public-port NIC rules are merged
+with private access rules, so the default-deny firewall permits forwarded clients.
+
+Recorded mappings are available at `GET /builds/{build_id}/external-access`:
+`team_number`, `object_name`, `protocol`, `internal_port`, `external_port`, and
+`public_address`. `GET /builds/{build_id}/external-access/export` also exports login
+credentials; both routes require repository read access.
+
+The bridge design follows Incus's [NAT proxy requirements](https://linuxcontainers.org/incus/docs/main/reference/devices_proxy/#nat-mode)
+and [NIC ACL behavior](https://linuxcontainers.org/incus/docs/main/howto/network_acls/).
 
 ## Images or snapshots
 
@@ -231,7 +278,8 @@ containers are then deployed from it like a host.
 ## Limits and troubleshooting
 
 - **On a shared cluster** (other tenants' instances, networks, pools and projects),
-  LaForge never asks the server for every object in full. LXD and Incus work out
+  Discovery avoids asking the server for every object in full. Native bridge creation
+  does read managed network configuration to check for subnet overlaps. LXD and Incus work out
   everything that uses each one for that, which can take longer than a request is
   allowed. It lists names, which is cheap. It reads details only for what it needs: a
   bounded number of networks (likely uplinks first), each storage pool, the chosen
@@ -263,5 +311,6 @@ containers are then deployed from it like a host.
 - **"no image configured for os …"** — map that `os:` name in the builder's images.
 - **"no docker base image yet"** — build it (above), or add a `compose-host` image.
 - **Agents never check in** — the instance can't reach `GATEWAY_PUBLIC_ADDR` or
-  `API_PUBLIC_URL`. OVN networks NAT out through the uplink; the Incus host itself usually
+  `API_PUBLIC_URL`. Native bridges NAT through the host's default route. OVN
+  networks NAT out through the uplink; the Incus host itself usually
   can't reach instance addresses on OVN networks, so test from inside an instance.

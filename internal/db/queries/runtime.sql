@@ -141,10 +141,9 @@ SELECT EXISTS (
 
 -- name: HasConfigureExternalAccessTask :one
 -- Dedup for the external-access reconciler, exactly like network access above:
--- one configure_external_access task per (team, public-ports fingerprint), across
--- all statuses. A content change to a team's `public:` ports yields a new
--- fingerprint and a fresh task; an unchanged set never re-runs (the builder call
--- is idempotent).
+-- one configure_external_access task per team and desired public ports/ready
+-- instance identities, across all statuses. A new or replaced public instance
+-- yields a fresh task even if content has not changed.
 SELECT EXISTS (
     SELECT 1 FROM task
     WHERE build_id = @build_id
@@ -376,6 +375,14 @@ RETURNING *;
 -- transient failure like a network still draining its used_by after its
 -- instances detach, or a builder still mid-operation.
 UPDATE task SET status = 'leased', last_error = $3,
+    lease_expires_at = now() + $4::interval, updated_at = now()
+WHERE id = $1 AND lease_owner = $2
+RETURNING *;
+
+-- name: DeferTask :one
+-- Waiting for VM startup is not a failed forwarding attempt.
+UPDATE task SET status = 'leased', last_error = $3,
+    attempts = GREATEST(attempts - 1, 0),
     lease_expires_at = now() + $4::interval, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
 RETURNING *;

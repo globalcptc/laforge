@@ -558,6 +558,7 @@ export interface IncusSizeSpec {
 // MicroCloud cluster has exactly one endpoint no matter how many members
 // it has (any one answers for the whole cluster).
 export interface IncusHostConfig {
+  network_type?: 'bridge' | 'ovn'
   credential_id?: string
   api_url: string
   client_cert_path: string
@@ -655,6 +656,7 @@ export interface BuilderConfig {
   incus_images: Record<string, IncusImageRef>
   incus_sizes: Record<string, IncusSizeSpec>
   incus_hosts: IncusHostConfig[]
+  incus_one_team_per_host?: boolean
   incus_credential_id: string | null
   aws_credential_id?: string | null
   microcloud_public_access?: MicrocloudPublicAccess | null
@@ -681,6 +683,7 @@ export interface BuilderConfigRequest {
   incus_images?: Record<string, IncusImageRef>
   incus_sizes?: Record<string, IncusSizeSpec>
   incus_hosts?: IncusHostConfig[]
+  incus_one_team_per_host?: boolean
   incus_credential_id?: string
   aws_credential_id?: string
   microcloud_public_access?: MicrocloudPublicAccess
@@ -700,6 +703,7 @@ export interface StoragePoolInfo {
 }
 
 export interface NetworkInfo {
+  config?: Record<string, string>
   name: string
   type: string // "physical" | "bridge" | "ovn" | ...
   managed: boolean
@@ -719,6 +723,7 @@ export interface ImageInfo {
 }
 
 export interface Discovery {
+  native_bridge_supported?: boolean
   storage_pools: StoragePoolInfo[]
   /** Full details for a bounded number of networks (likely uplinks first). */
   networks: NetworkInfo[]

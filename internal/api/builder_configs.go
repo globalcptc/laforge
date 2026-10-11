@@ -40,19 +40,20 @@ import (
 // FetchServerCertificateInsecure's own doc comment for how an admin
 // obtains it once, out of band).
 type builderConfigRequest struct {
+	IncusOneTeamPerHost    bool                           `json:"incus_one_team_per_host"`
 	MicrocloudPublicAccess *microcloud.PublicAccessConfig `json:"microcloud_public_access,omitempty"`
 	// AwsConfig is kind "aws"'s account infrastructure (ECS cluster,
 	// task-execution role, log group, region, agent-init image, assign-public-IP).
 	// Empty fields fall back to the runner's AWS_* env vars. Ignored by every
 	// other kind.
-	AwsConfig *awsbuilder.ConfigInput `json:"aws_config,omitempty"`
-	Kind      string                  `json:"kind"`
-	IncusApiUrl            string                         `json:"incus_api_url,omitempty"`
-	IncusClientCertPath    string                         `json:"incus_client_cert_path,omitempty"`
-	IncusClientKeyPath     string                         `json:"incus_client_key_path,omitempty"`
-	IncusServerCertPem     string                         `json:"incus_server_cert_pem,omitempty"`
-	IncusOvnUplinkNetwork  string                         `json:"incus_ovn_uplink_network,omitempty"`
-	IncusStoragePool       string                         `json:"incus_storage_pool,omitempty"`
+	AwsConfig             *awsbuilder.ConfigInput `json:"aws_config,omitempty"`
+	Kind                  string                  `json:"kind"`
+	IncusApiUrl           string                  `json:"incus_api_url,omitempty"`
+	IncusClientCertPath   string                  `json:"incus_client_cert_path,omitempty"`
+	IncusClientKeyPath    string                  `json:"incus_client_key_path,omitempty"`
+	IncusServerCertPem    string                  `json:"incus_server_cert_pem,omitempty"`
+	IncusOvnUplinkNetwork string                  `json:"incus_ovn_uplink_network,omitempty"`
+	IncusStoragePool      string                  `json:"incus_storage_pool,omitempty"`
 	// IncusProject is the LXD project a kind "microcloud" builder creates
 	// everything in; empty is `default`. Ignored by every other kind.
 	IncusProject                 string                    `json:"incus_project,omitempty"`
@@ -91,6 +92,9 @@ type builderConfigRequest struct {
 func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderConfigParams, error) {
 	if req.Kind != "fake" && req.Kind != "incus" && req.Kind != "microcloud" && req.Kind != "aws" && req.Kind != "openstack" {
 		return db.CreateBuilderConfigParams{}, errors.New(`kind must be "fake", "incus", "microcloud", "aws", or "openstack"`)
+	}
+	if req.IncusOneTeamPerHost && req.Kind != "incus" {
+		return db.CreateBuilderConfigParams{}, errors.New("incus_one_team_per_host is only supported by the Incus builder")
 	}
 	var publicAccess []byte
 	if req.MicrocloudPublicAccess != nil {
@@ -132,6 +136,7 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 	}
 	params := db.CreateBuilderConfigParams{
 		Kind:                   req.Kind,
+		IncusOneTeamPerHost:    req.IncusOneTeamPerHost,
 		MicrocloudPublicAccess: publicAccess,
 		AwsConfig:              awsConfig,
 		IncusApiUrl:            db.StrPtr(req.IncusApiUrl),
@@ -192,6 +197,7 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		IncusOperationTimeoutSeconds: params.IncusOperationTimeoutSeconds,
 		IncusImages:                  params.IncusImages, IncusSizes: params.IncusSizes,
 		IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
+		IncusOneTeamPerHost:    params.IncusOneTeamPerHost,
 		IncusProject:           params.IncusProject,
 		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
 	}); err != nil {
@@ -211,6 +217,7 @@ func (s *Server) verifyImages(r *http.Request, params db.CreateBuilderConfigPara
 		Kind: params.Kind, IncusApiUrl: params.IncusApiUrl, IncusClientCertPath: params.IncusClientCertPath,
 		IncusClientKeyPath: params.IncusClientKeyPath, IncusServerCertPem: params.IncusServerCertPem,
 		IncusImages: params.IncusImages, IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
+		IncusOneTeamPerHost:    params.IncusOneTeamPerHost,
 		IncusProject:           params.IncusProject,
 		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
 	})
@@ -372,8 +379,9 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		IncusOperationTimeoutSeconds: params.IncusOperationTimeoutSeconds,
 		IncusImages:                  params.IncusImages, IncusSizes: params.IncusSizes,
 		IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
-		ExternalAccessIp: params.ExternalAccessIp,
-		ExternalPortMin:  params.ExternalPortMin, ExternalPortMax: params.ExternalPortMax,
+		IncusOneTeamPerHost: params.IncusOneTeamPerHost,
+		ExternalAccessIp:    params.ExternalAccessIp,
+		ExternalPortMin:     params.ExternalPortMin, ExternalPortMax: params.ExternalPortMax,
 		IncusProject:           params.IncusProject,
 		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
 		AwsConfig:              params.AwsConfig,

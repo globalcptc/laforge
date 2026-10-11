@@ -160,7 +160,8 @@ export function BuilderWizard() {
     setDraft((d) => ({
       ...d,
       kind,
-      hosts: kind === 'microcloud' ? [d.hosts[0] ?? emptyHost()] : d.hosts.length ? d.hosts : [emptyHost()],
+      hosts: (kind === 'microcloud' ? [d.hosts[0] ?? emptyHost()] : d.hosts.length ? d.hosts : [emptyHost()]).map((h) => ({ ...h, networkType: kind === 'incus' ? h.networkType ?? 'bridge' : undefined })),
+      oneTeamPerHost: kind === 'incus' ? d.oneTeamPerHost ?? true : false,
       // Seed a cloud builder with the standard size names (empty types to fill
       // in) and one blank image row, so it starts as a form to complete.
       ...(isCloud(kind) && d.images.length === 0 && d.sizes.every((s) => !s.type)
@@ -174,7 +175,7 @@ export function BuilderWizard() {
   const blocker: Record<StepId, string | null> = {
     type: !draft.name ? 'Name the builder first.' : !NAME_PATTERN.test(draft.name) ? 'Fix the name first.' : null,
     connect: draft.hosts.length === 0 || !draft.hosts.every(hostReady) ? 'Connect every server first.' : null,
-    placement: !draft.hosts.every(isHostPlaced) ? 'Choose a storage pool and uplink for every server.' : null,
+    placement: !draft.hosts.every(isHostPlaced) ? 'Choose storage and supported networking for every server.' : null,
     images: draft.images.some((i) => !i.name)
       ? 'Every offered image needs a name.'
       : draft.images.some((i) => i.source === 'snapshot' && (!i.instance || !i.snapshot))
@@ -251,6 +252,8 @@ export function BuilderWizard() {
                 {step === 'placement' && (
                   <StepPlacement
                     kind={draft.kind}
+                    oneTeamPerHost={draft.oneTeamPerHost ?? false}
+                    onPlacementPolicyChange={(oneTeamPerHost) => setDraft((d) => ({ ...d, oneTeamPerHost }))}
                     hosts={draft.hosts}
                     onChange={(hosts) => setDraft((d) => ({ ...d, hosts }))}
                     microcloudPublicAccess={draft.microcloudPublicAccess}

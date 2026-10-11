@@ -26,9 +26,11 @@ package builderconfig
 import (
 	"context"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -424,8 +426,22 @@ func resolveIncusPool(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder
 		return nil, err
 	}
 
+	requireDistinct := row.IncusOneTeamPerHost
+	for _, hc := range hostConfigs {
+		if (incus.Config{NetworkType: hc.NetworkType, OVNUplinkNetwork: hc.OVNUplinkNetwork}).NetworkMode() == "bridge" {
+			requireDistinct = true
+		}
+	}
 	hosts := make([]*incus.Builder, 0, len(hostConfigs))
+	seenEndpoints := map[string]bool{}
+	seenCertificates := map[string]bool{}
 	for i, hc := range hostConfigs {
+		if hc.NetworkType != "" && hc.NetworkType != "bridge" && hc.NetworkType != "ovn" {
+			return nil, fmt.Errorf("incus_hosts[%d]: network_type must be bridge or ovn", i)
+		}
+		if hc.NetworkType == "ovn" && hc.OVNUplinkNetwork == "" {
+			return nil, fmt.Errorf("incus_hosts[%d]: OVN requires an uplink network", i)
+		}
 		var ep endpoint
 		if hc.CredentialID != "" {
 			var id pgtype.UUID
@@ -439,6 +455,17 @@ func resolveIncusPool(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder
 		if err != nil {
 			return nil, fmt.Errorf("builder config %q: incus_hosts[%d]: %w", row.Name, i, err)
 		}
+		if requireDistinct {
+			endpointKey := strings.TrimRight(strings.ToLower(ep.apiURL), "/")
+			certificateKey := string(ep.serverCertPEM)
+			if cert, _ := pem.Decode(ep.serverCertPEM); cert != nil {
+				certificateKey = string(cert.Bytes)
+			}
+			if seenEndpoints[endpointKey] || (certificateKey != "" && seenCertificates[certificateKey]) {
+				return nil, fmt.Errorf("incus_hosts[%d]: one team per host requires distinct servers; duplicate endpoint or server certificate", i)
+			}
+			seenEndpoints[endpointKey], seenCertificates[certificateKey] = true, true
+		}
 		client, err := ep.client()
 		if err != nil {
 			return nil, fmt.Errorf("builder config %q: incus_hosts[%d]: constructing client: %w", row.Name, i, err)
@@ -448,12 +475,14 @@ func resolveIncusPool(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder
 		}
 		hosts = append(hosts, incus.New(client, incus.Config{
 			Images: images, Sizes: sizes,
-			OVNUplinkNetwork: hc.OVNUplinkNetwork, StoragePool: hc.StoragePool, DockerBaseFingerprint: row.DockerBaseFingerprint,
+			NetworkType: hc.NetworkType, OVNUplinkNetwork: hc.OVNUplinkNetwork, StoragePool: hc.StoragePool, DockerBaseFingerprint: row.DockerBaseFingerprint,
 			ExternalAccessIP: db.StrOrEmpty(row.ExternalAccessIp),
 			ExternalPortMin:  int(db.Int32OrZero(row.ExternalPortMin)),
 			ExternalPortMax:  int(db.Int32OrZero(row.ExternalPortMax)),
 		}))
 	}
 
-	return incuspool.New(hosts, images), nil
+	resolved := incuspool.New(hosts, images)
+	resolved.OneTeamPerHost = row.IncusOneTeamPerHost
+	return resolved, nil
 }

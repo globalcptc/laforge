@@ -15,13 +15,14 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/loader"
 )
 
 // ReconcileExternalAccess enqueues a builder-level ConfigureExternalAccess for
 // any team whose content declares `public:` ports and whose hosts are deployed,
-// re-running only when that public-port set changes (a fingerprint of it rides
+// re-running when public ports or ready instance identities change (a fingerprint rides
 // in the task payload). It mirrors ReconcileNetworkAccess exactly -- the "when"
 // half of external-access enforcement -- and the runner's
 // executeConfigureExternalAccess is the "what" (gather the public hosts, call the
@@ -53,32 +54,9 @@ func ReconcileExternalAccess(ctx context.Context, pool *pgxpool.Pool, repoRoot s
 		if err != nil {
 			return fmt.Errorf("team %d: listing objects: %w", team.TeamNumber, err)
 		}
-		// Only once at least one of the team's hosts is actually deployed at the
-		// hoster (has an external ref) -- external access attaches to live instances.
-		deployed := false
-		for _, o := range objs {
-			if (o.Kind == "host" || o.Kind == "container") && db.StrOrEmpty(o.ExternalRef) != "" &&
-				(o.Status == "running" || o.Status == "building" || o.Status == "finished" || o.Status == "deployed") {
-				deployed = true
-				break
-			}
-		}
-		if !deployed {
+		teamFP, ready := externalAccessTeamFingerprint(c, objs, fp, nicMode)
+		if !ready {
 			continue
-		}
-		teamFP := fp
-		if nicMode {
-			lines := []string{"microcloud-public-nic-v1", fp}
-			for _, o := range objs {
-				if (o.Kind == "host" || o.Kind == "container") && db.StrOrEmpty(o.ExternalRef) != "" &&
-					(o.Status == "running" || o.Status == "building" || o.Status == "finished" || o.Status == "deployed") {
-					// Guest step progress doesn't change network permissions.
-					lines = append(lines, o.ID.String()+"|"+db.StrOrEmpty(o.ExternalRef))
-				}
-			}
-			sort.Strings(lines)
-			sum := sha256.Sum256([]byte(strings.Join(lines, "\n")))
-			teamFP = hex.EncodeToString(sum[:])
 		}
 		teamStr := strconv.FormatInt(int64(team.TeamNumber), 10)
 		present, err := q.HasConfigureExternalAccessTask(ctx, db.HasConfigureExternalAccessTaskParams{
@@ -164,4 +142,32 @@ func externalAccessFingerprint(c *loader.Content) string {
 	sort.Strings(lines)
 	sum := sha256.Sum256([]byte(strings.Join(lines, "\n")))
 	return hex.EncodeToString(sum[:])
+}
+
+// Include the identities of ready targets, not guest step progress. A private
+// host becoming ready cannot consume the public task, and later public VMs
+// produce a new fingerprint even when the content itself has not changed.
+func externalAccessTeamFingerprint(c *loader.Content, objs []db.DeployedObject, contentFP string, nicMode bool) (string, bool) {
+	lines := []string{"external-access-ready-v2", contentFP}
+	for _, o := range objs {
+		if (o.Kind != "host" && o.Kind != "container") || db.StrOrEmpty(o.ExternalRef) == "" || !builder.ExternalAccessDeployReady(o.Status) {
+			continue
+		}
+		public := nicMode
+		if h := findHost(c, o.ObjectName); h != nil && h.Public != nil {
+			public = public || len(h.Public.TCP)+len(h.Public.UDP) > 0
+		}
+		if ct := findContainer(c, o.ObjectName); ct != nil && ct.Public != nil {
+			public = public || len(ct.Public.TCP)+len(ct.Public.UDP) > 0
+		}
+		if public {
+			lines = append(lines, o.ID.String()+"|"+db.StrOrEmpty(o.ExternalRef))
+		}
+	}
+	if len(lines) == 2 {
+		return "", false
+	}
+	sort.Strings(lines)
+	sum := sha256.Sum256([]byte(strings.Join(lines, "\n")))
+	return hex.EncodeToString(sum[:]), true
 }

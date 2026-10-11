@@ -10,6 +10,8 @@ import { TIMEOUT_OPTIONS, uplinkCandidates, type HostDraft, type Kind } from './
 
 export function StepPlacement({
   kind,
+  oneTeamPerHost,
+  onPlacementPolicyChange,
   hosts,
   onChange,
   externalAccessIp,
@@ -20,6 +22,8 @@ export function StepPlacement({
   onPublicAccessChange,
 }: {
   kind: Kind
+  oneTeamPerHost: boolean
+  onPlacementPolicyChange: (value: boolean) => void
   microcloudPublicAccess?: MicrocloudPublicAccess
   onPublicAccessChange: (value: MicrocloudPublicAccess) => void
   hosts: HostDraft[]
@@ -53,6 +57,13 @@ export function StepPlacement({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-fg-muted">Choose where machines are stored and how team networks reach the outside, from what the server actually has.</p>
+      {kind === 'incus' && <div className="card p-4">
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" checked={oneTeamPerHost} onChange={(e) => onPlacementPolicyChange(e.target.checked)} />
+          One team per configured host
+        </label>
+        <p className="mt-2 text-xs text-fg-muted">Each team in a build gets a distinct host, in the order listed below. Builds with more teams than hosts are rejected before deployment. Native bridges also require distinct hosts for repeated team subnets.</p>
+      </div>}
       {hosts.map((h, i) => (
         <div key={h.key} className="card p-4">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg">
@@ -77,6 +88,13 @@ export function StepPlacement({
             </Field>
           )}
 
+          {kind === 'incus' && <Field label="Deployment networking" hint="Choose how this host connects the VMs in each deployment subnet.">
+            <Select value={h.networkType ?? 'bridge'} onChange={(e) => update(i, { networkType: e.target.value as 'bridge' | 'ovn' })}>
+              <option value="bridge">Native bridges — host routing and NAT</option>
+              <option value="ovn">OVN — isolated logical networks</option>
+            </Select>
+            {(h.networkType ?? 'bridge') === 'bridge' && <BridgeNotes host={h} />}
+          </Field>}
           {h.connection || kind === 'microcloud' ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
@@ -90,22 +108,22 @@ export function StepPlacement({
               >
 <PoolInput host={h} onChange={(storagePool) => update(i, { storagePool })} />
               </Field>
-              <Field
+              {(kind === 'microcloud' || (h.networkType ?? 'bridge') !== 'bridge') && (<Field
                 label={
                   <span className="flex items-center gap-1.5">
-                    <Network size={12} /> Uplink network
+                    <Network size={12} /> OVN uplink network
                   </span>
                 }
-                hint="The existing network each team's network routes out through. MicroCloud names it UPLINK by convention."
+                hint="A managed physical or bridge network prepared as an OVN uplink. This does not change the deployment network type."
                 className="mb-0"
               >
 <UplinkInput host={h} onChange={(uplink) => update(i, { uplink })} />
-              </Field>
+              </Field>)}
             </div>
           ) : (
             <div className="text-sm text-fg-muted">
               This host uses its saved settings -- storage pool <span className="font-mono text-fg">{h.storagePool || '(default)'}</span>, uplink{' '}
-              <span className="font-mono text-fg">{h.uplink || '(none)'}</span>. Connect it with a token to choose from the server's own list.
+              <span className="font-mono text-fg">{(h.networkType ?? 'bridge') === 'bridge' ? 'native bridges (no uplink needed)' : h.uplink || '(none)'}</span>. Connect it with a token to choose from the server's own list.
             </div>
           )}
 
@@ -145,6 +163,7 @@ export function StepPlacement({
           The external IPs that hosts' <span className="font-mono">public:</span> ports (e.g. RDP) are NAT'd in on. Each team is assigned one IP,
           round-robin, so with enough IPs every team gets its own address; teams that share one get a distinct external port each. Add no IPs to disable
           external access for this builder.
+          {kind === 'incus' && " For one team per host, list one external IP per host in the same order as the hosts above. Each address must reach its assigned host."}
         </p>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
@@ -275,7 +294,7 @@ function UplinkInput({ host, onChange }: { host: HostDraft; onChange: (uplink: s
       <datalist id={listId}>
         {[...candidates.map((n) => n.name), ...names.filter((n) => !candidates.some((c) => c.name === n))].map((n) => (
           <option key={n} value={n}>
-            {known.get(n)?.type ?? ''}
+            {networkLabel(known.get(n))}
           </option>
         ))}
       </datalist>
@@ -284,14 +303,14 @@ function UplinkInput({ host, onChange }: { host: HostDraft; onChange: (uplink: s
           Likely uplinks:
           {candidates.map((n) => (
             <button key={n.name} type="button" onClick={() => onChange(n.name)} className="rounded bg-surface-sunken px-1.5 py-0.5 font-mono text-fg hover:bg-surface-hover">
-              {n.name}
+              {n.name} · {networkLabel(n)}
             </button>
           ))}
         </div>
       )}
       {host.uplink && chosen && chosen.type !== 'physical' && chosen.type !== 'bridge' && (
         <div className="mt-1 text-xs text-warning">
-          {host.uplink} is a {chosen.type} network; an uplink is normally physical.
+          {host.uplink} is a {chosen.type} network; choose a managed physical or bridge network.
         </div>
       )}
       {host.uplink && names.length > 0 && !names.includes(host.uplink) && (
@@ -333,4 +352,23 @@ function PoolInput({ host, onChange }: { host: HostDraft; onChange: (pool: strin
       )}
     </div>
   )
+}
+
+function networkLabel(network: import('../../api/types').NetworkInfo | undefined): string {
+  if (!network) return 'type unknown'
+  return [network.type, network.managed ? 'managed' : 'host interface', network.config?.['ipv4.address']].filter(Boolean).join(' · ')
+}
+
+function BridgeNotes({ host }: { host: HostDraft }) {
+  const discovery = host.connection?.discovery
+  const bridges = (discovery?.networks ?? []).filter((n) => n.managed && n.type === 'bridge' && (!n.config?.['bridge.driver'] || n.config['bridge.driver'] === 'native'))
+  return <div className="mt-2 text-xs text-fg-muted">
+    <p>Incus creates a private bridge for each deployment subnet. The host provides routing and NAT through its existing default route; no uplink NIC is required.</p>
+    {discovery?.native_bridge_supported === false
+      ? <p className="mt-1 text-danger">This host lacks bridge NIC ACL support with nftables. Upgrade Incus or choose OVN.</p>
+      : discovery?.native_bridge_supported === true
+        ? <p className="mt-1">Detected native bridge and NIC firewall support.</p>
+        : <p className="mt-1">Bridge NIC firewall support will be checked before network creation.</p>}
+    {bridges.length > 0 && <p className="mt-1">Existing bridges: {bridges.map((n) => `${n.name} (${networkLabel(n)})`).join(', ')}. Deployment subnets must not overlap these networks.</p>}
+  </div>
 }

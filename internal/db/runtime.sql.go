@@ -363,6 +363,47 @@ func (q *Queries) CreateTeamTask(ctx context.Context, arg CreateTeamTaskParams) 
 	return i, err
 }
 
+const deferTask = `-- name: DeferTask :one
+UPDATE task SET status = 'leased', last_error = $3,
+    attempts = GREATEST(attempts - 1, 0),
+    lease_expires_at = now() + $4::interval, updated_at = now()
+WHERE id = $1 AND lease_owner = $2
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+`
+
+type DeferTaskParams struct {
+	ID         pgtype.UUID     `json:"id"`
+	LeaseOwner *string         `json:"lease_owner"`
+	LastError  *string         `json:"last_error"`
+	Column4    pgtype.Interval `json:"column_4"`
+}
+
+// Waiting for VM startup is not a failed forwarding attempt.
+func (q *Queries) DeferTask(ctx context.Context, arg DeferTaskParams) (Task, error) {
+	row := q.db.QueryRow(ctx, deferTask,
+		arg.ID,
+		arg.LeaseOwner,
+		arg.LastError,
+		arg.Column4,
+	)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deleteDeployedObject = `-- name: DeleteDeployedObject :exec
 DELETE FROM deployed_object WHERE id = $1
 `
@@ -814,10 +855,9 @@ type HasConfigureExternalAccessTaskParams struct {
 }
 
 // Dedup for the external-access reconciler, exactly like network access above:
-// one configure_external_access task per (team, public-ports fingerprint), across
-// all statuses. A content change to a team's `public:` ports yields a new
-// fingerprint and a fresh task; an unchanged set never re-runs (the builder call
-// is idempotent).
+// one configure_external_access task per team and desired public ports/ready
+// instance identities, across all statuses. A new or replaced public instance
+// yields a fresh task even if content has not changed.
 func (q *Queries) HasConfigureExternalAccessTask(ctx context.Context, arg HasConfigureExternalAccessTaskParams) (bool, error) {
 	row := q.db.QueryRow(ctx, hasConfigureExternalAccessTask, arg.BuildID, arg.Team, arg.Fingerprint)
 	var present bool

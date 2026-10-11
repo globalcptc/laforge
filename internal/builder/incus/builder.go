@@ -16,6 +16,8 @@ import (
 	"github.com/globalcptc/laforge/internal/render"
 )
 
+// Builder provisions native Linux bridges or legacy OVN networks on one Incus host.
+// Bridge networks route and NAT through the host and require non-overlapping subnets.
 // agentUserData renders the agent-install user-data for an instance from the
 // neutral download URL, choosing the format this image consumes: cloud-init for
 // Linux, cloudbase-init for Windows. viaISO is true for Windows, where
@@ -192,42 +194,8 @@ func sanitizeName(s string) string {
 	return strings.TrimRight(b.String(), "-")
 }
 
-func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (string, error) {
-	if b.Config.OVNUplinkNetwork == "" {
-		return "", fmt.Errorf("this builder config has no OVNUplinkNetwork set -- every DeployNetwork call needs an uplink to route OVN logical networks through")
-	}
-	name := networkName(spec.DisplayName, spec.ExternalName)
-	bridgeAddr, err := bridgeAddressCIDR(spec.CIDR)
-	if err != nil {
-		return "", fmt.Errorf("computing gateway address for %s: %w", spec.CIDR, err)
-	}
-	_, err = b.Client.post(ctx, "/1.0/networks", map[string]interface{}{
-		"name": name,
-		"type": "ovn",
-		"config": map[string]string{
-			"network":      b.Config.OVNUplinkNetwork,
-			"ipv4.address": bridgeAddr,
-			"ipv4.nat":     "true",
-			// IPv6 off: LaForge is IPv4-only, and leaving OVN to auto-assign an
-			// IPv6 subnet requires the uplink to carry an IPv6 range too -- when
-			// it doesn't, LXD rejects any later config change (e.g. attaching an
-			// ACL) with "Uplink address key volatile.network.ipv6.address cannot
-			// be empty when network address key ipv6.address is populated".
-			"ipv6.address": "none",
-		},
-	})
-	if err != nil {
-		var apiErr *APIError
-		if errors.As(err, &apiErr) && apiErr.AlreadyExists() {
-			return name, nil // adopt
-		}
-		return "", fmt.Errorf("creating network %s (from %s): %w", name, spec.ExternalName, err)
-	}
-	return name, nil
-}
-
 // bridgeAddressCIDR turns a content network's own CIDR (e.g.
-// "10.0.1.0/24" -- the network address itself) into the address the OVN network's own logical router/gateway
+// "10.0.1.0/24" -- the network address itself) into the address the network gateway
 // needs, in CIDR notation (e.g. "10.0.1.1/24"). Found by testing the
 // equivalent plain-bridge case against a live daemon (OVN itself isn't
 // available in this session's environment -- see Builder's own doc
@@ -706,6 +674,7 @@ func (b *Builder) destroyInstance(ctx context.Context, name string) error {
 	// Remove this instance's per-host port-firewall ACL now that the instance
 	// (its only user) is gone -- otherwise it lingers orphaned. Best-effort.
 	_, _ = b.Client.delete(ctx, "/1.0/network-acls/"+hostACLName(name))
+	_, _ = b.Client.delete(ctx, "/1.0/network-acls/"+publicACLName(name))
 	return nil
 }
 

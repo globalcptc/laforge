@@ -32,6 +32,7 @@ export interface HostDraft {
   legacy?: IncusHostConfig
   storagePool: string
   uplink: string
+  networkType?: 'bridge' | 'ovn'
   // MicroCloud only: the LXD project everything is created in; '' is `default`.
   project?: string
   timeoutSeconds: number
@@ -67,6 +68,7 @@ export interface SizeDraft {
 }
 
 export interface Draft {
+  oneTeamPerHost?: boolean
   name: string
   kind: Kind
   hosts: HostDraft[]
@@ -125,13 +127,13 @@ export function imageLabel(img: ImageInfo): string {
 }
 
 export function uplinkCandidates(networks: NetworkInfo[]): NetworkInfo[] {
-  return networks.filter((n) => n.type === 'physical' || n.type === 'bridge')
+  return networks.filter((n) => n.managed && (n.type === 'physical' || n.type === 'bridge'))
 }
 
 // Sensible first choices once a server is connected: its "default" pool and
 // a network named UPLINK (the MicroCloud convention), else the only
 // physical network.
-export function placementDefaults(conn: BuilderConnection): { storagePool: string; uplink: string } {
+export function placementDefaults(conn: BuilderConnection, kind: Kind = 'microcloud'): Pick<HostDraft, 'storagePool' | 'uplink' | 'networkType'> {
   const pools = conn.discovery.storage_pools
   const storagePool = pools.find((p) => p.name === 'default')?.name ?? pools[0]?.name ?? ''
   const candidates = uplinkCandidates(conn.discovery.networks)
@@ -140,7 +142,7 @@ export function placementDefaults(conn: BuilderConnection): { storagePool: strin
     candidates.find((n) => n.name.toLowerCase() === 'uplink')?.name ??
     (conn.discovery.network_names ?? []).find((n) => n.toLowerCase() === 'uplink') ??
     (physical.length === 1 ? physical[0].name : '')
-  return { storagePool, uplink }
+  return { storagePool, uplink, networkType: kind === 'incus' ? (conn.discovery.native_bridge_supported === false ? 'ovn' : 'bridge') : undefined }
 }
 
 // Every image on every connected host, deduplicated, with which hosts have
@@ -181,7 +183,9 @@ export function isHostConnected(h: HostDraft): boolean {
 }
 
 export function isHostPlaced(h: HostDraft): boolean {
-  return h.storagePool !== '' && h.uplink !== ''
+  return !!h.storagePool && (h.networkType === 'bridge'
+    ? h.connection?.discovery.native_bridge_supported !== false
+    : !!h.uplink)
 }
 
 export function imagesFromConfig(existing: Record<string, IncusImageRef>): ImageDraft[] {
@@ -246,12 +250,14 @@ export function draftFromConfig(bc: BuilderConfig): Draft {
         legacy: hc.credential_id ? undefined : hc,
         storagePool: hc.storage_pool ?? '',
         uplink: hc.ovn_uplink_network ?? '',
+        networkType: hc.network_type ?? (hc.ovn_uplink_network ? 'ovn' : 'bridge'),
         timeoutSeconds: hc.operation_timeout_seconds ?? 120,
       })
     }
   }
   return {
     name: bc.name,
+    oneTeamPerHost: bc.incus_one_team_per_host ?? false,
     kind: bc.kind,
     hosts,
     images: [],
@@ -336,12 +342,12 @@ export function toRequest(d: Draft): BuilderConfigRequest {
   }
 
   const incus_hosts: IncusHostConfig[] = d.hosts.map((h) => {
-    const placement = { storage_pool: h.storagePool, ovn_uplink_network: h.uplink, operation_timeout_seconds: h.timeoutSeconds }
+    const placement = { storage_pool: h.storagePool, network_type: h.networkType ?? 'bridge', ovn_uplink_network: (h.networkType ?? 'bridge') === 'bridge' ? undefined : h.uplink, operation_timeout_seconds: h.timeoutSeconds }
     if (h.credentialId)
       return { credential_id: h.credentialId, api_url: '', client_cert_path: '', client_key_path: '', server_cert_pem: '', ...placement }
     return { ...(h.legacy as IncusHostConfig), ...placement }
   })
-  return { kind: 'incus', incus_hosts, ...externalAccess, incus_images, incus_sizes }
+  return { kind: 'incus', incus_hosts, incus_one_team_per_host: d.oneTeamPerHost ?? false, ...externalAccess, incus_images, incus_sizes }
 }
 
 // cleanAwsConfig drops empty-string fields so they fall back to the runner's

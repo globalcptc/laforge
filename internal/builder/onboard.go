@@ -40,10 +40,11 @@ type StoragePoolInfo struct {
 }
 
 type NetworkInfo struct {
-	Name    string `json:"name"`
-	Type    string `json:"type"` // "physical", "bridge", "ovn", ...
-	Managed bool   `json:"managed"`
-	Status  string `json:"status"`
+	Config  map[string]string `json:"config,omitempty"`
+	Name    string            `json:"name"`
+	Type    string            `json:"type"` // "physical", "bridge", "ovn", ...
+	Managed bool              `json:"managed"`
+	Status  string            `json:"status"`
 }
 
 type ImageInfo struct {
@@ -61,7 +62,9 @@ type ImageInfo struct {
 // Discovery is what a hoster reports it has -- the pickable resources. Never nil
 // slices in a value the API returns, so the wire is always a JSON array.
 type Discovery struct {
-	StoragePools []StoragePoolInfo `json:"storage_pools"`
+	// Nil means capability detection was unavailable or this is another builder kind.
+	NativeBridgeSupported *bool             `json:"native_bridge_supported,omitempty"`
+	StoragePools          []StoragePoolInfo `json:"storage_pools"`
 	// Networks are the server's own (the `default` project's), since uplink
 	// networks always live there whatever project instances go in -- with
 	// details for at most a bounded number of them, likely uplinks first: on a
