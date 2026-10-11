@@ -44,24 +44,44 @@ func ReconcileNetworkAccess(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 			return fmt.Errorf("team %d: listing objects: %w", team.TeamNumber, err)
 		}
 
-		// Only proceed once every one of the team's networks is deployed --
-		// peering + ACLs need all of them to exist.
+		// Only proceed once every one of the team's networks is deployed AND every
+		// guest has settled -- peering + ACLs need all networks to exist, and a
+		// per-NIC ACL applied before its guest is created would silently skip that
+		// guest. A guest still being created (pending/deploying, or deployed but
+		// no reference recorded yet) is a WAIT, not a reason to run a partial
+		// policy; a guest that terminally failed to deploy has no NIC to configure,
+		// so it neither blocks nor joins the ACL set. The runner's own readiness
+		// defer is the safety net for a guest that flips unready after this queues.
 		var netObjs []db.DeployedObject
-		allDeployed := true
+		var guestRefs []string
+		allDeployed, allSettled := true, true
 		for _, o := range objs {
-			if o.Kind != "network" {
-				continue
-			}
-			netObjs = append(netObjs, o)
-			if o.Status != "deployed" && o.Status != "finished" {
-				allDeployed = false
+			switch o.Kind {
+			case "network":
+				netObjs = append(netObjs, o)
+				if o.Status != "deployed" && o.Status != "finished" {
+					allDeployed = false
+				}
+			case "host", "container":
+				switch o.Status {
+				case "pending", "deploying":
+					allSettled = false
+				case "deploy_failed":
+					// terminal: no instance to ACL -- excluded, doesn't block
+				default: // running/building/finished/deployed/build_failed/invalid
+					if ref := db.StrOrEmpty(o.ExternalRef); ref != "" {
+						guestRefs = append(guestRefs, ref)
+					} else {
+						allSettled = false // deployed but still settling (no ref yet)
+					}
+				}
 			}
 		}
-		if len(netObjs) == 0 || !allDeployed {
+		if len(netObjs) == 0 || !allDeployed || !allSettled {
 			continue
 		}
 
-		fp, err := networkAccessFingerprint(ctx, q, build.ContentRevisionID, netObjs)
+		fp, err := networkAccessFingerprint(ctx, q, build.ContentRevisionID, netObjs, guestRefs)
 		if err != nil {
 			return fmt.Errorf("team %d: fingerprinting network access: %w", team.TeamNumber, err)
 		}
@@ -91,9 +111,13 @@ func ReconcileNetworkAccess(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 }
 
 // networkAccessFingerprint hashes the team's desired inter-network policy -- each
-// network's name, CIDR, and sorted visible_from -- so the reconciler re-runs
-// exactly when that policy changes and not otherwise.
-func networkAccessFingerprint(ctx context.Context, q *db.Queries, revID pgtype.UUID, netObjs []db.DeployedObject) (string, error) {
+// network's name, CIDR, and sorted visible_from -- plus the sorted set of ready
+// guest instance references. Including the refs makes the reconciler re-run both
+// when the policy changes AND when the guest set changes (a rebuild replaces a
+// guest's reference), so a replaced instance's NIC gets its ACL re-applied; an
+// unchanged policy over an unchanged guest set never re-runs (the builder call is
+// idempotent).
+func networkAccessFingerprint(ctx context.Context, q *db.Queries, revID pgtype.UUID, netObjs []db.DeployedObject, guestRefs []string) (string, error) {
 	lines := make([]string, 0, len(netObjs))
 	for _, o := range netObjs {
 		net, err := q.GetNetworkByRevisionAndName(ctx, db.GetNetworkByRevisionAndNameParams{
@@ -108,6 +132,9 @@ func networkAccessFingerprint(ctx context.Context, q *db.Queries, revID pgtype.U
 		lines = append(lines, fmt.Sprintf("%s|%s|%s", net.Name, net.Cidr, strings.Join(visibleFrom, ",")))
 	}
 	sort.Strings(lines)
-	sum := sha256.Sum256([]byte(strings.Join(lines, "\n")))
+	refs := append([]string(nil), guestRefs...)
+	sort.Strings(refs)
+	payload := strings.Join(lines, "\n") + "\x00guests\x00" + strings.Join(refs, ",")
+	sum := sha256.Sum256([]byte(payload))
 	return hex.EncodeToString(sum[:]), nil
 }

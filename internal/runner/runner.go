@@ -201,10 +201,17 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 		return nil
 	}
 
-	if errors.Is(execErr, builder.ErrExternalAccessNotReady) && task.Kind == "configure_external_access" {
+	// A readiness wait is not a failure: the hoster just isn't ready to take this
+	// access policy yet (an instance still being created, no external_ref). Defer
+	// and retry WITHOUT consuming the three-attempt budget -- for both public
+	// forwarding and private per-NIC ACLs, which share this exact wait: a private
+	// ACL applied before its guests exist silently skips them and falsely reports
+	// success (the network-access bug this handling fixes).
+	if errors.Is(execErr, builder.ErrExternalAccessNotReady) &&
+		(task.Kind == "configure_external_access" || task.Kind == "configure_network_access") {
 		_, err := q.DeferTask(ctx, db.DeferTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Column4: db.Interval(r.RetryBackoff(1))})
 		if err != nil {
-			return fmt.Errorf("deferring external access: %w", err)
+			return fmt.Errorf("deferring access configuration: %w", err)
 		}
 		r.logEvent(ctx, q, task.BuildID, task.ID, "task.waiting", execErr.Error())
 		return nil
@@ -882,6 +889,24 @@ func (r *Runner) executeConfigureNetworkAccess(ctx context.Context, q *db.Querie
 			tcp, udp = ct.Ports.TCP, ct.Ports.UDP
 		} else {
 			continue // removed from content since deploy
+		}
+		// Every placed guest gets a NIC ACL (a host with no ports is "reachable on
+		// nothing"), so the policy must cover all of them -- applying it before a
+		// guest exists would silently skip that guest and falsely report success.
+		// A guest still being created makes the whole task WAIT (defer, no attempt
+		// consumed) until it's up; a guest that terminally failed to deploy has no
+		// NIC to configure, so skip it rather than block the team forever.
+		ref := db.StrOrEmpty(o.ExternalRef)
+		switch o.Status {
+		case "pending", "deploying":
+			return fmt.Errorf("%w: network-access target %s has not completed deployment", builder.ErrExternalAccessNotReady, o.ObjectName)
+		case "deploy_failed":
+			continue // no instance exists to ACL; don't strand the rest of the team
+		}
+		if ref == "" {
+			// Deployed-but-no-reference: creation is still settling (an uncertain
+			// deploy hasn't recorded the instance yet). Wait rather than skip.
+			return fmt.Errorf("%w: network-access target %s has no instance reference yet", builder.ErrExternalAccessNotReady, o.ObjectName)
 		}
 		rctx, err := render.Resolve(c, build.EnvironmentName, db.StrOrEmpty(o.AsName), int(teamNum))
 		if err != nil {

@@ -872,6 +872,7 @@ SELECT EXISTS (
       AND kind = 'configure_network_access'
       AND payload->>'team' = $2::text
       AND payload->>'fingerprint' = $3::text
+      AND status <> 'failed'
 ) AS present
 `
 
@@ -881,12 +882,14 @@ type HasConfigureNetworkAccessTaskParams struct {
 	Fingerprint string      `json:"fingerprint"`
 }
 
-// Dedup for the network-access reconciler: exactly one configure_network_access
-// task per (team, desired-config fingerprint), across ALL statuses. The
-// fingerprint (a hash of the team's networks' names/CIDRs/visible_from) rides in
-// the payload, so a content change yields a new fingerprint and a fresh task,
-// while an unchanged config never re-runs regardless of the earlier task's
-// outcome -- the builder call is idempotent, so re-asserting adds no value.
+// Dedup for the network-access reconciler: one live configure_network_access task
+// per (team, desired-config fingerprint). The fingerprint hashes the team's
+// networks' names/CIDRs/visible_from PLUS its ready guests' instance references,
+// so a content change OR an instance replacement (a rebuilt guest gets a new ref)
+// yields a new fingerprint and a fresh task, while an unchanged config never
+// re-runs (the builder call is idempotent). A previously FAILED task does NOT
+// count, so an exhausted attempt is re-queued and converges rather than leaving
+// the policy permanently half-applied.
 func (q *Queries) HasConfigureNetworkAccessTask(ctx context.Context, arg HasConfigureNetworkAccessTaskParams) (bool, error) {
 	row := q.db.QueryRow(ctx, hasConfigureNetworkAccessTask, arg.BuildID, arg.Team, arg.Fingerprint)
 	var present bool
