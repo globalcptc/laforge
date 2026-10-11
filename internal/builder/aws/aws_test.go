@@ -147,6 +147,21 @@ func TestVPCCIDRFor(t *testing.T) {
 	}
 }
 
+func TestTaskFamilyFromARN(t *testing.T) {
+	cases := map[string]string{
+		"arn:aws:ecs:us-east-1:123456789012:task-definition/laforge-web01:3": "laforge-web01",
+		"arn:aws:ecs:us-east-1:123456789012:task-definition/laforge-web01":   "laforge-web01", // no revision
+		"laforge-db01:12": "laforge-db01", // bare family:revision
+		"laforge-db01":    "laforge-db01",
+		"":                "",
+	}
+	for in, want := range cases {
+		if got := taskFamilyFromARN(in); got != want {
+			t.Errorf("taskFamilyFromARN(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestValidateVPCCIDR(t *testing.T) {
 	// Accepted: IPv4 blocks from /16 (the VPC max) down to /28 (the min), kept
 	// as declared rather than rounded to a /16.

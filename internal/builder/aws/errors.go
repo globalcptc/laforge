@@ -54,3 +54,13 @@ func isDuplicate(err error) bool {
 func alreadyAssociated(err error) bool {
 	return apiErrorCode(err) == "Resource.AlreadyAssociated"
 }
+
+// isDependencyViolation is AWS's "can't delete this yet, something still
+// references it" -- a security group still attached to a terminating instance's
+// (or stopping Fargate task's) ENI, or a VPC still holding resources. It's
+// transient during teardown: the referencing resource is on its way out, so a
+// caller treats it as "retry later," not a hard failure, and the task's existing
+// retry/backoff finishes the teardown once the reference is gone.
+func isDependencyViolation(err error) bool {
+	return apiErrorCode(err) == "DependencyViolation"
+}

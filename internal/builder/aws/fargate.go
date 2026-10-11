@@ -181,18 +181,21 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 	return arn, nil
 }
 
-// DestroyContainer stops the Fargate task. Idempotent: a missing/stopped task is
-// not an error.
+// DestroyContainer stops the Fargate task and removes what the deploy created
+// alongside it: the task-definition family (deregistered) and the per-object
+// security group. Idempotent: a missing/stopped task, an already-gone task def,
+// and an absent SG are all not errors.
 func (b *Builder) DestroyContainer(ctx context.Context, team, externalRef string) error {
 	if externalRef == "" {
 		return nil
 	}
 	// A compose container is an EC2 instance (see DeployContainer's ComposeHost
-	// branch); its ref is an instance id, not a task ARN. Route it to DestroyHost.
+	// branch); its ref is an instance id, not a task ARN. Route it to DestroyHost
+	// (which already tears down its SG and EIP).
 	if strings.HasPrefix(externalRef, "i-") {
 		return b.DestroyHost(ctx, team, externalRef)
 	}
-	_, err := b.ecs.StopTask(ctx, &ecs.StopTaskInput{
+	out, err := b.ecs.StopTask(ctx, &ecs.StopTaskInput{
 		Cluster: awssdk.String(b.cfg.Cluster),
 		Task:    awssdk.String(externalRef),
 		Reason:  awssdk.String("laforge teardown"),
@@ -200,7 +203,63 @@ func (b *Builder) DestroyContainer(ctx context.Context, team, externalRef string
 	if err != nil && !isNotFound(err) {
 		return fmt.Errorf("stopping Fargate task %s: %w", externalRef, err)
 	}
-	return nil
+	// Deregister the task-definition family this container registered (best-effort
+	// -- a leaked INACTIVE task def costs nothing, so it never blocks teardown).
+	if err == nil && out.Task != nil {
+		b.deregisterTaskFamily(ctx, awssdk.ToString(out.Task.TaskDefinitionArn))
+	}
+	// Delete the per-object SG. A stopping task's ENI still references it, so a
+	// DependencyViolation here is "task still draining" -- returned as retryable
+	// so the SG (and later the VPC) don't leak.
+	return b.deleteObjectSecurityGroup(ctx, externalRef)
+}
+
+// deregisterTaskFamily deregisters every revision of the task-definition family
+// named by taskDefArn ("arn:...:task-definition/laforge-<name>:<rev>"). Each
+// DeployContainer registers a new revision, so teardown clears the whole family.
+// Best-effort throughout; a listing or deregister hiccup just leaves an inert
+// INACTIVE revision behind.
+func (b *Builder) deregisterTaskFamily(ctx context.Context, taskDefArn string) {
+	family := taskFamilyFromARN(taskDefArn)
+	if family == "" {
+		return
+	}
+	var next *string
+	for {
+		list, err := b.ecs.ListTaskDefinitions(ctx, &ecs.ListTaskDefinitionsInput{
+			FamilyPrefix: awssdk.String(family),
+			NextToken:    next,
+		})
+		if err != nil {
+			return
+		}
+		for _, arn := range list.TaskDefinitionArns {
+			// FamilyPrefix is a prefix match, so guard against a sibling family
+			// (e.g. laforge-web vs laforge-web2) by comparing the family exactly.
+			if taskFamilyFromARN(arn) != family {
+				continue
+			}
+			_, _ = b.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{TaskDefinition: awssdk.String(arn)})
+		}
+		if list.NextToken == nil {
+			return
+		}
+		next = list.NextToken
+	}
+}
+
+// taskFamilyFromARN pulls the family out of a task-definition ARN or a
+// "family:revision" string: "arn:...:task-definition/laforge-web01:3" ->
+// "laforge-web01". Returns "" if there's nothing usable.
+func taskFamilyFromARN(arn string) string {
+	s := arn
+	if i := strings.LastIndex(s, "/"); i >= 0 {
+		s = s[i+1:] // drop the arn prefix, keep "laforge-web01:3"
+	}
+	if i := strings.LastIndex(s, ":"); i >= 0 {
+		s = s[:i] // drop ":<revision>"
+	}
+	return s
 }
 
 // fargateSize maps a content size to Fargate CPU/memory units. The shared Sizes

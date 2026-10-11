@@ -579,14 +579,30 @@ func (b *Builder) DestroyNetwork(ctx context.Context, team, externalRef string) 
 		Filters: []ec2types.Filter{filter("vpc-id", vpcID), managedFilter},
 	})
 	if err == nil && len(remaining.Subnets) == 0 {
-		b.teardownTeamVPC(ctx, vpcID)
+		// Propagate the teardown result: a VPC that won't delete (an ENI still
+		// draining, a leftover SG) must fail the task so it retries, not return
+		// success and silently leak the whole VPC + IGW + route tables + NACLs.
+		return b.teardownTeamVPC(ctx, vpcID)
 	}
 	return nil
 }
 
-// teardownTeamVPC removes the IGW, route tables, custom NACLs and the VPC
-// itself, best-effort (a not-found at any step is fine -- ensure-destroy).
-func (b *Builder) teardownTeamVPC(ctx context.Context, vpcID string) {
+// teardownTeamVPC removes everything the team VPC still holds -- its managed
+// security groups, IGW, route tables and custom NACLs -- and then the VPC
+// itself. The dependency deletes are best-effort (a not-found is fine), but the
+// final DeleteVpc error is RETURNED: if anything still references the VPC (a
+// terminating instance's ENI, a stopping Fargate task's ENI, a straggler SG) the
+// delete fails with DependencyViolation, and the caller retries until it's truly
+// gone. Deleting the managed SGs here is what unblocks that DeleteVpc -- a VPC
+// won't delete while a non-default security group remains in it.
+func (b *Builder) teardownTeamVPC(ctx context.Context, vpcID string) error {
+	if sgs, err := b.ec2.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
+		Filters: []ec2types.Filter{filter("vpc-id", vpcID), managedFilter},
+	}); err == nil {
+		for _, sg := range sgs.SecurityGroups {
+			_, _ = b.ec2.DeleteSecurityGroup(ctx, &ec2.DeleteSecurityGroupInput{GroupId: sg.GroupId})
+		}
+	}
 	if igws, err := b.ec2.DescribeInternetGateways(ctx, &ec2.DescribeInternetGatewaysInput{
 		Filters: []ec2types.Filter{filter("attachment.vpc-id", vpcID)},
 	}); err == nil {
@@ -609,7 +625,10 @@ func (b *Builder) teardownTeamVPC(ctx context.Context, vpcID string) {
 			_, _ = b.ec2.DeleteNetworkAcl(ctx, &ec2.DeleteNetworkAclInput{NetworkAclId: n.NetworkAclId})
 		}
 	}
-	_, _ = b.ec2.DeleteVpc(ctx, &ec2.DeleteVpcInput{VpcId: awssdk.String(vpcID)})
+	if _, err := b.ec2.DeleteVpc(ctx, &ec2.DeleteVpcInput{VpcId: awssdk.String(vpcID)}); err != nil && !isNotFound(err) {
+		return fmt.Errorf("deleting team VPC %s (resources may still be draining -- will retry): %w", vpcID, err)
+	}
+	return nil
 }
 
 func (b *Builder) findSubnet(ctx context.Context, externalName string) (string, error) {
@@ -701,6 +720,33 @@ func (b *Builder) DestroyHost(ctx context.Context, team, externalRef string) err
 	b.releaseEIPForRef(ctx, externalRef)
 	if _, err := b.ec2.TerminateInstances(ctx, &ec2.TerminateInstancesInput{InstanceIds: []string{externalRef}}); err != nil && !isNotFound(err) {
 		return fmt.Errorf("terminating instance %s: %w", externalRef, err)
+	}
+	// Delete the host's per-object security group. If we don't, it leaks AND
+	// blocks the team VPC teardown later (a VPC won't delete while a non-default
+	// SG remains in it). The SG can't go while the instance's ENI still
+	// references it, so a DependencyViolation here just means the instance is
+	// still terminating -- deleteObjectSecurityGroup returns that as a retryable
+	// error so the task runs again and succeeds once the ENI is gone.
+	return b.deleteObjectSecurityGroup(ctx, externalRef)
+}
+
+// deleteObjectSecurityGroup removes the per-object security group tagged with
+// this externalRef (created at deploy by ensureObjectSecurityGroup). Returns a
+// retryable error on DependencyViolation (the instance/task still terminating);
+// a missing SG, or no SG for this ref, is a no-op success.
+func (b *Builder) deleteObjectSecurityGroup(ctx context.Context, ref string) error {
+	sgID, err := b.sgForRef(ctx, ref)
+	if err != nil {
+		return nil // a describe hiccup shouldn't fail teardown; the VPC sweep catches stragglers
+	}
+	if sgID == "" {
+		return nil
+	}
+	if _, err := b.ec2.DeleteSecurityGroup(ctx, &ec2.DeleteSecurityGroupInput{GroupId: awssdk.String(sgID)}); err != nil && !isNotFound(err) {
+		if isDependencyViolation(err) {
+			return fmt.Errorf("security group %s still attached (instance/task still terminating); will retry", sgID)
+		}
+		return fmt.Errorf("deleting security group %s: %w", sgID, err)
 	}
 	return nil
 }
