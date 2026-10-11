@@ -30,28 +30,28 @@ type imageCatalog interface {
 // os/image names it has configured, for a builder kind that exposes one, plus
 // the builder's name. A build with no configured_build at all (the ad-hoc/test
 // path) returns nil images and an empty name -- nothing to check.
-func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool, build db.Build, teamCount int) (images map[string]bool, builderName string, err error) {
+func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool, build db.Build, teamCount int) (images map[string]bool, builderName string, b builder.Builder, err error) {
 	if !build.ConfiguredBuildID.Valid {
-		return nil, "", nil
+		return nil, "", nil, nil
 	}
 	cb, err := q.GetConfiguredBuild(ctx, build.ConfiguredBuildID)
 	if err != nil {
-		return nil, "", fmt.Errorf("loading configured build: %w", err)
+		return nil, "", nil, fmt.Errorf("loading configured build: %w", err)
 	}
 	row, err := q.GetBuilderConfigByName(ctx, cb.BuilderConfigName)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, cb.BuilderConfigName, fmt.Errorf("no such builder config %q", cb.BuilderConfigName)
+			return nil, cb.BuilderConfigName, nil, fmt.Errorf("no such builder config %q", cb.BuilderConfigName)
 		}
-		return nil, cb.BuilderConfigName, fmt.Errorf("loading builder config %q: %w", cb.BuilderConfigName, err)
+		return nil, cb.BuilderConfigName, nil, fmt.Errorf("loading builder config %q: %w", cb.BuilderConfigName, err)
 	}
-	b, err := builderconfig.Resolve(pool, row)
+	b, err = builderconfig.Resolve(pool, row)
 	if err != nil {
-		return nil, cb.BuilderConfigName, fmt.Errorf("resolving builder %q: %w", cb.BuilderConfigName, err)
+		return nil, cb.BuilderConfigName, nil, fmt.Errorf("resolving builder %q: %w", cb.BuilderConfigName, err)
 	}
 	if placement, ok := b.(interface{ ValidateTeamCount(int) error }); ok {
 		if err := placement.ValidateTeamCount(teamCount); err != nil {
-			return nil, cb.BuilderConfigName, err
+			return nil, cb.BuilderConfigName, b, err
 		}
 	}
 	if ic, ok := b.(imageCatalog); ok {
@@ -67,12 +67,14 @@ func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool
 		withBase[builder.ComposeHostImage] = true
 		images = withBase
 	}
-	return images, cb.BuilderConfigName, nil
+	return images, cb.BuilderConfigName, b, nil
 }
 
-// checkBuilderCompatibility validates image mappings and team placement.
+// checkBuilderCompatibility validates image mappings, team placement, and that
+// each host's requested disk fits its mapped source (a copied block volume can't
+// be shrunk below the template it comes from).
 func checkBuilderCompatibility(ctx context.Context, q *db.Queries, pool *pgxpool.Pool, build db.Build, c *loader.Content, env *loader.Environment, containerNames map[string]bool) error {
-	images, builderName, err := resolveBuilderImages(ctx, q, pool, build, env.Teams)
+	images, builderName, b, err := resolveBuilderImages(ctx, q, pool, build, env.Teams)
 	if err != nil {
 		return err
 	}
@@ -82,7 +84,72 @@ func checkBuilderCompatibility(ctx context.Context, q *db.Queries, pool *pgxpool
 	if err := checkEnvironmentImages(env, c, containerNames, images); err != nil {
 		return fmt.Errorf("environment %q incompatible with builder %q: %w", env.Name, builderName, err)
 	}
+	if err := checkHostDiskCapacity(ctx, b, c, env, containerNames); err != nil {
+		return fmt.Errorf("environment %q incompatible with builder %q: %w", env.Name, builderName, err)
+	}
 	return nil
+}
+
+// diskCapacitySource is satisfied by a builder (today MicroCloud) that copies
+// hosts from a source whose root block volume can't be shrunk, exposing the
+// source's minimum root capacity so preflight can reject an undersized host disk
+// before anything is provisioned.
+type diskCapacitySource interface {
+	SourceDiskMinBytes(ctx context.Context, os string) (minBytes int64, source string, ok bool, err error)
+}
+
+// checkHostDiskCapacity rejects any placed host whose requested `disk:` is
+// smaller than the minimum capacity of the source its os maps to. Only hosts
+// with an explicit disk size are checked -- with none, the copy keeps the
+// source's own size and can't shrink. A source whose minimum can't be determined
+// is left to the deploy-time shrink guard. Reads are deduplicated by (os,disk).
+func checkHostDiskCapacity(ctx context.Context, b builder.Builder, c *loader.Content, env *loader.Environment, containerNames map[string]bool) error {
+	dc, ok := b.(diskCapacitySource)
+	if !ok {
+		return nil
+	}
+	checked := map[string]bool{}
+	for _, objs := range env.Networks {
+		for objectName, copies := range objs {
+			if len(copies) == 0 || containerNames[objectName] {
+				continue
+			}
+			h := findHost(c, objectName)
+			if h == nil || h.Disk <= 0 {
+				continue
+			}
+			key := fmt.Sprintf("%s|%d", h.OS, h.Disk)
+			if checked[key] {
+				continue
+			}
+			checked[key] = true
+			minBytes, source, ok, err := dc.SourceDiskMinBytes(ctx, h.OS)
+			if err != nil || !ok {
+				continue // transient read error, or minimum undeterminable -- deploy guards it
+			}
+			requested := int64(h.Disk) * 1_000_000_000 // host.disk is GB (decimal), matching how the builder renders it
+			if requested < minBytes {
+				needGB := (minBytes + 999_999_999) / 1_000_000_000 // ceil to whole GB
+				return fmt.Errorf("host %q requests %d GB, but os %q source %s requires at least %s (%d bytes); increase host.disk to at least %d GB",
+					h.Name, h.Disk, h.OS, source, humanBytes(minBytes), minBytes, needGB)
+			}
+		}
+	}
+	return nil
+}
+
+// humanBytes renders a capacity the way the source expressed it: whole GiB when
+// it divides evenly (the common template case, e.g. "64 GiB"), else whole GB,
+// else a fractional GiB.
+func humanBytes(n int64) string {
+	switch {
+	case n%(1<<30) == 0:
+		return fmt.Sprintf("%d GiB", n/(1<<30))
+	case n%1_000_000_000 == 0:
+		return fmt.Sprintf("%d GB", n/1_000_000_000)
+	default:
+		return fmt.Sprintf("%.1f GiB", float64(n)/(1<<30))
+	}
 }
 
 // checkEnvironmentImages verifies every host's os has an image mapped in the

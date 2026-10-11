@@ -634,6 +634,16 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	}
 	err := b.createInstance(ctx, name, request)
 	if err != nil {
+		// A copy whose requested root disk is smaller than the source snapshot's
+		// block volume fails here with "Block volumes cannot be shrunk" -- a
+		// configuration mismatch retrying can't fix (and preflight catches when
+		// the source size is readable; this guards the sources whose size it
+		// couldn't determine). Mark it permanent so the runner stops retrying,
+		// and point at the fix.
+		if diskGB > 0 && img.IsSnapshot() && isShrinkError(err) {
+			return name, fmt.Errorf("%w: host disk %dGB is smaller than the %s source it copies from, whose block volume cannot be shrunk; raise this host's disk: to at least the source's size: %w",
+				builder.ErrPermanentConfig, diskGB, externalName, err)
+		}
 		// Keep the deterministic ref for cleanup even if creation is uncertain.
 		return name, fmt.Errorf("creating instance from %s: %w", externalName, err)
 	}
