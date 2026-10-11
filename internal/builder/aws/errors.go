@@ -64,3 +64,19 @@ func alreadyAssociated(err error) bool {
 func isDependencyViolation(err error) bool {
 	return apiErrorCode(err) == "DependencyViolation"
 }
+
+// isMalformed is AWS's "that isn't even a valid id" (InvalidInstanceID.Malformed,
+// InvalidSubnetId.Malformed, ...). During teardown it means we were handed a
+// deterministic ExternalName instead of a real AWS id -- because the object's
+// deploy failed before it ever recorded one -- so there is nothing to delete and
+// the destroy treats it as already gone.
+func isMalformed(err error) bool {
+	return strings.HasSuffix(apiErrorCode(err), ".Malformed")
+}
+
+// isECSClusterNotFound is ECS's "no such cluster": when the configured cluster is
+// wrong or gone, a StopTask has nothing to stop, so teardown treats it as done
+// rather than wedging the build forever on a config mistake.
+func isECSClusterNotFound(err error) bool {
+	return apiErrorCode(err) == "ClusterNotFoundException"
+}

@@ -558,14 +558,34 @@ func (b *Builder) associateNACL(ctx context.Context, naclID, subnetID string) er
 }
 
 func (b *Builder) DestroyNetwork(ctx context.Context, team, externalRef string) error {
-	// externalRef is the subnet id. Find its VPC (for teardown) before deleting.
+	// Resolve externalRef to a real subnet id. Normally it's the stored
+	// external_ref ("subnet-..."); when the object never recorded one (its deploy
+	// failed before CreateSubnet) the runner falls back to the deterministic
+	// ExternalName, so look the subnet up by its laforge:external-name tag. An
+	// empty result means the subnet was never created -- nothing to delete, but
+	// the team VPC may still exist from a partial deploy, so fall through to its
+	// teardown below.
+	subnetID := externalRef
+	if !strings.HasPrefix(subnetID, "subnet-") {
+		id, err := b.findSubnet(ctx, externalRef)
+		if err != nil {
+			return err
+		}
+		subnetID = id
+	}
 	vpcID := ""
-	if sub, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{SubnetIds: []string{externalRef}}); err == nil && len(sub.Subnets) > 0 {
-		vpcID = awssdk.ToString(sub.Subnets[0].VpcId)
+	if subnetID != "" {
+		if sub, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{SubnetIds: []string{subnetID}}); err == nil && len(sub.Subnets) > 0 {
+			vpcID = awssdk.ToString(sub.Subnets[0].VpcId)
+		}
+		if _, err := b.ec2.DeleteSubnet(ctx, &ec2.DeleteSubnetInput{SubnetId: awssdk.String(subnetID)}); err != nil && !isNotFound(err) && !isMalformed(err) {
+			return fmt.Errorf("deleting subnet %s: %w", subnetID, err)
+		}
 	}
-	if _, err := b.ec2.DeleteSubnet(ctx, &ec2.DeleteSubnetInput{SubnetId: awssdk.String(externalRef)}); err != nil && !isNotFound(err) {
-		return fmt.Errorf("deleting subnet %s: %w", externalRef, err)
-	}
+	// Even with no subnet of our own, the team VPC may still be out there (a
+	// partial deploy that created the VPC then failed), so find it by tag and
+	// tear it down once no managed subnets remain -- that's what reclaims an
+	// orphaned VPC instead of leaking it.
 	if vpcID == "" {
 		if id, err := b.findTeamVPC(ctx, team); err == nil {
 			vpcID = id
@@ -715,18 +735,38 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 }
 
 func (b *Builder) DestroyHost(ctx context.Context, team, externalRef string) error {
-	// Release any Elastic IP we attached for external access, so a teardown
-	// doesn't leak (and keep paying for) an allocation.
-	b.releaseEIPForRef(ctx, externalRef)
-	if _, err := b.ec2.TerminateInstances(ctx, &ec2.TerminateInstancesInput{InstanceIds: []string{externalRef}}); err != nil && !isNotFound(err) {
-		return fmt.Errorf("terminating instance %s: %w", externalRef, err)
+	// Resolve externalRef to a real instance id. The runner hands us the stored
+	// external_ref when there is one (an "i-..." id), but falls back to the
+	// deterministic ExternalName when the object has none -- e.g. its deploy
+	// failed before RunInstances ever ran. In that case look the instance up by
+	// its laforge:external-name tag; an empty result means nothing was created,
+	// so there's nothing to terminate and destroy is a no-op (minus any SG/EIP a
+	// partial deploy may have made, cleaned below).
+	instanceID := externalRef
+	if !strings.HasPrefix(instanceID, "i-") {
+		id, err := b.findInstance(ctx, externalRef)
+		if err != nil {
+			return err
+		}
+		instanceID = id
 	}
-	// Delete the host's per-object security group. If we don't, it leaks AND
-	// blocks the team VPC teardown later (a VPC won't delete while a non-default
-	// SG remains in it). The SG can't go while the instance's ENI still
-	// references it, so a DependencyViolation here just means the instance is
-	// still terminating -- deleteObjectSecurityGroup returns that as a retryable
-	// error so the task runs again and succeeds once the ENI is gone.
+	if instanceID != "" {
+		// Release any Elastic IP we attached for external access, so a teardown
+		// doesn't leak (and keep paying for) an allocation.
+		b.releaseEIPForRef(ctx, instanceID)
+		if _, err := b.ec2.TerminateInstances(ctx, &ec2.TerminateInstancesInput{InstanceIds: []string{instanceID}}); err != nil && !isNotFound(err) && !isMalformed(err) {
+			return fmt.Errorf("terminating instance %s: %w", instanceID, err)
+		}
+	}
+	// Delete the host's per-object security group (found by the ref it was tagged
+	// with at deploy). If we don't, it leaks AND blocks the team VPC teardown
+	// later (a VPC won't delete while a non-default SG remains in it). The SG
+	// can't go while the instance's ENI still references it, so a
+	// DependencyViolation here just means the instance is still terminating --
+	// deleteObjectSecurityGroup returns that as a retryable error so the task runs
+	// again and succeeds once the ENI is gone. A failed-deploy SG tagged by name
+	// only (never tagged with a ref) isn't found here and is instead swept by the
+	// VPC teardown.
 	return b.deleteObjectSecurityGroup(ctx, externalRef)
 }
 

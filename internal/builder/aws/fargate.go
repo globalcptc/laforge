@@ -195,18 +195,26 @@ func (b *Builder) DestroyContainer(ctx context.Context, team, externalRef string
 	if strings.HasPrefix(externalRef, "i-") {
 		return b.DestroyHost(ctx, team, externalRef)
 	}
-	out, err := b.ecs.StopTask(ctx, &ecs.StopTaskInput{
-		Cluster: awssdk.String(b.cfg.Cluster),
-		Task:    awssdk.String(externalRef),
-		Reason:  awssdk.String("laforge teardown"),
-	})
-	if err != nil && !isNotFound(err) {
-		return fmt.Errorf("stopping Fargate task %s: %w", externalRef, err)
-	}
-	// Deregister the task-definition family this container registered (best-effort
-	// -- a leaked INACTIVE task def costs nothing, so it never blocks teardown).
-	if err == nil && out.Task != nil {
-		b.deregisterTaskFamily(ctx, awssdk.ToString(out.Task.TaskDefinitionArn))
+	// Only a real task ARN is a task we can stop. When the object never recorded
+	// one (its deploy failed before RunTask), the runner falls back to the
+	// deterministic ExternalName -- there's no task to stop, so skip straight to
+	// SG cleanup. A missing cluster or task is "already gone," never a hard error,
+	// so a config mistake (wrong ECS cluster) can't wedge teardown forever.
+	if strings.HasPrefix(externalRef, "arn:") || strings.Contains(externalRef, ":task/") {
+		out, err := b.ecs.StopTask(ctx, &ecs.StopTaskInput{
+			Cluster: awssdk.String(b.cfg.Cluster),
+			Task:    awssdk.String(externalRef),
+			Reason:  awssdk.String("laforge teardown"),
+		})
+		if err != nil && !isNotFound(err) && !isMalformed(err) && !isECSClusterNotFound(err) {
+			return fmt.Errorf("stopping Fargate task %s: %w", externalRef, err)
+		}
+		// Deregister the task-definition family this container registered
+		// (best-effort -- a leaked INACTIVE task def costs nothing, so it never
+		// blocks teardown).
+		if err == nil && out.Task != nil {
+			b.deregisterTaskFamily(ctx, awssdk.ToString(out.Task.TaskDefinitionArn))
+		}
 	}
 	// Delete the per-object SG. A stopping task's ENI still references it, so a
 	// DependencyViolation here is "task still draining" -- returned as retryable
