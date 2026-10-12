@@ -917,6 +917,7 @@ export interface HomeData {
     kind: string
     color?: string
     active_builds: number
+    teams: number
     counts: HomeCounts
     // Build-gating capacity signals from the latest collected metrics, worst-first
     // (storage pools, node memory, AWS quotas). Empty when the builder has reported

@@ -26,22 +26,27 @@ func TestBuilderCapacity(t *testing.T) {
 		}
 	})
 
-	t.Run("LXD: each pool/node percent-full is its own signal; latest wins", func(t *testing.T) {
+	t.Run("LXD: per-node percent-full collapses to one aggregate row per metric (cluster peak)", func(t *testing.T) {
 		samples := []db.ListBuilderMetricSamplesRow{
+			// Memory on three nodes -- the aggregate must be the PEAK (75), not an
+			// average, so a near-full node isn't hidden. node3's newer sample wins.
 			{Key: "mem", Label: "Memory", Node: "node1", Kind: builder.MetricTimeseries, Unit: "%", Value: 30, SampledAt: ts(100)},
+			{Key: "mem", Label: "Memory", Node: "node2", Kind: builder.MetricTimeseries, Unit: "%", Value: 75, SampledAt: ts(100)},
+			{Key: "mem", Label: "Memory", Node: "node3", Kind: builder.MetricTimeseries, Unit: "%", Value: 10, SampledAt: ts(100)},
+			{Key: "mem", Label: "Memory", Node: "node3", Kind: builder.MetricTimeseries, Unit: "%", Value: 40, SampledAt: ts(220)}, // newer, wins over 10
 			{Key: "disk", Label: "Disk (pool)", Node: "node2", Kind: builder.MetricTimeseries, Unit: "%", Value: 88, SampledAt: ts(100)},
-			{Key: "mem", Label: "Memory", Node: "node1", Kind: builder.MetricTimeseries, Unit: "%", Value: 92, SampledAt: ts(220)},             // newer, wins over 30
 			{Key: "cpu_load", Label: "CPU load (1m)", Node: "node1", Kind: builder.MetricTimeseries, Unit: "load", Value: 7, SampledAt: ts(220)}, // ignored (not %)
 		}
 		got := builderCapacity(samples)
 		if len(got) != 2 {
-			t.Fatalf("capacity has %d signals, want 2 (cpu_load ignored): %+v", len(got), got)
+			t.Fatalf("capacity has %d rows, want 2 aggregates (mem, disk; cpu_load ignored): %+v", len(got), got)
 		}
-		if got[0].Key != "mem" || got[0].Node != "node1" || got[0].Pct != 92 || got[0].Max != nil {
-			t.Errorf("worst signal = %+v, want node1 memory 92%% (percent-full, no max)", got[0])
+		// disk 88 outranks mem's peak 75.
+		if got[0].Key != "disk" || got[0].Pct != 88 {
+			t.Errorf("worst row = %+v, want disk 88%%", got[0])
 		}
-		if got[1].Key != "disk" || got[1].Node != "node2" || got[1].Pct != 88 {
-			t.Errorf("second signal = %+v, want node2 disk 88%%", got[1])
+		if got[1].Key != "mem" || got[1].Pct != 75 || got[1].Node != "" {
+			t.Errorf("second row = %+v, want aggregate memory 75%% (cluster peak, no node)", got[1])
 		}
 	})
 

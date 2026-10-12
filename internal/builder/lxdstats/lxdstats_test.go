@@ -50,8 +50,8 @@ func TestHostMemberState(t *testing.T) {
 		"/1.0/cluster/members?recursion=1": `[{"server_name":"node1","status":"Online"},{"server_name":"node2","status":"Online"}]`,
 		"/1.0/cluster/members/node1/state": `{"sysinfo":{"load_averages":[1.5,1.2,0.9],"total_ram":100,"free_ram":40,"total_swap":10,"free_swap":7,"processes":321}}`,
 		"/1.0/cluster/members/node2/state": `{"sysinfo":{"load_averages":[0.5,0.4,0.3],"total_ram":200,"free_ram":150,"total_swap":0,"free_swap":0,"processes":100}}`,
-		"/1.0/storage-pools/default/state?target=node1": `{"space":{"used":20,"total":40}}`,
-		"/1.0/storage-pools/default/state?target=node2": `{"space":{"used":10,"total":40}}`,
+		"/1.0/storage-pools/default/resources?target=node1": `{"space":{"used":20,"total":40}}`,
+		"/1.0/storage-pools/default/resources?target=node2": `{"space":{"used":10,"total":40}}`,
 		"/1.0/warnings?recursion=1":                     `[{"status":"new","severity":"low","location":"node1","last_message":"a thing"},{"status":"resolved"}]`,
 		"/1.0/storage-pools?recursion=1":                `[{"name":"default","status":"Created"},{"name":"broken","status":"Errored"}]`,
 	})
@@ -105,7 +105,7 @@ func TestHostFallsBackWhenNoMemberState(t *testing.T) {
 	get := fakeGet(map[string]string{
 		"/1.0":                             `{"environment":{"server_name":"solo"}}`,
 		"/1.0/resources":                   `{"memory":{"used":25,"total":100}}`,
-		"/1.0/storage-pools/default/state": `{"space":{"used":10,"total":100}}`,
+		"/1.0/storage-pools/default/resources": `{"space":{"used":10,"total":100}}`,
 		// no /1.0/cluster/members route -> memberStateMetrics returns false
 	})
 	stats, err := Host(context.Background(), get, nil, "default")
@@ -132,7 +132,7 @@ func TestHostDiskFallsBackWhenTargetRejected(t *testing.T) {
 		"/1.0/cluster/members/node1/state": `{"sysinfo":{"total_ram":100,"free_ram":40}}`,
 		// No "...?target=node1" route -> the targeted read errors; the untargeted
 		// one below is the fallback.
-		"/1.0/storage-pools/default/state": `{"space":{"used":30,"total":60}}`,
+		"/1.0/storage-pools/default/resources": `{"space":{"used":30,"total":60}}`,
 	})
 	stats, err := Host(context.Background(), get, nil, "default")
 	if err != nil {
@@ -156,7 +156,7 @@ func TestHostStandaloneOmitsCPU(t *testing.T) {
 	get := fakeGet(map[string]string{
 		"/1.0":                             `{"environment":{"server_name":"solo","server_clustered":false}}`,
 		"/1.0/resources":                   `{"memory":{"used":25,"total":100}}`,
-		"/1.0/storage-pools/default/state": `{"space":{"used":10,"total":100}}`,
+		"/1.0/storage-pools/default/resources": `{"space":{"used":10,"total":100}}`,
 	})
 	stats, err := Host(context.Background(), get, nil, "default")
 	if err != nil {
@@ -173,7 +173,7 @@ func TestHostStandaloneOmitsCPU(t *testing.T) {
 func TestHostDegradesOnPartialFailure(t *testing.T) {
 	get := fakeGet(map[string]string{
 		"/1.0":                             `{"environment":{"server_name":"n","server_clustered":false}}`,
-		"/1.0/storage-pools/default/state": `{"space":{"used":30,"total":60}}`,
+		"/1.0/storage-pools/default/resources": `{"space":{"used":30,"total":60}}`,
 	})
 	stats, err := Host(context.Background(), get, nil, "default")
 	if err != nil {
@@ -205,7 +205,7 @@ func TestHostNetworkFromMetrics(t *testing.T) {
 	get := fakeGet(map[string]string{
 		"/1.0":                             `{"environment":{"server_name":"solo","server_clustered":false}}`,
 		"/1.0/resources":                   `{"memory":{"used":25,"total":100}}`,
-		"/1.0/storage-pools/default/state": `{"space":{"used":10,"total":100}}`,
+		"/1.0/storage-pools/default/resources": `{"space":{"used":10,"total":100}}`,
 	})
 	metrics := `# HELP lxd_network_receive_bytes_total received
 # TYPE lxd_network_receive_bytes_total counter
@@ -232,7 +232,7 @@ func TestHostCPUFromMetrics(t *testing.T) {
 	get := fakeGet(map[string]string{
 		"/1.0":                             `{"environment":{"server_name":"solo","server_clustered":false}}`,
 		"/1.0/resources":                   `{"memory":{"used":25,"total":100}}`,
-		"/1.0/storage-pools/default/state": `{"space":{"used":10,"total":100}}`,
+		"/1.0/storage-pools/default/resources": `{"space":{"used":10,"total":100}}`,
 	})
 	// A standalone host (no cluster member-state, so no load average) still gets a
 	// CPU chart from the per-instance cpu-seconds counters; idle/iowait excluded.

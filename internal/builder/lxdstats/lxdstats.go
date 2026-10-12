@@ -334,21 +334,22 @@ func memMetric(node string, used, total uint64) builder.Metric {
 	}
 }
 
-// addDisk reports the configured storage pool's used/total as a disk % for node.
-// target, when set, scopes the pool-state query to a specific cluster member
-// (?target=). A genuinely non-clustered host rejects ?target outright, and some
-// single-node setups serve member-state yet still return nothing for it, so when
-// a targeted read fails OR reports no capacity we retry once WITHOUT the target
-// rather than silently dropping the only disk signal -- this is why the disk
-// chart was missing on standalone/cluster-of-one Incus hosts. Best-effort, but a
-// pool that truly can't be read warns (visible on the builder page), never
-// vanishes without a trace.
+// addDisk reports the configured storage pool's used/total as a disk % for node,
+// read from the pool's /resources endpoint (its {space,inodes} usage -- NOT
+// /state, which storage pools don't have: that path 404s against the real API).
+// target, when set, scopes the read to a specific cluster member (?target=). A
+// genuinely non-clustered host rejects ?target outright, and some single-node
+// setups serve member-state yet still return nothing for it, so when a targeted
+// read fails OR reports no capacity we retry once WITHOUT the target rather than
+// silently dropping the only disk signal. Best-effort, but a pool that truly
+// can't be read warns (visible on the builder page), never vanishes without a
+// trace.
 func addDisk(ctx context.Context, get Getter, pool, node, target string, stats *builder.Stats) {
 	if pool == "" {
 		return
 	}
-	base := "/1.0/storage-pools/" + url.PathEscape(pool) + "/state"
-	used, total, err := poolSpace(ctx, get, poolStatePath(base, target))
+	base := "/1.0/storage-pools/" + url.PathEscape(pool) + "/resources"
+	used, total, err := poolSpace(ctx, get, scopeToMember(base, target))
 	if (err != nil || total == 0) && target != "" {
 		if u, t, e := poolSpace(ctx, get, base); e == nil && t > 0 {
 			used, total, err = u, t, nil
@@ -368,15 +369,15 @@ func addDisk(ctx context.Context, get Getter, pool, node, target string, stats *
 	})
 }
 
-// poolStatePath scopes a pool-state path to a cluster member when target is set.
-func poolStatePath(base, target string) string {
+// scopeToMember adds ?target= to a path when a cluster member is given.
+func scopeToMember(base, target string) string {
 	if target == "" {
 		return base
 	}
 	return base + "?target=" + url.QueryEscape(target)
 }
 
-// poolSpace reads a storage pool's used/total bytes from its /state endpoint.
+// poolSpace reads a storage pool's used/total bytes from its /resources endpoint.
 func poolSpace(ctx context.Context, get Getter, path string) (used, total uint64, err error) {
 	raw, err := get(ctx, path)
 	if err != nil {

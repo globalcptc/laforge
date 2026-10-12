@@ -132,26 +132,27 @@ const CAPACITY_SHOWN = 5
 const fmtNum = (n: number) => (Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1))
 
 // CapacityBar is one build-gating signal, named concretely: a storage pool or a
-// node's memory as percent-full, or an AWS quota as used/limit. The number on
-// the right is the whole point -- "Disk (local) · node3  92%" or "Elastic IPs
-// 5 / 5  100%" tells you exactly what's full and by how much.
+// node's memory as percent-full, or an AWS quota as used/limit. Layout is
+// label | number | bar in fixed columns, so every row's numbers right-align in
+// one column and every row's bar shares the same start and end -- "Disk (local)
+// · node3  92%" or "Elastic IPs  5 / 5  100%" lines up down the pane.
 function CapacityBar({ sig }: { sig: HomeCapacity }) {
   const pct = Math.min(100, Math.max(0, sig.pct))
   const tone = sig.pct >= 90 ? 'bg-danger' : sig.pct >= 75 ? 'bg-warning' : 'bg-accent'
   const label = sig.node ? `${sig.label} · ${sig.node}` : sig.label
   const quota = sig.max != null
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_5rem_auto] items-center gap-3 text-xs">
+    <div className="grid grid-cols-[minmax(0,1fr)_7rem_8rem] items-center gap-3 text-xs">
       <span className="truncate text-fg-muted" title={label}>
         {label}
       </span>
-      <div className="h-1.5 overflow-hidden rounded-full bg-surface-sunken" title={`${sig.pct.toFixed(0)}%`}>
-        <div className={cn('h-full rounded-full', tone)} style={{ width: `${pct}%` }} />
-      </div>
       <span className="text-right font-mono tabular-nums text-fg">
         {quota ? `${fmtNum(sig.value)} / ${fmtNum(sig.max!)}` : `${sig.pct.toFixed(0)}%`}
         {quota && <span className="ml-1.5 text-fg-subtle">{sig.pct.toFixed(0)}%</span>}
       </span>
+      <div className="h-1.5 overflow-hidden rounded-full bg-surface-sunken" title={`${sig.pct.toFixed(0)}%`}>
+        <div className={cn('h-full rounded-full', tone)} style={{ width: `${pct}%` }} />
+      </div>
     </div>
   )
 }
@@ -190,6 +191,9 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
                 <div className="flex gap-3 text-xs text-fg-muted">
                   <span>
                     <span className="font-medium text-fg">{b.active_builds}</span> builds
+                  </span>
+                  <span>
+                    <span className="font-medium text-fg">{b.teams}</span> teams
                   </span>
                   <span>
                     <span className="font-medium text-fg">{b.counts.hosts}</span> hosts
