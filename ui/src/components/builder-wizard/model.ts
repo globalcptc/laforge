@@ -88,6 +88,9 @@ export interface Draft {
   externalAccessIp: string
   externalPortMin?: number
   externalPortMax?: number
+  // User-chosen display color ("" = none, else a "#rrggbb" hex), shown as a pill
+  // wherever the builder name appears.
+  color?: string
 }
 
 let seq = 0
@@ -268,10 +271,18 @@ export function draftFromConfig(bc: BuilderConfig): Draft {
     externalAccessIp: bc.external_access_ip ?? '',
     externalPortMin: bc.external_port_min ?? undefined,
     externalPortMax: bc.external_port_max ?? undefined,
+    color: bc.color ?? '',
   }
 }
 
+// toRequest adds the display color (common to every kind) on top of the
+// kind-specific body built by requestBody. An empty color is sent as undefined;
+// the server treats a missing color as "none", which also clears a prior color.
 export function toRequest(d: Draft): BuilderConfigRequest {
+  return { ...requestBody(d), color: d.color || undefined }
+}
+
+function requestBody(d: Draft): BuilderConfigRequest {
   if (d.kind === 'fake') return { kind: 'fake' }
 
   if (isCloud(d.kind)) {

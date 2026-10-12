@@ -74,6 +74,7 @@ type homeRepository struct {
 type homeBuilder struct {
 	Name         string     `json:"name"`
 	Kind         string     `json:"kind"`
+	Color        string     `json:"color,omitempty"`
 	ActiveBuilds int        `json:"active_builds"`
 	Counts       homeCounts `json:"counts"`
 	// Utilization is "how close is this builder to a wall", from its latest
@@ -252,8 +253,9 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 	for _, c := range configs {
 		if bl := builders[c.Name]; bl != nil {
 			bl.Kind = c.Kind
+			bl.Color = c.Color
 		} else if admin {
-			builders[c.Name] = &homeBuilder{Name: c.Name, Kind: c.Kind}
+			builders[c.Name] = &homeBuilder{Name: c.Name, Kind: c.Kind, Color: c.Color}
 		}
 	}
 	// Capacity utilization from each builder's latest collected metrics (recent

@@ -6,6 +6,7 @@ import { ApiError } from '../api/client'
 import { EmptyState } from '../components/EmptyState'
 import { BuilderImageConsole } from '../components/BuilderImageConsole'
 import { RegistryCredentials } from '../components/RegistryCredentials'
+import { BuilderPill } from '../components/BuilderPill'
 import { KIND_LABEL } from '../components/builder-wizard/model'
 import type { BuilderConfig } from '../api/types'
 import { Badge, Button, Card, CardHeader, PageHeader, Spinner, Table, TableScroller, Td, Th, buttonClass, cn, useToast } from '../ui'
@@ -130,8 +131,8 @@ function BuilderRow({ bc, onOpenConsole }: { bc: BuilderConfig; onOpenConsole: (
   return (
     <tr>
       <Td className="font-medium text-fg">
-        <Link to="/admin/infrastructure/$name" params={{ name: bc.name }} className="text-accent hover:underline">
-          {bc.name}
+        <Link to="/admin/infrastructure/$name" params={{ name: bc.name }} className="hover:opacity-80">
+          <BuilderPill name={bc.name} color={bc.color} kind={bc.kind} />
         </Link>
       </Td>
       <Td>

@@ -1,5 +1,6 @@
 import { AlertTriangle, Boxes, Cloud, Server } from 'lucide-react'
 import { Field, Input, cn } from '../../ui'
+import { ColorPicker } from '../ColorPicker'
 import type { Kind } from './model'
 
 const KINDS: { kind: Kind; title: string; body: string; icon: typeof Server; draft?: boolean }[] = [
@@ -44,15 +45,19 @@ export const NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/
 export function StepType({
   name,
   kind,
+  color,
   editing,
   onName,
   onKind,
+  onColor,
 }: {
   name: string
   kind: Kind
+  color: string
   editing: boolean
   onName: (v: string) => void
   onKind: (k: Kind) => void
+  onColor: (v: string) => void
 }) {
   const nameError = name && !NAME_PATTERN.test(name) ? 'Use lowercase letters, numbers, and dashes.' : undefined
   return (
@@ -64,6 +69,10 @@ export function StepType({
         className="mb-0 max-w-sm"
       >
         <Input value={name} onChange={(e) => onName(e.target.value.toLowerCase())} disabled={editing} placeholder="cptc-microcloud" autoFocus={!editing} />
+      </Field>
+
+      <Field label="Color" hint="Shown as a colored pill wherever this builder’s name appears." className="mb-0">
+        <ColorPicker value={color} onChange={onColor} previewName={name} previewKind={kind} />
       </Field>
 
       <div>

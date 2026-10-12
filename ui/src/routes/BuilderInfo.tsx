@@ -3,6 +3,7 @@ import { Pencil, TriangleAlert } from 'lucide-react'
 import { useBuilderStats, useBuilderUsage, useBuilderConfigs } from '../api/hooks'
 import type { MetricSeries, MetricGauge, UsageResource, UsagePublic, UsageBuild } from '../api/types'
 import { BuilderKindBadge } from '../components/BuilderKindBadge'
+import { BuilderPill } from '../components/BuilderPill'
 import { StatusBadge } from '../components/StatusBadge'
 import { Card, CardHeader, PageHeader, EmptyState, buttonClass, cn } from '../ui'
 
@@ -48,7 +49,8 @@ export function BuilderInfo() {
         }
       />
       {bc && (
-        <div className="mb-4">
+        <div className="mb-4 flex items-center gap-2">
+          <BuilderPill name={bc.name} color={bc.color} kind={bc.kind} />
           <BuilderKindBadge kind={bc.kind} />
         </div>
       )}

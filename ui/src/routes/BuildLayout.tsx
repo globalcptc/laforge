@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link, Outlet, useParams, useRouterState } from '@tanstack/react-router'
 import { GitCommitHorizontal, Rocket, Trash2, TriangleAlert } from 'lucide-react'
-import { useBuild, useBuildReadiness, useDeployBuild, useTeardownBuild } from '../api/hooks'
+import { useBuild, useBuildReadiness, useBuilders, useDeployBuild, useTeardownBuild } from '../api/hooks'
 import { StatusBadge } from '../components/StatusBadge'
-import { BuilderKindBadge } from '../components/BuilderKindBadge'
+import { BuilderPill } from '../components/BuilderPill'
 import { ApiError } from '../api/client'
 import { Button, cn, PageHeader, useToast } from '../ui'
 
@@ -24,6 +24,8 @@ const TABS = [
 export function BuildLayout() {
   const { repoId, buildId } = useParams({ from: '/repos/$repoId/builds/$buildId' })
   const { data: build } = useBuild(buildId)
+  const { data: builders } = useBuilders()
+  const builderColor = builders?.find((b) => b.name === build?.builder_config_name)?.color
   const deploy = useDeployBuild(buildId)
   const teardown = useTeardownBuild(buildId)
   // Pre-deploy quota warnings matter only while the build can still be deployed.
@@ -66,7 +68,7 @@ export function BuildLayout() {
         title={
           <span className="flex min-w-0 items-center gap-3">
             <span className="shrink-0">{build?.environment_name ?? '…'}</span>
-            {build?.builder_kind && <BuilderKindBadge kind={build.builder_kind} name={build.builder_config_name} label={build.builder_config_name} />}
+            {build?.builder_config_name && <BuilderPill name={build.builder_config_name} color={builderColor} kind={build.builder_kind} />}
             {build && <StatusBadge status={build.status} />}
             {build?.commit_sha && (
               <span className="flex min-w-0 items-center gap-1.5 text-sm font-normal text-fg-muted" title={build.commit_message ?? undefined}>

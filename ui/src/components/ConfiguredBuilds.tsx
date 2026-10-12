@@ -18,7 +18,7 @@ import { NewBuildModal } from './NewBuildModal'
 import { StatusBadge } from './StatusBadge'
 import type { Build, ConfiguredBuild } from '../api/types'
 import { Button, Card, CardHeader, cn, Spinner, Table, TableScroller, Td, Th } from '../ui'
-import { BuilderKindBadge } from './BuilderKindBadge'
+import { BuilderPill } from './BuilderPill'
 
 // Which branch cards are twisted open persists across navigation and
 // reloads (direct product feedback), keyed by the configured-build id
@@ -63,6 +63,7 @@ export function ConfiguredBuilds({ repoId }: { repoId: string }) {
   const { data: allBuilds } = useBuilds(repoId)
   const { data: builderConfigs } = useBuilderConfigs()
   const kindByName = useMemo(() => new Map((builderConfigs ?? []).map((bc) => [bc.name, bc.kind])), [builderConfigs])
+  const colorByName = useMemo(() => new Map((builderConfigs ?? []).map((bc) => [bc.name, bc.color ?? ''])), [builderConfigs])
   const create = useCreateConfiguredBuild(repoId)
   const [showForm, setShowForm] = useState(false)
 
@@ -130,7 +131,14 @@ export function ConfiguredBuilds({ repoId }: { repoId: string }) {
       {builds && builds.length > 0 && (
         <div className="flex flex-col gap-2 p-3 pt-0">
           {builds.map((cb) => (
-            <ConfiguredBuildRow key={cb.id} cb={cb} repoId={repoId} builds={byConfigured.get(cb.id) ?? []} builderKind={kindByName.get(cb.builder_config_name)} />
+            <ConfiguredBuildRow
+              key={cb.id}
+              cb={cb}
+              repoId={repoId}
+              builds={byConfigured.get(cb.id) ?? []}
+              builderKind={kindByName.get(cb.builder_config_name)}
+              builderColor={colorByName.get(cb.builder_config_name)}
+            />
           ))}
           {unassociated.length > 0 && <UnassociatedBuilds repoId={repoId} builds={unassociated} />}
         </div>
@@ -139,7 +147,19 @@ export function ConfiguredBuilds({ repoId }: { repoId: string }) {
   )
 }
 
-function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: ConfiguredBuild; repoId: string; builds: Build[]; builderKind?: string }) {
+function ConfiguredBuildRow({
+  cb,
+  repoId,
+  builds,
+  builderKind,
+  builderColor,
+}: {
+  cb: ConfiguredBuild
+  repoId: string
+  builds: Build[]
+  builderKind?: string
+  builderColor?: string
+}) {
   const fmt = useTimeFormat()
   const trigger = useTriggerBuild(repoId)
   const sync = useSyncConfiguredBuild(repoId)
@@ -229,10 +249,8 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
               {lastBuild ? <StatusBadge status={lastBuild.status} /> : <span className="text-xs italic text-fg-subtle">no builds yet</span>}
             </div>
             <div className="mt-0.5 flex items-center gap-1.5 text-xs text-fg-muted">
-              <span className="truncate">
-                {cb.environment_path} · {cb.builder_config_name}
-              </span>
-              <BuilderKindBadge kind={builderKind} name={cb.builder_config_name} />
+              <span className="truncate">{cb.environment_path}</span>
+              <BuilderPill name={cb.builder_config_name} color={builderColor} kind={builderKind} />
             </div>
           </div>
         </button>

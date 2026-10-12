@@ -77,6 +77,9 @@ type builderConfigRequest struct {
 	ExternalAccessIP string `json:"external_access_ip,omitempty"`
 	ExternalPortMin  int32  `json:"external_port_min,omitempty"`
 	ExternalPortMax  int32  `json:"external_port_max,omitempty"`
+	// Color is a user-chosen display color for the builder's name pill ("" = none,
+	// else a "#rrggbb" hex). See validate() for the format check.
+	Color string `json:"color,omitempty"`
 }
 
 // validate turns req into the columns CreateBuilderConfig/UpdateBuilderConfig
@@ -89,12 +92,33 @@ type builderConfigRequest struct {
 // it. Resolve's own "microcloud"/"incus" paths never dial the network --
 // they only parse and pin locally -- so this needs no live cluster to
 // validate.
+// validBuilderColor accepts an empty string (no color chosen) or a lowercase or
+// uppercase "#rrggbb" hex string. The UI's color picker only ever sends the
+// latter, but a config could be posted directly, so the format is checked here.
+func validBuilderColor(c string) bool {
+	if c == "" {
+		return true
+	}
+	if len(c) != 7 || c[0] != '#' {
+		return false
+	}
+	for _, r := range c[1:] {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
+
 func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderConfigParams, error) {
 	if req.Kind != "fake" && req.Kind != "incus" && req.Kind != "microcloud" && req.Kind != "aws" && req.Kind != "openstack" {
 		return db.CreateBuilderConfigParams{}, errors.New(`kind must be "fake", "incus", "microcloud", "aws", or "openstack"`)
 	}
 	if req.IncusOneTeamPerHost && req.Kind != "incus" {
 		return db.CreateBuilderConfigParams{}, errors.New("incus_one_team_per_host is only supported by the Incus builder")
+	}
+	if !validBuilderColor(req.Color) {
+		return db.CreateBuilderConfigParams{}, errors.New(`color must be empty or a "#rrggbb" hex string`)
 	}
 	var publicAccess []byte
 	if req.MicrocloudPublicAccess != nil {
@@ -149,6 +173,7 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		IncusSizes:             sizes,
 		IncusHosts:             hosts,
 		ExternalAccessIp:       db.StrPtr(req.ExternalAccessIP),
+		Color:                  req.Color,
 	}
 	if req.Kind == "microcloud" && req.IncusProject != "default" {
 		params.IncusProject = db.StrPtr(req.IncusProject)
@@ -274,8 +299,9 @@ func (s *Server) handleListBuilderConfigs(w http.ResponseWriter, r *http.Request
 // builderSummary is what anyone configuring a build needs to pick a
 // builder: its name and type, none of its connection details.
 type builderSummary struct {
-	Name string `json:"name"`
-	Kind string `json:"kind"`
+	Name  string `json:"name"`
+	Kind  string `json:"kind"`
+	Color string `json:"color,omitempty"`
 }
 
 // handleListBuilders lists every builder by name and type for any signed-in
@@ -293,7 +319,7 @@ func (s *Server) handleListBuilders(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]builderSummary, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, builderSummary{Name: row.Name, Kind: row.Kind})
+		out = append(out, builderSummary{Name: row.Name, Kind: row.Kind, Color: row.Color})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -386,6 +412,7 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
 		AwsConfig:              params.AwsConfig,
 		AwsCredentialID:        params.AwsCredentialID,
+		Color:                  params.Color,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

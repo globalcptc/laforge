@@ -667,6 +667,8 @@ export interface BuilderConfig {
   external_access_ip: string | null
   external_port_min: number | null
   external_port_max: number | null
+  /** User-chosen display color ("" = none, else a "#rrggbb" hex), shown as a pill wherever the builder name appears. */
+  color?: string
   created_at: string
   updated_at: string
 }
@@ -694,6 +696,7 @@ export interface BuilderConfigRequest {
   external_access_ip?: string
   external_port_min?: number
   external_port_max?: number
+  color?: string
 }
 
 // StoragePoolInfo/NetworkInfo/ImageInfo mirror internal/builder/incus's
@@ -830,6 +833,7 @@ export interface ListEnvironmentFilesResponse {
 export interface BuilderSummary {
   name: string
   kind: string
+  color?: string
 }
 
 // DriftResource mirrors internal/builder.Resource -- one thing
@@ -911,6 +915,7 @@ export interface HomeData {
   builders: {
     name: string
     kind: string
+    color?: string
     active_builds: number
     counts: HomeCounts
     // Capacity "how full" from the latest collected metrics; absent when the

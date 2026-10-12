@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { builderConnectionPath, useBuilderConfigs, useCreateBuilderConfig, useUpdateBuilderConfig } from '../api/hooks'
 import { ApiError, api } from '../api/client'
 import type { BuilderConnection } from '../api/types'
-import { Button, PageHeader, Spinner, cn, useToast } from '../ui'
+import { Button, Field, PageHeader, Spinner, cn, useToast } from '../ui'
 import {
   DEFAULT_SIZES,
   availableImages,
@@ -25,6 +25,7 @@ import { StepImages } from '../components/builder-wizard/StepImages'
 import { StepSizes } from '../components/builder-wizard/StepSizes'
 import { StepCloud, StepCloudConnect, StepCloudRegion, StepCloudImages, StepCloudSizes } from '../components/builder-wizard/StepCloud'
 import { StepReview } from '../components/builder-wizard/StepReview'
+import { ColorPicker } from '../components/ColorPicker'
 
 type StepId = 'type' | 'connect' | 'placement' | 'images' | 'sizes' | 'cloud' | 'cloud-connect' | 'cloud-region' | 'cloud-images' | 'cloud-sizes' | 'review'
 
@@ -261,7 +262,17 @@ export function BuilderWizard() {
   const renderStep = (id: StepId) => {
     switch (id) {
       case 'type':
-        return <StepType name={draft.name} kind={draft.kind} editing={!!editingName} onName={(name) => setDraft((d) => ({ ...d, name }))} onKind={setKind} />
+        return (
+          <StepType
+            name={draft.name}
+            kind={draft.kind}
+            color={draft.color ?? ''}
+            editing={!!editingName}
+            onName={(name) => setDraft((d) => ({ ...d, name }))}
+            onKind={setKind}
+            onColor={(color) => setDraft((d) => ({ ...d, color }))}
+          />
+        )
       case 'connect':
         return <StepConnect kind={draft.kind} hosts={draft.hosts} onChange={(hosts) => setDraft((d) => ({ ...d, hosts }))} />
       case 'placement':
@@ -387,11 +398,19 @@ export function BuilderWizard() {
                   </div>
                 )}
                 <div className="mt-5 space-y-6">
-                  {active && active.steps.length > 0 ? (
-                    active.steps.map((id) => <div key={id}>{renderStep(id)}</div>)
-                  ) : (
-                    <div className="text-sm text-fg-muted">This builder has nothing to configure.</div>
+                  {active?.id === 'config' && (
+                    <Field label="Color" hint="Shown as a colored pill wherever this builder’s name appears." className="mb-0">
+                      <ColorPicker
+                        value={draft.color ?? ''}
+                        onChange={(color) => setDraft((d) => ({ ...d, color }))}
+                        previewName={draft.name}
+                        previewKind={draft.kind}
+                      />
+                    </Field>
                   )}
+                  {active && active.steps.length > 0
+                    ? active.steps.map((id) => <div key={id}>{renderStep(id)}</div>)
+                    : active?.id !== 'config' && <div className="text-sm text-fg-muted">This builder has nothing to configure.</div>}
                 </div>
                 <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
                   <Button variant="ghost" onClick={() => navigate({ to: '/admin/infrastructure/$name', params: { name: editingName } })}>

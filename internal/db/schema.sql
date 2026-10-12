@@ -137,6 +137,7 @@ CREATE TABLE public.builder_config (
     aws_config jsonb,
     aws_credential_id uuid,
     incus_one_team_per_host boolean DEFAULT false NOT NULL,
+    color text DEFAULT ''::text NOT NULL,
     CONSTRAINT builder_config_kind_check CHECK ((kind = ANY (ARRAY['fake'::text, 'incus'::text, 'microcloud'::text, 'aws'::text, 'openstack'::text])))
 );
 --

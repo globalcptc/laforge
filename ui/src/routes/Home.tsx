@@ -6,6 +6,7 @@ import type { AttentionItem, HomeBuild, HomeCounts, HomeData } from '../api/type
 import { AccessCountdown } from '../components/AccessCountdown'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
+import { BuilderPill } from '../components/BuilderPill'
 import { KIND_LABEL, type Kind } from '../components/builder-wizard/model'
 import { Button, Card, PageHeader, Spinner, cn } from '../ui'
 
@@ -140,11 +141,11 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
         {builders.map((b) => {
           const machines = b.counts.hosts + b.counts.containers
           const name = me?.is_instance_admin ? (
-            <Link to="/admin/infrastructure/$name" params={{ name: b.name }} className="font-medium text-fg hover:text-accent">
-              {b.name}
+            <Link to="/admin/infrastructure/$name" params={{ name: b.name }} className="hover:opacity-80">
+              <BuilderPill name={b.name} color={b.color} kind={b.kind} />
             </Link>
           ) : (
-            <span className="font-medium text-fg">{b.name}</span>
+            <BuilderPill name={b.name} color={b.color} kind={b.kind} />
           )
           // Prefer a real capacity bar from collected metrics (how close this
           // builder is to a quota/resource wall); fall back to a relative
