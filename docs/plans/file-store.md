@@ -12,15 +12,16 @@ here depends on that plan's cloud/site split.
 
 1. [What it is for](#1-what-it-is-for)
 2. [Shape](#2-shape)
-3. [Storage and data model](#3-storage-and-data-model)
-4. [Getting files in](#4-getting-files-in)
-5. [Getting files to hosts](#5-getting-files-to-hosts)
-6. [Getting files back from hosts](#6-getting-files-back-from-hosts)
-7. [Configuration](#7-configuration)
-8. [Security](#8-security)
-9. [Operations](#9-operations)
-10. [Phases](#10-phases)
-11. [Open decisions](#11-open-decisions)
+3. [File stores](#3-file-stores)
+4. [Data model](#4-data-model)
+5. [Getting files in](#5-getting-files-in)
+6. [Getting files to hosts](#6-getting-files-to-hosts)
+7. [Getting files back from hosts](#7-getting-files-back-from-hosts)
+8. [Configuration](#8-configuration)
+9. [Security](#9-security)
+10. [Operations](#10-operations)
+11. [Phases](#11-phases)
+12. [Open decisions](#12-open-decisions)
 
 ## 1. What it is for
 
@@ -61,8 +62,9 @@ flowchart TB
       sftp[":2022 laforge-sftp"]
       gw[":8444 gateway"]
       orch["orchestrator · runner"]
-      bucket[("object storage
-      FILESTORE_URL: S3-compatible or a directory")]
+      bucket[("file stores
+      S3-compatible or Azure buckets,
+      set up on the admin page")]
     end
     subgraph Hosts["Deployed hosts"]
       host["agent · scripts"]
@@ -76,8 +78,7 @@ flowchart TB
     sftp --> bucket
     orch -- "resolve references, mint links" --> api
     host -- "mTLS" --> gw
-    host -- "signed link → 302 to the bucket
-    (or the bytes, for a directory backend)" --> api
+    host -- "signed link → 302 to the bucket" --> api
     host -. "presigned GET, short-lived;
     SHA-256 checked" .-> bucket
 ```
@@ -85,27 +86,68 @@ flowchart TB
 Two new things listen: the api gains the file routes, and `laforge-sftp` is a new small
 service on 2022 (optional; leave it out of the stack if nobody wants SFTP). Hosts already
 reach the api today for their agent binary (`API_PUBLIC_URL`); download and upload links
-use the same address. Bytes themselves go to and from the bucket directly wherever the
-backend allows it (§5): the api authorises, the bucket serves. Nothing new is published.
+use the same address. Bytes themselves go to and from the bucket directly (§6): the api
+authorises, the bucket serves. LaForge never holds file bytes itself beyond an upload in
+flight. Nothing new is published.
 
-## 3. Storage and data model
+## 3. File stores
 
-**Bytes** live in object storage behind one abstraction (`gocloud.dev/blob`), keyed by
-content: `sha256/<first 2>/<sha256>`. Identical uploads are stored once; renames are
-free; everything a host fetches is verifiable. `FILESTORE_URL` picks the backend:
+**Bytes** live in object storage you bring — never on LaForge's own disk, which would make
+LaForge the thing that needs the storage and the bandwidth. A deployment has one or more
+**file stores**, set up and managed on an admin page, **Admin → File stores**, the way
+builders are (a list, a form per kind, a *Test* button, edit and delete):
 
-| Backend | `FILESTORE_URL` |
-| --- | --- |
-| S3-compatible (AWS, R2, B2, MinIO, SeaweedFS) | `s3://bucket?region=…&endpoint=…&use_path_style=true` plus `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` |
-| Azure Blob | `azblob://container` plus `AZURE_STORAGE_ACCOUNT` / `AZURE_STORAGE_KEY` |
-| A directory (development, small deployments) | `file:///var/lib/laforge/files` |
+| Kind | Settings | Credential |
+| --- | --- | --- |
+| **S3-compatible** — AWS S3, Cloudflare R2, Backblaze B2, MinIO, SeaweedFS… | bucket, region, endpoint (blank for AWS), path-style on/off, a key prefix | access key id + secret |
+| **Azure Blob** | storage account, container, a prefix | account key (or a SAS token) |
+
+Each store also carries the policy that applies to what it holds — one place, not a
+dozen environment variables: maximum file size (default 50 GiB), quota per scope
+(default none), versions kept per file (5), retention of deleted files (30 days),
+whether browsers may upload straight to it (§5; S3 only, needs a CORS rule exposing
+`ETag`), how long a download redirect's presigned URL lives (15 minutes), and whether
+the api should stream downloads itself for hosts that can't reach the bucket (§6).
+
+**Which store a file goes to.** One store is the **default**; a repository can be pointed
+at another on its settings (a sponsor's own bucket, a region nearer a venue). New
+uploads to a scope go to its store; `file_blob` remembers which store holds each object,
+so re-pointing a repository affects only what's uploaded from then on, and nothing moves
+by itself. The Files page shows each store's usage, and the store's page shows which
+scopes use it.
+
+**Testing a store** (`POST /file-stores/{id}/test`, like a registry credential's): write
+a small object, read it back with a range, presign a GET and fetch it anonymously,
+delete it — so a store that's reachable from the api but not presignable, or writable
+but not readable, is caught at setup and not at a competition.
+
+**Deleting a store** is refused while any `file_blob` lives in it; empty the scopes that
+use it first (or move them — §12). **No lifecycle rules** on the bucket that delete
+objects: LaForge's collector owns deletion.
+
+**Credentials at rest** are stored in the database the way builder and registry
+credentials are today (same trust model: the database is the secret store), write-only
+over the API, redacted in every response, and only ever used server-side — a browser
+gets presigned URLs, never a key.
+
+**Development** needs a bucket too: the dev compose stack includes a SeaweedFS (or
+MinIO) container, and the first-run page offers it as a one-click default store. The
+test suite runs against the same (`LAFORGE_TEST_S3_URL`).
+
+Objects are keyed by content, `<prefix>/sha256/<first 2>/<sha256>`, behind one
+abstraction (`gocloud.dev/blob`, which covers both kinds): identical uploads are stored
+once, renames are free, and everything a host fetches is verifiable.
+
+## 4. Data model
 
 **Names** live in Postgres:
 
 | Table | What |
 | --- | --- |
-| `file_blob` | one row per distinct content: sha256, size; garbage-collected once nothing references it |
+| `file_store` | a configured store: name, kind (`s3`, `azblob`), its settings as JSON, its credential, its policy (max file size, scope quota, versions kept, deleted-file retention, direct uploads, presign TTL, proxy downloads), `is_default`, created/updated by and at |
+| `file_blob` | one row per distinct content: sha256, size, **store id**; garbage-collected once nothing references it |
 | `file` | a named file in a **scope** — `repository_id` NULL is `global`, else that repository's — with a path unique (case-insensitively) among the scope's live files; description; soft-delete columns |
+| `repository.file_store_id` | which store a repository's scope uploads to; NULL means the default store |
 | `file_version` | each upload to a path adds one; the highest is current; sha256, size, content type, who, when |
 | `file_upload` | an upload in progress: via `tus`, `sftp` or `direct`, scope and path, bytes so far, expiry; the api and the sftp service each resume and expire only their own |
 | `file_event` | everything that happened to a file (upload, rename, delete, restore, version restore), for the file's history |
@@ -118,16 +160,16 @@ level manages its scope; anyone with `read` on a repository sees and downloads i
 and `global` ones. Resolution from content: the repository's own scope first, then
 `global`.
 
-**Versions.** `FILESTORE_KEEP_VERSIONS` (default 5) older versions are kept per file, plus
-any version that live content pins by `path@N`. A deleted file is kept
-`FILESTORE_DELETED_RETENTION_DAYS` (30) for restore, then purged; blobs are collected when
-no version references them.
+**Versions.** The store's *versions kept* (default 5) older versions are kept per file,
+plus any version that live content pins by `path@N`. A deleted file is kept the store's
+*deleted-file retention* (30 days) for restore, then purged; blobs are collected when no
+version references them.
 
-**Quotas.** `FILESTORE_MAX_FILE_SIZE` (50 GiB) per file; `FILESTORE_SCOPE_QUOTA` per scope
-(0 = none), checked before an upload starts *and* when it completes — host uploads
+**Quotas.** The store's *maximum file size* (50 GiB) per file and *quota per scope* (none
+by default), checked before an upload starts *and* when it completes — host uploads
 included (a host can't fill the store).
 
-## 4. Getting files in
+## 5. Getting files in
 
 **tus over HTTP — the UI and the CLI.** `POST /file-uploads/` (tus 1.0.0, the `tusd`
 library) with `Upload-Metadata` carrying scope, path and the file's SHA-256. Bytes are
@@ -145,7 +187,7 @@ out.
   ls|get|rm|mv|versions|restore` round it out). `laforge check --online` asks the api
   (`POST /files/resolve`) that every reference in the content exists.
 
-**Direct to the bucket — optional, S3 only.** With `FILESTORE_DIRECT_UPLOADS=true` the
+**Direct to the bucket — optional, S3 only.** With *direct uploads* on for the store, the
 browser uploads parts straight to the bucket through presigned multipart URLs
 (`/direct-uploads`, `/direct-uploads/{id}/urls`, `…/complete`); the api only records
 completion, then hashes and moves the assembled object into place. For when a many-GB
@@ -159,7 +201,7 @@ permissions as the UI. Writes stage like tus and finish on close; `reput` contin
 open upload at its offset. Reads stream from the bucket with ranges. `ls`, `rename`,
 `rm`, `mkdir` map onto file records.
 
-## 5. Getting files to hosts
+## 6. Getting files to hosts
 
 **References in content** (a `FileResolver` in `internal/render`, with a syntax-only
 implementation for offline tools):
@@ -189,12 +231,12 @@ its links; the files are meant for that host.
 can be signed once, stay stable in rendered scripts, and die with the build — none of
 which a bucket URL can do (presigned URLs expire on a clock and can't be revoked). But
 the api needn't carry the bytes: on a signed, live link it answers **302 to a presigned
-GET** on the object (`FILESTORE_PRESIGN_TTL`, default 15 minutes — long enough for one
+GET** on the object (the store's *presign TTL*, default 15 minutes — long enough for one
 download, short enough to be useless later), and the host streams from the bucket with
-ranges. The api serves the bytes itself only when it has to: the `file://` backend has
-no bucket, and `FILESTORE_PROXY_DOWNLOADS=true` is for a venue whose hosts can reach the
-api but not the bucket's host. Either way the response carries `ETag` and
-`X-Content-SHA256`, and ranges work. The Files page's own downloads use the same redirect.
+ranges. The api streams the bytes itself only when the store's *proxy downloads* is on,
+for a venue whose hosts can reach the api but not the bucket's host. Either way the
+response carries `ETag` and `X-Content-SHA256`, and ranges work. The Files page's own
+downloads use the same redirect.
 
 **The agent** (`download:` step) follows the link, checks the SHA-256 the step payload
 carries, and resumes with a `Range` after an interruption (asking the api again if the
@@ -203,7 +245,7 @@ the system roots for it and for the bucket (both sit behind real certificates in
 deployment that isn't a laptop), and the hash check covers integrity either way.
 Scripts' `curl -L`/PowerShell fetches follow the redirect the same way.
 
-## 6. Getting files back from hosts
+## 7. Getting files back from hosts
 
 ```yaml
 steps:
@@ -228,27 +270,22 @@ steps:
   bucket credential, and they're small next to downloads.
 - **Quota** applies as for any upload; a hash the store already has costs nothing.
 
-## 7. Configuration
+## 8. Configuration
+
+Stores and their policy live in the database (§3), so the environment keeps only what
+has to be there before the database is reachable or is about the machine itself:
 
 ```
-FILESTORE_URL=s3://bucket?region=us-east-1          # or azblob://…, file:///var/lib/laforge/files
-FILESTORE_STAGING_DIR=/var/lib/laforge/staging      # uploads in flight (api and sftp each their own)
-FILESTORE_MAX_FILE_SIZE=50GiB
-FILESTORE_SCOPE_QUOTA=0                             # per repository / global; 0 = none
-FILESTORE_KEEP_VERSIONS=5
-FILESTORE_DELETED_RETENTION_DAYS=30
+FILESTORE_STAGING_DIR=/var/lib/laforge/staging      # uploads in flight on the api's disk (the sftp service has its own)
 FILESTORE_UPLOAD_EXPIRY_HOURS=168                   # abandoned uploads
-FILESTORE_DIRECT_UPLOADS=false                      # S3 only; needs a CORS rule exposing ETag
-FILESTORE_PRESIGN_TTL=15m                           # how long a download redirect's bucket URL lives
-FILESTORE_PROXY_DOWNLOADS=false                     # true: the api streams downloads itself (hosts can't reach the bucket)
 API_PUBLIC_URL=https://laforge.example.com          # exists today: what hosts reach the api at
 SFTP_LISTEN_ADDR=:2022  SFTP_HOST_KEY=/var/lib/laforge/sftp/host_key   # laforge-sftp
 ```
 
-With `FILESTORE_URL` unset the Files page, `{{ file }}` and the `upload:` step say the
-file store isn't configured; nothing else changes.
+With no store configured, the Files page says so and points at Admin → File stores;
+`{{ file }}` references fail validation with the same message; nothing else changes.
 
-## 8. Security
+## 9. Security
 
 - **Links in the path, nothing in query strings**; tokens are HMAC with a key that never
   leaves the database. A download link grants one version to one build and dies with
@@ -259,44 +296,48 @@ file store isn't configured; nothing else changes.
 - **Uploads are verified** against the SHA-256 the client declared before a version
   appears; a mismatch discards the bytes.
 - **Permissions** follow the repository's existing levels; `global` is instance-admin.
-- **No lifecycle rules on the bucket** that delete objects: LaForge's collector owns
-  deletion.
+- **Store credentials** are write-only over the API, redacted in responses, and never
+  reach a browser or a host; a presigned URL is what leaves.
 - **Agent downloads** verify the SHA-256 from the step payload (delivered over mTLS), so
   a plain-HTTP `API_PUBLIC_URL` still gives integrity, just not confidentiality — use
   HTTPS for anything that matters. A presigned bucket URL is short-lived and names one
   object; it carries no bucket credential.
 
-## 9. Operations
+## 10. Operations
 
 - **Housekeeping** (api, hourly): expire abandoned uploads and their staging files; purge
   deleted files past retention; prune versions past `KEEP_VERSIONS` that no content
   pins; collect unreferenced blobs; prune host-upload partials older than 24 h.
 - **Usage**: the Files page shows bytes per scope against its quota (`GET /files/usage`).
-- **Backups**: the database and the bucket together; a restored database with a bucket
-  that moved on just has dangling `file_blob` rows the collector resolves.
-- **Tests** need an S3-compatible server for the direct-upload path
-  (`LAFORGE_TEST_S3_URL`; SeaweedFS in a container worked); everything else runs on the
-  `file://` backend.
+- **Backups**: the database and the buckets together; a restored database with a bucket
+  that moved on just has dangling `file_blob` rows the collector resolves. The store
+  credentials are in the database backup — treat it accordingly.
+- **Tests** run against an S3-compatible server (`LAFORGE_TEST_S3_URL`; SeaweedFS in a
+  container), the same one the dev compose stack provides.
 
-## 10. Phases
+## 11. Phases
 
 | Phase | Size | What | Done when |
 | --- | --- | --- | --- |
-| **F1 Store and API** | M | `internal/filestore`, migration `00050`, management routes, tus uploads, housekeeping, `file_reference` at validation, the Files page and `laforge files` | a file uploaded through the UI (and resumed after a kill) appears with its version, "used by" lists the content that names it, and `laforge check --online` fails a push naming a missing file |
-| **F2 Delivery** | S | `/files/d/{token}` on the api (302 to a presigned GET, or the bytes for `file://` / `PROXY_DOWNLOADS`), `{{ file }}`/`download:` resolution in the orchestrator, fingerprints, the agent's download with resume and hash check | a fake-builder host downloads a file by reference straight from the bucket, a replaced file redeploys it, a torn-down build's link answers 410, an expired presigned URL is re-fetched through the link |
+| **F1 Stores and API** | M | `file_store` and the Admin → File stores page (S3, Azure; test, default, per-repository choice), `internal/filestore` behind `gocloud.dev/blob`, migration `00050`, management routes, tus uploads, housekeeping, `file_reference` at validation, the Files page and `laforge files`; SeaweedFS in the dev compose | a store set up on the page passes its test; a file uploaded through the UI (and resumed after a kill) appears with its version in that store, "used by" lists the content that names it, and `laforge check --online` fails a push naming a missing file |
+| **F2 Delivery** | S | `/files/d/{token}` on the api (302 to a presigned GET, or the bytes when the store proxies), `{{ file }}`/`download:` resolution in the orchestrator, fingerprints, the agent's download with resume and hash check | a fake-builder host downloads a file by reference straight from the bucket, a replaced file redeploys it, a torn-down build's link answers 410, an expired presigned URL is re-fetched through the link |
 | **F3 Host uploads** | M | `host_upload`, grants minted at dispatch, `/files/u/{token}` receiver, the agent's tus-core client, the Artifacts tab | an `upload:` step lands under the build after a dropped connection; a second send on the same link is refused; a player-minted link is refused |
 | **F4 SFTP** | S | `laforge-sftp`, compose service, docs | an OpenSSH upload cut off mid-way and finished with `reput` comes back with the same SHA-256 |
-| **F5 Direct uploads** | S | `FILESTORE_DIRECT_UPLOADS` | a browser upload to a bucket survives a reload |
+| **F5 Direct uploads** | S | the store's *direct uploads* setting, presigned parts | a browser upload to a bucket survives a reload |
 
 F1 → F2 → F3 in order; F4 and F5 any time after F1.
 
-## 11. Open decisions
+## 12. Open decisions
 
 - **Agent TLS for downloads.** The agent trusts the system roots for `API_PUBLIC_URL`
   and the bucket. If a deployment's api sits behind a private CA, the agent would need
   that CA delivered with its identity at first boot.
-- **Hosts that can't reach the bucket.** `FILESTORE_PROXY_DOWNLOADS` is global; a
-  per-builder setting would let one venue proxy while others go direct.
+- **Hosts that can't reach the bucket.** *Proxy downloads* is per store; a per-builder
+  setting would let one venue proxy while others go direct from the same store.
+- **Moving a scope between stores.** Re-pointing a repository only affects new uploads.
+  A "move" that copies its blobs to the new store and updates `file_blob` is a
+  background job worth having once there are two stores; until then, deleting a store
+  means emptying it first.
 - **Retention of host uploads.** They count against the repository's quota and are
   never pruned on their own; a build's teardown could offer to delete its `uploads/`
   folder.
