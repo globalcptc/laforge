@@ -110,6 +110,48 @@ func shortName(externalName string) string {
 	return "lf-" + hex.EncodeToString(sum[:])[:12]
 }
 
+// LXD socket-path budget (issue #63, ported from the MicroCloud builder). When a
+// VM starts, the daemon opens a Unix control socket at
+//
+//	<incusLogsDir><project>_<instance>/qemu.monitor
+//
+// and Go's Linux sun_path buffer is 108 bytes INCLUDING the trailing NUL, so the
+// whole path must be <= 107 bytes or the connect fails with a bare EINVAL long
+// after the instance name passed the 63-char limit. We budget the generated name
+// against it. incusLogsDir is the Incus package-install default; a snap install's
+// path is longer, so this can under-budget there -- same "assume the standard
+// install" tradeoff MicroCloud makes with the LXD snap path.
+const (
+	incusLogsDir      = "/var/lib/incus/logs/"
+	qemuMonitorSuffix = "/qemu.monitor"
+	unixSocketPathMax = 107 // 108-byte sun_path minus the trailing NUL
+	minInstanceName   = len("lf-") + 12 // shortName is always "lf-"+12 hex = 15 bytes
+)
+
+// maxInstanceNameLen is the longest instance name that keeps the qemu-monitor
+// socket path within the Unix-socket limit for this project, also honoring the
+// 63-char cidata-volume cap.
+func maxInstanceNameLen(project string) int {
+	socketCap := unixSocketPathMax - len(incusLogsDir) - len(project) - len("_") - len(qemuMonitorSuffix)
+	cidataCap := 63 - len("-cidata")
+	if socketCap < cidataCap {
+		return socketCap
+	}
+	return cidataCap
+}
+
+// validateInstanceNameBudget rejects, before any resource is created, a project
+// so long that not even the minimal hashed name fits the socket path -- a
+// permanent configuration error (retrying can't shorten the project).
+func validateInstanceNameBudget(project string) error {
+	if maxInstanceNameLen(project) < minInstanceName {
+		minPath := len(incusLogsDir) + len(project) + len("_") + minInstanceName + len(qemuMonitorSuffix)
+		return fmt.Errorf("%w: Incus project %q (%d chars) leaves no room for a valid instance name: even the shortest %d-char name yields a %d-byte VM socket path, over the %d-byte limit. Use a shorter project name.",
+			builder.ErrPermanentConfig, project, len(project), minInstanceName, minPath, unixSocketPathMax)
+	}
+	return nil
+}
+
 // instanceName is shortName's readable counterpart for hosts and
 // containers (not networks, which are stuck with the 15-char cap and so
 // keep the pure hash): "lf-<branch>-t<team>-<host>-<6 hex>". The hex
@@ -117,16 +159,19 @@ func shortName(externalName string) string {
 // deterministic (idempotent adopt-on-retry recomputes the exact same name)
 // and collision-free across two live builds of the same branch+host on one
 // hoster, which the readable part alone can't guarantee. Falls back to
-// shortName when there's no display hint at all. Capped so the derived
-// cidata volume name ("<name>-cidata") still fits Incus's 63-char limit.
-func instanceName(displayName, externalName string) string {
+// shortName when there's no display hint at all. Capped to fit BOTH the cidata
+// volume's 63-char limit AND the full qemu-monitor socket path for project.
+func instanceName(displayName, externalName, project string) string {
 	base := sanitizeName(displayName)
 	if base == "" {
 		return shortName(externalName)
 	}
 	sum := sha256.Sum256([]byte(externalName))
 	suffix := hex.EncodeToString(sum[:])[:6]
-	const maxBase = 48 // 63 - len("-cidata") - len("-<6 hex>"), rounded down
+	maxBase := maxInstanceNameLen(project) - len("-") - len(suffix)
+	if maxBase < len("lf-") {
+		return shortName(externalName) // project ate the budget; the 15-byte hash is the floor
+	}
 	if len(base) > maxBase {
 		base = strings.TrimRight(base[:maxBase], "-")
 	}
@@ -138,7 +183,7 @@ func instanceName(displayName, externalName string) string {
 // real `lf-...` instance instead of the logical external name. Deterministic from
 // the identical inputs -- the optional hook the runner probes for on destroy.
 func (b *Builder) HostReference(externalName, displayName string) string {
-	return instanceName(displayName, externalName)
+	return instanceName(displayName, externalName, b.Client.Project)
 }
 
 // networkName is instanceName's counterpart for networks, which are held
@@ -310,7 +355,10 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 	if spec.ComposeHost {
 		return b.deployComposeHost(ctx, spec)
 	}
-	name := instanceName(spec.DisplayName, spec.ExternalName)
+	if err := validateInstanceNameBudget(b.Client.Project); err != nil {
+		return "", err
+	}
+	name := instanceName(spec.DisplayName, spec.ExternalName, b.Client.Project)
 	size, ok := b.Config.Sizes[spec.Size]
 	if !ok {
 		return "", fmt.Errorf("no size configured for %q", spec.Size)
@@ -432,7 +480,10 @@ func (b *Builder) instanceConfig(ctx context.Context, name string) (map[string]s
 const teamConfigKey = "user.laforge_team"
 
 func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool) (string, error) {
-	name := instanceName(displayName, externalName)
+	if err := validateInstanceNameBudget(b.Client.Project); err != nil {
+		return "", err
+	}
+	name := instanceName(displayName, externalName, b.Client.Project)
 
 	config := map[string]string{teamConfigKey: team}
 	if nesting {
@@ -547,6 +598,15 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		"devices": devices,
 	})
 	if err != nil {
+		// A copy whose requested root disk is smaller than the source snapshot's
+		// block volume fails here with "Block volumes cannot be shrunk" -- a
+		// configuration mismatch retrying can't fix (preflight catches it when the
+		// source size is readable; this guards the sources whose size it couldn't
+		// determine). Mark it permanent so the runner stops retrying.
+		if diskGB > 0 && img.IsSnapshot() && isShrinkError(err) {
+			return name, fmt.Errorf("%w: host disk %dGB is smaller than the %s source it copies from, whose block volume cannot be shrunk; raise this host's disk: to at least the source's size: %w",
+				builder.ErrPermanentConfig, diskGB, externalName, err)
+		}
 		// Keep the deterministic ref for cleanup when creation is uncertain.
 		return name, fmt.Errorf("creating instance %s (from %s): %w", name, externalName, err)
 	}

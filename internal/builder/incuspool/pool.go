@@ -144,6 +144,17 @@ func (p *Pool) HostReference(externalName, displayName string) string {
 	return p.Hosts[0].HostReference(externalName, displayName)
 }
 
+// SourceDiskMinBytes forwards the pre-deploy disk-shrink check so the orchestrator
+// preflight (which resolves an "incus" builder to this Pool) can reject a host
+// whose disk: is smaller than its mapped snapshot. The os->snapshot mapping is the
+// same on every host, so any host answers.
+func (p *Pool) SourceDiskMinBytes(ctx context.Context, os string) (int64, string, bool, error) {
+	if len(p.Hosts) == 0 {
+		return 0, "", false, nil
+	}
+	return p.Hosts[0].SourceDiskMinBytes(ctx, os)
+}
+
 func (p *Pool) DestroyContainer(ctx context.Context, team, externalRef string) error {
 	h, err := p.hostForTeam(team)
 	if err != nil {
