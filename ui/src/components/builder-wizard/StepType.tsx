@@ -1,4 +1,4 @@
-import { AlertTriangle, Boxes, Cloud, Server } from 'lucide-react'
+import { AlertTriangle, Boxes, CloudCog, Container, Server } from 'lucide-react'
 import { Field, Input, cn } from '../../ui'
 import { ColorPicker } from '../ColorPicker'
 import type { Kind } from './model'
@@ -20,13 +20,13 @@ const KINDS: { kind: Kind; title: string; body: string; icon: typeof Server; dra
     kind: 'aws',
     title: 'AWS (EC2)',
     body: 'Amazon EC2 + Fargate: a per-team VPC with a subnet per network, instances from your AMIs. Enter an access key and pick the region, AMIs and instance types here.',
-    icon: Cloud,
+    icon: CloudCog,
   },
   {
     kind: 'openstack',
     title: 'OpenStack',
     body: 'An OpenStack cloud (Nova/Neutron): instances from Glance images and Nova flavors. Credentials and region come from the runner’s OS_* environment.',
-    icon: Cloud,
+    icon: Container,
     draft: true,
   },
   // The 'fake' (simulated) builder stays wired up in the backend for local

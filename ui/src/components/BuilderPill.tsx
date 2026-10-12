@@ -1,4 +1,4 @@
-import { Boxes, Cloud, FlaskConical, Server, type LucideIcon } from 'lucide-react'
+import { Boxes, Cloud, CloudCog, Container, FlaskConical, type LucideIcon } from 'lucide-react'
 import { cn } from '../ui'
 
 // Builder kind -> icon, so a colored pill can still carry the family glyph.
@@ -6,8 +6,8 @@ import { cn } from '../ui'
 const KIND_ICON: Record<string, LucideIcon> = {
   microcloud: Cloud,
   incus: Boxes,
-  aws: Cloud,
-  openstack: Server,
+  aws: CloudCog,
+  openstack: Container,
   fake: FlaskConical,
 }
 
@@ -34,6 +34,7 @@ export function BuilderPill({
   color,
   kind,
   icon = true,
+  size = 'md',
   className,
   title,
 }: {
@@ -41,6 +42,9 @@ export function BuilderPill({
   color?: string | null
   kind?: string
   icon?: boolean
+  // 'sm' sits inline next to small body text without towering over it (e.g. the
+  // Configured Builds branch line); 'md' is the standalone default.
+  size?: 'sm' | 'md'
   className?: string
   title?: string
 }) {
@@ -48,17 +52,19 @@ export function BuilderPill({
   const Icon = kind ? KIND_ICON[kind] : undefined
   const colored = !!color && /^#[0-9a-fA-F]{6}$/.test(color)
   const style = colored ? { backgroundColor: color!, color: contrastText(color!), borderColor: color! } : undefined
+  const sm = size === 'sm'
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
+        'inline-flex shrink-0 items-center rounded-full border font-medium',
+        sm ? 'gap-0.5 px-1.5 py-0 text-[11px]/4' : 'gap-1 px-2 py-0.5 text-xs',
         !colored && 'border-border bg-surface-sunken text-fg',
         className,
       )}
       style={style}
       title={title ?? name}
     >
-      {icon && Icon && <Icon size={11} />}
+      {icon && Icon && <Icon size={sm ? 10 : 11} />}
       {name}
     </span>
   )

@@ -250,7 +250,7 @@ function ConfiguredBuildRow({
             </div>
             <div className="mt-0.5 flex items-center gap-1.5 text-xs text-fg-muted">
               <span className="truncate">{cb.environment_path}</span>
-              <BuilderPill name={cb.builder_config_name} color={builderColor} kind={builderKind} />
+              <BuilderPill name={cb.builder_config_name} color={builderColor} kind={builderKind} size="sm" />
             </div>
           </div>
         </button>
