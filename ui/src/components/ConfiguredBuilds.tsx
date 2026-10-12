@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { ChevronDown, GitCommitHorizontal, Hammer, IterationCw, MousePointerClick, Plus, Rocket, Lock, Unlock, Trash2, RefreshCw } from 'lucide-react'
 import {
   useBuilderConfigs,
@@ -161,6 +161,7 @@ function ConfiguredBuildRow({
   builderColor?: string
 }) {
   const fmt = useTimeFormat()
+  const navigate = useNavigate()
   const trigger = useTriggerBuild(repoId)
   const sync = useSyncConfiguredBuild(repoId)
   const remove = useDeleteConfiguredBuild(repoId)
@@ -171,7 +172,6 @@ function ConfiguredBuildRow({
   // acting on real infrastructure -- the same "live" set the server enforces.
   const hasLiveBuild = builds.some((b) => ['deploying', 'building', 'finished', 'tearing_down'].includes(b.status))
   const [error, setError] = useState<string | null>(null)
-  const [justBuilt, setJustBuilt] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(() => readExpandedIds().has(cb.id))
   // Only the two most recent builds show by default; older ones collapse behind a
   // "show older" row so a long branch history doesn't fill the page.
@@ -209,7 +209,9 @@ function ConfiguredBuildRow({
     setError(null)
     try {
       const build = await trigger.mutateAsync(cb.id)
-      setJustBuilt(build.id)
+      // Take the operator straight to the new build -- Build Now is a deliberate
+      // "I want to watch this deploy" action, so land on its page.
+      navigate({ to: '/repos/$repoId/builds/$buildId', params: { repoId, buildId: build.id } })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Build failed')
     }
@@ -291,12 +293,8 @@ function ConfiguredBuildRow({
         </button>
 
         <div className="shrink-0 text-right">
-          {justBuilt ? (
-            <Link to="/repos/$repoId/builds/$buildId" params={{ repoId, buildId: justBuilt }} className="text-xs font-medium text-accent hover:underline">
-              View build →
-            </Link>
-          ) : cb.current_content_revision_id ? (
-            <Button variant="coral" size="sm" onClick={onBuild} disabled={trigger.isPending}>
+          {cb.current_content_revision_id ? (
+            <Button variant="pink" size="sm" onClick={onBuild} disabled={trigger.isPending}>
               {trigger.isPending ? 'Building…' : 'Build Now'}
             </Button>
           ) : null}

@@ -21,6 +21,8 @@ const buttonStyles = cva(
         brand: 'bg-brand text-fg-inverted hover:bg-brand-hover',
         // CPTC coral, a light fill -- fixed dark ink for text, not white.
         coral: 'bg-cptc-coral text-cptc-coral-fg hover:brightness-95',
+        // Darker CPTC pink -- the "Build Now" CTA. Fixed white ink.
+        pink: 'bg-cptc-pink text-cptc-pink-fg hover:brightness-95',
         link: 'text-accent hover:text-accent-hover underline-offset-4 hover:underline',
       },
       size: {

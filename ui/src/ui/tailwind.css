@@ -78,12 +78,19 @@
   --color-pink: #be185d;
   --color-pink-soft: #fce7f3;
 
-  /* CPTC logo ink, used deliberately as the "Build Now" button fill, with a
-     fixed dark ink for its text. Both are fixed (never redefined for dark
-     mode): it's a light coral chip that reads the same in either theme, so
-     it must not pick up the theme's flipping brand/fg colours. */
+  /* CPTC coral logo ink -- a light chip fill (e.g. the "Sizes" edit action),
+     with a fixed dark ink for its text. Both are fixed (never redefined for dark
+     mode): the light coral reads the same in either theme, so it must not pick up
+     the theme's flipping brand/fg colours. (The "Build Now" CTA uses the darker
+     --color-cptc-pink below.) */
   --color-cptc-coral: #fd9493;
   --color-cptc-coral-fg: #301956;
+
+  /* Darker CPTC pink -- the "Build Now" CTA fill. A deeper rose than the light
+     coral chip, with fixed white ink so it reads the same in either theme (not
+     redefined for dark mode, same rationale as the coral above). */
+  --color-cptc-pink: #d6456b;
+  --color-cptc-pink-fg: #ffffff;
 
   --radius-token-sm: 0.375rem;
   --radius-token: 0.5rem;
