@@ -905,7 +905,15 @@ export interface HomeData {
   active_builds: number
   totals: HomeCounts
   repositories: { id: string; github_owner: string; github_repo: string; builds: HomeBuild[] }[]
-  builders: { name: string; kind: string; active_builds: number; counts: HomeCounts }[]
+  builders: {
+    name: string
+    kind: string
+    active_builds: number
+    counts: HomeCounts
+    // Capacity "how full" from the latest collected metrics; absent when the
+    // builder has reported none yet (then the UI shows a machine-count bar).
+    utilization?: { pct: number; driver: string }
+  }[]
   attention: AttentionItem[]
 }
 

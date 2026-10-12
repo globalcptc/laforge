@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/loader"
 )
@@ -75,6 +76,19 @@ type homeBuilder struct {
 	Kind         string     `json:"kind"`
 	ActiveBuilds int        `json:"active_builds"`
 	Counts       homeCounts `json:"counts"`
+	// Utilization is "how close is this builder to a wall", from its latest
+	// collected metrics -- the most-constrained quota (AWS) or the busiest node's
+	// memory/disk (Incus/MicroCloud). nil when the builder has reported no metrics
+	// yet (OpenStack, or a builder before its first collection), in which case the
+	// UI falls back to the machine-count bar.
+	Utilization *builderUtil `json:"utilization,omitempty"`
+}
+
+// builderUtil is the home page's capacity bar: a 0-100% fill plus a short label
+// naming what's driving it.
+type builderUtil struct {
+	Pct    float64 `json:"pct"`
+	Driver string  `json:"driver"`
 }
 
 // Attention categories: the stable key a person's "close this item" dismissal
@@ -242,6 +256,21 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 			builders[c.Name] = &homeBuilder{Name: c.Name, Kind: c.Kind}
 		}
 	}
+	// Capacity utilization from each builder's latest collected metrics (recent
+	// window so it reflects now, not a stale peak). Best-effort: a builder with no
+	// samples (OpenStack, or pre-first-collection) just gets no utilization.
+	utilCutoff := pgtype.Timestamptz{Time: time.Now().Add(-10 * time.Minute), Valid: true}
+	for _, c := range configs {
+		bl := builders[c.Name]
+		if bl == nil {
+			continue
+		}
+		samples, err := s.Queries.ListBuilderMetricSamples(ctx, db.ListBuilderMetricSamplesParams{BuilderConfigID: c.ID, SampledAt: utilCutoff})
+		if err != nil {
+			continue
+		}
+		bl.Utilization = builderUtilization(samples)
+	}
 	for _, bl := range builders {
 		view.Builders = append(view.Builders, *bl)
 	}
@@ -252,6 +281,46 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 		return view.Builders[i].Name < view.Builders[j].Name
 	})
 	writeJSON(w, http.StatusOK, view)
+}
+
+// builderUtilization reduces a builder's recent metric samples to a single
+// "how full" percentage: the MOST-constrained signal, so the bar fills as any
+// one dimension nears its ceiling. That's a quota usage/limit for AWS (gauges
+// with a Max) or a node's memory/disk percentage for Incus/MicroCloud (the
+// "%"-unit time-series). Other metrics (latency, load, throughput counters) have
+// no ceiling and are ignored. Returns nil when nothing capacity-bearing was
+// reported. Samples arrive oldest-first, so the last seen per (key,node) is the
+// latest.
+func builderUtilization(samples []db.ListBuilderMetricSamplesRow) *builderUtil {
+	type gk struct{ key, node string }
+	latest := make(map[gk]db.ListBuilderMetricSamplesRow, len(samples))
+	for _, s := range samples {
+		latest[gk{s.Key, s.Node}] = s
+	}
+	best := -1.0
+	driver := ""
+	for _, s := range latest {
+		var pct float64
+		label := s.Label
+		switch {
+		case s.Kind == builder.MetricGauge && s.Max != nil && *s.Max > 0:
+			pct = s.Value / *s.Max * 100
+		case s.Unit == "%": // a utilization time-series (memory, disk)
+			pct = s.Value
+			if s.Node != "" {
+				label += " on " + s.Node
+			}
+		default:
+			continue // not a capacity signal
+		}
+		if pct > best {
+			best, driver = pct, label
+		}
+	}
+	if best < 0 {
+		return nil
+	}
+	return &builderUtil{Pct: best, Driver: driver}
 }
 
 // homeBuild is one active build's card: its teams, what it has deployed

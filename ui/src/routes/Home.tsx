@@ -146,14 +146,23 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
           ) : (
             <span className="font-medium text-fg">{b.name}</span>
           )
+          // Prefer a real capacity bar from collected metrics (how close this
+          // builder is to a quota/resource wall); fall back to a relative
+          // machine-count bar, clearly labelled, when there are no metrics yet.
+          const util = b.utilization
+          const pct = util ? Math.min(100, util.pct) : (machines / maxHosts) * 100
+          const tone = util ? (util.pct >= 90 ? 'bg-danger' : util.pct >= 75 ? 'bg-warning' : 'bg-accent') : 'bg-accent'
+          const barTitle = util
+            ? `${util.pct.toFixed(0)}% — ${util.driver}`
+            : `${machines} machines (relative to busiest builder)`
           return (
             <div key={b.name} className="grid grid-cols-[minmax(0,12rem)_1fr_auto] items-center gap-4 px-4 py-2.5 text-sm">
               <div className="min-w-0">
                 <div className="truncate">{name}</div>
                 <div className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</div>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-surface-sunken" title={`${machines} machines`}>
-                <div className="h-full rounded-full bg-accent" style={{ width: `${(machines / maxHosts) * 100}%` }} />
+              <div className="h-2 overflow-hidden rounded-full bg-surface-sunken" title={barTitle}>
+                <div className={cn('h-full rounded-full', tone)} style={{ width: `${pct}%` }} />
               </div>
               <div className="flex gap-4 text-xs text-fg-muted">
                 <span>
