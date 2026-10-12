@@ -142,7 +142,8 @@ but not readable, is caught at setup and not at a competition.
 
 **Deleting a store** is refused while any `file_blob` lives in it; empty the scopes that
 use it first (or move them — §12). **No lifecycle rules** on the bucket that delete
-objects: LaForge's collector owns deletion.
+objects — LaForge's collector owns deletion; the one exception is aborting incomplete
+multipart uploads (§7), which touches nothing completed.
 
 **Credentials at rest** are stored in the database the way builder and registry
 credentials are today (same trust model: the database is the secret store), write-only
@@ -164,7 +165,7 @@ once, renames are free, and everything a host fetches is verifiable.
 | Table | What |
 | --- | --- |
 | `file_store` | a configured store: name, kind (`s3`, `azblob`), its settings as JSON, its credential, its policy (max file size, scope quota, versions kept, deleted-file retention, direct uploads, presign TTL, proxy downloads), `is_default`, created/updated by and at |
-| `file_blob` | one row per distinct content: sha256, size, **store id**; garbage-collected once nothing references it |
+| `file_blob` | one stored object: its **key** in the store (content-addressed `sha256/…` for people's uploads; `uploads/<build>/<grant>` for a host's), sha256 (verified, or *declared* for a host's), size, **store id**; garbage-collected once no version references it. Two kinds of key, one table: the collector, usage accounting and delivery handle both, and the tests cover both |
 | `file` | a named file in a **scope** — `repository_id` NULL is `global`, else that repository's — with a path unique (case-insensitively) among the scope's live files; description; soft-delete columns |
 | `repository.file_store_id` | which store a repository's scope uploads to; NULL means the default store |
 | `file_version` | each upload to a path adds one; the highest is current; sha256, size, content type, who, when |
@@ -172,7 +173,7 @@ once, renames are free, and everything a host fetches is verifiable.
 | `file_event` | everything that happened to a file (upload, rename, delete, restore, version restore), for the file's history |
 | `file_reference` | which files each content revision references (`download: { file }`, `{{ file }}`), with the pinned version or 0 for current; recorded at validation. Answers "used by" and protects a referenced version from pruning |
 | `file_delivery_key` | the HMAC key that signs host download links; one row, made on first use |
-| `host_upload` | an `upload:` step's grant: grant id, build, destination path, sha256 and size once received; one row per grant, so a used link takes nothing more |
+| `host_upload` | an `upload:` step's grant: grant id, build, destination path, declared sha256 and size, the multipart upload in progress, and the version once complete; one row per grant, so a used link takes nothing more |
 
 **Scopes and permissions.** Instance admins manage `global`; a repository's `manage`
 level manages its scope; anyone with `read` on a repository sees and downloads its files
@@ -274,7 +275,13 @@ steps:
 
 - **Where it lands**: the build's repository scope, under
   `uploads/<environment>/<build>/team<NN>/<host>/…` — a host can't write anywhere else.
-  Listed on the build's Artifacts tab and the Files page like any file.
+  Listed on the build's Artifacts tab and the Files page like any file, marked as a
+  host's.
+- **Evidence, never content.** What a host sent is for people to look at, never for
+  LaForge to deliver: `{{ file "uploads/…" }}` and `download: { file: uploads/… }` are
+  **refused at validation**. Without that rule a team's host becomes a way to feed bytes
+  to other teams' hosts on the next deploy; with it, nothing a player uploads can reach
+  another host through LaForge, whatever its hash says.
 - **One-time links, never at a player's initiative.** When the step is dispatched (a
   deploy step, a scheduled task — a fresh grant each firing — or an ad-hoc command), the
   orchestrator mints a grant: a random id plus the build and destination, signed into a
@@ -288,20 +295,40 @@ steps:
   retrying each; `GET` on the link says which parts the bucket already has, so an
   interrupted upload resumes from there; `POST …/complete` has the api finish the
   multipart upload and record the file. The api sees headers, never bytes. Presigned
-  part URLs live an hour and name one part of one object; there's no bucket credential
-  on the host.
+  part URLs live an hour and name one part of one object, **with `Content-Length` signed
+  into each**, so a host can't send more than it declared; the completed object's size
+  must match the declaration or the upload is aborted. There's no bucket credential on
+  the host.
 - **Not content-addressed.** A host's upload is stored under its own key,
   `<prefix>/uploads/<build>/<grant>`, never under its hash — the api can't verify a hash
   it never streamed, and a key it can't verify must never be one a trusted file could
   share (a host declaring a trusted file's hash would otherwise overwrite what
   `{{ file }}` serves). The declared SHA-256 is recorded on the version as *declared*,
-  shown as such, and checked by whoever downloads it; the agent additionally sends S3's
-  per-part `x-amz-checksum-sha256`, which the bucket enforces, so corruption in transit
-  is caught there.
+  shown as such — never as a trust signal, never matched against another file — and
+  checked by whoever downloads it; the agent additionally sends S3's per-part
+  `x-amz-checksum-sha256`, which the bucket enforces, so corruption in transit is caught
+  there. When a store *proxies* uploads (below), the api does stream the bytes, so it
+  hashes them and marks the version *verified*; the two cases are labelled, not
+  conflated.
+- **Dedupe only against itself.** A scheduled upload of an unchanged file — the hourly
+  log from 500 hosts for three days — would otherwise be tens of thousands of identical
+  objects. If a host declares the same hash as **its own previous version at the same
+  path**, the new version points at the existing object and nothing is uploaded. A host
+  can only lie to itself this way, so it's safe; it's also most of the growth.
+- **Bounded per build.** A build has a cap on hosts' uploads — count and bytes, set on
+  the store with a default of 10,000 files and 50 GiB — checked before part URLs are
+  issued, so one runaway step can't fill a scope. **Purging a build's artifacts purges
+  its `uploads/` folder** too; otherwise they stay with the repository like any file,
+  subject to its quota.
+- **Serving them.** Always `Content-Disposition: attachment`, never inline, never
+  content-sniffed — a "log" that's HTML must not render in an admin's session — and the
+  UI says who sent it: a player could have made it hostile.
 - **Quota** is checked against the declared size before part URLs are issued, and the
-  object's real size when it completes; abandoned multipart uploads are aborted by
-  housekeeping after 24 h. A store with *proxy* on takes the parts through the api
-  instead, for a venue whose hosts can't reach the bucket.
+  object's real size when it completes. Abandoned multipart uploads are aborted by
+  housekeeping after 24 h — on S3 they're billed until then — and the one bucket
+  lifecycle rule LaForge allows, *abort incomplete multipart uploads after 7 days*, is a
+  backstop that can't touch a completed object. A store with *proxy* on takes the parts
+  through the api instead, for a venue whose hosts can't reach the bucket.
 
 ## 8. Configuration
 
@@ -328,8 +355,9 @@ With no store configured, the Files page says so and points at Admin → File st
   partials are capped at the per-file maximum and pruned.
 - **People's uploads are verified** against the SHA-256 the client declared before a
   version appears; a mismatch discards the bytes. **Hosts' uploads are never
-  content-addressed** (§7), so a hostile host can't overwrite or alias anything a
-  trusted file serves.
+  content-addressed, never referenceable from content, and never served inline** (§7),
+  so a hostile host can't overwrite or alias anything a trusted file serves, can't
+  reach another host through LaForge, and can't script an admin's browser.
 - **Permissions** follow the repository's existing levels; `global` is instance-admin.
 - **Store credentials** are write-only over the API, redacted in responses, and never
   reach a browser or a host; a presigned URL is what leaves.
@@ -340,9 +368,10 @@ With no store configured, the Files page says so and points at Admin → File st
 
 ## 10. Operations
 
-- **Housekeeping** (api, hourly): expire abandoned uploads and their staging files; purge
-  deleted files past retention; prune versions past `KEEP_VERSIONS` that no content
-  pins; collect unreferenced blobs; prune host-upload partials older than 24 h.
+- **Housekeeping** (api, hourly): expire abandoned uploads and their staging files; abort
+  multipart uploads (people's and hosts') open longer than 24 h; purge deleted files
+  past retention; prune versions past the store's *versions kept* that no content pins;
+  collect unreferenced blobs of both kinds.
 - **Usage**: the Files page shows bytes per scope against its quota (`GET /files/usage`).
 - **Backups**: the database and the buckets together; a restored database with a bucket
   that moved on just has dangling `file_blob` rows the collector resolves. The store
@@ -356,7 +385,7 @@ With no store configured, the Files page says so and points at Admin → File st
 | --- | --- | --- | --- |
 | **F1 Stores and API** | M | `file_store` and the Admin → File stores page (S3, Azure; test, default, per-repository choice), `internal/filestore` behind `gocloud.dev/blob`, migration `00050`, management routes, tus uploads, housekeeping, `file_reference` at validation, the Files page and `laforge files`; SeaweedFS in the dev compose | a store set up on the page passes its test; a file uploaded through the UI (and resumed after a kill) appears with its version in that store, "used by" lists the content that names it, and `laforge check --online` fails a push naming a missing file |
 | **F2 Delivery** | S | `/files/d/{token}` on the api (302 to a presigned GET, or the bytes when the store proxies), `{{ file }}`/`download:` resolution in the orchestrator, fingerprints, the agent's download with resume and hash check | a fake-builder host downloads a file by reference straight from the bucket, a replaced file redeploys it, a torn-down build's link answers 410, an expired presigned URL is re-fetched through the link |
-| **F3 Host uploads** | M | `host_upload`, grants minted at dispatch, `/files/u/{token}` issuing and completing presigned multipart uploads, the agent's part uploader with resume, the Artifacts tab | an `upload:` step lands under the build straight from the host to the bucket, resuming after a dropped connection; a second send on the same link is refused; a player-minted link is refused; a declared hash matching a trusted file changes nothing that file serves |
+| **F3 Host uploads** | M | `host_upload`, grants minted at dispatch, `/files/u/{token}` issuing and completing presigned multipart uploads, the agent's part uploader with resume, the Artifacts tab | an `upload:` step lands under the build straight from the host to the bucket, resuming after a dropped connection; a second send on the same link is refused; a player-minted link is refused; a declared hash matching a trusted file changes nothing that file serves; content referencing `uploads/…` fails validation; a part larger than declared is refused by the bucket; an unchanged scheduled upload adds a version but no object; purging the build's artifacts removes its uploads |
 | **F4 SFTP** | S | `laforge-sftp`, compose service, docs | an OpenSSH upload cut off mid-way and finished with `reput` comes back with the same SHA-256 |
 | **F5 Direct uploads** | S | the store's *direct uploads* setting, presigned parts, abandoned-multipart cleanup | a browser upload to a bucket survives a reload |
 
@@ -374,6 +403,9 @@ or with it); F4 any time after F1.
   A "move" that copies its blobs to the new store and updates `file_blob` is a
   background job worth having once there are two stores; until then, deleting a store
   means emptying it first.
+- **Verifying hosts' uploads after the fact.** A background job reading each object
+  back to check its declared hash would cost exactly the egress the design avoids. Not
+  planned; the per-part checksums cover transit, and the UI never claims more.
 - **Retention of host uploads.** They count against the repository's quota and are
   never pruned on their own; a build's teardown could offer to delete its `uploads/`
   folder.
