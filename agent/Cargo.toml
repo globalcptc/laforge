@@ -43,6 +43,15 @@ sysinfo = { version = "0.33", default-features = false, features = ["system", "d
 # agent cross-compile notes).
 portable-pty = "0.8"
 
+# Native Windows service support: lets the agent run under the Service Control
+# Manager (sc create ... start= auto), so the SCM owns boot-start and
+# crash-restart (sc failure actions) -- robust in a way a scheduled task only
+# approximates, and immune to the clock/timezone skew that stops a boot task.
+# Windows-only; pure FFI via windows-sys (no C toolchain), so the windows-gnu
+# cross-compile stays clean.
+[target.'cfg(windows)'.dependencies]
+windows-service = "0.7"
+
 [profile.release]
 opt-level = "z"
 lto = true

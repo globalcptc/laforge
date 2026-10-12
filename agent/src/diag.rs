@@ -10,7 +10,7 @@
 //     a file next to the binary (and still nothing to the console).
 // The flag is baked into the binary alongside the identity (see identity.rs),
 // NOT read from an environment variable or the launcher -- so a student can't
-// turn logging on by editing the systemd unit or the scheduled task.
+// turn logging on by editing the systemd unit or the Windows service.
 
 use std::fs::OpenOptions;
 use std::io::Write;

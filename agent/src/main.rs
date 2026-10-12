@@ -17,6 +17,8 @@ mod protocol;
 mod selfhash;
 mod shell;
 mod validators;
+#[cfg(windows)]
+mod winsvc;
 
 use protocol::{GetTaskResponsePayload, HeartbeatResponsePayload, LogBatchRequestPayload, MessageType, ReportStatusRequestPayload};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, ServerName};
@@ -34,6 +36,21 @@ const LOG_BUFFER_CAP: usize = 10_000;
 const LOG_BATCH_MAX: usize = 500;
 
 fn main() {
+    // On Windows the agent is installed as a service (see internal/agentdelivery).
+    // When the SCM launches it, speak the service protocol; a plain console run
+    // (dev, or the OCI container entrypoint) falls through to the ordinary path.
+    #[cfg(windows)]
+    {
+        if winsvc::is_launched_by_scm() {
+            return; // ran (and finished) as a service
+        }
+    }
+    run_agent()
+}
+
+// run_agent is the ordinary (console) entry: identity-driven host or supervised
+// container. Diverges -- it loops forever or exits the process on a fatal error.
+fn run_agent() -> ! {
     // Decide where our own diagnostics go BEFORE emitting a single line. A real
     // (patched) build is SILENT by default -- nothing to stdout/stderr, so a
     // captured box leaks nothing locally; only what the agent sends the servers

@@ -72,26 +72,29 @@ func TestBuildIssuesAChainedCertAndRealUserData(t *testing.T) {
 	if ud := LinuxUserData(del.DownloadURL); !strings.Contains(ud, del.DownloadURL) || !strings.Contains(ud, "systemd") {
 		t.Fatalf("linux user-data should install a systemd service from the URL: %s", ud)
 	}
-	if ud := WindowsCloudbaseUserData(del.DownloadURL); !strings.HasPrefix(ud, "#ps1_sysnative") || !strings.Contains(ud, "schtasks") {
+	if ud := WindowsCloudbaseUserData(del.DownloadURL); !strings.HasPrefix(ud, "#ps1_sysnative") || !strings.Contains(ud, "sc.exe create LaForgeAgent") {
 		t.Fatalf("windows cloudbase user-data malformed: %s", ud)
 	}
-	if ud := WindowsEC2LaunchUserData(del.DownloadURL); !strings.HasPrefix(ud, "<powershell>") || !strings.Contains(ud, "schtasks") {
+	if ud := WindowsEC2LaunchUserData(del.DownloadURL); !strings.HasPrefix(ud, "<powershell>") || !strings.Contains(ud, "sc.exe create LaForgeAgent") {
 		t.Fatalf("windows EC2Launch user-data malformed: %s", ud)
 	}
-	// The Windows task must be robust: registered from XML (not /sc onstart), a
-	// boot trigger with NO StartBoundary (timezone-proof), a repetition for crash
-	// recovery, and no execution time limit (so the agent isn't killed at 72h).
+	// The agent must be installed as a real service (SCM owns boot-start and
+	// crash-restart): auto-start, failure/restart actions, and started now -- with
+	// a hardened scheduled task as a mutually-exclusive fallback if it doesn't run.
 	ud := WindowsEC2LaunchUserData(del.DownloadURL)
-	for _, want := range []string{"/xml", "<BootTrigger>", "<Repetition>", "IgnoreNew", "<ExecutionTimeLimit>PT0S</ExecutionTimeLimit>", "RestartOnFailure"} {
+	for _, want := range []string{
+		"sc.exe create LaForgeAgent", "start= auto", "obj= LocalSystem",
+		"sc.exe failure LaForgeAgent", "actions= restart/5000", "sc.exe start LaForgeAgent",
+		// Fallback path, gated on the service not running.
+		"-ne 'Running'", "schtasks /create /tn LaForgeAgent /xml", "<BootTrigger>", "<ExecutionTimeLimit>PT0S</ExecutionTimeLimit>",
+	} {
 		if !strings.Contains(ud, want) {
-			t.Errorf("windows task missing robustness marker %q", want)
+			t.Errorf("windows install missing %q", want)
 		}
 	}
-	if strings.Contains(ud, "StartBoundary") {
-		t.Errorf("windows boot trigger must have no StartBoundary (a future-skewed clock would stop it firing)")
-	}
-	if strings.Contains(ud, "/sc onstart") {
-		t.Errorf("windows task should be registered from XML, not the fragile /sc onstart")
+	// A future-skewed clock must not gate the fallback task either.
+	if strings.Contains(ud, "<StartBoundary>") {
+		t.Errorf("fallback boot trigger must have no StartBoundary")
 	}
 
 	// The issued cert must verify against the CA, with the object id as CN.

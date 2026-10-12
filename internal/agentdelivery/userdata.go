@@ -38,26 +38,24 @@ runcmd:
 }
 
 // windowsAgentPowerShell is the first-boot PowerShell that downloads the agent
-// and registers it as a boot-time task. It carries NO format wrapper -- the two
+// and installs it as a Windows service. It carries NO format wrapper -- the two
 // exported Windows renderers add the cloudbase-init shebang or the EC2Launch
 // <powershell> tags around this one shared body, so the install logic stays
 // identical across hosters.
 //
-// Run as a scheduled task, not a Windows service: the agent is a plain console
-// program with no Service Control Manager handler, so `sc create` starts it but
-// the SCM kills it within ~30s for not reporting as a service. The task is
-// registered from an XML definition (not `schtasks /sc onstart`, whose defaults
-// are fragile) so it:
-//   - fires on EVERY boot with no StartBoundary -- a /sc ONSTART task is stamped
-//     with a creation-time StartBoundary, which a clock skewed into the future
-//     (a UTC+4 region before cloudbase-init fixes the timezone) pushes past "now"
-//     so the trigger never fires;
-//   - re-launches the agent within a minute if it crashes or exits, via a
-//     1-minute repetition with IgnoreNew (never double-runs while it's alive)
-//     plus RestartOnFailure for a non-zero exit -- /sc onstart alone only runs at
-//     boot, so a dead agent stays dead until the next reboot;
-//   - never auto-kills the long-running agent (ExecutionTimeLimit PT0S -- the
-//     default is 72 hours).
+// Installed as a real Windows SERVICE (the agent speaks the Service Control
+// Manager protocol natively -- see agent/src/winsvc.rs). The SCM then owns:
+//   - boot-start (start= auto), with NO time trigger, so a clock skewed into the
+//     future -- e.g. a UTC+4 region before cloudbase-init fixes the timezone --
+//     can't stop it starting (the failure mode a boot scheduled task has);
+//   - crash-restart (failure actions: restart after 5s, indefinitely), so a dead
+//     agent comes straight back instead of staying down until the next reboot.
+// If the service doesn't come up, it falls back to a hardened boot-time
+// scheduled task running the same binary (which detects it wasn't launched by
+// the SCM and runs as a console program) -- a backup for an unusual image.
+// NOTE: in PowerShell "sc" is an alias for Set-Content, so the service control
+// tool must be invoked as "sc.exe"; its "key= value" argument syntax (the space
+// after "=" is required) is passed through cmd, which parses it reliably.
 func windowsAgentPowerShell(binaryURL string) string {
 	return fmt.Sprintf(`$ErrorActionPreference = "Stop"
 # Clear "user must change password at next logon" on the built-in local admin.
@@ -75,11 +73,34 @@ $dst = "C:\laforge-agent.exe"
 for ($i = 0; $i -lt 60; $i++) {
   try { Invoke-WebRequest -Uri "%s" -OutFile $dst -UseBasicParsing; break } catch { Start-Sleep -Seconds 5 }
 }
-$taskXml = @'
+# Remove any prior install (a legacy scheduled-task version, or a re-run) so this
+# is idempotent; native-command failures here are expected and don't abort.
+schtasks /delete /tn LaForgeAgent /f 2>$null
+cmd /c "sc.exe stop LaForgeAgent"
+cmd /c "sc.exe delete LaForgeAgent"
+Start-Sleep -Seconds 2
+cmd /c 'sc.exe create LaForgeAgent binPath= "C:\laforge-agent.exe" start= auto obj= LocalSystem DisplayName= "LaForge Agent"'
+cmd /c 'sc.exe description LaForgeAgent "LaForge agent"'
+cmd /c 'sc.exe failure LaForgeAgent reset= 0 actions= restart/5000/restart/5000/restart/5000'
+cmd /c "sc.exe failureflag LaForgeAgent 1"
+cmd /c "sc.exe start LaForgeAgent"
+Start-Sleep -Seconds 5
+# Fallback: if the service didn't come up (an unusual image, an SCM refusal), run
+# the agent from a hardened boot-time scheduled task instead -- the SAME binary
+# detects it wasn't launched by the SCM and runs as a console program. The failed
+# service is deleted first, so the two are mutually exclusive (never two agents).
+# The task mirrors the service's robustness: a BootTrigger with NO StartBoundary
+# (immune to a future-skewed clock), a 1-minute repetition with IgnoreNew for
+# crash recovery, and no execution time limit (the default is 72h).
+$svc = Get-Service -Name LaForgeAgent -ErrorAction SilentlyContinue
+if (-not $svc -or $svc.Status -ne 'Running') {
+  Write-Host "LaForge service is not running; falling back to a scheduled task"
+  cmd /c "sc.exe delete LaForgeAgent"
+  $taskXml = @'
 <?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
-    <Description>LaForge agent</Description>
+    <Description>LaForge agent (service fallback)</Description>
   </RegistrationInfo>
   <Triggers>
     <BootTrigger>
@@ -120,10 +141,11 @@ $taskXml = @'
   </Actions>
 </Task>
 '@
-$xmlPath = "C:\laforge-agent-task.xml"
-Set-Content -Path $xmlPath -Value $taskXml -Encoding Unicode
-schtasks /create /tn LaForgeAgent /xml "$xmlPath" /f
-schtasks /run /tn LaForgeAgent
+  $xmlPath = "C:\laforge-agent-task.xml"
+  Set-Content -Path $xmlPath -Value $taskXml -Encoding Unicode
+  schtasks /create /tn LaForgeAgent /xml "$xmlPath" /f
+  schtasks /run /tn LaForgeAgent
+}
 `, binaryURL)
 }
 
