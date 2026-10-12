@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { builderConnectionPath, useBuilderConfigs, useCreateBuilderConfig, useUpdateBuilderConfig } from '../api/hooks'
 import { ApiError, api } from '../api/client'
 import type { BuilderConnection } from '../api/types'
-import { Button, Field, PageHeader, Spinner, cn, useToast } from '../ui'
+import { Button, PageHeader, Spinner, cn, useToast } from '../ui'
 import {
   DEFAULT_SIZES,
   availableImages,
@@ -66,6 +66,22 @@ const STEP_TITLE: Record<StepId, string> = {
   'cloud-images': 'Images',
   'cloud-sizes': 'Sizes',
   review: 'Review',
+}
+
+// EditorSection gives one group of the builder editor a clear heading and a
+// divider so the page reads as distinct sections (Appearance, Connection, …)
+// instead of one long flat form. It stays frameless on purpose -- the step
+// forms carry their own inner cards, so an outer card here would nest cards.
+function EditorSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section>
+      <div className="mb-4 border-b border-border pb-2">
+        <h3 className="text-sm font-semibold tracking-tight text-fg">{title}</h3>
+        {description && <p className="mt-0.5 text-xs text-fg-muted">{description}</p>}
+      </div>
+      {children}
+    </section>
+  )
 }
 
 // cloudBlocker validates a cloud builder's image/size maps: at least one of
@@ -397,19 +413,23 @@ export function BuilderWizard() {
                     ))}
                   </div>
                 )}
-                <div className="mt-5 space-y-6">
+                <div className="mt-6 space-y-8">
                   {active?.id === 'config' && (
-                    <Field label="Color" hint="Shown as a colored pill wherever this builder’s name appears." className="mb-0">
+                    <EditorSection title="Appearance" description="Shown as a colored pill wherever this builder’s name appears.">
                       <ColorPicker
                         value={draft.color ?? ''}
                         onChange={(color) => setDraft((d) => ({ ...d, color }))}
                         previewName={draft.name}
                         previewKind={draft.kind}
                       />
-                    </Field>
+                    </EditorSection>
                   )}
                   {active && active.steps.length > 0
-                    ? active.steps.map((id) => <div key={id}>{renderStep(id)}</div>)
+                    ? active.steps.map((id) => (
+                        <EditorSection key={id} title={STEP_TITLE[id]}>
+                          {renderStep(id)}
+                        </EditorSection>
+                      ))
                     : active?.id !== 'config' && <div className="text-sm text-fg-muted">This builder has nothing to configure.</div>}
                 </div>
                 <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
