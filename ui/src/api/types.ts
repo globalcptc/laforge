@@ -918,11 +918,25 @@ export interface HomeData {
     color?: string
     active_builds: number
     counts: HomeCounts
-    // Capacity "how full" from the latest collected metrics; absent when the
-    // builder has reported none yet (then the UI shows a machine-count bar).
-    utilization?: { pct: number; driver: string }
+    // Build-gating capacity signals from the latest collected metrics, worst-first
+    // (storage pools, node memory, AWS quotas). Empty when the builder has reported
+    // none yet (OpenStack, or before its first collection).
+    capacity?: HomeCapacity[]
   }[]
   attention: AttentionItem[]
+}
+
+// HomeCapacity mirrors internal/api.homeCapacity: one build-gating signal. For an
+// AWS quota (max set) the UI shows used/max; for a percent-full series (disk,
+// memory, swap) max is absent and it shows just the percent.
+export interface HomeCapacity {
+  key: string
+  label: string
+  node?: string
+  pct: number
+  value: number
+  max?: number
+  unit: string
 }
 
 export interface AttentionItem {

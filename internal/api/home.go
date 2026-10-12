@@ -77,19 +77,27 @@ type homeBuilder struct {
 	Color        string     `json:"color,omitempty"`
 	ActiveBuilds int        `json:"active_builds"`
 	Counts       homeCounts `json:"counts"`
-	// Utilization is "how close is this builder to a wall", from its latest
-	// collected metrics -- the most-constrained quota (AWS) or the busiest node's
-	// memory/disk (Incus/MicroCloud). nil when the builder has reported no metrics
-	// yet (OpenStack, or a builder before its first collection), in which case the
-	// UI falls back to the machine-count bar.
-	Utilization *builderUtil `json:"utilization,omitempty"`
+	// Capacity is every build-gating signal this builder reported in its latest
+	// metrics, worst-first: each AWS quota as used/limit, and each Incus/MicroCloud
+	// storage pool and node's memory as a percent-full. Empty when the builder has
+	// reported no capacity metrics yet (OpenStack, or before its first collection).
+	// This replaces the old single abstract "utilization" bar: naming the exact
+	// pool/node/quota and its real numbers is what makes it actionable.
+	Capacity []homeCapacity `json:"capacity,omitempty"`
 }
 
-// builderUtil is the home page's capacity bar: a 0-100% fill plus a short label
-// naming what's driving it.
-type builderUtil struct {
-	Pct    float64 `json:"pct"`
-	Driver string  `json:"driver"`
+// homeCapacity is one build-gating signal: a storage pool, a node's memory, or
+// an AWS quota. Pct is the 0-100 fill. For an AWS quota (a gauge) Value/Max hold
+// the raw used/limit so the UI can show "5 / 10"; for a percent-full series
+// (disk, memory, swap) Max is nil and the UI shows just the percent.
+type homeCapacity struct {
+	Key   string   `json:"key"`
+	Label string   `json:"label"`
+	Node  string   `json:"node,omitempty"`
+	Pct   float64  `json:"pct"`
+	Value float64  `json:"value"`
+	Max   *float64 `json:"max,omitempty"`
+	Unit  string   `json:"unit"`
 }
 
 // Attention categories: the stable key a person's "close this item" dismissal
@@ -258,9 +266,9 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 			builders[c.Name] = &homeBuilder{Name: c.Name, Kind: c.Kind, Color: c.Color}
 		}
 	}
-	// Capacity utilization from each builder's latest collected metrics (recent
+	// Capacity signals from each builder's latest collected metrics (recent
 	// window so it reflects now, not a stale peak). Best-effort: a builder with no
-	// samples (OpenStack, or pre-first-collection) just gets no utilization.
+	// samples (OpenStack, or pre-first-collection) just gets no capacity list.
 	utilCutoff := pgtype.Timestamptz{Time: time.Now().Add(-10 * time.Minute), Valid: true}
 	for _, c := range configs {
 		bl := builders[c.Name]
@@ -271,7 +279,7 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		bl.Utilization = builderUtilization(samples)
+		bl.Capacity = builderCapacity(samples)
 	}
 	for _, bl := range builders {
 		view.Builders = append(view.Builders, *bl)
@@ -285,44 +293,45 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, view)
 }
 
-// builderUtilization reduces a builder's recent metric samples to a single
-// "how full" percentage: the MOST-constrained signal, so the bar fills as any
-// one dimension nears its ceiling. That's a quota usage/limit for AWS (gauges
-// with a Max) or a node's memory/disk percentage for Incus/MicroCloud (the
-// "%"-unit time-series). Other metrics (latency, load, throughput counters) have
-// no ceiling and are ignored. Returns nil when nothing capacity-bearing was
-// reported. Samples arrive oldest-first, so the last seen per (key,node) is the
-// latest.
-func builderUtilization(samples []db.ListBuilderMetricSamplesRow) *builderUtil {
+// builderCapacity decodes a builder's recent metric samples into its build-gating
+// signals, worst-first: every quota usage/limit for AWS (gauges with a Max) and
+// every memory/disk/swap percent-full for Incus/MicroCloud (the "%"-unit
+// time-series), each keeping its own label, node and real numbers. Other metrics
+// (latency, load, throughput counters, counts) have no ceiling and are skipped.
+// Samples arrive oldest-first, so the last seen per (key,node) is the latest.
+// Returns an empty slice when nothing capacity-bearing was reported.
+func builderCapacity(samples []db.ListBuilderMetricSamplesRow) []homeCapacity {
 	type gk struct{ key, node string }
 	latest := make(map[gk]db.ListBuilderMetricSamplesRow, len(samples))
 	for _, s := range samples {
 		latest[gk{s.Key, s.Node}] = s
 	}
-	best := -1.0
-	driver := ""
+	out := make([]homeCapacity, 0, len(latest))
 	for _, s := range latest {
-		var pct float64
-		label := s.Label
+		c := homeCapacity{Key: s.Key, Label: s.Label, Node: s.Node, Value: s.Value, Unit: s.Unit}
 		switch {
 		case s.Kind == builder.MetricGauge && s.Max != nil && *s.Max > 0:
-			pct = s.Value / *s.Max * 100
-		case s.Unit == "%": // a utilization time-series (memory, disk)
-			pct = s.Value
-			if s.Node != "" {
-				label += " on " + s.Node
-			}
+			c.Pct = s.Value / *s.Max * 100
+			c.Max = s.Max
+		case s.Unit == "%": // a percent-full time-series (memory, disk, swap)
+			c.Pct = s.Value
 		default:
 			continue // not a capacity signal
 		}
-		if pct > best {
-			best, driver = pct, label
+		out = append(out, c)
+	}
+	// Worst-first so the UI can show the tightest constraints and truncate the
+	// rest; ties break on a stable key+node order for a deterministic response.
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Pct != out[j].Pct {
+			return out[i].Pct > out[j].Pct
 		}
-	}
-	if best < 0 {
-		return nil
-	}
-	return &builderUtil{Pct: best, Driver: driver}
+		if out[i].Key != out[j].Key {
+			return out[i].Key < out[j].Key
+		}
+		return out[i].Node < out[j].Node
+	})
+	return out
 }
 
 // homeBuild is one active build's card: its teams, what it has deployed

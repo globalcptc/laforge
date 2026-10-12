@@ -120,6 +120,29 @@ func TestHostFallsBackWhenNoMemberState(t *testing.T) {
 	}
 }
 
+// TestHostDiskFallsBackWhenTargetRejected covers a single-node-cluster Incus
+// host that serves member-state (so disk is queried with ?target=) but rejects
+// the targeted pool-state read -- the disk chart must still appear from the
+// untargeted retry, not vanish silently. This is the standalone/cluster-of-one
+// case the builder page was missing.
+func TestHostDiskFallsBackWhenTargetRejected(t *testing.T) {
+	get := fakeGet(map[string]string{
+		"/1.0":                             `{"environment":{"server_name":"node1"}}`,
+		"/1.0/cluster/members?recursion=1": `[{"server_name":"node1","status":"Online"}]`,
+		"/1.0/cluster/members/node1/state": `{"sysinfo":{"total_ram":100,"free_ram":40}}`,
+		// No "...?target=node1" route -> the targeted read errors; the untargeted
+		// one below is the fallback.
+		"/1.0/storage-pools/default/state": `{"space":{"used":30,"total":60}}`,
+	})
+	stats, err := Host(context.Background(), get, nil, "default")
+	if err != nil {
+		t.Fatalf("Host: %v", err)
+	}
+	if m, ok := metricFor(stats, "disk", "node1"); !ok || m.Value != 50 {
+		t.Errorf("disk = %+v, want 50%% via the untargeted fallback", m)
+	}
+}
+
 func hasWarningContaining(stats builder.Stats, sub string) bool {
 	for _, w := range stats.Warnings {
 		if strings.Contains(w, sub) {

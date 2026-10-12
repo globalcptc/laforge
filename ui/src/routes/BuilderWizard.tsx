@@ -135,6 +135,9 @@ export function BuilderWizard() {
 
   const [draft, setDraft] = useState<Draft>({ name: '', kind: 'microcloud', hosts: [emptyHost()], images: [], sizes: [], externalAccessIp: '' })
   const [initialized, setInitialized] = useState(false)
+  // Edit mode skips the Connect step, so host connections are auto-read once after
+  // the draft loads (see the effect below). This guards that one-shot.
+  const [hostsAutoRead, setHostsAutoRead] = useState(false)
   // Wizard-flow (create) state only; edit mode is the editor below, not the steps.
   const [stepIndex, setStepIndex] = useState(0)
   const [furthest, setFurthest] = useState(0)
@@ -192,6 +195,20 @@ export function BuilderWizard() {
       setRefreshing(false)
     }
   }
+
+  // In the editor there's no Connect step to populate host connections, so read
+  // them once after the draft loads -- otherwise the Images/Placement sections
+  // show "no host connected" until Refresh is clicked. Only hosts with an
+  // enrolled credential can be re-read; legacy (cert-path) hosts have no probe
+  // endpoint and are left as-is.
+  useEffect(() => {
+    if (!editingName || !initialized || hostsAutoRead) return
+    setHostsAutoRead(true)
+    if (draft.hosts.some((h) => h.credentialId && !h.connection)) {
+      void refreshHosts()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingName, initialized, hostsAutoRead])
 
   const steps: StepId[] =
     draft.kind === 'fake'

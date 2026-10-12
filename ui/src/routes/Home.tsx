@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { AlertTriangle, Boxes, ChevronRight, FolderGit2, GitCommit, Network, Server, ServerCog, Users, X } from 'lucide-react'
 import { useDismissAttention, useHome, useMe } from '../api/hooks'
-import type { AttentionItem, HomeBuild, HomeCounts, HomeData } from '../api/types'
+import type { AttentionItem, HomeBuild, HomeCapacity, HomeCounts, HomeData } from '../api/types'
 import { AccessCountdown } from '../components/AccessCountdown'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
@@ -124,9 +124,40 @@ function AttentionRow({ item }: { item: AttentionItem }) {
   )
 }
 
+// How many capacity signals to show per builder before collapsing the rest into
+// a "+N more" link -- enough to see the real constraints without the home page
+// turning into a full metrics dashboard (that's what the builder page is for).
+const CAPACITY_SHOWN = 5
+
+const fmtNum = (n: number) => (Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1))
+
+// CapacityBar is one build-gating signal, named concretely: a storage pool or a
+// node's memory as percent-full, or an AWS quota as used/limit. The number on
+// the right is the whole point -- "Disk (local) · node3  92%" or "Elastic IPs
+// 5 / 5  100%" tells you exactly what's full and by how much.
+function CapacityBar({ sig }: { sig: HomeCapacity }) {
+  const pct = Math.min(100, Math.max(0, sig.pct))
+  const tone = sig.pct >= 90 ? 'bg-danger' : sig.pct >= 75 ? 'bg-warning' : 'bg-accent'
+  const label = sig.node ? `${sig.label} · ${sig.node}` : sig.label
+  const quota = sig.max != null
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_5rem_auto] items-center gap-3 text-xs">
+      <span className="truncate text-fg-muted" title={label}>
+        {label}
+      </span>
+      <div className="h-1.5 overflow-hidden rounded-full bg-surface-sunken" title={`${sig.pct.toFixed(0)}%`}>
+        <div className={cn('h-full rounded-full', tone)} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-right font-mono tabular-nums text-fg">
+        {quota ? `${fmtNum(sig.value)} / ${fmtNum(sig.max!)}` : `${sig.pct.toFixed(0)}%`}
+        {quota && <span className="ml-1.5 text-fg-subtle">{sig.pct.toFixed(0)}%</span>}
+      </span>
+    </div>
+  )
+}
+
 function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builders']; buildersInUse: number }) {
   const { data: me } = useMe()
-  const maxHosts = Math.max(1, ...builders.map((b) => b.counts.hosts + b.counts.containers))
   return (
     <Card>
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
@@ -139,7 +170,9 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
       </div>
       <div className="divide-y divide-border">
         {builders.map((b) => {
-          const machines = b.counts.hosts + b.counts.containers
+          const capacity = b.capacity ?? []
+          const shown = capacity.slice(0, CAPACITY_SHOWN)
+          const hidden = capacity.length - shown.length
           const name = me?.is_instance_admin ? (
             <Link to="/admin/infrastructure/$name" params={{ name: b.name }} className="hover:opacity-80">
               <BuilderPill name={b.name} color={b.color} kind={b.kind} />
@@ -147,38 +180,49 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
           ) : (
             <BuilderPill name={b.name} color={b.color} kind={b.kind} />
           )
-          // Prefer a real capacity bar from collected metrics (how close this
-          // builder is to a quota/resource wall); fall back to a relative
-          // machine-count bar, clearly labelled, when there are no metrics yet.
-          const util = b.utilization
-          const pct = util ? Math.min(100, util.pct) : (machines / maxHosts) * 100
-          const tone = util ? (util.pct >= 90 ? 'bg-danger' : util.pct >= 75 ? 'bg-warning' : 'bg-accent') : 'bg-accent'
-          const barTitle = util
-            ? `${util.pct.toFixed(0)}% — ${util.driver}`
-            : `${machines} machines (relative to busiest builder)`
           return (
-            <div key={b.name} className="grid grid-cols-[minmax(0,12rem)_1fr_auto] items-center gap-4 px-4 py-2.5 text-sm">
-              <div className="min-w-0">
-                <div className="truncate">{name}</div>
-                <div className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</div>
+            <div key={b.name} className="px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  {name}
+                  <span className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</span>
+                </div>
+                <div className="flex gap-3 text-xs text-fg-muted">
+                  <span>
+                    <span className="font-medium text-fg">{b.active_builds}</span> builds
+                  </span>
+                  <span>
+                    <span className="font-medium text-fg">{b.counts.hosts}</span> hosts
+                  </span>
+                  <span>
+                    <span className="font-medium text-fg">{b.counts.containers}</span> containers
+                  </span>
+                  <span>
+                    <span className="font-medium text-fg">{b.counts.networks}</span> networks
+                  </span>
+                </div>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-surface-sunken" title={barTitle}>
-                <div className={cn('h-full rounded-full', tone)} style={{ width: `${pct}%` }} />
-              </div>
-              <div className="flex gap-4 text-xs text-fg-muted">
-                <span>
-                  <span className="font-medium text-fg">{b.active_builds}</span> builds
-                </span>
-                <span>
-                  <span className="font-medium text-fg">{b.counts.hosts}</span> hosts
-                </span>
-                <span>
-                  <span className="font-medium text-fg">{b.counts.containers}</span> containers
-                </span>
-                <span>
-                  <span className="font-medium text-fg">{b.counts.networks}</span> networks
-                </span>
-              </div>
+              {capacity.length > 0 ? (
+                <div className="mt-2.5 space-y-1.5">
+                  {shown.map((sig) => (
+                    <CapacityBar key={`${sig.key}|${sig.node}`} sig={sig} />
+                  ))}
+                  {hidden > 0 &&
+                    (me?.is_instance_admin ? (
+                      <Link
+                        to="/admin/infrastructure/$name"
+                        params={{ name: b.name }}
+                        className="inline-block text-xs text-accent hover:underline"
+                      >
+                        +{hidden} more →
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-fg-subtle">+{hidden} more</span>
+                    ))}
+                </div>
+              ) : (
+                <div className="mt-2 text-xs text-fg-subtle">No capacity metrics reported yet.</div>
+              )}
             </div>
           )
         })}

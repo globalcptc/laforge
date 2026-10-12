@@ -336,19 +336,51 @@ func memMetric(node string, used, total uint64) builder.Metric {
 
 // addDisk reports the configured storage pool's used/total as a disk % for node.
 // target, when set, scopes the pool-state query to a specific cluster member
-// (?target=); empty queries the connected host. Best-effort.
+// (?target=). A genuinely non-clustered host rejects ?target outright, and some
+// single-node setups serve member-state yet still return nothing for it, so when
+// a targeted read fails OR reports no capacity we retry once WITHOUT the target
+// rather than silently dropping the only disk signal -- this is why the disk
+// chart was missing on standalone/cluster-of-one Incus hosts. Best-effort, but a
+// pool that truly can't be read warns (visible on the builder page), never
+// vanishes without a trace.
 func addDisk(ctx context.Context, get Getter, pool, node, target string, stats *builder.Stats) {
 	if pool == "" {
 		return
 	}
-	path := "/1.0/storage-pools/" + url.PathEscape(pool) + "/state"
-	if target != "" {
-		path += "?target=" + url.QueryEscape(target)
+	base := "/1.0/storage-pools/" + url.PathEscape(pool) + "/state"
+	used, total, err := poolSpace(ctx, get, poolStatePath(base, target))
+	if (err != nil || total == 0) && target != "" {
+		if u, t, e := poolSpace(ctx, get, base); e == nil && t > 0 {
+			used, total, err = u, t, nil
+		}
 	}
-	raw, err := get(ctx, path)
 	if err != nil {
 		stats.Warnings = append(stats.Warnings, "disk pool "+pool+" ("+node+"): "+err.Error())
 		return
+	}
+	if total == 0 {
+		stats.Warnings = append(stats.Warnings, "disk pool "+pool+" ("+node+"): no capacity reported")
+		return
+	}
+	stats.Metrics = append(stats.Metrics, builder.Metric{
+		Key: "disk", Label: "Disk (" + pool + ")", Node: node, Kind: builder.MetricTimeseries, Unit: "%",
+		Value: float64(used) / float64(total) * 100,
+	})
+}
+
+// poolStatePath scopes a pool-state path to a cluster member when target is set.
+func poolStatePath(base, target string) string {
+	if target == "" {
+		return base
+	}
+	return base + "?target=" + url.QueryEscape(target)
+}
+
+// poolSpace reads a storage pool's used/total bytes from its /state endpoint.
+func poolSpace(ctx context.Context, get Getter, path string) (used, total uint64, err error) {
+	raw, err := get(ctx, path)
+	if err != nil {
+		return 0, 0, err
 	}
 	var ps struct {
 		Space struct {
@@ -356,10 +388,8 @@ func addDisk(ctx context.Context, get Getter, pool, node, target string, stats *
 			Total uint64 `json:"total"`
 		} `json:"space"`
 	}
-	if json.Unmarshal(raw, &ps) == nil && ps.Space.Total > 0 {
-		stats.Metrics = append(stats.Metrics, builder.Metric{
-			Key: "disk", Label: "Disk (" + pool + ")", Node: node, Kind: builder.MetricTimeseries, Unit: "%",
-			Value: float64(ps.Space.Used) / float64(ps.Space.Total) * 100,
-		})
+	if err := json.Unmarshal(raw, &ps); err != nil {
+		return 0, 0, err
 	}
+	return ps.Space.Used, ps.Space.Total, nil
 }
