@@ -45,8 +45,19 @@ runcmd:
 //
 // Run as a scheduled task, not a Windows service: the agent is a plain console
 // program with no Service Control Manager handler, so `sc create` starts it but
-// the SCM kills it within ~30s for not reporting as a service. A scheduled task
-// (onstart, SYSTEM) runs a console program correctly and restarts it on boot.
+// the SCM kills it within ~30s for not reporting as a service. The task is
+// registered from an XML definition (not `schtasks /sc onstart`, whose defaults
+// are fragile) so it:
+//   - fires on EVERY boot with no StartBoundary -- a /sc ONSTART task is stamped
+//     with a creation-time StartBoundary, which a clock skewed into the future
+//     (a UTC+4 region before cloudbase-init fixes the timezone) pushes past "now"
+//     so the trigger never fires;
+//   - re-launches the agent within a minute if it crashes or exits, via a
+//     1-minute repetition with IgnoreNew (never double-runs while it's alive)
+//     plus RestartOnFailure for a non-zero exit -- /sc onstart alone only runs at
+//     boot, so a dead agent stays dead until the next reboot;
+//   - never auto-kills the long-running agent (ExecutionTimeLimit PT0S -- the
+//     default is 72 hours).
 func windowsAgentPowerShell(binaryURL string) string {
 	return fmt.Sprintf(`$ErrorActionPreference = "Stop"
 # Clear "user must change password at next logon" on the built-in local admin.
@@ -64,7 +75,54 @@ $dst = "C:\laforge-agent.exe"
 for ($i = 0; $i -lt 60; $i++) {
   try { Invoke-WebRequest -Uri "%s" -OutFile $dst -UseBasicParsing; break } catch { Start-Sleep -Seconds 5 }
 }
-schtasks /create /tn LaForgeAgent /tr "$dst" /sc onstart /ru SYSTEM /rl highest /f
+$taskXml = @'
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>LaForge agent</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <BootTrigger>
+      <Enabled>true</Enabled>
+      <Repetition>
+        <Interval>PT1M</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+    </BootTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <Priority>5</Priority>
+    <RestartOnFailure>
+      <Interval>PT1M</Interval>
+      <Count>999</Count>
+    </RestartOnFailure>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>C:\laforge-agent.exe</Command>
+    </Exec>
+  </Actions>
+</Task>
+'@
+$xmlPath = "C:\laforge-agent-task.xml"
+Set-Content -Path $xmlPath -Value $taskXml -Encoding Unicode
+schtasks /create /tn LaForgeAgent /xml "$xmlPath" /f
 schtasks /run /tn LaForgeAgent
 `, binaryURL)
 }

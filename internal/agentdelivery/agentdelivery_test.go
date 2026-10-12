@@ -78,6 +78,21 @@ func TestBuildIssuesAChainedCertAndRealUserData(t *testing.T) {
 	if ud := WindowsEC2LaunchUserData(del.DownloadURL); !strings.HasPrefix(ud, "<powershell>") || !strings.Contains(ud, "schtasks") {
 		t.Fatalf("windows EC2Launch user-data malformed: %s", ud)
 	}
+	// The Windows task must be robust: registered from XML (not /sc onstart), a
+	// boot trigger with NO StartBoundary (timezone-proof), a repetition for crash
+	// recovery, and no execution time limit (so the agent isn't killed at 72h).
+	ud := WindowsEC2LaunchUserData(del.DownloadURL)
+	for _, want := range []string{"/xml", "<BootTrigger>", "<Repetition>", "IgnoreNew", "<ExecutionTimeLimit>PT0S</ExecutionTimeLimit>", "RestartOnFailure"} {
+		if !strings.Contains(ud, want) {
+			t.Errorf("windows task missing robustness marker %q", want)
+		}
+	}
+	if strings.Contains(ud, "StartBoundary") {
+		t.Errorf("windows boot trigger must have no StartBoundary (a future-skewed clock would stop it firing)")
+	}
+	if strings.Contains(ud, "/sc onstart") {
+		t.Errorf("windows task should be registered from XML, not the fragile /sc onstart")
+	}
 
 	// The issued cert must verify against the CA, with the object id as CN.
 	certPEM, keyPEM, err := cfg.issueLeaf(objID)
