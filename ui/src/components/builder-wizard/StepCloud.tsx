@@ -7,6 +7,11 @@ import { SearchSelect, type SearchOption } from '../SearchSelect'
 import type { AwsConfig, BuilderConnection, Discovery } from '../../api/types'
 import type { ImageDraft, SizeDraft } from './model'
 
+// The reserved builder-image name a compose container boots from -- mirrors
+// internal/builder.ComposeHostImage. On a cloud builder it maps to a
+// Docker-capable image (an AMI on AWS); there is no base image to build.
+const COMPOSE_HOST_IMAGE = 'compose-host'
+
 // StepCloud configures an OpenStack builder (the typed-id form): credentials and
 // region come from the runner environment, and the two maps are entered by hand
 // -- OpenStack has no stored credential to discover from yet. AWS uses the
@@ -329,9 +334,15 @@ export function StepCloudImages({
     onImages(images.map((img, idx) => (idx === i ? { ...img, ...patch } : img)))
   }
 
+  // Compose containers run on an EC2 instance booted from a Docker-capable AMI
+  // mapped under the reserved name "compose-host" -- there's nothing to "build" on
+  // AWS (unlike the LXD builders' docker base image). Offer a one-click add.
+  const hasComposeHost = images.some((img) => img.name === COMPOSE_HOST_IMAGE)
+
   return (
     <div className="flex flex-col gap-4">
       {infoBox('Map each os name content uses to an AMI. Your own AMIs are listed; type a name (e.g. “ubuntu”, “Windows”, “kali”) to search Amazon, Canonical, Microsoft and Marketplace images for this region. Or paste an exact AMI id and pick “Use …” — handy for a Marketplace image (which may need you to accept its terms in the account first).')}
+      {infoBox(`Using compose containers? Add an image named “${COMPOSE_HOST_IMAGE}” mapped to a Docker-capable AMI (e.g. an Amazon Linux 2023 or Ubuntu image with Docker). Compose hosts boot an EC2 instance from it — there is no base image to build on AWS.`)}
       <div className="flex flex-col gap-2">
         {images.map((img, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -355,10 +366,19 @@ export function StepCloudImages({
             </Button>
           </div>
         ))}
-        <div>
+        <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" onClick={() => onImages([...images, { name: '', fingerprint: '', alias: '', vm: false, server: '' }])}>
             <Plus size={14} /> Add image
           </Button>
+          {!hasComposeHost && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onImages([...images, { name: COMPOSE_HOST_IMAGE, fingerprint: '', alias: '', vm: false, server: '' }])}
+            >
+              <Plus size={14} /> Add compose-host
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -153,7 +153,9 @@ docker info >/dev/null 2>&1 && docker compose version && docker run --rm hello-w
 const DockerBaseCleanupScript = `apt-get clean; rm -rf /var/lib/apt/lists/*; cloud-init clean --logs >/dev/null 2>&1; true`
 
 // ComposeHostSpec is the machine a compose container runs on, as the host a
-// builder deploys for it (see ContainerSpec.ComposeHost).
+// builder deploys for it (see ContainerSpec.ComposeHost). It runs at the
+// container's own configured size, resolved through the builder's size map like
+// any host.
 func (s ContainerSpec) ComposeHostSpec() HostSpec {
 	return HostSpec{
 		ExternalName: s.ExternalName, DisplayName: s.DisplayName, Team: s.Team,

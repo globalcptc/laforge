@@ -30,28 +30,28 @@ type imageCatalog interface {
 // os/image names it has configured, for a builder kind that exposes one, plus
 // the builder's name. A build with no configured_build at all (the ad-hoc/test
 // path) returns nil images and an empty name -- nothing to check.
-func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool, build db.Build, teamCount int) (images map[string]bool, builderName string, b builder.Builder, err error) {
+func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool, build db.Build, teamCount int) (images map[string]bool, builderName string, kind string, b builder.Builder, err error) {
 	if !build.ConfiguredBuildID.Valid {
-		return nil, "", nil, nil
+		return nil, "", "", nil, nil
 	}
 	cb, err := q.GetConfiguredBuild(ctx, build.ConfiguredBuildID)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("loading configured build: %w", err)
+		return nil, "", "", nil, fmt.Errorf("loading configured build: %w", err)
 	}
 	row, err := q.GetBuilderConfigByName(ctx, cb.BuilderConfigName)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, cb.BuilderConfigName, nil, fmt.Errorf("no such builder config %q", cb.BuilderConfigName)
+			return nil, cb.BuilderConfigName, "", nil, fmt.Errorf("no such builder config %q", cb.BuilderConfigName)
 		}
-		return nil, cb.BuilderConfigName, nil, fmt.Errorf("loading builder config %q: %w", cb.BuilderConfigName, err)
+		return nil, cb.BuilderConfigName, "", nil, fmt.Errorf("loading builder config %q: %w", cb.BuilderConfigName, err)
 	}
 	b, err = builderconfig.Resolve(pool, row)
 	if err != nil {
-		return nil, cb.BuilderConfigName, nil, fmt.Errorf("resolving builder %q: %w", cb.BuilderConfigName, err)
+		return nil, cb.BuilderConfigName, row.Kind, nil, fmt.Errorf("resolving builder %q: %w", cb.BuilderConfigName, err)
 	}
 	if placement, ok := b.(interface{ ValidateTeamCount(int) error }); ok {
 		if err := placement.ValidateTeamCount(teamCount); err != nil {
-			return nil, cb.BuilderConfigName, b, err
+			return nil, cb.BuilderConfigName, row.Kind, b, err
 		}
 	}
 	if ic, ok := b.(imageCatalog); ok {
@@ -67,14 +67,14 @@ func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool
 		withBase[builder.ComposeHostImage] = true
 		images = withBase
 	}
-	return images, cb.BuilderConfigName, b, nil
+	return images, cb.BuilderConfigName, row.Kind, b, nil
 }
 
 // checkBuilderCompatibility validates image mappings, team placement, and that
 // each host's requested disk fits its mapped source (a copied block volume can't
 // be shrunk below the template it comes from).
 func checkBuilderCompatibility(ctx context.Context, q *db.Queries, pool *pgxpool.Pool, build db.Build, c *loader.Content, env *loader.Environment, containerNames map[string]bool) error {
-	images, builderName, b, err := resolveBuilderImages(ctx, q, pool, build, env.Teams)
+	images, builderName, kind, b, err := resolveBuilderImages(ctx, q, pool, build, env.Teams)
 	if err != nil {
 		return err
 	}
@@ -82,6 +82,11 @@ func checkBuilderCompatibility(ctx context.Context, q *db.Queries, pool *pgxpool
 		return nil // ad-hoc/test build, nothing configured to check against
 	}
 	if err := checkEnvironmentImages(env, c, containerNames, images); err != nil {
+		// The compose-host remedy differs by builder kind (LXD builds a base image,
+		// cloud builders map one), so format that one here where the kind is known.
+		if errors.Is(err, errComposeHostMissing) {
+			return fmt.Errorf("environment %q incompatible with builder %q: %s", env.Name, builderName, composeHostHint(kind))
+		}
 		return fmt.Errorf("environment %q incompatible with builder %q: %w", env.Name, builderName, err)
 	}
 	if err := checkHostDiskCapacity(ctx, b, c, env, containerNames); err != nil {
@@ -183,11 +188,35 @@ func checkEnvironmentImages(env *loader.Environment, c *loader.Content, containe
 	}
 	for name := range imageNames {
 		if !images[name] && name == builder.ComposeHostImage {
-			return fmt.Errorf("has a compose container, which needs the builder's docker base image -- build it first (Infrastructure → Base image), or add a builder image named %q", name)
+			// Formatted kind-aware by the caller: LXD builders build a docker base
+			// image, cloud builders map a Docker-capable image instead (no build).
+			return errComposeHostMissing
 		}
 		if !images[name] {
 			return fmt.Errorf("uses os/image %q, which the builder has no image configured for", name)
 		}
 	}
 	return nil
+}
+
+// errComposeHostMissing signals that the environment has a compose container but
+// the builder has no compose-host image. checkBuilderCompatibility turns it into
+// a kind-aware message (see composeHostHint) -- the remedy differs by builder.
+var errComposeHostMissing = errors.New("missing compose-host image")
+
+// composeHostHint explains how to satisfy the compose-host requirement for a
+// builder of the given kind. LXD builders (incus/microcloud) build a docker base
+// image from the UI; cloud builders have no base image to build -- you map an
+// existing Docker-capable image under the name "compose-host" instead (the
+// "Infrastructure → Base image" button the LXD message mentions does not exist
+// for them).
+func composeHostHint(kind string) string {
+	switch kind {
+	case "incus", "microcloud":
+		return fmt.Sprintf("has a compose container, which needs the builder's docker base image -- build it first (Infrastructure → Base image), or add a builder image named %q", builder.ComposeHostImage)
+	case "aws":
+		return fmt.Sprintf("has a compose container, which needs a builder image named %q mapped to a Docker-capable AMI -- add it in the builder's Images (there is no base image to build on AWS)", builder.ComposeHostImage)
+	default:
+		return fmt.Sprintf("has a compose container, which needs a builder image named %q mapped to a Docker-capable image -- add it in the builder's Images", builder.ComposeHostImage)
+	}
 }
