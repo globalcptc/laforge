@@ -1132,7 +1132,8 @@ SELECT build.id, build.configured_build_id, build.content_revision_id, build.env
        content_revision.commit_sha,
        content_revision.commit_message,
        content_revision.committed_at,
-       content_revision.ref AS branch
+       content_revision.ref AS branch,
+       (SELECT count(*) FROM team WHERE team.build_id = build.id) AS team_count
 FROM build
 JOIN content_revision ON content_revision.id = build.content_revision_id
 WHERE content_revision.repository_id = $1
@@ -1153,6 +1154,7 @@ type ListBuildsByRepositoryRow struct {
 	CommitMessage      *string            `json:"commit_message"`
 	CommittedAt        pgtype.Timestamptz `json:"committed_at"`
 	Branch             *string            `json:"branch"`
+	TeamCount          int64              `json:"team_count"`
 }
 
 // "Every build of this repository" (Build → Builds) --
@@ -1182,6 +1184,7 @@ func (q *Queries) ListBuildsByRepository(ctx context.Context, repositoryID pgtyp
 			&i.CommitMessage,
 			&i.CommittedAt,
 			&i.Branch,
+			&i.TeamCount,
 		); err != nil {
 			return nil, err
 		}

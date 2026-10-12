@@ -49,7 +49,8 @@ SELECT build.*,
        content_revision.commit_sha,
        content_revision.commit_message,
        content_revision.committed_at,
-       content_revision.ref AS branch
+       content_revision.ref AS branch,
+       (SELECT count(*) FROM team WHERE team.build_id = build.id) AS team_count
 FROM build
 JOIN content_revision ON content_revision.id = build.content_revision_id
 WHERE content_revision.repository_id = $1

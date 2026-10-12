@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 import { builderConnectionPath, useBuilderConfigs, useCreateBuilderConfig, useUpdateBuilderConfig } from '../api/hooks'
@@ -28,20 +28,29 @@ import { StepReview } from '../components/builder-wizard/StepReview'
 
 type StepId = 'type' | 'connect' | 'placement' | 'images' | 'sizes' | 'cloud' | 'cloud-connect' | 'cloud-region' | 'cloud-images' | 'cloud-sizes' | 'review'
 
-// sectionStepIndex maps a ?section= hint from the info page's edit buttons to the
-// matching step for the current builder kind (config = connection/infra settings,
-// images, sizes). Returns -1 when no step fits.
-function sectionStepIndex(section: string, steps: StepId[]): number {
-  const candidates: Record<string, StepId[]> = {
-    config: ['cloud-region', 'cloud-connect', 'placement', 'connect', 'cloud'],
-    images: ['cloud-images', 'images'],
-    sizes: ['cloud-sizes', 'sizes'],
+// editorSections groups a kind's forms into the editable sections the info page
+// links to (Config / Images / Sizes), so EDITING a builder is a focused editor
+// with Save -- not a walk through the creation wizard's steps. 'type' (name/kind,
+// fixed after create) and 'review' are deliberately excluded.
+function editorSections(kind: Kind): { id: string; label: string; steps: StepId[] }[] {
+  if (kind === 'aws') {
+    return [
+      { id: 'config', label: 'Config', steps: ['cloud-connect', 'cloud-region'] },
+      { id: 'images', label: 'Images', steps: ['cloud-images'] },
+      { id: 'sizes', label: 'Sizes', steps: ['cloud-sizes'] },
+    ]
   }
-  for (const id of candidates[section] ?? []) {
-    const i = steps.indexOf(id)
-    if (i >= 0) return i
+  if (isCloud(kind)) {
+    return [{ id: 'config', label: 'Config', steps: ['cloud'] }] // StepCloud holds images + sizes inline
   }
-  return -1
+  if (kind === 'fake') {
+    return [{ id: 'config', label: 'Config', steps: [] }]
+  }
+  return [
+    { id: 'config', label: 'Config', steps: ['connect', 'placement'] },
+    { id: 'images', label: 'Images', steps: ['images'] },
+    { id: 'sizes', label: 'Sizes', steps: ['sizes'] },
+  ]
 }
 
 const STEP_TITLE: Record<StepId, string> = {
@@ -109,10 +118,14 @@ export function BuilderWizard() {
 
   const [draft, setDraft] = useState<Draft>({ name: '', kind: 'microcloud', hosts: [emptyHost()], images: [], sizes: [], externalAccessIp: '' })
   const [initialized, setInitialized] = useState(false)
-  const [stepIndex, setStepIndex] = useState(editingName ? 1 : 0)
-  const [furthest, setFurthest] = useState(editingName ? 5 : 0)
+  // Wizard-flow (create) state only; edit mode is the editor below, not the steps.
+  const [stepIndex, setStepIndex] = useState(0)
+  const [furthest, setFurthest] = useState(0)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  // Which section the editor (edit mode) is showing; seeded from the ?section
+  // deep-link the info page's Config/Images/Sizes buttons use.
+  const [activeSection, setActiveSection] = useState<string>(search.section ?? 'config')
 
   const existing = editingName ? configs?.find((c) => c.name === editingName) : undefined
 
@@ -173,20 +186,6 @@ export function BuilderWizard() {
           : ['type', 'connect', 'placement', 'images', 'sizes', 'review']
   const step = steps[Math.min(stepIndex, steps.length - 1)]
 
-  // The info page's Config/Images/Sizes buttons deep-link via ?section=; once the
-  // edited builder is loaded (so the steps match its kind), jump there once.
-  const sectionJumped = useRef(false)
-  useEffect(() => {
-    if (sectionJumped.current || !editingName || !initialized || !search.section) return
-    const i = sectionStepIndex(search.section, steps)
-    if (i >= 0) {
-      setStepIndex(i)
-      setFurthest((f) => Math.max(f, i))
-      sectionJumped.current = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingName, initialized, search.section, draft.kind])
-
   function setKind(kind: Kind) {
     setDraft((d) => ({
       ...d,
@@ -235,7 +234,11 @@ export function BuilderWizard() {
       if (editingName) await update.mutateAsync({ name: editingName, ...req })
       else await create.mutateAsync({ name: draft.name, ...req })
       toast({ title: editingName ? 'Builder saved' : 'Builder created', description: draft.name, tone: 'success' })
-      navigate({ to: '/admin/infrastructure' })
+      if (editingName) {
+        navigate({ to: '/admin/infrastructure/$name', params: { name: editingName } })
+      } else {
+        navigate({ to: '/admin/infrastructure' })
+      }
     } catch (e) {
       setSaveError(e instanceof ApiError ? e.message : 'Saving failed')
     }
@@ -253,6 +256,163 @@ export function BuilderWizard() {
   const saving = create.isPending || update.isPending
   const isLast = stepIndex === steps.length - 1
 
+  // renderStep draws one step's form; shared by the creation wizard (one at a
+  // time) and the editor (a section's steps stacked).
+  const renderStep = (id: StepId) => {
+    switch (id) {
+      case 'type':
+        return <StepType name={draft.name} kind={draft.kind} editing={!!editingName} onName={(name) => setDraft((d) => ({ ...d, name }))} onKind={setKind} />
+      case 'connect':
+        return <StepConnect kind={draft.kind} hosts={draft.hosts} onChange={(hosts) => setDraft((d) => ({ ...d, hosts }))} />
+      case 'placement':
+        return (
+          <StepPlacement
+            kind={draft.kind}
+            oneTeamPerHost={draft.oneTeamPerHost ?? false}
+            onPlacementPolicyChange={(oneTeamPerHost) => setDraft((d) => ({ ...d, oneTeamPerHost }))}
+            hosts={draft.hosts}
+            onChange={(hosts) => setDraft((d) => ({ ...d, hosts }))}
+            microcloudPublicAccess={draft.microcloudPublicAccess}
+            onPublicAccessChange={(microcloudPublicAccess) => setDraft((d) => ({ ...d, microcloudPublicAccess }))}
+            externalAccessIp={draft.externalAccessIp}
+            externalPortMin={draft.externalPortMin}
+            externalPortMax={draft.externalPortMax}
+            onExternalChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+          />
+        )
+      case 'images':
+        return (
+          <StepImages
+            kind={draft.kind}
+            images={draft.images}
+            available={available}
+            hosts={draft.hosts}
+            refreshing={refreshing}
+            onRefresh={refreshHosts}
+            onChange={(images) => setDraft((d) => ({ ...d, images }))}
+          />
+        )
+      case 'sizes':
+        return <StepSizes sizes={draft.sizes} onChange={(sizes) => setDraft((d) => ({ ...d, sizes }))} />
+      case 'cloud':
+        return (
+          <StepCloud
+            images={draft.images}
+            sizes={draft.sizes}
+            onImages={(images) => setDraft((d) => ({ ...d, images }))}
+            onSizes={(sizes) => setDraft((d) => ({ ...d, sizes }))}
+          />
+        )
+      case 'cloud-connect':
+        return (
+          <StepCloudConnect
+            credentialId={draft.awsCredentialId}
+            account={draft.awsConfig?.account}
+            onConnected={(awsCredentialId, account) => setDraft((d) => ({ ...d, awsCredentialId, awsConfig: { ...d.awsConfig, account } }))}
+          />
+        )
+      case 'cloud-region':
+        return (
+          <StepCloudRegion
+            credentialId={draft.awsCredentialId}
+            awsConfig={draft.awsConfig}
+            discovery={draft.awsDiscovery}
+            onAwsConfig={(awsConfig) => setDraft((d) => ({ ...d, awsConfig }))}
+            onDiscovery={(awsDiscovery) => setDraft((d) => ({ ...d, awsDiscovery }))}
+            onRegionChange={() =>
+              setDraft((d) => ({
+                ...d,
+                images: d.images.map((i) => ({ ...i, fingerprint: '' })),
+                sizes: d.sizes.map((s) => ({ ...s, type: '' })),
+              }))
+            }
+          />
+        )
+      case 'cloud-images':
+        return (
+          <StepCloudImages
+            credentialId={draft.awsCredentialId}
+            region={draft.awsConfig?.region}
+            images={draft.images}
+            discovery={draft.awsDiscovery}
+            onImages={(images) => setDraft((d) => ({ ...d, images }))}
+            onDiscovery={(awsDiscovery) => setDraft((d) => ({ ...d, awsDiscovery }))}
+          />
+        )
+      case 'cloud-sizes':
+        return <StepCloudSizes sizes={draft.sizes} discovery={draft.awsDiscovery} onSizes={(sizes) => setDraft((d) => ({ ...d, sizes }))} />
+      case 'review':
+        return <StepReview draft={draft} />
+      default:
+        return null
+    }
+  }
+
+  // Edit mode is a focused EDITOR, not the creation wizard: section tabs
+  // (Config / Images / Sizes) and a Save button, instead of a step-by-step flow
+  // that only lets you save on the final Review step. See the info page's edit
+  // buttons.
+  if (editingName) {
+    const sections = editorSections(draft.kind)
+    const active = sections.find((s) => s.id === activeSection) ?? sections[0]
+    const activeBlocker = active?.steps.map((id) => blocker[id]).find(Boolean) ?? null
+    return (
+      <>
+        <PageHeader
+          title={`Edit ${editingName}`}
+          breadcrumbs={[{ label: 'Infrastructure', href: '/admin/infrastructure' }, { label: editingName }]}
+        />
+        <div className="page-body">
+          <div className="mx-auto max-w-4xl">
+            {loading ? (
+              <div className="flex items-center gap-2 text-sm text-fg-muted">
+                <Spinner /> Loading…
+              </div>
+            ) : (
+              <>
+                {sections.length > 1 && (
+                  <div className="flex gap-1 border-b border-border">
+                    {sections.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => setActiveSection(s.id)}
+                        className={cn(
+                          'border-b-2 px-3 py-2 text-sm font-medium',
+                          active?.id === s.id ? 'border-accent text-fg' : 'border-transparent text-fg-muted hover:text-fg',
+                        )}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-5 space-y-6">
+                  {active && active.steps.length > 0 ? (
+                    active.steps.map((id) => <div key={id}>{renderStep(id)}</div>)
+                  ) : (
+                    <div className="text-sm text-fg-muted">This builder has nothing to configure.</div>
+                  )}
+                </div>
+                <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
+                  <Button variant="ghost" onClick={() => navigate({ to: '/admin/infrastructure/$name', params: { name: editingName } })}>
+                    <ArrowLeft size={12} /> Cancel
+                  </Button>
+                  <div className="flex items-center gap-3">
+                    {saveError && <span className="max-w-md text-xs text-danger">{saveError}</span>}
+                    {activeBlocker && <span className="text-xs text-fg-muted">{activeBlocker}</span>}
+                    <Button variant="primary" onClick={save} disabled={saving || !!activeBlocker}>
+                      {saving ? <Spinner /> : <Check size={12} />} Save
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <PageHeader
@@ -269,98 +429,7 @@ export function BuilderWizard() {
                 <Spinner /> Loading…
               </div>
             ) : (
-              <>
-                {step === 'type' && (
-                  <StepType
-                    name={draft.name}
-                    kind={draft.kind}
-                    editing={!!editingName}
-                    onName={(name) => setDraft((d) => ({ ...d, name }))}
-                    onKind={setKind}
-                  />
-                )}
-                {step === 'connect' && <StepConnect kind={draft.kind} hosts={draft.hosts} onChange={(hosts) => setDraft((d) => ({ ...d, hosts }))} />}
-                {step === 'placement' && (
-                  <StepPlacement
-                    kind={draft.kind}
-                    oneTeamPerHost={draft.oneTeamPerHost ?? false}
-                    onPlacementPolicyChange={(oneTeamPerHost) => setDraft((d) => ({ ...d, oneTeamPerHost }))}
-                    hosts={draft.hosts}
-                    onChange={(hosts) => setDraft((d) => ({ ...d, hosts }))}
-                    microcloudPublicAccess={draft.microcloudPublicAccess}
-                    onPublicAccessChange={(microcloudPublicAccess) => setDraft((d) => ({ ...d, microcloudPublicAccess }))}
-                    externalAccessIp={draft.externalAccessIp}
-                    externalPortMin={draft.externalPortMin}
-                    externalPortMax={draft.externalPortMax}
-                    onExternalChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
-                  />
-                )}
-                {step === 'images' && (
-                  <StepImages
-                    kind={draft.kind}
-                    images={draft.images}
-                    available={available}
-                    hosts={draft.hosts}
-                    refreshing={refreshing}
-                    onRefresh={refreshHosts}
-                    onChange={(images) => setDraft((d) => ({ ...d, images }))}
-                  />
-                )}
-                {step === 'sizes' && <StepSizes sizes={draft.sizes} onChange={(sizes) => setDraft((d) => ({ ...d, sizes }))} />}
-                {step === 'cloud' && (
-                  <StepCloud
-                    images={draft.images}
-                    sizes={draft.sizes}
-                    onImages={(images) => setDraft((d) => ({ ...d, images }))}
-                    onSizes={(sizes) => setDraft((d) => ({ ...d, sizes }))}
-                  />
-                )}
-                {step === 'cloud-connect' && (
-                  <StepCloudConnect
-                    credentialId={draft.awsCredentialId}
-                    account={draft.awsConfig?.account}
-                    onConnected={(awsCredentialId, account) =>
-                      setDraft((d) => ({ ...d, awsCredentialId, awsConfig: { ...d.awsConfig, account } }))
-                    }
-                  />
-                )}
-                {step === 'cloud-region' && (
-                  <StepCloudRegion
-                    credentialId={draft.awsCredentialId}
-                    awsConfig={draft.awsConfig}
-                    discovery={draft.awsDiscovery}
-                    onAwsConfig={(awsConfig) => setDraft((d) => ({ ...d, awsConfig }))}
-                    onDiscovery={(awsDiscovery) => setDraft((d) => ({ ...d, awsDiscovery }))}
-                    onRegionChange={() =>
-                      setDraft((d) => ({
-                        ...d,
-                        // AMIs/instance types are region-specific; clear the picks so a
-                        // stale AMI id from another region can't be saved.
-                        images: d.images.map((i) => ({ ...i, fingerprint: '' })),
-                        sizes: d.sizes.map((s) => ({ ...s, type: '' })),
-                      }))
-                    }
-                  />
-                )}
-                {step === 'cloud-images' && (
-                  <StepCloudImages
-                    credentialId={draft.awsCredentialId}
-                    region={draft.awsConfig?.region}
-                    images={draft.images}
-                    discovery={draft.awsDiscovery}
-                    onImages={(images) => setDraft((d) => ({ ...d, images }))}
-                    onDiscovery={(awsDiscovery) => setDraft((d) => ({ ...d, awsDiscovery }))}
-                  />
-                )}
-                {step === 'cloud-sizes' && (
-                  <StepCloudSizes
-                    sizes={draft.sizes}
-                    discovery={draft.awsDiscovery}
-                    onSizes={(sizes) => setDraft((d) => ({ ...d, sizes }))}
-                  />
-                )}
-                {step === 'review' && <StepReview draft={draft} />}
-              </>
+              renderStep(step)
             )}
           </div>
 

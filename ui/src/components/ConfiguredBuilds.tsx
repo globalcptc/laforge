@@ -153,6 +153,9 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
   const [error, setError] = useState<string | null>(null)
   const [justBuilt, setJustBuilt] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(() => readExpandedIds().has(cb.id))
+  // Only the two most recent builds show by default; older ones collapse behind a
+  // "show older" row so a long branch history doesn't fill the page.
+  const [showOlder, setShowOlder] = useState(false)
 
   function toggleExpanded() {
     setExpanded((v) => {
@@ -323,11 +326,12 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
                     <Th className="pl-4">Environment</Th>
                     <Th>Commit</Th>
                     <Th>State</Th>
+                    <Th>Teams</Th>
                     <Th className="pr-4">Created</Th>
                   </tr>
                 </thead>
                 <tbody>
-                  {builds.map((b) => (
+                  {(showOlder ? builds : builds.slice(0, 2)).map((b) => (
                     <tr key={b.id}>
                       <Td className="pl-4">
                         <span className="flex items-center gap-1.5">
@@ -364,9 +368,20 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
                       <Td>
                         <StatusBadge status={b.status} />
                       </Td>
+                      <Td className="font-mono text-fg">{b.team_count ?? '—'}</Td>
                       <Td className="pr-4 text-fg-muted">{fmt.dateTime(b.created_at)}</Td>
                     </tr>
                   ))}
+                  {builds.length > 2 && (
+                    <tr>
+                      <Td colSpan={5} className="pl-4">
+                        <button onClick={() => setShowOlder((v) => !v)} className="flex items-center gap-1 text-xs text-accent hover:underline">
+                          <ChevronDown size={13} className={cn('transition-transform', showOlder && 'rotate-180')} />
+                          {showOlder ? 'Show fewer' : `Show ${builds.length - 2} older build${builds.length - 2 === 1 ? '' : 's'}`}
+                        </button>
+                      </Td>
+                    </tr>
+                  )}
                 </tbody>
               </Table>
             </TableScroller>
@@ -452,6 +467,7 @@ function UnassociatedBuilds({ builds, repoId }: { builds: Build[]; repoId: strin
                   <Th className="pl-4">Environment</Th>
                   <Th>Branch</Th>
                   <Th>State</Th>
+                  <Th>Teams</Th>
                   <Th className="pr-4">Created</Th>
                 </tr>
               </thead>
@@ -467,6 +483,7 @@ function UnassociatedBuilds({ builds, repoId }: { builds: Build[]; repoId: strin
                     <Td>
                       <StatusBadge status={b.status} />
                     </Td>
+                    <Td className="font-mono text-fg">{b.team_count ?? '—'}</Td>
                     <Td className="pr-4 text-fg-muted">{fmt.dateTime(b.created_at)}</Td>
                   </tr>
                 ))}

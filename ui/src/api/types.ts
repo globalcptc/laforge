@@ -88,6 +88,9 @@ export interface Build {
   // The ref (branch) of the build's commit, from its content_revision -- survives
   // even if the configured build is gone. May be "refs/heads/<branch>" or null.
   branch?: string | null
+  // Number of teams the build materialized; populated by the builds listing
+  // (GET /repos/{id}/builds), absent on endpoints returning a bare build.
+  team_count?: number
 }
 
 export interface Team {

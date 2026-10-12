@@ -35,7 +35,7 @@ export function BuilderInfo() {
   )
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className="mx-auto max-w-5xl px-4 py-6">
       <PageHeader
         title={name}
         description="Backend health and capacity for this builder."
@@ -75,7 +75,7 @@ export function BuilderInfo() {
       {gauges.length > 0 && (
         <Card className="mb-4">
           <CardHeader title="Quotas" />
-          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
             {gauges.map((g) => (
               <GaugeBar key={g.key + g.node} gauge={g} />
             ))}
@@ -83,22 +83,44 @@ export function BuilderInfo() {
         </Card>
       )}
 
-      {series.length === 0 ? (
-        <EmptyState
-          title={stats.isLoading ? 'Loading metrics…' : 'No metrics for this builder'}
-          description={
-            stats.isLoading
-              ? ''
-              : 'This builder reports no backend health, or its stack is unreachable right now. OpenStack does not report host metrics.'
-          }
-        />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {groupByKey(series).map((group) => (
-            <MetricChart key={group.key} label={group.label} unit={group.unit} lines={group.lines} />
-          ))}
-        </div>
-      )}
+      {(() => {
+        if (series.length > 0) {
+          return (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {groupByKey(series).map((group) => (
+                <MetricChart key={group.key} label={group.label} unit={group.unit} lines={group.lines} />
+              ))}
+            </div>
+          )
+        }
+        // No data yet -- still show the builder's expected chart skeleton (empty),
+        // so the page reads as a dashboard whether or not metrics have arrived,
+        // rather than collapsing to a bare message. Kinds that publish no host
+        // metrics (OpenStack, fake) have no skeleton and keep the plain notice.
+        const skeleton = placeholderCharts(bc?.kind)
+        if (skeleton.length === 0) {
+          return (
+            <EmptyState
+              title={stats.isLoading ? 'Loading metrics…' : 'No metrics for this builder'}
+              description={stats.isLoading ? '' : 'This builder reports no backend health. OpenStack does not report host metrics.'}
+            />
+          )
+        }
+        return (
+          <>
+            <p className="mb-3 text-xs text-fg-muted">
+              {stats.isLoading
+                ? 'Loading metrics…'
+                : 'No metrics collected yet — these populate once the collector reads this builder (about every 2 minutes), assuming the control plane can reach it.'}
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {skeleton.map((m) => (
+                <PlaceholderChart key={m.key} label={m.label} unit={m.unit} />
+              ))}
+            </div>
+          </>
+        )
+      })()}
 
       {/* Public endpoints last: a full-width list grouped by team. */}
       <div className="mt-4">
@@ -170,7 +192,7 @@ function PublicPanel({ endpoints }: { endpoints: UsagePublic[] }) {
         {endpoints.length === 0 ? (
           <div className="text-xs text-fg-subtle">No public endpoints exposed.</div>
         ) : (
-          <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
             {teams.map((t) => (
               <div key={t.team}>
                 <div className="mb-1 text-xs font-medium uppercase tracking-wide text-fg-muted">Team {t.team}</div>
@@ -235,6 +257,50 @@ interface chartGroup {
 
 // groupByKey collapses per-node series into one chart per metric key, each with
 // a line per node.
+// placeholderCharts is the chart skeleton a builder KIND is expected to show, so
+// the page renders the dashboard's shape even before any metrics have been
+// collected. Labels/units match what the builders actually publish, so a card
+// stays put when its real data arrives. Kinds that publish nothing return [].
+function placeholderCharts(kind: string | undefined): { key: string; label: string; unit: string }[] {
+  const lxd = [
+    { key: 'api_latency', label: 'API response time', unit: 'ms' },
+    { key: 'cpu_load', label: 'CPU load (1m)', unit: 'load' },
+    { key: 'mem', label: 'Memory', unit: '%' },
+    { key: 'swap', label: 'Swap', unit: '%' },
+    { key: 'disk', label: 'Disk', unit: '%' },
+    { key: 'net', label: 'Network', unit: 'bytes/s' },
+    { key: 'disk_io', label: 'Disk I/O', unit: 'bytes/s' },
+    { key: 'processes', label: 'Processes', unit: 'count' },
+  ]
+  switch (kind) {
+    case 'incus':
+    case 'microcloud':
+      return lxd
+    case 'aws':
+      return [
+        { key: 'api_latency', label: 'API response time', unit: 'ms' },
+        { key: 'cpu', label: 'CPU (avg)', unit: '%' },
+        { key: 'net', label: 'Network', unit: 'bytes/s' },
+        { key: 'disk_ops', label: 'Disk R/W ops', unit: 'ops/s' },
+      ]
+    default:
+      return [] // openstack/fake publish no host metrics
+  }
+}
+
+// PlaceholderChart is a chart card with no data yet -- same shape as MetricChart
+// so the empty skeleton and the live dashboard line up.
+function PlaceholderChart({ label, unit }: { label: string; unit: string }) {
+  return (
+    <Card>
+      <CardHeader title={`${label}${unit ? ` (${unit})` : ''}`} />
+      <div className="flex items-center justify-center p-4 pt-3" style={{ height: 80 + 24 }}>
+        <span className="text-xs text-fg-subtle">No data yet</span>
+      </div>
+    </Card>
+  )
+}
+
 function groupByKey(series: MetricSeries[]): chartGroup[] {
   const byKey = new Map<string, chartGroup>()
   for (const s of series) {
