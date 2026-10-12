@@ -78,17 +78,21 @@ flowchart TB
     sftp --> bucket
     orch -- "resolve references, mint links" --> api
     host -- "mTLS" --> gw
-    host -- "signed link → 302 to the bucket" --> api
-    host -. "presigned GET, short-lived;
-    SHA-256 checked" .-> bucket
+    host -- "signed links: download → 302 to the bucket;
+    upload → presigned part URLs" --> api
+    host -. "GET: presigned, short-lived, SHA-256 checked
+    PUT: parts, straight into the bucket" .-> bucket
 ```
 
 Two new things listen: the api gains the file routes, and `laforge-sftp` is a new small
 service on 2022 (optional; leave it out of the stack if nobody wants SFTP). Hosts already
 reach the api today for their agent binary (`API_PUBLIC_URL`); download and upload links
-use the same address. Bytes themselves go to and from the bucket directly (§6): the api
-authorises, the bucket serves. LaForge never holds file bytes itself beyond an upload in
-flight. Nothing new is published.
+use the same address, but **only for authorisation**: a host's download link answers with
+a redirect to the bucket, and a host's upload link answers with presigned part URLs on
+the bucket. No file byte passes through the api in either direction unless a store's
+*proxy* setting is turned on for a venue that can't reach its bucket. The only bytes
+the api ever stages are people's tus uploads (§5), and those can go direct too. Nothing
+new is published.
 
 ## 3. File stores
 
@@ -108,6 +112,21 @@ dozen environment variables: maximum file size (default 50 GiB), quota per scope
 whether browsers may upload straight to it (§5; S3 only, needs a CORS rule exposing
 `ETag`), how long a download redirect's presigned URL lives (15 minutes), and whether
 the api should stream downloads itself for hosts that can't reach the bucket (§6).
+
+**Adding one is a wizard**, like adding a builder (`/admin/file-stores/new`; *Edit*
+reopens it at any step):
+
+1. **Kind** — S3-compatible or Azure Blob, with a line on what each needs (a bucket and
+   an access key with get/put/delete/list on it; a container and an account key).
+2. **Connection** — the kind's settings and credential, and a **Test** that runs the
+   round trip below live, showing each check as it passes (reachable → can write → can
+   read with a range → can presign and fetch anonymously → can delete). Nothing is saved
+   until the test passes once; a store that can't do all of this can't be used.
+3. **Policy** — the limits and retention with their defaults filled in; *direct
+   uploads* with the exact CORS rule to paste into the bucket (and the test re-run
+   against it from the browser); *presign TTL*; *proxy downloads* with when to turn it on.
+4. **Use** — make it the default (the first one is, automatically), and optionally point
+   repositories at it now.
 
 **Which store a file goes to.** One store is the **default**; a repository can be pointed
 at another on its settings (a sponsor's own bucket, a region nearer a venue). New
@@ -187,8 +206,8 @@ out.
   ls|get|rm|mv|versions|restore` round it out). `laforge check --online` asks the api
   (`POST /files/resolve`) that every reference in the content exists.
 
-**Direct to the bucket — optional, S3 only.** With *direct uploads* on for the store, the
-browser uploads parts straight to the bucket through presigned multipart URLs
+**Direct to the bucket — the default where the bucket allows it.** With *direct uploads*
+on for the store, the browser uploads parts straight to the bucket through presigned multipart URLs
 (`/direct-uploads`, `/direct-uploads/{id}/urls`, `…/complete`); the api only records
 completion, then hashes and moves the assembled object into place. For when a many-GB
 upload shouldn't pass through the api at all. Needs a CORS rule on the bucket that
@@ -262,13 +281,27 @@ steps:
   token the step payload carries as `<API_PUBLIC_URL>/files/u/<token>`. The grant is used
   up when the upload completes; anything sent on it afterwards is refused. Nothing a
   player does on the host can make LaForge ask for a file.
-- **Protocol**: tus core — `HEAD` for the server's `Upload-Offset`, `PATCH` to append
-  with `Upload-Length` and the SHA-256 in `Upload-Metadata`; `409` on an offset mismatch,
-  `422` (and the partial dropped) on a hash mismatch. Partials live in the staging
-  directory and are pruned after 24 h. These do pass through the api: a host's upload
-  must be hashed and quota-checked before it becomes a file, hosts need resume without a
-  bucket credential, and they're small next to downloads.
-- **Quota** applies as for any upload; a hash the store already has costs nothing.
+- **Straight into the bucket.** The same mechanism as the browser's direct uploads
+  (§5), with the grant in place of a session: the agent `POST`s the link with the file's
+  size and SHA-256 and gets back the part size and a presigned URL per part (S3
+  multipart; Azure block SAS URLs); it `PUT`s the parts to the bucket, in parallel,
+  retrying each; `GET` on the link says which parts the bucket already has, so an
+  interrupted upload resumes from there; `POST …/complete` has the api finish the
+  multipart upload and record the file. The api sees headers, never bytes. Presigned
+  part URLs live an hour and name one part of one object; there's no bucket credential
+  on the host.
+- **Not content-addressed.** A host's upload is stored under its own key,
+  `<prefix>/uploads/<build>/<grant>`, never under its hash — the api can't verify a hash
+  it never streamed, and a key it can't verify must never be one a trusted file could
+  share (a host declaring a trusted file's hash would otherwise overwrite what
+  `{{ file }}` serves). The declared SHA-256 is recorded on the version as *declared*,
+  shown as such, and checked by whoever downloads it; the agent additionally sends S3's
+  per-part `x-amz-checksum-sha256`, which the bucket enforces, so corruption in transit
+  is caught there.
+- **Quota** is checked against the declared size before part URLs are issued, and the
+  object's real size when it completes; abandoned multipart uploads are aborted by
+  housekeeping after 24 h. A store with *proxy* on takes the parts through the api
+  instead, for a venue whose hosts can't reach the bucket.
 
 ## 8. Configuration
 
@@ -278,7 +311,7 @@ has to be there before the database is reachable or is about the machine itself:
 ```
 FILESTORE_STAGING_DIR=/var/lib/laforge/staging      # uploads in flight on the api's disk (the sftp service has its own)
 FILESTORE_UPLOAD_EXPIRY_HOURS=168                   # abandoned uploads
-API_PUBLIC_URL=https://laforge.example.com          # exists today: what hosts reach the api at
+API_PUBLIC_URL=https://laforge.example.com          # exists today: what hosts reach the api at (links only; bytes go to the bucket)
 SFTP_LISTEN_ADDR=:2022  SFTP_HOST_KEY=/var/lib/laforge/sftp/host_key   # laforge-sftp
 ```
 
@@ -293,8 +326,10 @@ With no store configured, the Files page says so and points at Admin → File st
 - **Hosts can't enumerate or browse**: no listing route is reachable without a session.
 - **Quota and size limits** apply to host uploads, so a hostile host can't fill the store;
   partials are capped at the per-file maximum and pruned.
-- **Uploads are verified** against the SHA-256 the client declared before a version
-  appears; a mismatch discards the bytes.
+- **People's uploads are verified** against the SHA-256 the client declared before a
+  version appears; a mismatch discards the bytes. **Hosts' uploads are never
+  content-addressed** (§7), so a hostile host can't overwrite or alias anything a
+  trusted file serves.
 - **Permissions** follow the repository's existing levels; `global` is instance-admin.
 - **Store credentials** are write-only over the API, redacted in responses, and never
   reach a browser or a host; a presigned URL is what leaves.
@@ -321,11 +356,12 @@ With no store configured, the Files page says so and points at Admin → File st
 | --- | --- | --- | --- |
 | **F1 Stores and API** | M | `file_store` and the Admin → File stores page (S3, Azure; test, default, per-repository choice), `internal/filestore` behind `gocloud.dev/blob`, migration `00050`, management routes, tus uploads, housekeeping, `file_reference` at validation, the Files page and `laforge files`; SeaweedFS in the dev compose | a store set up on the page passes its test; a file uploaded through the UI (and resumed after a kill) appears with its version in that store, "used by" lists the content that names it, and `laforge check --online` fails a push naming a missing file |
 | **F2 Delivery** | S | `/files/d/{token}` on the api (302 to a presigned GET, or the bytes when the store proxies), `{{ file }}`/`download:` resolution in the orchestrator, fingerprints, the agent's download with resume and hash check | a fake-builder host downloads a file by reference straight from the bucket, a replaced file redeploys it, a torn-down build's link answers 410, an expired presigned URL is re-fetched through the link |
-| **F3 Host uploads** | M | `host_upload`, grants minted at dispatch, `/files/u/{token}` receiver, the agent's tus-core client, the Artifacts tab | an `upload:` step lands under the build after a dropped connection; a second send on the same link is refused; a player-minted link is refused |
+| **F3 Host uploads** | M | `host_upload`, grants minted at dispatch, `/files/u/{token}` issuing and completing presigned multipart uploads, the agent's part uploader with resume, the Artifacts tab | an `upload:` step lands under the build straight from the host to the bucket, resuming after a dropped connection; a second send on the same link is refused; a player-minted link is refused; a declared hash matching a trusted file changes nothing that file serves |
 | **F4 SFTP** | S | `laforge-sftp`, compose service, docs | an OpenSSH upload cut off mid-way and finished with `reput` comes back with the same SHA-256 |
-| **F5 Direct uploads** | S | the store's *direct uploads* setting, presigned parts | a browser upload to a bucket survives a reload |
+| **F5 Direct uploads** | S | the store's *direct uploads* setting, presigned parts, abandoned-multipart cleanup | a browser upload to a bucket survives a reload |
 
-F1 → F2 → F3 in order; F4 and F5 any time after F1.
+F1 → F2 → F3 in order (F3 reuses F5's presigned-part mechanism, so F5 comes before F3
+or with it); F4 any time after F1.
 
 ## 12. Open decisions
 
