@@ -49,8 +49,7 @@ func Host(ctx context.Context, get Getter, getRaw RawGetter, pool string) (build
 	}
 	var env struct {
 		Environment struct {
-			ServerName      string `json:"server_name"`
-			ServerClustered bool   `json:"server_clustered"`
+			ServerName string `json:"server_name"`
 		} `json:"environment"`
 	}
 	_ = json.Unmarshal(raw, &env)
@@ -60,13 +59,18 @@ func Host(ctx context.Context, get Getter, getRaw RawGetter, pool string) (build
 		Kind: builder.MetricTimeseries, Unit: "ms", Value: latency,
 	})
 
-	if env.Environment.ServerClustered {
-		clusterMetrics(ctx, get, pool, &stats)
-	} else {
+	// Prefer the per-member sysinfo (load averages, RAM, swap, process count) from
+	// the cluster member-state endpoint. We ASK for it rather than gating on the
+	// server_clustered flag: an Incus host run as a single-node "cluster" serves
+	// member-state and its full sysinfo even though it isn't a multi-node cluster,
+	// so this is how a standalone-looking Incus host still yields the same charts
+	// MicroCloud does. Only when that endpoint genuinely isn't there do we fall
+	// back to /1.0/resources (host memory alone).
+	if !memberStateMetrics(ctx, get, pool, node, &stats) {
 		singleHostMetrics(ctx, get, pool, node, &stats)
 	}
 	addMetricsStats(ctx, getRaw, node, &stats)
-	addWarnings(ctx, get, &stats)
+	addWarnings(ctx, get, node, &stats)
 	addStoragePoolHealth(ctx, get, &stats)
 	return stats, nil
 }
@@ -75,7 +79,7 @@ func Host(ctx context.Context, get Getter, getRaw RawGetter, pool string) (build
 // surfaces each one as a stats warning, so an operator sees the daemon's own
 // health notices (a degraded pool, a failed task) on the builder page. Works on
 // a standalone host and a cluster alike. Best-effort.
-func addWarnings(ctx context.Context, get Getter, stats *builder.Stats) {
+func addWarnings(ctx context.Context, get Getter, node string, stats *builder.Stats) {
 	raw, err := get(ctx, "/1.0/warnings?recursion=1")
 	if err != nil {
 		stats.Warnings = append(stats.Warnings, "warnings: "+err.Error())
@@ -105,7 +109,7 @@ func addWarnings(ctx context.Context, get Getter, stats *builder.Stats) {
 		}
 	}
 	stats.Metrics = append(stats.Metrics, builder.Metric{
-		Key: "lxd_warnings", Label: "Unresolved warnings", Kind: builder.MetricTimeseries, Unit: "count", Value: float64(unresolved),
+		Key: "lxd_warnings", Label: "Unresolved warnings", Node: node, Kind: builder.MetricTimeseries, Unit: "count", Value: float64(unresolved),
 	})
 }
 
@@ -133,14 +137,14 @@ func addStoragePoolHealth(ctx context.Context, get Getter, stats *builder.Stats)
 }
 
 // addMetricsStats reads the daemon's OWN OpenMetrics endpoint (/1.0/metrics) once
-// and derives host-level trend lines from the per-instance counters it exposes --
-// crucially, these are available even on a STANDALONE (non-clustered) host that
-// has no cluster member-state: total network throughput and total guest CPU
-// usage. Both are real measurements the daemon makes (not the guest agent), and
-// both are COUNTERs the API turns into per-second rates (bytes/s) / cores. This
-// is how a standalone Incus-pool host still gets a CPU and a Network chart even
-// though its load-average/swap/process sysinfo isn't exposed without clustering.
-// Best-effort: an unreachable endpoint warns and omits these charts.
+// and derives host-level trend lines from the per-instance counters it exposes.
+// These are the charts BOTH builders share, because /1.0/metrics is served the
+// same way on a STANDALONE host and a cluster member -- so the Incus pool and
+// MicroCloud show the identical set (CPU, network, disk I/O, process count),
+// rather than MicroCloud alone getting the cluster-member-state sysinfo. Network,
+// CPU and disk I/O are COUNTERs the API turns into per-second rates; process
+// count is a point-in-time gauge. Best-effort: an unreachable endpoint warns and
+// omits these charts.
 func addMetricsStats(ctx context.Context, getRaw RawGetter, node string, stats *builder.Stats) {
 	if getRaw == nil {
 		return
@@ -164,6 +168,14 @@ func addMetricsStats(ctx context.Context, getRaw RawGetter, node string, stats *
 			Key: "cpu", Label: "CPU (guest cores)", Node: node, Kind: builder.MetricCounter, Unit: "cores", Value: v,
 		})
 	}
+	// Disk throughput: read + written bytes across every instance's disks.
+	if v, ok := sumOpenMetric(text, []string{"lxd_disk_read_bytes_total", "lxd_disk_written_bytes_total"}, nil); ok {
+		stats.Metrics = append(stats.Metrics, builder.Metric{
+			Key: "disk_io", Label: "Disk I/O", Node: node, Kind: builder.MetricCounter, Unit: "bytes/s", Value: v,
+		})
+	}
+	// NB: process count comes from the member-state sysinfo (host processes), not
+	// from /1.0/metrics, so it isn't duplicated here.
 }
 
 // sumOpenMetric totals the value of every OpenMetrics sample line whose name
@@ -236,23 +248,26 @@ func singleHostMetrics(ctx context.Context, get Getter, pool, node string, stats
 	addDisk(ctx, get, pool, node, "", stats)
 }
 
-// clusterMetrics reports per-member health for EVERY cluster member from its
-// state (sysinfo: load averages, RAM, swap, process count) plus the member's
-// storage-pool usage, and a cluster-wide online-member count. Each member's
-// readings are tagged with its server name so the page reads per-node.
-func clusterMetrics(ctx context.Context, get Getter, pool string, stats *builder.Stats) {
+// memberStateMetrics reports each member's sysinfo (load averages 1/5/15m, memory,
+// swap, process count) and storage-pool usage from the cluster member-state
+// endpoint, tagged per server. It returns false when that endpoint isn't served
+// at all (a truly non-clustered daemon with no member-state) so the caller falls
+// back to /1.0/resources; an Incus host run as a single-node cluster DOES serve
+// it, which is how the Incus pool gets the same sysinfo charts MicroCloud does.
+// Best-effort per member: a member that can't be read warns and is skipped.
+func memberStateMetrics(ctx context.Context, get Getter, pool, connectedNode string, stats *builder.Stats) bool {
 	raw, err := get(ctx, "/1.0/cluster/members?recursion=1")
 	if err != nil {
-		stats.Warnings = append(stats.Warnings, "cluster members: "+err.Error())
-		return
+		return false // not clustered at all -> caller uses /1.0/resources
 	}
 	var members []struct {
 		ServerName string `json:"server_name"`
 		Status     string `json:"status"`
 	}
-	if json.Unmarshal(raw, &members) != nil {
-		return
+	if json.Unmarshal(raw, &members) != nil || len(members) == 0 {
+		return false
 	}
+	gotAny := false
 	online := 0
 	for _, m := range members {
 		node := m.ServerName
@@ -279,6 +294,7 @@ func clusterMetrics(ctx context.Context, get Getter, pool string, stats *builder
 		if json.Unmarshal(stateRaw, &st) != nil {
 			continue
 		}
+		gotAny = true
 		si := st.SysInfo
 		if si.TotalRAM > 0 {
 			stats.Metrics = append(stats.Metrics, memMetric(node, si.TotalRAM-si.FreeRAM, si.TotalRAM))
@@ -289,29 +305,26 @@ func clusterMetrics(ctx context.Context, get Getter, pool string, stats *builder
 				Value: float64(si.TotalSwap-si.FreeSwap) / float64(si.TotalSwap) * 100,
 			})
 		}
-		for _, l := range []struct {
-			key, label string
-			idx        int
-		}{{"cpu_load", "CPU load (1m)", 0}, {"cpu_load_5m", "CPU load (5m)", 1}, {"cpu_load_15m", "CPU load (15m)", 2}} {
-			if len(si.LoadAverages) > l.idx {
-				stats.Metrics = append(stats.Metrics, builder.Metric{
-					Key: l.key, Label: l.label, Node: node, Kind: builder.MetricTimeseries, Unit: "load", Value: si.LoadAverages[l.idx],
-				})
-			}
+		// 1-minute load average only (the 5m/15m averages were dropped as noise).
+		if len(si.LoadAverages) > 0 {
+			stats.Metrics = append(stats.Metrics, builder.Metric{
+				Key: "cpu_load", Label: "CPU load (1m)", Node: node, Kind: builder.MetricTimeseries, Unit: "load", Value: si.LoadAverages[0],
+			})
 		}
 		if si.Processes > 0 {
 			stats.Metrics = append(stats.Metrics, builder.Metric{
 				Key: "processes", Label: "Processes", Node: node, Kind: builder.MetricTimeseries, Unit: "count", Value: float64(si.Processes),
 			})
 		}
-		// Per-member storage pool usage (targeted at that member).
 		addDisk(ctx, get, pool, node, node, stats)
 	}
-	// Cluster-wide: how many members are online (a drop below the member count
-	// is a real outage, surfaced as both a trend line and a warning above).
+	if !gotAny {
+		return false // members listed but none served state -> fall back
+	}
 	stats.Metrics = append(stats.Metrics, builder.Metric{
-		Key: "members_online", Label: "Cluster members online", Kind: builder.MetricTimeseries, Unit: "count", Value: float64(online),
+		Key: "members_online", Label: "Cluster members online", Node: connectedNode, Kind: builder.MetricTimeseries, Unit: "count", Value: float64(online),
 	})
+	return true
 }
 
 func memMetric(node string, used, total uint64) builder.Metric {

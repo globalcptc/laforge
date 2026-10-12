@@ -40,11 +40,13 @@ func metricFor(stats builder.Stats, key, node string) (builder.Metric, bool) {
 	return builder.Metric{}, false
 }
 
-func TestHostClustered(t *testing.T) {
-	// A 2-member cluster: metrics come from each member's state (sysinfo RAM +
-	// load averages) and a per-member targeted storage-pool query.
+func TestHostMemberState(t *testing.T) {
+	// A host that serves the cluster member-state endpoint -- which includes a
+	// single-node-cluster Incus host, NOT just a multi-node MicroCloud -- yields
+	// the full per-member sysinfo (load 1/5/15m, memory, swap, processes) + disk.
+	// This is the path that gives the Incus pool the same charts as MicroCloud.
 	get := fakeGet(map[string]string{
-		"/1.0":                             `{"environment":{"server_name":"node1","server_clustered":true}}`,
+		"/1.0":                             `{"environment":{"server_name":"node1"}}`,
 		"/1.0/cluster/members?recursion=1": `[{"server_name":"node1","status":"Online"},{"server_name":"node2","status":"Online"}]`,
 		"/1.0/cluster/members/node1/state": `{"sysinfo":{"load_averages":[1.5,1.2,0.9],"total_ram":100,"free_ram":40,"total_swap":10,"free_swap":7,"processes":321}}`,
 		"/1.0/cluster/members/node2/state": `{"sysinfo":{"load_averages":[0.5,0.4,0.3],"total_ram":200,"free_ram":150,"total_swap":0,"free_swap":0,"processes":100}}`,
@@ -60,33 +62,28 @@ func TestHostClustered(t *testing.T) {
 	if _, ok := metricByKey(stats, "api_latency"); !ok {
 		t.Error("missing api_latency metric")
 	}
-	// node1: mem 60%, load 1.5/1.2/0.9, disk 50%, swap (10-7)/10=30%, 321 procs.
-	if m, ok := metricFor(stats, "mem", "node1"); !ok || m.Value != 60 {
-		t.Errorf("node1 mem = %+v, want 60%%", m)
+	// node1: mem 60%, load 1.5 (1m only), disk 50%, swap (10-7)/10=30%, 321 procs.
+	checks := []struct {
+		key  string
+		want float64
+	}{{"mem", 60}, {"cpu_load", 1.5}, {"swap", 30}, {"processes", 321}, {"disk", 50}}
+	for _, c := range checks {
+		if m, ok := metricFor(stats, c.key, "node1"); !ok || m.Value != c.want {
+			t.Errorf("node1 %s = %+v, want %v", c.key, m, c.want)
+		}
 	}
-	if m, ok := metricFor(stats, "cpu_load", "node1"); !ok || m.Value != 1.5 {
-		t.Errorf("node1 cpu_load = %+v, want 1.5", m)
+	// The 5m/15m load averages are intentionally not emitted.
+	for _, k := range []string{"cpu_load_5m", "cpu_load_15m"} {
+		if _, ok := metricByKey(stats, k); ok {
+			t.Errorf("%s should no longer be emitted", k)
+		}
 	}
-	if m, ok := metricFor(stats, "cpu_load_5m", "node1"); !ok || m.Value != 1.2 {
-		t.Errorf("node1 cpu_load_5m = %+v, want 1.2", m)
+	if m, ok := metricFor(stats, "mem", "node2"); !ok || m.Value != 25 {
+		t.Errorf("node2 mem = %+v, want 25%%", m)
 	}
-	if m, ok := metricFor(stats, "cpu_load_15m", "node1"); !ok || m.Value != 0.9 {
-		t.Errorf("node1 cpu_load_15m = %+v, want 0.9", m)
-	}
-	if m, ok := metricFor(stats, "swap", "node1"); !ok || m.Value != 30 {
-		t.Errorf("node1 swap = %+v, want 30%%", m)
-	}
-	if m, ok := metricFor(stats, "processes", "node1"); !ok || m.Value != 321 {
-		t.Errorf("node1 processes = %+v, want 321", m)
-	}
-	if m, ok := metricFor(stats, "disk", "node1"); !ok || m.Value != 50 {
-		t.Errorf("node1 disk = %+v, want 50%%", m)
-	}
-	// node2 has no swap configured -> no swap metric.
 	if _, ok := metricFor(stats, "swap", "node2"); ok {
 		t.Error("node2 should report no swap metric (total_swap=0)")
 	}
-	// Cluster-wide: both members online; one unresolved warning surfaced + counted.
 	if m, ok := metricByKey(stats, "members_online"); !ok || m.Value != 2 {
 		t.Errorf("members_online = %+v, want 2", m)
 	}
@@ -98,6 +95,28 @@ func TestHostClustered(t *testing.T) {
 	}
 	if !hasWarningContaining(stats, "a thing") {
 		t.Error("want the unresolved LXD warning message surfaced")
+	}
+}
+
+// TestHostFallsBackWhenNoMemberState covers a daemon that doesn't serve the
+// cluster member-state endpoint at all: it must fall back to /1.0/resources for
+// host memory and still report disk, without a cpu_load chart.
+func TestHostFallsBackWhenNoMemberState(t *testing.T) {
+	get := fakeGet(map[string]string{
+		"/1.0":                             `{"environment":{"server_name":"solo"}}`,
+		"/1.0/resources":                   `{"memory":{"used":25,"total":100}}`,
+		"/1.0/storage-pools/default/state": `{"space":{"used":10,"total":100}}`,
+		// no /1.0/cluster/members route -> memberStateMetrics returns false
+	})
+	stats, err := Host(context.Background(), get, nil, "default")
+	if err != nil {
+		t.Fatalf("Host: %v", err)
+	}
+	if m, ok := metricFor(stats, "mem", "solo"); !ok || m.Value != 25 {
+		t.Errorf("fallback mem = %+v, want 25%%", m)
+	}
+	if _, ok := metricByKey(stats, "cpu_load"); ok {
+		t.Error("a host without member-state should not report cpu_load")
 	}
 }
 
