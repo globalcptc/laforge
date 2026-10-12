@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, Info, Plus, Trash2 } from 'lucide-react'
 import { Button, Input, Spinner } from '../../ui'
 import { api, ApiError } from '../../api/client'
@@ -330,6 +330,19 @@ export function StepCloudImages({
     }
   }
 
+  // Load region-scoped discovery once on entry when it isn't already in hand --
+  // the editor can deep-link straight to this step (the "Images" edit button),
+  // skipping the region step where it's normally fetched, so the owned-AMI list
+  // and the recommended compose-host AMI would otherwise be empty here.
+  const loadedRef = useRef(false)
+  useEffect(() => {
+    if (loadedRef.current || !credentialId || !region) return
+    if ((discovery?.images?.length ?? 0) > 0 || discovery?.recommended_compose_ami) return
+    loadedRef.current = true
+    void search('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [credentialId, region])
+
   function setImage(i: number, patch: Partial<ImageDraft>) {
     onImages(images.map((img, idx) => (idx === i ? { ...img, ...patch } : img)))
   }
@@ -342,7 +355,7 @@ export function StepCloudImages({
   return (
     <div className="flex flex-col gap-4">
       {infoBox('Map each os name content uses to an AMI. Your own AMIs are listed; type a name (e.g. “ubuntu”, “Windows”, “kali”) to search Amazon, Canonical, Microsoft and Marketplace images for this region. Or paste an exact AMI id and pick “Use …” — handy for a Marketplace image (which may need you to accept its terms in the account first).')}
-      {infoBox(`Using compose containers? Add an image named “${COMPOSE_HOST_IMAGE}” mapped to a Docker-capable AMI (e.g. an Amazon Linux 2023 or Ubuntu image with Docker). Compose hosts boot an EC2 instance from it — there is no base image to build on AWS.`)}
+      {infoBox(`Using compose containers? Click “Add compose-host” — it maps the reserved “${COMPOSE_HOST_IMAGE}” image to the latest Amazon Linux 2023 AMI for this region (Docker is installed on first boot). Compose hosts boot an EC2 instance from it; there is no base image to build on AWS. You can swap in any other Docker-capable AMI.`)}
       <div className="flex flex-col gap-2">
         {images.map((img, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -374,7 +387,14 @@ export function StepCloudImages({
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => onImages([...images, { name: COMPOSE_HOST_IMAGE, fingerprint: '', alias: '', vm: false, server: '' }])}
+              title={
+                discovery?.recommended_compose_ami
+                  ? `Maps compose-host to ${discovery.recommended_compose_ami} (latest Amazon Linux 2023)`
+                  : 'Adds a compose-host image row — pick a Docker-capable AMI'
+              }
+              onClick={() =>
+                onImages([...images, { name: COMPOSE_HOST_IMAGE, fingerprint: discovery?.recommended_compose_ami ?? '', alias: '', vm: false, server: '' }])
+              }
             >
               <Plus size={14} /> Add compose-host
             </Button>

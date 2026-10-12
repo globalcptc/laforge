@@ -89,6 +89,10 @@ type Discovery struct {
 	// instance-type picker. Nil for every other kind. (AMIs reuse Images.)
 	Regions       []string `json:"regions"`
 	InstanceTypes []string `json:"instance_types"`
+	// RecommendedComposeAMI is AWS-only: the latest Amazon Linux 2023 x86_64 AMI
+	// in the chosen region, a Docker-capable default the wizard's one-click
+	// "Add compose-host" pre-fills. Empty when unresolved or another kind.
+	RecommendedComposeAMI string `json:"recommended_compose_ami,omitempty"`
 }
 
 // SnapshotInfo is one snapshot of an instance that could serve as a template.

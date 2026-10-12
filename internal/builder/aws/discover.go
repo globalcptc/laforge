@@ -78,6 +78,7 @@ func (onboarder) Rediscover(ctx context.Context, conn builder.Connection) (*buil
 	}
 
 	d.InstanceTypes = discoverInstanceTypes(ctx, c, d)
+	d.RecommendedComposeAMI = recommendedComposeAMI(ctx, c, d)
 	appendImages(ctx, c, d, []string{"self"}, "")
 	if q := strings.TrimSpace(conn.ImageQuery); q != "" {
 		// Official owners first (they fill the cap before Marketplace noise),
@@ -86,6 +87,35 @@ func (onboarder) Rediscover(ctx context.Context, conn builder.Connection) (*buil
 		appendImages(ctx, c, d, []string{amiMarketplaceOwner}, q)
 	}
 	return d, nil
+}
+
+// recommendedComposeAMI resolves the latest Amazon Linux 2023 x86_64 AMI in the
+// region -- a sensible Docker-capable default for a compose-host (Docker and the
+// compose plugin are installed on first boot, so a stock AL2023 image works).
+// Reuses the already-granted ec2:DescribeImages (no SSM dependency, no extra
+// IAM). Best-effort: a failure just leaves it empty and the operator picks one.
+func recommendedComposeAMI(ctx context.Context, c *ec2.Client, d *builder.Discovery) string {
+	out, err := c.DescribeImages(ctx, &ec2.DescribeImagesInput{
+		Owners: []string{"amazon"},
+		Filters: []ec2types.Filter{
+			// Standard AL2023 (not -minimal), kernel-tagged, x86_64.
+			{Name: awssdk.String("name"), Values: []string{"al2023-ami-2023.*-kernel-*-x86_64"}},
+			{Name: awssdk.String("state"), Values: []string{"available"}},
+			{Name: awssdk.String("architecture"), Values: []string{"x86_64"}},
+		},
+	})
+	if err != nil {
+		d.Warnings = append(d.Warnings, "couldn't resolve a recommended compose-host AMI: "+err.Error())
+		return ""
+	}
+	// CreationDate is ISO-8601, so a lexicographic max is the newest release.
+	var newestID, newestDate string
+	for _, img := range out.Images {
+		if date := awssdk.ToString(img.CreationDate); date > newestDate {
+			newestDate, newestID = date, awssdk.ToString(img.ImageId)
+		}
+	}
+	return newestID
 }
 
 func discoverInstanceTypes(ctx context.Context, c *ec2.Client, d *builder.Discovery) []string {
