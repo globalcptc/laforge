@@ -1,11 +1,42 @@
 import { useParams } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
-import { Radio, Search, ChevronRight } from 'lucide-react'
+import { Radio, Search, ChevronRight, Download, Copy, Check } from 'lucide-react'
 import { useEvents, useLiveEvents } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import type { LFEvent } from '../api/types'
 import { EmptyState } from '../components/EmptyState'
-import { Badge, Select, cn } from '../ui'
+import { Badge, Button, Select, cn } from '../ui'
+
+// logsToText renders the full journal as a plain-text log for export: one line
+// per event (ISO timestamp, host-or-"build", kind, message), with any longer
+// payload detail (a step's command output / error) indented beneath it.
+function logsToText(events: LFEvent[]): string {
+  return events
+    .map((e) => {
+      const ts = new Date(e.created_at).toISOString()
+      const who = e.host ? (e.team_number != null ? `t${e.team_number}/${e.host}` : e.host) : 'build'
+      let line = `${ts}  ${who}  ${e.kind}  ${e.message}`
+      const detail = eventDetail(e.payload)
+      if (detail && detail !== e.message) {
+        line += '\n' + detail.split('\n').map((l) => '    ' + l).join('\n')
+      }
+      return line
+    })
+    .join('\n')
+}
+
+// downloadText triggers a browser download of text as a file -- no server round
+// trip, since the journal is already fully loaded in the page.
+function downloadText(filename: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
 
 // toneForKind colours an event's kind badge by what it IS, so the journal is
 // scannable by type/outcome: red for failures, green for completions, amber for
@@ -52,6 +83,7 @@ export function BuildLogs() {
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [copied, setCopied] = useState(false)
   const fmt = useTimeFormat()
 
   function toggle(id: string) {
@@ -61,6 +93,24 @@ export function BuildLogs() {
       else next.add(id)
       return next
     })
+  }
+
+  // Export the whole journal (not the filtered view) as a timestamped .txt.
+  function exportLogs() {
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+    downloadText(`laforge-build-${buildId.slice(0, 8)}-logs-${stamp}.txt`, logsToText(all))
+  }
+
+  // Copy the whole journal to the clipboard, with a brief "Copied" confirmation.
+  async function copyLogs() {
+    try {
+      await navigator.clipboard.writeText(logsToText(all))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Clipboard blocked (insecure context / permission) -- fall back to export.
+      exportLogs()
+    }
   }
 
   const all = useMemo(() => {
@@ -107,6 +157,12 @@ export function BuildLogs() {
               </option>
             ))}
           </Select>
+          <Button variant="primary" size="sm" onClick={copyLogs} disabled={all.length === 0} title="Copy the full log to the clipboard">
+            {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy'}
+          </Button>
+          <Button variant="primary" size="sm" onClick={exportLogs} disabled={all.length === 0} title="Export the full log as a text file">
+            <Download size={13} /> Export
+          </Button>
         </div>
       </div>
 

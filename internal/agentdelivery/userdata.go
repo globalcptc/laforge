@@ -23,6 +23,10 @@ write_files:
       Description=LaForge agent
       After=network-online.target
       Wants=network-online.target
+      # Never give up restarting: disable systemd's start-rate limiter so even a
+      # fast crash-loop keeps being restarted (RestartSec=5 already keeps us under
+      # the default burst, but this makes "restart forever" explicit).
+      StartLimitIntervalSec=0
       [Service]
       ExecStart=/usr/local/bin/laforge-agent
       Restart=always
