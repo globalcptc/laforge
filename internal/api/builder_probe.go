@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/globalcptc/laforge/internal/builder"
@@ -18,6 +19,22 @@ import (
 	"github.com/globalcptc/laforge/internal/builder/microcloud"
 	"github.com/globalcptc/laforge/internal/db"
 )
+
+// splitCSVParam turns a comma-separated query value ("ami-1,ami-2") into a
+// trimmed, empty-free slice -- nil for an empty param.
+func splitCSVParam(v string) []string {
+	if strings.TrimSpace(v) == "" {
+		return nil
+	}
+	parts := strings.Split(v, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
 
 type connectBuilderRequest struct {
 	// Kind selects which builder type's onboarding to run. Historically this
@@ -140,10 +157,13 @@ func (s *Server) handleGetBuilderConnection(w http.ResponseWriter, r *http.Reque
 		ServerCertPEM: []byte(cred.ServerCertPem), ClientCertPEM: []byte(cred.ClientCertPem), ClientKeyPEM: []byte(cred.ClientKeyPem),
 		AWSAccessKeyID: cred.AwsAccessKeyID, AWSSecretAccessKey: cred.AwsSecretAccessKey,
 		// ?project= scopes Incus images to a project; ?region= / ?q= scope AWS
-		// discovery to a region and an AMI name-search term.
+		// discovery to a region and an AMI name-search term; ?image_ids= resolves
+		// specific already-configured AMIs by id so the config page shows their
+		// full details even when they aren't owned or searched.
 		Project:    r.URL.Query().Get("project"),
 		Region:     r.URL.Query().Get("region"),
 		ImageQuery: r.URL.Query().Get("q"),
+		ImageIDs:   splitCSVParam(r.URL.Query().Get("image_ids")),
 	})
 	if err != nil {
 		writeError(w, statusUpstreamFailed, err)

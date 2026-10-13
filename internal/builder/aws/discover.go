@@ -79,6 +79,9 @@ func (onboarder) Rediscover(ctx context.Context, conn builder.Connection) (*buil
 
 	d.InstanceTypes = discoverInstanceTypes(ctx, c, d)
 	d.RecommendedComposeAMI = recommendedComposeAMI(ctx, c, d)
+	// Resolve already-configured AMIs by id FIRST, so the config page always has
+	// their full details even when they aren't owned and nothing is being searched.
+	appendImagesByID(ctx, c, d, conn.ImageIDs)
 	appendImages(ctx, c, d, []string{"self"}, "")
 	if q := strings.TrimSpace(conn.ImageQuery); q != "" {
 		// Official owners first (they fill the cap before Marketplace noise),
@@ -182,7 +185,39 @@ func toImageInfo(img ec2types.Image) builder.ImageInfo {
 	info.Properties.Description = awssdk.ToString(img.Description)
 	info.Properties.Created = awssdk.ToString(img.CreationDate)
 	info.Properties.Owner = ownerLabel(awssdk.ToString(img.OwnerId))
+	info.Properties.State = string(img.State)
 	return info
+}
+
+// appendImagesByID resolves specific AMI ids (whatever their owner) and merges
+// them in -- so the config page can show full details for an already-configured
+// AMI that the owned/searched lists wouldn't contain (a public Amazon/Canonical/
+// Marketplace image). Best-effort: a bad/stale id just doesn't come back.
+func appendImagesByID(ctx context.Context, c *ec2.Client, d *builder.Discovery, ids []string) {
+	clean := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if strings.HasPrefix(strings.TrimSpace(id), "ami-") {
+			clean = append(clean, strings.TrimSpace(id))
+		}
+	}
+	if len(clean) == 0 {
+		return
+	}
+	out, err := c.DescribeImages(ctx, &ec2.DescribeImagesInput{ImageIds: clean})
+	if err != nil {
+		d.Warnings = append(d.Warnings, "couldn't resolve configured AMI ids: "+err.Error())
+		return
+	}
+	seen := make(map[string]bool, len(d.Images))
+	for _, img := range d.Images {
+		seen[img.Fingerprint] = true
+	}
+	for _, img := range out.Images {
+		if id := awssdk.ToString(img.ImageId); id != "" && !seen[id] {
+			seen[id] = true
+			d.Images = append(d.Images, toImageInfo(img))
+		}
+	}
 }
 
 // ownerLabel turns a bare AWS owner account id into a readable publisher name for

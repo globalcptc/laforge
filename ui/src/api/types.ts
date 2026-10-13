@@ -730,9 +730,10 @@ export interface ImageInfo {
     os: string
     release: string
     description: string
-    /** AMI creation date (ISO-8601) and publisher — AWS only; empty on the on-prem builders. */
+    /** AMI creation date (ISO-8601), publisher, and availability state — AWS only; empty on the on-prem builders. */
     created?: string
     owner?: string
+    state?: string
   }
 }
 

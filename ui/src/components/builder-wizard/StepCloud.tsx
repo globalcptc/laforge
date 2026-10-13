@@ -4,7 +4,7 @@ import { Button, Input, Spinner } from '../../ui'
 import { api, ApiError } from '../../api/client'
 import { useConnectBuilder, builderConnectionPath } from '../../api/hooks'
 import { SearchSelect, type SearchOption } from '../SearchSelect'
-import type { AwsConfig, BuilderConnection, Discovery } from '../../api/types'
+import type { AwsConfig, BuilderConnection, Discovery, ImageInfo } from '../../api/types'
 import type { ImageDraft, SizeDraft } from './model'
 
 // The reserved builder-image name a compose container boots from -- mirrors
@@ -193,9 +193,60 @@ export function StepCloudConnect({ credentialId, account, onConnected }: { crede
 
 // fetchDiscovery is the shared imperative rediscovery call (mirrors
 // StepPlacement's ProjectPicker.choose): one request, result stored by the caller.
-async function fetchDiscovery(credentialId: string, region?: string, imageQuery?: string): Promise<Discovery> {
-  const conn = await api.get<BuilderConnection>(builderConnectionPath(credentialId, 'aws', undefined, { region, imageQuery }))
+async function fetchDiscovery(credentialId: string, region?: string, imageQuery?: string, imageIds?: string[]): Promise<Discovery> {
+  const conn = await api.get<BuilderConnection>(builderConnectionPath(credentialId, 'aws', undefined, { region, imageQuery, imageIds }))
   return conn.discovery
+}
+
+// amiMetaLine is the one-line AMI summary for the picker dropdown: publisher ·
+// architecture · platform · created date · description.
+function amiMetaLine(img: ImageInfo): string {
+  return [
+    img.properties.owner,
+    img.architecture,
+    img.properties.os,
+    img.properties.created ? `created ${img.properties.created.slice(0, 10)}` : '',
+    img.properties.description,
+  ]
+    .map((s) => (s ?? '').trim())
+    .filter(Boolean)
+    .join(' · ')
+}
+
+// AmiDetails is the full, at-rest view of a configured AMI, shown under its row
+// so you can see what it is without opening the dropdown or the AWS console. A
+// non-"available" state is called out in danger -- it won't launch.
+function AmiDetails({ img }: { img: ImageInfo }) {
+  const rows: Array<[string, string]> = [
+    ['Name', img.aliases?.[0] ?? ''],
+    ['Publisher', img.properties.owner ?? ''],
+    ['Architecture', img.architecture ?? ''],
+    ['Platform', img.properties.os ?? ''],
+    ['Created', img.properties.created ? img.properties.created.slice(0, 10) : ''],
+    ['Description', img.properties.description ?? ''],
+  ].filter(([, v]) => v !== '')
+  const bad = img.properties.state && img.properties.state !== 'available'
+  return (
+    <div className="ml-[calc(10rem+1.5rem)] rounded-token border border-border bg-surface-sunken px-3 py-2 text-xs">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+        {rows.map(([k, v]) => (
+          <div key={k} className="contents">
+            <dt className="text-fg-subtle">{k}</dt>
+            <dd className="min-w-0 break-words text-fg">{v}</dd>
+          </div>
+        ))}
+        {img.properties.state && (
+          <div className="contents">
+            <dt className="text-fg-subtle">State</dt>
+            <dd className={bad ? 'font-medium text-danger' : 'text-fg'}>
+              {img.properties.state}
+              {bad ? ' — this AMI is not available and will fail to launch' : ''}
+            </dd>
+          </div>
+        )}
+      </dl>
+    </div>
+  )
 }
 
 // StepCloudRegion picks the region (AMIs and instance types are region-scoped, so
@@ -315,29 +366,25 @@ export function StepCloudImages({
   onDiscovery: (d: Discovery) => void
 }) {
   const [searching, setSearching] = useState(false)
+  // The AMI ids already configured, so every discovery call resolves them by id
+  // (DescribeImages) and returns their full details -- otherwise a configured
+  // Amazon/Canonical/Marketplace AMI shows as a bare "ami-…" with nothing to
+  // identify it, which is the whole complaint.
+  const configuredAmiIds = images.map((img) => img.fingerprint).filter((f) => f.startsWith('ami-'))
+  const imagesById = new Map((discovery?.images ?? []).map((img) => [img.fingerprint, img]))
+
   const amiOptions: SearchOption[] = (discovery?.images ?? []).map((img) => ({
     value: img.fingerprint,
     label: img.aliases?.[0] || img.fingerprint,
     hint: img.fingerprint,
-    // A readable detail line: publisher · architecture · platform · release date
-    // · description, so an AMI is identifiable without leaving the picker.
-    meta: [
-      img.properties.owner,
-      img.architecture,
-      img.properties.os,
-      img.properties.created ? `created ${img.properties.created.slice(0, 10)}` : '',
-      img.properties.description,
-    ]
-      .map((s) => (s ?? '').trim())
-      .filter(Boolean)
-      .join(' · '),
+    meta: amiMetaLine(img),
   }))
 
   async function search(q: string) {
     if (!credentialId) return
     setSearching(true)
     try {
-      onDiscovery(await fetchDiscovery(credentialId, region, q))
+      onDiscovery(await fetchDiscovery(credentialId, region, q, configuredAmiIds))
     } catch {
       // Leave the current options; the picker just shows what it has.
     } finally {
@@ -345,14 +392,13 @@ export function StepCloudImages({
     }
   }
 
-  // Load region-scoped discovery once on entry when it isn't already in hand --
-  // the editor can deep-link straight to this step (the "Images" edit button),
-  // skipping the region step where it's normally fetched, so the owned-AMI list
-  // and the recommended compose-host AMI would otherwise be empty here.
+  // Load region-scoped discovery once on entry -- the editor can deep-link
+  // straight to this step (the "Images" edit button), skipping the region step
+  // where it's normally fetched. Always run (even when some images are already in
+  // hand) so the configured AMI ids get resolved to their full details.
   const loadedRef = useRef(false)
   useEffect(() => {
     if (loadedRef.current || !credentialId || !region) return
-    if ((discovery?.images?.length ?? 0) > 0 || discovery?.recommended_compose_ami) return
     loadedRef.current = true
     void search('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -372,28 +418,41 @@ export function StepCloudImages({
       {infoBox('Map each os name content uses to an AMI. Your own AMIs are listed; type a name (e.g. “ubuntu”, “Windows”, “kali”) to search Amazon, Canonical, Microsoft and Marketplace images for this region. Or paste an exact AMI id and pick “Use …” — handy for a Marketplace image (which may need you to accept its terms in the account first).')}
       {infoBox(`Using compose containers? Click “Add compose-host” — it maps the reserved “${COMPOSE_HOST_IMAGE}” image to the latest Amazon Linux 2023 AMI for this region (Docker is installed on first boot). Compose hosts boot an EC2 instance from it; there is no base image to build on AWS. You can swap in any other Docker-capable AMI.`)}
       <div className="flex flex-col gap-2">
-        {images.map((img, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Input value={img.name} onChange={(e) => setImage(i, { name: e.target.value })} placeholder="ubuntu22" className="w-40" aria-label="os name" />
-            <span className="text-fg-subtle">→</span>
-            <div className="min-w-0 flex-1">
-              <SearchSelect
-                value={img.fingerprint}
-                options={amiOptions}
-                onChange={(v) => setImage(i, { fingerprint: v })}
-                onSearch={search}
-                loading={searching}
-                allowCustom
-                placeholder="Choose, search, or paste an AMI id"
-                searchPlaceholder="Search by name, or paste ami-…"
-                emptyLabel="No matches — type a name to search, or paste an AMI id"
-              />
+        {images.map((img, i) => {
+          const resolved = imagesById.get(img.fingerprint)
+          return (
+            <div key={i} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Input value={img.name} onChange={(e) => setImage(i, { name: e.target.value })} placeholder="ubuntu22" className="w-40" aria-label="os name" />
+                <span className="text-fg-subtle">→</span>
+                <div className="min-w-0 flex-1">
+                  <SearchSelect
+                    value={img.fingerprint}
+                    options={amiOptions}
+                    onChange={(v) => setImage(i, { fingerprint: v })}
+                    onSearch={search}
+                    loading={searching}
+                    allowCustom
+                    placeholder="Choose, search, or paste an AMI id"
+                    searchPlaceholder="Search by name, or paste ami-…"
+                    emptyLabel="No matches — type a name to search, or paste an AMI id"
+                  />
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => onImages(images.filter((_, idx) => idx !== i))} aria-label="Remove image">
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+              {/* Full details of the configured AMI, resolved live by id so you
+                  never need the AWS console to know what "ami-…" is. */}
+              {img.fingerprint.startsWith('ami-') && resolved && <AmiDetails img={resolved} />}
+              {img.fingerprint.startsWith('ami-') && !resolved && !searching && (
+                <div className="ml-[calc(10rem+1.5rem)] text-xs text-fg-subtle">
+                  Couldn’t resolve {img.fingerprint} in {region ?? 'this region'} — it may be deregistered, private to another account, or in a different region.
+                </div>
+              )}
             </div>
-            <Button variant="ghost" size="icon" onClick={() => onImages(images.filter((_, idx) => idx !== i))} aria-label="Remove image">
-              <Trash2 size={14} />
-            </Button>
-          </div>
-        ))}
+          )
+        })}
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" onClick={() => onImages([...images, { name: '', fingerprint: '', alias: '', vm: false, server: '' }])}>
             <Plus size={14} /> Add image

@@ -61,6 +61,10 @@ type ImageInfo struct {
 		// the on-prem builders leave them empty.
 		Created string `json:"created,omitempty"`
 		Owner   string `json:"owner,omitempty"`
+		// State is the AMI's availability ("available", "deregistered", "pending",
+		// …) -- a resolved-by-id configured AMI that is no longer "available" would
+		// fail to launch, which the config page surfaces instead of hiding. AWS only.
+		State string `json:"state,omitempty"`
 	} `json:"properties"`
 }
 
@@ -167,6 +171,12 @@ type Connection struct {
 	// name-search term. Transient request parameters, not stored.
 	Region     string
 	ImageQuery string
+	// ImageIDs are specific AMI ids to resolve by id and include in the results,
+	// regardless of owner or search term -- so the image-configuration page can
+	// show the full details (name, publisher, arch, created, state) of an AMI
+	// that's already configured but wouldn't surface in the owned/searched list
+	// (an Amazon/Canonical/Marketplace image). Transient, not stored.
+	ImageIDs []string
 }
 
 // HasCredential reports whether this onboarding produced stored credential

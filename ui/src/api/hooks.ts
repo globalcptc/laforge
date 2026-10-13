@@ -700,13 +700,14 @@ export function builderConnectionPath(
   credentialId: string,
   kind?: string,
   project?: string,
-  opts?: { region?: string; imageQuery?: string },
+  opts?: { region?: string; imageQuery?: string; imageIds?: string[] },
 ): string {
   const q = new URLSearchParams()
   if (kind) q.set('kind', kind)
   if (project) q.set('project', project)
   if (opts?.region) q.set('region', opts.region)
   if (opts?.imageQuery) q.set('q', opts.imageQuery)
+  if (opts?.imageIds?.length) q.set('image_ids', opts.imageIds.join(','))
   const qs = q.toString()
   return `/builder-connections/${credentialId}${qs ? `?${qs}` : ''}`
 }
