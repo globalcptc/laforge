@@ -374,6 +374,40 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("decoding get-task response: {e}")))?;
 
         if let Some(task) = gt.task {
+            // A reboot is special: the command tears down the very connection we
+            // would report its result on. Reporting AFTER running it races the
+            // reboot and loses -- the gateway never records the step done, the
+            // lease expires, the box boots, re-leases the SAME reboot task, and
+            // reboots again, forever (observed as a ~65s reboot loop). So ACK
+            // FIRST: report the step done and wait for the gateway's response
+            // BEFORE issuing the reboot. The gateway marks the task done the
+            // moment it receives the request (before it even sends the ack), so
+            // the completion is durable even if the ack is lost to the reboot.
+            // Then reboot, then STOP leasing -- the next step must wait until the
+            // agent reconnects on the fresh boot, not run in the shutdown window.
+            if task.command == "reboot" {
+                dlog!("laforge-agent: reboot task {} -- acking done before rebooting", task.id);
+                let report = ReportStatusRequestPayload {
+                    task_id: task.id.clone(),
+                    status: "done".to_string(),
+                    output: "reboot initiated by agent".to_string(),
+                    error: String::new(),
+                    validator_results: Vec::new(),
+                };
+                let body = serde_json::to_vec(&report)
+                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding reboot report: {e}")))?;
+                protocol::write_frame(&mut tls, MessageType::ReportStatusRequest, &body)?;
+                let (mt, _body) = protocol::read_frame(&mut tls)?;
+                expect(mt, MessageType::ReportStatusResponse)?;
+                // Now actually reboot (forced + idempotent -- see commands::cmd_reboot).
+                let outcome = commands::run("reboot", &task.payload);
+                dlog!("laforge-agent: reboot command -> {} {}", outcome.status, outcome.error);
+                // Barrier: the box is going down. Do NOT loop back for more work;
+                // sleep well past the reboot so the next step runs only after a
+                // fresh boot. If the reboot somehow didn't take, fall through.
+                std::thread::sleep(Duration::from_secs(300));
+                continue;
+            }
             // Run the task on a WORKER thread, not here, so a slow or hung
             // command never stops this loop from heartbeating. The worker only
             // touches the command and the result channel -- this loop stays the

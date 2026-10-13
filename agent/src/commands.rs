@@ -449,14 +449,25 @@ fn cmd_service(payload: &Value) -> Result<String, String> {
 #[cfg(unix)]
 fn cmd_reboot(payload: &Value) -> Result<String, String> {
     let delay = payload.get("delay_sec").and_then(Value::as_i64).unwrap_or(0).max(0);
+    // Cancel any already-pending shutdown so a re-issue is idempotent; ignore the
+    // error when none is pending.
+    let _ = run_ok("shutdown", &["-c"]);
     run_ok("shutdown", &["-r", &format!("+{}", (delay + 59) / 60)])?;
     Ok(format!("reboot scheduled in {delay}s"))
 }
 #[cfg(windows)]
 fn cmd_reboot(payload: &Value) -> Result<String, String> {
     let delay = payload.get("delay_sec").and_then(Value::as_i64).unwrap_or(0).max(0);
-    run_ok("shutdown", &["/r", "/t", &delay.to_string()])?;
-    Ok(format!("reboot scheduled in {delay}s"))
+    // Abort any shutdown this box already has scheduled, so re-issuing is
+    // idempotent -- otherwise `shutdown /r` fails with 1190 ("a system shutdown
+    // has already been scheduled"). Ignore the error: it fails when nothing is
+    // scheduled, which is the normal case.
+    let _ = run_ok("shutdown", &["/a"]);
+    // /f forces the reboot through. A non-forced reboot issued by the agent
+    // (running as a LocalSystem service, session 0) was observed being DEFERRED
+    // until an interactive login released it -- leaving the host hung mid-build.
+    run_ok("shutdown", &["/r", "/t", &delay.to_string(), "/f"])?;
+    Ok(format!("reboot scheduled in {delay}s (forced)"))
 }
 
 fn run_ok(cmd: &str, args: &[&str]) -> Result<(), String> {
