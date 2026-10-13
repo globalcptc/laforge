@@ -127,9 +127,10 @@ type Builder struct {
 	// subnet created without an explicit AZ lands in whichever AZ AWS picks -- and
 	// a legacy AZ like us-east-1e offers no t3/current types, so RunInstances into
 	// it fails "instance type not supported in your requested Availability Zone".
+	// Best-effort: "" means "couldn't determine one, let AWS choose" (the behavior
+	// before this optimization), never a hard failure.
 	azOnce   sync.Once
 	azCached string
-	azErr    error
 }
 
 // New constructs the builder from the ambient AWS credential/region chain,
@@ -574,11 +575,8 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 		// Pin the subnet to an AZ that offers the builder's instance types -- a
 		// subnet created without one lands wherever AWS chooses, and a legacy AZ
 		// (e.g. us-east-1e) offers no t3/current types, so every host in it fails
-		// to launch. Empty -> no size map to constrain, let AWS pick.
-		az, err := b.subnetAZ(ctx)
-		if err != nil {
-			return "", err
-		}
+		// to launch. Best-effort: "" (can't determine one) lets AWS pick, as before.
+		az := b.subnetAZ(ctx)
 		in := &ec2.CreateSubnetInput{
 			VpcId:             awssdk.String(vpcID),
 			CidrBlock:         awssdk.String(spec.CIDR),
@@ -799,12 +797,20 @@ func (b *Builder) subnetForNetwork(ctx context.Context, networkExternalName stri
 // subnetAZ returns an Availability Zone that offers EVERY instance type in the
 // builder's size map, resolved once and cached. Pinning subnets to it stops AWS
 // from dropping one into a legacy AZ (e.g. us-east-1e) that can't run current
-// instance types. Returns "" (let AWS choose) only when there's no size map to
-// constrain the choice. A resolution error is surfaced, not swallowed -- a wrong
-// AZ fails every host, so this isn't a "best-effort, carry on" case.
-func (b *Builder) subnetAZ(ctx context.Context) (string, error) {
-	b.azOnce.Do(func() { b.azCached, b.azErr = b.resolveSubnetAZ(ctx) })
-	return b.azCached, b.azErr
+// instance types. BEST-EFFORT: "" means "let AWS choose the subnet's AZ" -- the
+// behavior before this optimization -- which is what we fall back to whenever the
+// lookup can't run (e.g. the credential lacks ec2:DescribeInstanceTypeOfferings,
+// or no single AZ offers every type). This is an optimization, never a gate: a
+// missing permission must not fail the whole build's network deploys.
+func (b *Builder) subnetAZ(ctx context.Context) string {
+	b.azOnce.Do(func() {
+		az, err := b.resolveSubnetAZ(ctx)
+		if err != nil {
+			az = "" // fall back to AWS's choice; don't fail the deploy
+		}
+		b.azCached = az
+	})
+	return b.azCached
 }
 
 func (b *Builder) resolveSubnetAZ(ctx context.Context) (string, error) {
