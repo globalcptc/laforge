@@ -10,9 +10,13 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -45,6 +49,8 @@ func main() {
 	checkoutCacheDir := flag.String("checkout-cache-dir", filepath.Join(os.TempDir(), "laforge-checkouts"), "where fetched checkouts are cached, one per {repository, commit}, when GitHub credentials are configured (GITHUB_APP_ID/GITHUB_APP_PRIVATE_KEY_PATH or GITHUB_SERVICE_TOKEN) -- see internal/checkout")
 	checkoutCacheRetention := flag.Duration("checkout-cache-retention", 24*time.Hour, "how long an unused cached checkout is kept before internal/checkout.Evict removes it; 0 disables cleanup")
 	interval := flag.Duration("interval", 2*time.Second, "how often to reconcile every non-terminal build")
+	reconcileConcurrency := flag.Int("reconcile-concurrency", envIntDefault("RECONCILE_CONCURRENCY", 8), "how many builds to reconcile in PARALLEL each pass. Reconciles are per-build independent, so a bounded worker pool keeps one slow build (a cold checkout, a hanging hoster API) from blocking the rest. Default 8; 1 restores the old serial behavior.")
+	reconcileBuildTimeout := flag.Duration("reconcile-build-timeout", envDurationDefault("RECONCILE_BUILD_TIMEOUT", 2*time.Minute), "max time one build's reconcile may take (checkout + hoster calls) before its context is cancelled, so a hanging builder fails fast and the next pass retries instead of holding a worker. 0 disables.")
 	heartbeatRetention := flag.Duration("heartbeat-retention", 72*time.Hour, "how long to keep agent_heartbeat rows (an append-only log with no other retention policy -- see migrations/00007's own doc comment); 0 disables cleanup")
 	scheduleInterval := flag.Duration("schedule-interval", 5*time.Second, "how often to check for due scheduled_task rows (schedule: entries and ad-hoc scheduled tasks)")
 	accessInterval := flag.Duration("access-interval", 15*time.Second, "how often to enforce each live build's authored access: windows (open/close teams on schedule)")
@@ -81,78 +87,158 @@ func main() {
 		log.Printf("checkout cache enabled at %s -- builds resolve their own repository/commit", *checkoutCacheDir)
 	}
 
+	// A reconcile pass is serial over every non-terminal build, and each build
+	// does real work inline -- a git checkout plus hoster API calls (network and
+	// external access). A successful pass otherwise logs nothing, so a slow one
+	// (a cold checkout, or a builder whose API is hanging/retrying) looks like
+	// the orchestrator is idle when it is in fact blocked. These thresholds make
+	// that time visible without drowning a healthy, sub-second pass in noise:
+	// log a per-build phase breakdown only when a single build's pass is slow,
+	// and a one-line pass summary only when the whole pass is slow.
+	const (
+		slowBuildThreshold = 3 * time.Second
+		slowCycleThreshold = 10 * time.Second
+	)
+	// reconcileOne is the whole per-build pass, factored out of the loop so a
+	// bounded worker pool can run several builds at once (see reconcileAll).
+	// Each build gets its OWN context deadline: the pass does a git checkout and
+	// several hoster API calls, and a single hanging/throttling builder must not
+	// be able to hold a worker -- and, before the pool, the entire loop -- for
+	// minutes. On a timeout the orchestrator calls return a context error, which
+	// is logged and recorded like any other reconcile failure, and the next pass
+	// simply retries. Reconciles are per-build independent (distinct build_ids,
+	// distinct team/object rows) and the DB pool, the checkout cache, and log are
+	// all concurrency-safe, so running them in parallel needs no other locking.
+	reconcileOne := func(b db.Build) {
+		buildStart := time.Now()
+		bctx := ctx
+		if *reconcileBuildTimeout > 0 {
+			var cancel context.CancelFunc
+			bctx, cancel = context.WithTimeout(ctx, *reconcileBuildTimeout)
+			defer cancel()
+		}
+		lastMark := buildStart
+		var phases []string
+		mark := func(label string) {
+			now := time.Now()
+			phases = append(phases, fmt.Sprintf("%s=%s", label, now.Sub(lastMark).Round(time.Millisecond)))
+			lastMark = now
+		}
+		// Teardown deliberately
+		// never touches content at all -- a build has to be
+		// destroyable even once its repository access, branch, or
+		// checkout is no longer resolvable, unlike Reconcile below,
+		// which requires it.
+		if b.Status == "tearing_down" {
+			if err := orchestrator.Teardown(bctx, pool, b.ID); err != nil {
+				log.Printf("tearing down build %s: %v", b.ID, err)
+			}
+			if d := time.Since(buildStart); d >= slowBuildThreshold {
+				log.Printf("reconcile build %s (tearing_down): slow pass %s", b.ID, d.Round(time.Millisecond))
+			}
+			return
+		}
+		// Advance object lifecycle (agent check-in, steps, validators)
+		// then the build phase before touching content -- like teardown,
+		// neither depends on the checkout being resolvable, so a build
+		// whose revision has since moved past the branch tip still settles
+		// (running -> building -> finished/failed) instead of erroring here
+		// forever. AdvanceBuildStatus returns settled=true only for a
+		// TERMINAL build (finished/failed): a build still "building" keeps
+		// reconciling so drift/fingerprint changes are caught live.
+		if err := orchestrator.AdvanceObjectLifecycle(bctx, pool, b.ID); err != nil {
+			log.Printf("advancing object lifecycle for build %s: %v", b.ID, err)
+		}
+		if settled, err := orchestrator.AdvanceBuildStatus(bctx, pool, b.ID); err != nil {
+			log.Printf("advancing build status for build %s: %v", b.ID, err)
+		} else if settled {
+			return
+		}
+		mark("lifecycle")
+		dir, err := resolveContent(bctx, b.ID)
+		if err != nil {
+			log.Printf("resolving content for build %s: %v", b.ID, err)
+			return
+		}
+		mark("checkout")
+		recErr := ""
+		if err := orchestrator.Reconcile(bctx, pool, dir, b.ID); err != nil {
+			log.Printf("reconcile build %s: %v", b.ID, err)
+			recErr = err.Error()
+		}
+		mark("reconcile")
+		// Record the reconcile outcome on the build so the UI can show WHY a
+		// build is stuck -- a build/builder incompatibility, say, which
+		// isn't a content error and so can't be caught by `laforge check`.
+		// Write only on a change to avoid an UPDATE every tick.
+		prev := ""
+		if b.ReconcileError != nil {
+			prev = *b.ReconcileError
+		}
+		if recErr != prev {
+			var val *string
+			if recErr != "" {
+				val = &recErr
+			}
+			if e := q.SetBuildReconcileError(bctx, db.SetBuildReconcileErrorParams{ID: b.ID, ReconcileError: val}); e != nil {
+				log.Printf("recording reconcile error for build %s: %v", b.ID, e)
+			}
+		}
+		// Enforce visible_from once a team's networks are up (peering + ACLs
+		// via the builder). Deliberately after Reconcile, which drives the
+		// networks to deployed in the first place.
+		if err := orchestrator.ReconcileNetworkAccess(bctx, pool, b.ID); err != nil {
+			log.Printf("reconcile network access for build %s: %v", b.ID, err)
+		}
+		mark("netaccess")
+		// Realize content `public:` ports once a team's hosts are up (a
+		// public IP or a port-NAT on a shared uplink IP, per builder).
+		if err := orchestrator.ReconcileExternalAccess(bctx, pool, dir, b.ID); err != nil {
+			log.Printf("reconcile external access for build %s: %v", b.ID, err)
+		}
+		mark("extaccess")
+		// Name the slow build and which phase ate the time, so a stalled pass
+		// points straight at the cause (a cold checkout, a hanging hoster API)
+		// instead of looking like an idle process.
+		if d := time.Since(buildStart); d >= slowBuildThreshold {
+			log.Printf("reconcile build %s (%s): slow pass %s [%s]", b.ID, b.Status, d.Round(time.Millisecond), strings.Join(phases, " "))
+		}
+	}
+
 	reconcileAll := func() {
+		cycleStart := time.Now()
 		builds, err := q.ListBuildsByStatus(ctx, []string{"planned", "deploying", "building", "tearing_down"})
 		if err != nil {
 			log.Printf("listing builds: %v", err)
 			return
 		}
+		// Reconcile builds through a bounded worker pool instead of serially, so
+		// one slow build no longer blocks every build behind it (the head-of-line
+		// stall that made a new build sit for minutes). A buffered channel caps
+		// the number in flight; each build still gets its own deadline inside
+		// reconcileOne.
+		limit := *reconcileConcurrency
+		if limit < 1 {
+			limit = 1
+		}
+		sem := make(chan struct{}, limit)
+		var wg sync.WaitGroup
 		for _, b := range builds {
-			// Teardown deliberately
-			// never touches content at all -- a build has to be
-			// destroyable even once its repository access, branch, or
-			// checkout is no longer resolvable, unlike Reconcile below,
-			// which requires it.
-			if b.Status == "tearing_down" {
-				if err := orchestrator.Teardown(ctx, pool, b.ID); err != nil {
-					log.Printf("tearing down build %s: %v", b.ID, err)
-				}
-				continue
-			}
-			// Advance object lifecycle (agent check-in, steps, validators)
-			// then the build phase before touching content -- like teardown,
-			// neither depends on the checkout being resolvable, so a build
-			// whose revision has since moved past the branch tip still settles
-			// (running -> building -> finished/failed) instead of erroring here
-			// forever. AdvanceBuildStatus returns settled=true only for a
-			// TERMINAL build (finished/failed): a build still "building" keeps
-			// reconciling so drift/fingerprint changes are caught live.
-			if err := orchestrator.AdvanceObjectLifecycle(ctx, pool, b.ID); err != nil {
-				log.Printf("advancing object lifecycle for build %s: %v", b.ID, err)
-			}
-			if settled, err := orchestrator.AdvanceBuildStatus(ctx, pool, b.ID); err != nil {
-				log.Printf("advancing build status for build %s: %v", b.ID, err)
-			} else if settled {
-				continue
-			}
-			dir, err := resolveContent(ctx, b.ID)
-			if err != nil {
-				log.Printf("resolving content for build %s: %v", b.ID, err)
-				continue
-			}
-			recErr := ""
-			if err := orchestrator.Reconcile(ctx, pool, dir, b.ID); err != nil {
-				log.Printf("reconcile build %s: %v", b.ID, err)
-				recErr = err.Error()
-			}
-			// Record the reconcile outcome on the build so the UI can show WHY a
-			// build is stuck -- a build/builder incompatibility, say, which
-			// isn't a content error and so can't be caught by `laforge check`.
-			// Write only on a change to avoid an UPDATE every tick.
-			prev := ""
-			if b.ReconcileError != nil {
-				prev = *b.ReconcileError
-			}
-			if recErr != prev {
-				var val *string
-				if recErr != "" {
-					val = &recErr
-				}
-				if e := q.SetBuildReconcileError(ctx, db.SetBuildReconcileErrorParams{ID: b.ID, ReconcileError: val}); e != nil {
-					log.Printf("recording reconcile error for build %s: %v", b.ID, e)
-				}
-			}
-			// Enforce visible_from once a team's networks are up (peering + ACLs
-			// via the builder). Deliberately after Reconcile, which drives the
-			// networks to deployed in the first place.
-			if err := orchestrator.ReconcileNetworkAccess(ctx, pool, b.ID); err != nil {
-				log.Printf("reconcile network access for build %s: %v", b.ID, err)
-			}
-			// Realize content `public:` ports once a team's hosts are up (a
-			// public IP or a port-NAT on a shared uplink IP, per builder).
-			if err := orchestrator.ReconcileExternalAccess(ctx, pool, dir, b.ID); err != nil {
-				log.Printf("reconcile external access for build %s: %v", b.ID, err)
-			}
+			b := b
+			sem <- struct{}{}
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				defer func() { <-sem }()
+				reconcileOne(b)
+			}()
+		}
+		wg.Wait()
+		// One line per slow pass (not per 2s tick) so the real reconcile cadence
+		// -- the gap between a build's successive passes -- is visible when it
+		// stretches far past the -interval the ticker nominally asks for.
+		if d := time.Since(cycleStart); d >= slowCycleThreshold {
+			log.Printf("reconcile pass: %d builds (%d in parallel) in %s", len(builds), limit, d.Round(time.Millisecond))
 		}
 	}
 
@@ -394,4 +480,29 @@ func main() {
 			collectBuilderMetrics()
 		}
 	}
+}
+
+// envIntDefault reads an integer environment variable, falling back to def when
+// unset or unparseable -- lets reconcile concurrency be set from the compose env
+// (RECONCILE_CONCURRENCY) without a flag, the same way the runner reads
+// RUNNER_CONCURRENCY.
+func envIntDefault(name string, def int) int {
+	if v := os.Getenv(name); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return def
+}
+
+// envDurationDefault reads a Go duration environment variable (e.g. "90s",
+// "2m"), falling back to def when unset or unparseable -- the duration twin of
+// envIntDefault, so RECONCILE_BUILD_TIMEOUT can be set from the compose env.
+func envDurationDefault(name string, def time.Duration) time.Duration {
+	if v := os.Getenv(name); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
+		}
+	}
+	return def
 }
