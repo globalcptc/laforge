@@ -217,14 +217,14 @@ function amiMetaLine(img: ImageInfo): string {
 // so you can see what it is without opening the dropdown or the AWS console. A
 // non-"available" state is called out in danger -- it won't launch.
 function AmiDetails({ img }: { img: ImageInfo }) {
-  const rows: Array<[string, string]> = [
+  const rows = ([
     ['Name', img.aliases?.[0] ?? ''],
     ['Publisher', img.properties.owner ?? ''],
     ['Architecture', img.architecture ?? ''],
     ['Platform', img.properties.os ?? ''],
     ['Created', img.properties.created ? img.properties.created.slice(0, 10) : ''],
     ['Description', img.properties.description ?? ''],
-  ].filter(([, v]) => v !== '')
+  ] as Array<[string, string]>).filter(([, v]) => v !== '')
   const bad = img.properties.state && img.properties.state !== 'available'
   return (
     <div className="ml-[calc(10rem+1.5rem)] rounded-token border border-border bg-surface-sunken px-3 py-2 text-xs">
@@ -366,6 +366,7 @@ export function StepCloudImages({
   onDiscovery: (d: Discovery) => void
 }) {
   const [searching, setSearching] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   // The AMI ids already configured, so every discovery call resolves them by id
   // (DescribeImages) and returns their full details -- otherwise a configured
   // Amazon/Canonical/Marketplace AMI shows as a bare "ami-…" with nothing to
@@ -383,10 +384,13 @@ export function StepCloudImages({
   async function search(q: string) {
     if (!credentialId) return
     setSearching(true)
+    setError(null)
     try {
       onDiscovery(await fetchDiscovery(credentialId, region, q, configuredAmiIds))
-    } catch {
-      // Leave the current options; the picker just shows what it has.
+    } catch (e) {
+      // Surface it -- a silent failure is exactly why "discovery isn't working"
+      // looked like nothing was happening.
+      setError(e instanceof ApiError ? e.message : 'Discovery request failed')
     } finally {
       setSearching(false)
     }
@@ -413,10 +417,33 @@ export function StepCloudImages({
   // AWS (unlike the LXD builders' docker base image). Offer a one-click add.
   const hasComposeHost = images.some((img) => img.name === COMPOSE_HOST_IMAGE)
 
+  // Why AMI details might be blank, said plainly instead of silently showing bare
+  // ids: no credential or region means discovery can't run; an error or a
+  // per-listing warning (an IAM gap on ec2:DescribeImages, say) means it ran but
+  // couldn't read them. Without this the page just looks like "discovery isn't working".
+  const blocker = !credentialId
+    ? 'No AWS credential is connected, so AMI details can’t be loaded. Connect one in the Config step.'
+    : !region
+      ? 'No region is set, so AMIs can’t be resolved (they’re region-scoped). Set a region in the Region step.'
+      : null
+  const warnings = discovery?.warnings ?? []
+
   return (
     <div className="flex flex-col gap-4">
       {infoBox('Map each os name content uses to an AMI. Your own AMIs are listed; type a name (e.g. “ubuntu”, “Windows”, “kali”) to search Amazon, Canonical, Microsoft and Marketplace images for this region. Or paste an exact AMI id and pick “Use …” — handy for a Marketplace image (which may need you to accept its terms in the account first).')}
       {infoBox(`Using compose containers? Click “Add compose-host” — it maps the reserved “${COMPOSE_HOST_IMAGE}” image to the latest Amazon Linux 2023 AMI for this region (Docker is installed on first boot). Compose hosts boot an EC2 instance from it; there is no base image to build on AWS. You can swap in any other Docker-capable AMI.`)}
+      {blocker && (
+        <div className="rounded-token border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning">{blocker}</div>
+      )}
+      {error && (
+        <div className="rounded-token border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">Couldn’t load AMI details: {error}</div>
+      )}
+      {warnings.length > 0 && (
+        <div className="rounded-token border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
+          <div className="font-medium">AWS reported:</div>
+          <ul className="mt-1 list-disc space-y-0.5 pl-4">{warnings.map((w, i) => <li key={i} className="break-words">{w}</li>)}</ul>
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         {images.map((img, i) => {
           const resolved = imagesById.get(img.fingerprint)
