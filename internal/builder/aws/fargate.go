@@ -76,7 +76,7 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 			return "", err
 		}
 	}
-	subnetID, vpcID, err := b.subnetForNetwork(ctx, spec.Network)
+	subnetID, vpcID, _, err := b.subnetForNetwork(ctx, spec.Network)
 	if err != nil {
 		return "", fmt.Errorf("resolving subnet for container %q: %w", spec.ExternalName, err)
 	}

@@ -126,8 +126,38 @@ fn cmd_execute(payload: &Value) -> Result<String, String> {
     if out.status.success() {
         Ok(String::from_utf8_lossy(&out.stdout).to_string())
     } else {
-        Err(format!("{command} exited {}: {}", out.status, String::from_utf8_lossy(&out.stderr)))
+        Err(format!("{command} exited {}: {}", out.status, failure_detail(&out.stdout, &out.stderr)))
     }
+}
+
+// failure_detail builds the diagnostic for a failed command from BOTH its stderr
+// and stdout -- many tools (docker compose among them, and plain shell scripts)
+// write their real error to stdout, so stderr alone comes back empty and a step
+// failure reads as a bare "exited 1:" with nothing useful. Capped to a tail so a
+// noisy command can't bloat the event payload (the error is almost always last).
+fn failure_detail(stdout: &[u8], stderr: &[u8]) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    let e = String::from_utf8_lossy(stderr);
+    if !e.trim().is_empty() {
+        parts.push(e.trim_end().to_string());
+    }
+    let o = String::from_utf8_lossy(stdout);
+    if !o.trim().is_empty() {
+        parts.push(o.trim_end().to_string());
+    }
+    let joined = if parts.is_empty() { "(no output)".to_string() } else { parts.join("\n") };
+    tail(&joined, 16_000)
+}
+
+// tail keeps the last `max` bytes of s (on a char boundary), prefixing a marker
+// when it had to cut -- a command's failure is almost always at the end.
+fn tail(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        return s.to_string();
+    }
+    let cut = s.len() - max;
+    let start = (cut..s.len()).find(|&i| s.is_char_boundary(i)).unwrap_or(s.len());
+    format!("…(truncated)…\n{}", &s[start..])
 }
 
 fn cmd_write_file(payload: &Value) -> Result<String, String> {

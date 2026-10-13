@@ -88,6 +88,7 @@ Resources:
               - ec2:DescribeRegions
               - ec2:DescribeImages
               - ec2:DescribeInstanceTypes
+              - ec2:DescribeInstanceTypeOfferings   # pick a subnet AZ that offers the configured instance types
             Resource: '*'
             Condition:
               StringEquals:

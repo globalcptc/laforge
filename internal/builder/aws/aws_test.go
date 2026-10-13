@@ -265,3 +265,28 @@ func TestCIDRWithin(t *testing.T) {
 		t.Error("a /16 is not within a /24 (wrong direction)")
 	}
 }
+
+func TestAWSReservedAddress(t *testing.T) {
+	cases := []struct {
+		cidr, ip string
+		reserved bool
+	}{
+		{"10.0.3.0/24", "10.0.3.0", true},  // network
+		{"10.0.3.0/24", "10.0.3.1", true},  // VPC router
+		{"10.0.3.0/24", "10.0.3.2", true},  // Amazon DNS (the one that failed in the field)
+		{"10.0.3.0/24", "10.0.3.3", true},  // AWS "future use"
+		{"10.0.3.0/24", "10.0.3.255", true}, // broadcast
+		{"10.0.3.0/24", "10.0.3.4", false},  // first usable
+		{"10.0.3.0/24", "10.0.3.100", false},
+		{"10.0.0.0/16", "10.0.0.3", true},   // first four, bigger block
+		{"10.0.0.0/16", "10.0.255.255", true}, // broadcast of a /16
+		{"10.0.0.0/16", "10.0.0.4", false},
+		{"10.0.3.0/24", "10.0.4.2", false},  // not in this subnet
+	}
+	for _, c := range cases {
+		got, reason := awsReservedAddress(c.cidr, c.ip)
+		if got != c.reserved {
+			t.Errorf("awsReservedAddress(%q, %q) = %v (%q), want %v", c.cidr, c.ip, got, reason, c.reserved)
+		}
+	}
+}

@@ -88,6 +88,7 @@ want least privilege (see the note after the policy).
         "ec2:DescribeSecurityGroups", "ec2:CreateSecurityGroup", "ec2:DeleteSecurityGroup",
         "ec2:AuthorizeSecurityGroupIngress", "ec2:RevokeSecurityGroupIngress",
         "ec2:RunInstances", "ec2:TerminateInstances", "ec2:DescribeInstances",
+        "ec2:DescribeInstanceTypeOfferings",
         "ec2:StartInstances", "ec2:StopInstances", "ec2:RebootInstances",
         "ec2:CreateTags",
         "ec2:AllocateAddress", "ec2:ReleaseAddress", "ec2:AssociateAddress",

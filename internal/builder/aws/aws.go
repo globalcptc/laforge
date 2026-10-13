@@ -33,12 +33,14 @@ package aws
 import (
 	"context"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -119,6 +121,15 @@ type Builder struct {
 	cw     *cloudwatch.Client
 	quotas *servicequotas.Client
 	cfg    Config
+
+	// Cached AZ for every subnet this builder creates. Resolved once (azOnce) to
+	// an AZ that offers ALL the builder's configured instance types, because a
+	// subnet created without an explicit AZ lands in whichever AZ AWS picks -- and
+	// a legacy AZ like us-east-1e offers no t3/current types, so RunInstances into
+	// it fails "instance type not supported in your requested Availability Zone".
+	azOnce   sync.Once
+	azCached string
+	azErr    error
 }
 
 // New constructs the builder from the ambient AWS credential/region chain,
@@ -485,25 +496,42 @@ func (b *Builder) ensureTeamNACL(ctx context.Context, vpcID, team string) (strin
 
 // --- Networks (subnets within the team VPC) -------------------------------
 
-func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (string, error) {
-	if spec.CIDR == "" {
-		return "", fmt.Errorf("network %q has no CIDR -- AWS requires one for the subnet", spec.ExternalName)
-	}
-	vpcID, err := b.ensureTeamVPC(ctx, buildFromExternalName(spec.ExternalName), spec.Team, spec.CIDR, spec.VPCCIDR)
+// vpcSetupLocks serializes each team's VPC-level resource creation (VPC, IGW,
+// route table, NACL, CIDR) across the networks DeployNetwork is called for
+// concurrently. Process-global so it holds regardless of how many builder
+// instances the runner resolves; keyed by build+team (the VPC's identity before
+// it exists). An entry is tiny and the set is bounded by builds*teams, so these
+// are never reclaimed -- not worth the bookkeeping.
+var vpcSetupLocks sync.Map // key string -> *sync.Mutex
+
+func vpcSetupLock(key string) *sync.Mutex {
+	m, _ := vpcSetupLocks.LoadOrStore(key, &sync.Mutex{})
+	return m.(*sync.Mutex)
+}
+
+// ensureTeamVPCResources builds (or adopts) the team's shared VPC-level resources
+// under the per-team lock, so concurrent DeployNetwork calls don't race to create
+// them. Returns the ids the per-network subnet setup needs.
+func (b *Builder) ensureTeamVPCResources(ctx context.Context, spec builder.NetworkSpec) (vpcID, rtID, naclID string, err error) {
+	lk := vpcSetupLock(buildFromExternalName(spec.ExternalName) + "/" + spec.Team)
+	lk.Lock()
+	defer lk.Unlock()
+
+	vpcID, err = b.ensureTeamVPC(ctx, buildFromExternalName(spec.ExternalName), spec.Team, spec.CIDR, spec.VPCCIDR)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
 	igwID, err := b.ensureInternetGateway(ctx, vpcID, spec.Team)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
-	rtID, err := b.ensureTeamRouteTable(ctx, vpcID, spec.Team, igwID)
+	rtID, err = b.ensureTeamRouteTable(ctx, vpcID, spec.Team, igwID)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
-	naclID, err := b.ensureTeamNACL(ctx, vpcID, spec.Team)
+	naclID, err = b.ensureTeamNACL(ctx, vpcID, spec.Team)
 	if err != nil {
-		return "", err
+		return "", "", "", err
 	}
 	// Ensure the VPC carries this network's CIDR. When the environment declared
 	// an overall supernet (spec.VPCCIDR), the VPC already spans it and the loader
@@ -513,9 +541,28 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	// paper over). Only in the inference path (no supernet) might a network land
 	// in a different /16 and need its containing block associated.
 	if spec.VPCCIDR == "" {
-		if err := b.ensureVPCCIDR(ctx, vpcID, spec.CIDR); err != nil {
-			return "", err
+		if err = b.ensureVPCCIDR(ctx, vpcID, spec.CIDR); err != nil {
+			return "", "", "", err
 		}
+	}
+	return vpcID, rtID, naclID, nil
+}
+
+func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (string, error) {
+	if spec.CIDR == "" {
+		return "", fmt.Errorf("network %q has no CIDR -- AWS requires one for the subnet", spec.ExternalName)
+	}
+	// The VPC and its IGW/route-table/NACL are PER-TEAM, shared by all of a team's
+	// networks -- but the runner calls DeployNetwork for them concurrently. Each
+	// "ensure" is describe-then-create, which races: several see no IGW and all
+	// create+attach one, the losers get "already has an internet gateway attached"
+	// (a 15-30s retry) and leak the orphan IGW they created (burning the IGW
+	// quota). Serialize the per-team VPC-level setup so exactly one network builds
+	// the shared resources and the rest adopt them. Per-network work (the subnet)
+	// stays concurrent, below.
+	vpcID, rtID, naclID, err := b.ensureTeamVPCResources(ctx, spec)
+	if err != nil {
+		return "", err
 	}
 
 	// Ensure: adopt a subnet already tagged with this network's ExternalName.
@@ -524,11 +571,23 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 		return "", err
 	}
 	if subnetID == "" {
-		created, err := b.ec2.CreateSubnet(ctx, &ec2.CreateSubnetInput{
+		// Pin the subnet to an AZ that offers the builder's instance types -- a
+		// subnet created without one lands wherever AWS chooses, and a legacy AZ
+		// (e.g. us-east-1e) offers no t3/current types, so every host in it fails
+		// to launch. Empty -> no size map to constrain, let AWS pick.
+		az, err := b.subnetAZ(ctx)
+		if err != nil {
+			return "", err
+		}
+		in := &ec2.CreateSubnetInput{
 			VpcId:             awssdk.String(vpcID),
 			CidrBlock:         awssdk.String(spec.CIDR),
 			TagSpecifications: []ec2types.TagSpecification{b.tagSpec(ec2types.ResourceTypeSubnet, spec.ExternalName, spec.Team, spec.DisplayName)},
-		})
+		}
+		if az != "" {
+			in.AvailabilityZone = awssdk.String(az)
+		}
+		created, err := b.ec2.CreateSubnet(ctx, in)
 		if err != nil {
 			return "", fmt.Errorf("creating subnet for %q: %w", spec.ExternalName, err)
 		}
@@ -726,15 +785,97 @@ func (b *Builder) findSubnet(ctx context.Context, externalName string) (string, 
 
 // subnetForNetwork resolves a network's ExternalName to its subnet id and VPC id
 // (a security group is VPC-scoped, so callers need both).
-func (b *Builder) subnetForNetwork(ctx context.Context, networkExternalName string) (subnetID, vpcID string, err error) {
+func (b *Builder) subnetForNetwork(ctx context.Context, networkExternalName string) (subnetID, vpcID, cidr string, err error) {
 	out, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{Filters: []ec2types.Filter{nameFilter(networkExternalName)}})
 	if err != nil {
-		return "", "", fmt.Errorf("looking up subnet for network %q: %w", networkExternalName, err)
+		return "", "", "", fmt.Errorf("looking up subnet for network %q: %w", networkExternalName, err)
 	}
 	if len(out.Subnets) == 0 {
-		return "", "", fmt.Errorf("no subnet found for network %q -- its DeployNetwork may not have run yet", networkExternalName)
+		return "", "", "", fmt.Errorf("no subnet found for network %q -- its DeployNetwork may not have run yet", networkExternalName)
 	}
-	return awssdk.ToString(out.Subnets[0].SubnetId), awssdk.ToString(out.Subnets[0].VpcId), nil
+	return awssdk.ToString(out.Subnets[0].SubnetId), awssdk.ToString(out.Subnets[0].VpcId), awssdk.ToString(out.Subnets[0].CidrBlock), nil
+}
+
+// subnetAZ returns an Availability Zone that offers EVERY instance type in the
+// builder's size map, resolved once and cached. Pinning subnets to it stops AWS
+// from dropping one into a legacy AZ (e.g. us-east-1e) that can't run current
+// instance types. Returns "" (let AWS choose) only when there's no size map to
+// constrain the choice. A resolution error is surfaced, not swallowed -- a wrong
+// AZ fails every host, so this isn't a "best-effort, carry on" case.
+func (b *Builder) subnetAZ(ctx context.Context) (string, error) {
+	b.azOnce.Do(func() { b.azCached, b.azErr = b.resolveSubnetAZ(ctx) })
+	return b.azCached, b.azErr
+}
+
+func (b *Builder) resolveSubnetAZ(ctx context.Context) (string, error) {
+	seen := map[string]bool{}
+	var types []string
+	for _, t := range b.cfg.Sizes {
+		if t != "" && !seen[t] {
+			seen[t] = true
+			types = append(types, t)
+		}
+	}
+	if len(types) == 0 {
+		return "", nil // nothing to constrain; let AWS pick the subnet's AZ
+	}
+	// Intersect the AZs that offer each configured instance type.
+	counts := map[string]int{}
+	for _, t := range types {
+		out, err := b.ec2.DescribeInstanceTypeOfferings(ctx, &ec2.DescribeInstanceTypeOfferingsInput{
+			LocationType: ec2types.LocationTypeAvailabilityZone,
+			Filters:      []ec2types.Filter{filter("instance-type", t)},
+		})
+		if err != nil {
+			return "", fmt.Errorf("listing AZs for instance type %q: %w", t, err)
+		}
+		az := map[string]bool{}
+		for _, o := range out.InstanceTypeOfferings {
+			az[awssdk.ToString(o.Location)] = true
+		}
+		for a := range az {
+			counts[a]++
+		}
+	}
+	var common []string
+	for a, n := range counts {
+		if n == len(types) {
+			common = append(common, a)
+		}
+	}
+	if len(common) == 0 {
+		return "", fmt.Errorf("no single Availability Zone offers all configured instance types %v -- choose types that share an AZ", types)
+	}
+	sort.Strings(common) // deterministic: same AZ every time, so all subnets co-locate
+	return common[0], nil
+}
+
+// awsReservedAddress reports whether ip falls in AWS's per-subnet reserved range,
+// which AWS forbids assigning to an instance: the FIRST FOUR addresses (network,
+// VPC router, Amazon DNS, future use) and the BROADCAST address. reason names
+// which, for a clear error. This is why content that places a host at .1/.2/.3 --
+// fine on Incus/MicroCloud, where only .1 is the gateway -- fails on AWS.
+func awsReservedAddress(cidr, ip string) (reserved bool, reason string) {
+	_, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return false, ""
+	}
+	addr := net.ParseIP(ip).To4()
+	base := ipnet.IP.To4()
+	m := net.IP(ipnet.Mask).To4()
+	if addr == nil || base == nil || m == nil || !ipnet.Contains(addr) {
+		return false, ""
+	}
+	a := binary.BigEndian.Uint32(addr)
+	net0 := binary.BigEndian.Uint32(base)
+	broadcast := net0 | ^binary.BigEndian.Uint32(m)
+	switch {
+	case a >= net0 && a <= net0+3:
+		return true, fmt.Sprintf("one of the first four (network, router, DNS, reserved) addresses of %s", cidr)
+	case a == broadcast:
+		return true, fmt.Sprintf("the broadcast address of %s", cidr)
+	}
+	return false, ""
 }
 
 // --- Hosts ----------------------------------------------------------------
@@ -754,9 +895,18 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	if !ok {
 		return "", fmt.Errorf("no instance-type mapping for size %q (configure the builder's size map)", spec.Size)
 	}
-	subnetID, vpcID, err := b.subnetForNetwork(ctx, spec.Network)
+	subnetID, vpcID, cidr, err := b.subnetForNetwork(ctx, spec.Network)
 	if err != nil {
 		return "", err
+	}
+	// A host whose content address lands in AWS's reserved range can never launch
+	// (AWS rejects it outright), so fail now with a clear, PERMANENT error -- no
+	// point retrying -- instead of three rounds of the opaque AWS message.
+	if spec.Address != "" {
+		if reserved, reason := awsReservedAddress(cidr, spec.Address); reserved {
+			return "", fmt.Errorf("host %q address %s is %s, which AWS reserves and won't assign -- use a last_octet of 4 or higher (AWS keeps the first four and last of every subnet): %w",
+				spec.ExternalName, spec.Address, reason, builder.ErrPermanentConfig)
+		}
 	}
 	sgID, err := b.ensureObjectSecurityGroup(ctx, spec.ExternalName, spec.Team, vpcID)
 	if err != nil {
