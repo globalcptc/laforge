@@ -288,6 +288,9 @@ export function StepCloudRegion({
           <Field label="Agent Init Image" hint="Small public image a Fargate container runs once to download the agent. Default alpine:3.20 — change only if you can't pull from Docker Hub.">
             <Input value={aws.agent_init_image ?? ''} onChange={(e) => setAws({ agent_init_image: e.target.value })} placeholder="alpine:3.20" className="font-mono" />
           </Field>
+          <Field label="EC2 Key Pair" hint="Name of an existing EC2 key pair in this region, associated with every instance. It's how you retrieve a Windows box's Administrator password: aws ec2 get-password-data --priv-launch-key your-key.pem. Leave blank for no key pair — but then Windows passwords aren't recoverable. Deliberately not set via user-data, which a competitor on the box could read.">
+            <Input value={aws.key_name ?? ''} onChange={(e) => setAws({ key_name: e.target.value })} placeholder="laforge-cptc" className="font-mono" />
+          </Field>
         </div>
       </section>
     </div>

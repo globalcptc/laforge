@@ -374,6 +374,7 @@ function cleanAwsConfig(c: AwsConfig): AwsConfig {
   if (c.execution_role_arn?.trim()) out.execution_role_arn = c.execution_role_arn.trim()
   if (c.log_group?.trim()) out.log_group = c.log_group.trim()
   if (c.agent_init_image?.trim()) out.agent_init_image = c.agent_init_image.trim()
+  if (c.key_name?.trim()) out.key_name = c.key_name.trim()
   if (c.account?.trim()) out.account = c.account.trim()
   return out
 }

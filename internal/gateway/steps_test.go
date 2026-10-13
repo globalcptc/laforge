@@ -8,6 +8,46 @@ import (
 	"github.com/globalcptc/laforge/internal/loader"
 )
 
+// TestExpandStepsAdminPasswordBackstop proves ExpandSteps prepends a single
+// set_password for the host's built-in admin account from the environment's
+// root_password -- root on Linux, Administrator on Windows -- as the first
+// command for every host. examples/lm-test sets root_password: P@ssword123.
+func TestExpandStepsAdminPasswordBackstop(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatalf("loader.Load: %v", err)
+	}
+	if len(c.Errors) != 0 {
+		t.Fatalf("content has schema errors: %+v", c.Errors)
+	}
+
+	check := func(asName, wantUser string) {
+		t.Helper()
+		cmds, _, err := ExpandSteps("../../examples/lm-test", c, "lm-test", asName, 1)
+		if err != nil {
+			t.Fatalf("ExpandSteps (%s): %v", asName, err)
+		}
+		if len(cmds) == 0 || cmds[0].Command != agentproto.CmdSetPassword {
+			t.Fatalf("%s: first command = %v, want set_password", asName, cmds)
+		}
+		pw, ok := cmds[0].Payload.(agentproto.SetPasswordPayload)
+		if !ok {
+			t.Fatalf("%s: payload is %T, want SetPasswordPayload", asName, cmds[0].Payload)
+		}
+		if pw.Username != wantUser {
+			t.Errorf("%s: admin user = %q, want %q", asName, pw.Username, wantUser)
+		}
+		if pw.Password != "P@ssword123" {
+			t.Errorf("%s: password = %q, want the env's root_password", asName, pw.Password)
+		}
+		if !cmds[0].IgnoreErrors {
+			t.Errorf("%s: backstop should ignore_errors so it never fails an otherwise-good host", asName)
+		}
+	}
+	check("web01", "root")         // ubuntu22 -> root
+	check("dc01", "Administrator") // windows-server-2022 -> Administrator
+}
+
 // TestExpandStepsOnRealWebserverHost exercises every interesting
 // expansion path against real content in one shot:
 // examples/lm-test/hosts/webserver.yaml's steps are
@@ -30,7 +70,11 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 		t.Fatalf("ExpandSteps: %v", err)
 	}
 
+	// cmds[0] is the admin-password backstop (root on this ubuntu22 host) that
+	// ExpandSteps prepends from the environment's root_password; the authored
+	// steps follow. TestExpandStepsAdminPasswordBackstop covers the step itself.
 	wantCommands := []string{
+		agentproto.CmdSetPassword, // admin-password backstop (root)
 		agentproto.CmdWriteFile, agentproto.CmdExecute, // script: base
 		agentproto.CmdDownload,
 		agentproto.CmdExtract,
@@ -46,19 +90,19 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 	}
 
 	// ignore_errors rides from a script onto its execute command: vuln-sqli sets
-	// it (cmds[5]), base does not (cmds[1]).
-	if cmds[1].IgnoreErrors {
+	// it (cmds[6]), base does not (cmds[2]).
+	if cmds[2].IgnoreErrors {
 		t.Errorf("base's execute should not ignore errors")
 	}
-	if !cmds[5].IgnoreErrors {
+	if !cmds[6].IgnoreErrors {
 		t.Errorf("vuln-sqli sets ignore_errors: true, but its execute command didn't carry it")
 	}
 
 	// The first script's rendered content actually made it into the
 	// write_file payload -- not empty, not a template artifact.
-	wf, ok := cmds[0].Payload.(agentproto.WriteFilePayload)
+	wf, ok := cmds[1].Payload.(agentproto.WriteFilePayload)
 	if !ok {
-		t.Fatalf("cmds[0].Payload is %T, want agentproto.WriteFilePayload", cmds[0].Payload)
+		t.Fatalf("cmds[1].Payload is %T, want agentproto.WriteFilePayload", cmds[1].Payload)
 	}
 	if wf.Content == "" {
 		t.Fatal("rendered script content is empty")
@@ -67,9 +111,9 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 		t.Fatalf("rendered script content still has an unrendered template marker:\n%s", wf.Content)
 	}
 
-	exec, ok := cmds[1].Payload.(agentproto.ExecutePayload)
+	exec, ok := cmds[2].Payload.(agentproto.ExecutePayload)
 	if !ok {
-		t.Fatalf("cmds[1].Payload is %T, want agentproto.ExecutePayload", cmds[1].Payload)
+		t.Fatalf("cmds[2].Payload is %T, want agentproto.ExecutePayload", cmds[2].Payload)
 	}
 	if exec.Command != "/bin/bash" {
 		t.Fatalf("exec.Command = %q, want /bin/bash (base.yaml's language is bash)", exec.Command)
@@ -78,9 +122,9 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 		t.Fatalf("exec.Args = %v, want exactly [%q] (the path the script was just written to)", exec.Args, wf.Path)
 	}
 
-	dl, ok := cmds[2].Payload.(agentproto.DownloadPayload)
+	dl, ok := cmds[3].Payload.(agentproto.DownloadPayload)
 	if !ok {
-		t.Fatalf("cmds[2].Payload is %T, want agentproto.DownloadPayload", cmds[2].Payload)
+		t.Fatalf("cmds[3].Payload is %T, want agentproto.DownloadPayload", cmds[3].Payload)
 	}
 	if dl.From != "https://files.cp.tc/site.tar.gz" || dl.To != "/var/www/site.tar.gz" {
 		t.Fatalf("download payload = %+v, want matching webserver.yaml's from/to", dl)
@@ -288,11 +332,13 @@ func TestExpandStepsUsesRuntimePublicAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cmds) != 1 {
+	// cmds[0] is the admin-password backstop ExpandSteps prepends for every host;
+	// the authored write_file follows at cmds[1].
+	if len(cmds) != 2 {
 		t.Fatalf("commands: %v", cmds)
 	}
-	payload, ok := cmds[0].Payload.(agentproto.WriteFilePayload)
+	payload, ok := cmds[1].Payload.(agentproto.WriteFilePayload)
 	if !ok || payload.Content != "10.250.3.100" {
-		t.Fatalf("runtime public IP missing: %+v", cmds[0])
+		t.Fatalf("runtime public IP missing: %+v", cmds[1])
 	}
 }

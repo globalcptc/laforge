@@ -636,6 +636,8 @@ export interface AwsConfig {
   execution_role_arn?: string
   log_group?: string
   agent_init_image?: string
+  /** EC2 key pair associated with instances so a Windows box's admin password is retrievable via get-password-data. */
+  key_name?: string
   /** AWS account id the credential belongs to, captured at connect. Display-only. */
   account?: string
 }

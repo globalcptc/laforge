@@ -83,6 +83,13 @@ type ConfigInput struct {
 	ExecutionRoleARN string `json:"execution_role_arn,omitempty"`
 	LogGroup         string `json:"log_group,omitempty"`
 	AgentInitImage   string `json:"agent_init_image,omitempty"`
+	// KeyName is an existing EC2 key pair (in this region) associated with every
+	// launched instance, so the operator can retrieve a Windows box's admin
+	// password with `aws ec2 get-password-data --priv-launch-key`. Deliberately
+	// NOT set via user-data: a user-data password is readable from the instance
+	// metadata by anyone on the box (a competitor), whereas the key pair keeps it
+	// out of the guest entirely. Empty means no key pair (falls back to AWS_KEY_NAME).
+	KeyName string `json:"key_name,omitempty"`
 	// Account is the AWS account id the enrolled credential belongs to (captured
 	// at connect via STS). Display-only — shown in the builders list so you can
 	// tell which account a builder deploys into; the builder itself doesn't use it.
@@ -104,6 +111,7 @@ type Config struct {
 	ExecutionRoleARN string // task execution role (AWS_ECS_EXECUTION_ROLE_ARN)
 	LogGroup         string // CloudWatch log group for task logs (AWS_ECS_LOG_GROUP), optional
 	AgentInitImage   string // public image the agent-download init container runs (AWS_ECS_AGENT_INIT_IMAGE, default "alpine:3.20")
+	KeyName          string // EC2 key pair associated with launched instances for Windows password retrieval (AWS_KEY_NAME), optional
 
 	// AccessKeyID/SecretAccessKey are the enrolled wizard credential (from the
 	// builder_credential store). When set they are used as a static credentials
@@ -174,6 +182,9 @@ func New(ctx context.Context, cfg Config) (*Builder, error) {
 	if cfg.AgentInitImage == "" {
 		cfg.AgentInitImage = envOr("AWS_ECS_AGENT_INIT_IMAGE", "alpine:3.20")
 	}
+	if cfg.KeyName == "" {
+		cfg.KeyName = os.Getenv("AWS_KEY_NAME")
+	}
 	return &Builder{
 		ec2:    ec2.NewFromConfig(awsCfg),
 		ecs:    ecs.NewFromConfig(awsCfg),
@@ -195,6 +206,7 @@ func ConfigFromInput(in ConfigInput, images, sizes map[string]string) Config {
 		ExecutionRoleARN: in.ExecutionRoleARN,
 		LogGroup:         in.LogGroup,
 		AgentInitImage:   in.AgentInitImage,
+		KeyName:          in.KeyName,
 	}
 }
 
@@ -1007,6 +1019,15 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	}
 	if spec.Address != "" {
 		in.PrivateIpAddress = awssdk.String(spec.Address)
+	}
+	// Associate the configured EC2 key pair so the operator can decrypt a Windows
+	// box's admin password with `aws ec2 get-password-data --priv-launch-key`.
+	// Harmless on Linux (the key lands in the default user's authorized_keys; the
+	// agent, not SSH, drives the host). If the named key pair doesn't exist in the
+	// region, RunInstances fails loudly with InvalidKeyPair.NotFound -- the right
+	// outcome, since launching without it would silently lock Windows out again.
+	if b.cfg.KeyName != "" {
+		in.KeyName = awssdk.String(b.cfg.KeyName)
 	}
 	if spec.AgentDownloadURL != "" {
 		// Render the agent install for THIS image's mechanism: a stock AWS Linux

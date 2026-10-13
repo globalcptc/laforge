@@ -11,6 +11,7 @@ package gateway
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/globalcptc/laforge/internal/agentproto"
@@ -130,9 +131,46 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 
 	var out []PlannedCommand
 	var notes []string
+
+	// Admin-password backstop: apply the environment's root_password to the host's
+	// built-in admin account (Administrator on Windows, root on Linux) over the
+	// agent's own authenticated channel. The cloudbase-init builders inject this
+	// at boot from the image; a cloud builder like AWS has no cloudbase-init, so
+	// without this its Windows boxes would show a UI password the box never got.
+	// Running it through the agent gives every builder the same working admin
+	// login -- a harmless idempotent re-set where cloudbase-init already did it,
+	// the sole mechanism where it didn't -- and keeps the password OFF the box's
+	// user-data/metadata, where its own users could read it. Host-only (a
+	// container has no such login) and only when root_password is set. First, so
+	// the credential is usable early; ignore_errors so this safety net never fails
+	// an otherwise-good host (the builder's break-glass access still applies).
+	// Unconditional because ExpandSteps is only the whole-host expansion the deploy
+	// materializer and the UI step view share -- one-off operator and scheduled
+	// commands go through ExpandOneStep (their own ad_hoc lane), so they never pick
+	// this up and never re-set the password.
+	groupOffset := 0
+	if ctx.ObjectKind == "host" {
+		if rp := environmentRootPassword(c, envName); rp != "" {
+			adminUser := "root"
+			// Same coarse rule as agentdelivery.PlatformFor: an OS whose name
+			// contains "win" is Windows, everything else Linux.
+			if strings.Contains(strings.ToLower(ctx.OS), "win") {
+				adminUser = "Administrator"
+			}
+			out = append(out, PlannedCommand{
+				Command:      agentproto.CmdSetPassword,
+				Payload:      agentproto.SetPasswordPayload{Username: adminUser, Password: rp},
+				IgnoreErrors: true,
+				Group:        0,
+				GroupLabel:   "Set admin password",
+			})
+			groupOffset = 1
+		}
+	}
+
 	// A compose container's project comes up first, as its own group, so the
 	// container's authored steps (and their validators) run against a live stack.
-	first := 0
+	first := groupOffset
 	if ctx.Compose != "" {
 		var o expandOptions
 		for _, opt := range opts {
@@ -152,9 +190,10 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		}
 		for k := range cmds {
 			cmds[k].GroupLabel = ComposeGroupLabel
+			cmds[k].Group = groupOffset
 		}
 		out = append(out, cmds...)
-		first = 1
+		first = groupOffset + 1
 	}
 	for i, step := range ctx.Steps {
 		cmds, ns, err := ExpandOneStep(repoRoot, c, ctx, i, step, opts...)
@@ -172,6 +211,18 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		notes = append(notes, ns...)
 	}
 	return out, notes, nil
+}
+
+// environmentRootPassword returns the named environment's root_password, or ""
+// when the environment isn't found or sets none. Same lookup the compose block
+// uses for container_logs.
+func environmentRootPassword(c *loader.Content, envName string) string {
+	for i := range c.Environments {
+		if c.Environments[i].Name == envName {
+			return c.Environments[i].RootPass
+		}
+	}
+	return ""
 }
 
 // ComposeGroupLabel heads the commands that start a compose container's project.

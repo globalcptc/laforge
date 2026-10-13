@@ -220,6 +220,24 @@ rest are discovered for you or have sane defaults.
 - **Agent Init Image** — a small public image a Fargate container runs once to
   download the LaForge agent. *Optional, default `alpine:3.20`.* Leave it unless
   your account can't pull from Docker Hub (then point it at an ECR mirror).
+- **EC2 Key Pair** — name of an existing EC2 key pair in this region, associated
+  with every launched instance. *Optional, but required to recover Windows admin
+  passwords.* Create or import one first (`aws ec2 create-key-pair --region
+  <region> --key-name laforge-cptc --query KeyMaterial --output text >
+  laforge-cptc.pem`) and keep the `.pem` safe, then enter the key-pair **name**
+  here. With it set, retrieve a Windows box's `Administrator` password with:
+
+  ```
+  aws ec2 get-password-data --region <region> --instance-id <id> \
+    --priv-launch-key laforge-cptc.pem
+  ```
+
+  LaForge deliberately does **not** set the Windows password via user-data: a
+  user-data password is readable from the instance metadata by anyone on the box
+  (a competitor), whereas the key pair keeps it out of the guest entirely. On
+  Linux the key lands in the default user's `authorized_keys` and is harmless (the
+  agent, not SSH, drives the host). Falls back to the runner's `AWS_KEY_NAME`
+  environment variable when blank.
 
 ### Images step
 

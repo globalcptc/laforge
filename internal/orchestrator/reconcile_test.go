@@ -451,11 +451,11 @@ func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 	// Steps now materialize eagerly (so the UI can show them) -- but while the
 	// dependency is only 'running', they are 'blocked': visible, not leasable,
 	// and the object records what it's waiting on.
-	if got := webserverSteps(); got != 5*6 {
-		t.Fatalf("webserver steps while database only 'running' = %d, want %d (materialized eagerly as blocked)", got, 5*6)
+	if got := webserverSteps(); got != 5*7 {
+		t.Fatalf("webserver steps while database only 'running' = %d, want %d (materialized eagerly as blocked)", got, 5*7)
 	}
-	if blocked, pending := webserverStepStatuses(); blocked != 5*6 || pending != 0 {
-		t.Fatalf("webserver steps while waiting: blocked=%d pending=%d, want all %d blocked (none leasable)", blocked, pending, 5*6)
+	if blocked, pending := webserverStepStatuses(); blocked != 5*7 || pending != 0 {
+		t.Fatalf("webserver steps while waiting: blocked=%d pending=%d, want all %d blocked (none leasable)", blocked, pending, 5*7)
 	}
 	if !webserverBlockedOnSet() {
 		t.Fatal("webserver blocked_on not recorded while waiting on database")
@@ -471,11 +471,11 @@ func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
 		t.Fatalf("Reconcile (database finished): %v", err)
 	}
-	if got := webserverSteps(); got != 5*6 {
-		t.Fatalf("webserver steps after database finished = %d, want %d (6 commands x 5 teams)", got, 5*6)
+	if got := webserverSteps(); got != 5*7 {
+		t.Fatalf("webserver steps after database finished = %d, want %d (7 commands x 5 teams: 6 authored + the admin-password backstop)", got, 5*7)
 	}
-	if blocked, pending := webserverStepStatuses(); blocked != 0 || pending != 5*6 {
-		t.Fatalf("after database finished: blocked=%d pending=%d, want all %d pending (released)", blocked, pending, 5*6)
+	if blocked, pending := webserverStepStatuses(); blocked != 0 || pending != 5*7 {
+		t.Fatalf("after database finished: blocked=%d pending=%d, want all %d pending (released)", blocked, pending, 5*7)
 	}
 	if webserverBlockedOnSet() {
 		t.Fatal("webserver blocked_on should be cleared after the dependency finished")
