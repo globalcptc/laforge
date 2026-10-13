@@ -308,11 +308,24 @@ func (c *Client) doWithHeaders(ctx context.Context, method, path string, body in
 	// request's own short-lived deadline -- a child context can never
 	// outlive its parent's, so passing reqCtx into waitForOperation would
 	// silently cap its own, much longer c.OperationTimeout+10s deadline
-	// back down to requestTimeout (30s) regardless of what
-	// OperationTimeout is configured to. Found exactly this way, live,
-	// against a real MicroCloud/Ceph cluster -- see NewClient's own doc
-	// comment on this same class of bug.
-	reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+	// back down regardless of what OperationTimeout is configured to. Found
+	// exactly this way, live, against a real MicroCloud/Ceph cluster -- see
+	// NewClient's own doc comment on this same class of bug.
+	//
+	// The submission deadline is max(requestTimeout, OperationTimeout), not a
+	// fixed requestTimeout: a SYNCHRONOUS call (a read like SnapshotExists /
+	// ListImages, or a synchronous mutation) IS the whole request, so a slow
+	// cluster read must get the configured budget rather than dying at 30s --
+	// exactly the "checking snapshot …: context deadline exceeded" the image
+	// config page hit against a Ceph-backed cluster. An async op still returns
+	// its operation handle quickly here and then waits on the original ctx, so
+	// the longer submission deadline only helps reads and never shortens a wait.
+	// This matches the MicroCloud client's do(), which already does this.
+	timeout := requestTimeout
+	if c.OperationTimeout > timeout {
+		timeout = c.OperationTimeout
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	u := c.BaseURL + path
 	if c.Project != "" {

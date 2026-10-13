@@ -75,13 +75,24 @@ try {
 } catch { Write-Host "clearing Administrator password-expiry: $_" }
 $dst = "C:\laforge-agent.exe"
 for ($i = 0; $i -lt 60; $i++) {
-  try { Invoke-WebRequest -Uri "%s" -OutFile $dst -UseBasicParsing; break } catch { Start-Sleep -Seconds 5 }
+  try { Invoke-WebRequest -Uri "%s" -OutFile $dst -UseBasicParsing -ErrorAction Stop; break } catch { Start-Sleep -Seconds 5 }
 }
+# CRITICAL: drop out of "Stop" before the install. The retry-guarded download
+# above needs Stop so a failed Invoke-WebRequest throws into its catch; but the
+# idempotent cleanup/create below runs native tools (sc.exe, schtasks) that write
+# expected "service/task does not exist" noise to stderr on a fresh box, and
+# under $ErrorActionPreference='Stop' PowerShell turns ANY native stderr into a
+# TERMINATING error -- which aborts the whole script before sc create ever
+# runs. That is the "agent downloaded but no service installed" failure. The
+# explicit Get-Service check further down is the real error handling here, so
+# Continue is correct: let every install step run, then decide via the result.
+$ErrorActionPreference = "Continue"
+if (-not (Test-Path $dst)) { Write-Host "laforge-agent.exe did not download after retries; cannot install"; exit 1 }
 # Remove any prior install (a legacy scheduled-task version, or a re-run) so this
 # is idempotent; native-command failures here are expected and don't abort.
 schtasks /delete /tn LaForgeAgent /f 2>$null
-cmd /c "sc.exe stop LaForgeAgent"
-cmd /c "sc.exe delete LaForgeAgent"
+cmd /c "sc.exe stop LaForgeAgent" 2>$null
+cmd /c "sc.exe delete LaForgeAgent" 2>$null
 Start-Sleep -Seconds 2
 cmd /c 'sc.exe create LaForgeAgent binPath= "C:\laforge-agent.exe" start= auto obj= LocalSystem DisplayName= "LaForge Agent"'
 cmd /c 'sc.exe description LaForgeAgent "LaForge agent"'
