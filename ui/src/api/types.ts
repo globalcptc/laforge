@@ -663,6 +663,8 @@ export interface BuilderConfig {
   incus_credential_id: string | null
   aws_credential_id?: string | null
   microcloud_public_access?: MicrocloudPublicAccess | null
+  /** MicroCloud only: cluster member names LaForge must NOT place instances on. */
+  microcloud_host_blocklist?: string[]
   aws_config?: AwsConfig | null
   external_access_ip: string | null
   external_port_min: number | null
@@ -692,6 +694,7 @@ export interface BuilderConfigRequest {
   incus_credential_id?: string
   aws_credential_id?: string
   microcloud_public_access?: MicrocloudPublicAccess
+  microcloud_host_blocklist?: string[]
   aws_config?: AwsConfig
   external_access_ip?: string
   external_port_min?: number

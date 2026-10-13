@@ -22,8 +22,9 @@ const composeWaitSeconds = 600
 // installDockerScript installs Docker Engine with the compose plugin when the
 // machine doesn't have both already. A machine booted from the builder's docker
 // base image has them and skips straight past it; this is for an operator's own
-// compose-host image that doesn't. Docker's own convenience script covers
-// the Linux distributions LaForge images use.
+// compose-host image that doesn't. Docker's convenience script covers Debian/
+// Ubuntu/etc.; Amazon Linux (which rejects that script) gets a dedicated path,
+// since it's the AMI the AWS compose-host one-click recommends.
 const installDockerScript = `set -e
 if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
   echo "docker and the compose plugin are already installed"
@@ -34,6 +35,21 @@ fi
 if command -v docker >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update && apt-get install -y docker-compose-v2 && docker compose version && exit 0
+fi
+# Amazon Linux (AL2/AL2023): get.docker.com fails with "Unsupported distribution
+# 'amzn'", so install Docker from the distro's own repo and drop in the compose
+# v2 plugin (the amzn docker package doesn't bundle it). uname -m already matches
+# the compose release asset suffix (x86_64 / aarch64).
+if [ -r /etc/os-release ] && . /etc/os-release && [ "$ID" = "amzn" ]; then
+  dnf install -y docker
+  systemctl enable --now docker
+  if ! docker compose version >/dev/null 2>&1; then
+    mkdir -p /usr/libexec/docker/cli-plugins
+    curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)" -o /usr/libexec/docker/cli-plugins/docker-compose
+    chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+  fi
+  docker compose version
+  exit 0
 fi
 if command -v curl >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com -o /tmp/laforge-get-docker.sh

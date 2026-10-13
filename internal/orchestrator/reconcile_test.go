@@ -83,9 +83,9 @@ func TestReconcileOnRealExampleRepo(t *testing.T) {
 	q := db.New(pool)
 	build := newTestBuild(t, pool, "reconcile-real-repo")
 
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
-		t.Fatalf("Reconcile: %v", err)
-	}
+	// A box's deploy waits for its network; bring the networks up so every object
+	// gets its deploy task (this test asserts one task per object).
+	reconcileWithNetworksUp(t, ctx, pool, "../../examples/lm-test", build.ID)
 
 	objs, err := q.ListDeployedObjectsByBuild(ctx, build.ID)
 	if err != nil {
@@ -319,9 +319,9 @@ func TestReconcilePlannedBuildCreatesNoRealWork(t *testing.T) {
 	if _, err := q.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: build.ID, Status: "deploying"}); err != nil {
 		t.Fatalf("SetBuildStatus: %v", err)
 	}
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
-		t.Fatalf("Reconcile (deploying): %v", err)
-	}
+	// A box's deploy waits for its network; bring networks up so every object gets
+	// its deploy task (this asserts one deploy task per object).
+	reconcileWithNetworksUp(t, ctx, pool, "../../examples/lm-test", build.ID)
 	tasksAfterDeploy, err := q.ListTasksByBuild(ctx, build.ID)
 	if err != nil {
 		t.Fatalf("ListTasksByBuild (after deploy): %v", err)
@@ -417,13 +417,25 @@ func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 		return true
 	}
 
-	// First pass: the box deploys ahead of time, so webserver gets its deploy
-	// task immediately even though database hasn't finished.
+	// First pass creates the network deploy tasks; a box's deploy waits for its
+	// network's subnet/bridge to exist (a physical prerequisite), so bring the
+	// networks up as a completed DeployNetwork would.
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if _, err := pool.Exec(ctx,
+		"UPDATE deployed_object SET status='running' WHERE kind='network' AND team_id IN (SELECT id FROM team WHERE build_id=$1)",
+		build.ID); err != nil {
+		t.Fatalf("marking networks up: %v", err)
+	}
+	// Next pass: the box deploys ahead of time, so webserver gets its deploy task
+	// even though database hasn't finished -- deploy is NOT gated on depends_on,
+	// only on its network existing.
 	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 	if got := countWebserverTasks(); got != 5 {
-		t.Fatalf("webserver deploy tasks on first pass = %d, want 5 (deploy not gated on depends_on)", got)
+		t.Fatalf("webserver deploy tasks after networks up = %d, want 5 (deploy not gated on depends_on)", got)
 	}
 
 	// Bring every team's webserver box up (agent in) but leave database merely

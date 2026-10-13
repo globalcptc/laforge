@@ -359,6 +359,12 @@ func resolveMicrocloud(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builde
 	if err := publicAccess.Validate(); err != nil {
 		return nil, err
 	}
+	var blocklist []string
+	if len(row.MicrocloudHostBlocklist) > 0 {
+		if err := json.Unmarshal(row.MicrocloudHostBlocklist, &blocklist); err != nil {
+			return nil, fmt.Errorf("decoding microcloud_host_blocklist: %w", err)
+		}
+	}
 	b := microcloud.New(client, microcloud.Config{
 		PublicAccess: publicAccess,
 		Images:       images, Sizes: sizes,
@@ -368,6 +374,7 @@ func resolveMicrocloud(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builde
 		ExternalPortMin:       int(db.Int32OrZero(row.ExternalPortMin)),
 		ExternalPortMax:       int(db.Int32OrZero(row.ExternalPortMax)),
 		DockerBaseFingerprint: row.DockerBaseFingerprint,
+		HostBlocklist:         blocklist,
 	})
 	if pool != nil && row.ID.Valid {
 		b.PublicAddresses = microcloud.SQLPublicAddressAllocator{Pool: pool, BuilderID: row.ID}

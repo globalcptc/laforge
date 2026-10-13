@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -42,6 +43,9 @@ import (
 type builderConfigRequest struct {
 	IncusOneTeamPerHost    bool                           `json:"incus_one_team_per_host"`
 	MicrocloudPublicAccess *microcloud.PublicAccessConfig `json:"microcloud_public_access,omitempty"`
+	// MicrocloudHostBlocklist names cluster members LaForge must NOT place
+	// instances on (MicroCloud only). Empty = no restriction.
+	MicrocloudHostBlocklist []string `json:"microcloud_host_blocklist,omitempty"`
 	// AwsConfig is kind "aws"'s account infrastructure (ECS cluster,
 	// task-execution role, log group, region, agent-init image, assign-public-IP).
 	// Empty fields fall back to the runner's AWS_* env vars. Ignored by every
@@ -110,6 +114,24 @@ func validBuilderColor(c string) bool {
 	return true
 }
 
+// cleanStrings trims each entry, drops empties, and de-duplicates (preserving
+// order) -- used for free-entry lists like the MicroCloud host blocklist so a
+// stray blank or a duplicate name doesn't reach the builder. Never nil, so it
+// marshals to "[]" not "null".
+func cleanStrings(in []string) []string {
+	out := []string{}
+	seen := map[string]bool{}
+	for _, s := range in {
+		s = strings.TrimSpace(s)
+		if s == "" || seen[s] {
+			continue
+		}
+		seen[s] = true
+		out = append(out, s)
+	}
+	return out
+}
+
 func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderConfigParams, error) {
 	if req.Kind != "fake" && req.Kind != "incus" && req.Kind != "microcloud" && req.Kind != "aws" && req.Kind != "openstack" {
 		return db.CreateBuilderConfigParams{}, errors.New(`kind must be "fake", "incus", "microcloud", "aws", or "openstack"`)
@@ -130,6 +152,11 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		}
 		publicAccess, _ = json.Marshal(req.MicrocloudPublicAccess)
 	}
+	if len(req.MicrocloudHostBlocklist) > 0 && req.Kind != "microcloud" {
+		return db.CreateBuilderConfigParams{}, errors.New("microcloud_host_blocklist is only supported by the MicroCloud builder")
+	}
+	// Always a JSON array (never SQL NULL), so a cleared blocklist stores "[]".
+	blocklist, _ := json.Marshal(cleanStrings(req.MicrocloudHostBlocklist))
 	var awsConfig []byte
 	if req.AwsConfig != nil {
 		if req.Kind != "aws" {
@@ -174,6 +201,7 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		IncusHosts:             hosts,
 		ExternalAccessIp:       db.StrPtr(req.ExternalAccessIP),
 		Color:                  req.Color,
+		MicrocloudHostBlocklist: blocklist,
 	}
 	if req.Kind == "microcloud" && req.IncusProject != "default" {
 		params.IncusProject = db.StrPtr(req.IncusProject)
@@ -411,8 +439,9 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		IncusProject:           params.IncusProject,
 		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
 		AwsConfig:              params.AwsConfig,
-		AwsCredentialID:        params.AwsCredentialID,
-		Color:                  params.Color,
+		AwsCredentialID:         params.AwsCredentialID,
+		Color:                   params.Color,
+		MicrocloudHostBlocklist: params.MicrocloudHostBlocklist,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

@@ -91,6 +91,8 @@ export interface Draft {
   // User-chosen display color ("" = none, else a "#rrggbb" hex), shown as a pill
   // wherever the builder name appears.
   color?: string
+  // MicroCloud only: cluster member names LaForge must not place instances on.
+  hostBlocklist?: string[]
 }
 
 let seq = 0
@@ -272,6 +274,7 @@ export function draftFromConfig(bc: BuilderConfig): Draft {
     externalPortMin: bc.external_port_min ?? undefined,
     externalPortMax: bc.external_port_max ?? undefined,
     color: bc.color ?? '',
+    hostBlocklist: bc.microcloud_host_blocklist ?? [],
   }
 }
 
@@ -333,6 +336,7 @@ function requestBody(d: Draft): BuilderConfigRequest {
     const h = d.hosts[0]
     const placement = {
       microcloud_public_access: d.microcloudPublicAccess ? { ...d.microcloudPublicAccess, dns: d.microcloudPublicAccess.dns?.map((v) => v.trim()).filter(Boolean) } : undefined,
+      microcloud_host_blocklist: (d.hostBlocklist ?? []).map((s) => s.trim()).filter(Boolean),
       incus_storage_pool: h.storagePool,
       incus_ovn_uplink_network: h.uplink,
       incus_project: h.project || undefined,

@@ -290,3 +290,43 @@ func TestAWSReservedAddress(t *testing.T) {
 		}
 	}
 }
+
+func TestMinimalSupernet(t *testing.T) {
+	cases := []struct {
+		in   []string
+		want string
+	}{
+		{[]string{"10.0.1.0/24", "10.0.2.0/24"}, "10.0.0.0/22"},
+		{[]string{"10.0.1.0/24"}, "10.0.1.0/24"},
+		{[]string{"10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24", "10.0.0.0/24"}, "10.0.0.0/22"},
+		{[]string{"10.1.0.0/16", "10.2.0.0/16"}, "10.0.0.0/14"},
+	}
+	for _, c := range cases {
+		got, _, ok := minimalSupernet(c.in)
+		if !ok || got != c.want {
+			t.Errorf("minimalSupernet(%v) = %q (ok=%v), want %q", c.in, got, ok, c.want)
+		}
+	}
+}
+
+func TestCollapseIfAllNetworks(t *testing.T) {
+	all := []string{"10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"}
+
+	// Visible from every network -> collapse to one supernet.
+	got := collapseIfAllNetworks([]string{"10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"}, all)
+	if len(got) != 1 || got[0] != "10.0.0.0/22" {
+		t.Errorf("full visibility collapse = %v, want [10.0.0.0/22]", got)
+	}
+
+	// Partial visibility -> unchanged (must not widen to the excluded network).
+	partial := []string{"10.0.1.0/24", "10.0.2.0/24"}
+	got = collapseIfAllNetworks(partial, all)
+	if len(got) != 2 {
+		t.Errorf("partial visibility must not collapse: got %v", got)
+	}
+
+	// A single source -> nothing to collapse.
+	if got := collapseIfAllNetworks([]string{"10.0.1.0/24"}, all); len(got) != 1 {
+		t.Errorf("single source changed: %v", got)
+	}
+}

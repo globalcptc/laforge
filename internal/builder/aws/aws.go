@@ -856,6 +856,81 @@ func (b *Builder) resolveSubnetAZ(ctx context.Context) (string, error) {
 	return common[0], nil
 }
 
+// collapseIfAllNetworks replaces a host's per-network source CIDRs with ONE
+// covering supernet when the sources include every team network -- "visible from
+// everything," so one block is equivalent and cuts AWS's per-(port x source) rule
+// count back to one source per port. Only when ALL networks are present: with a
+// partial set, a supernet could silently widen access to a network the policy
+// excluded, so sources are returned unchanged. Defensive: if the supernet can't
+// be computed or comes out implausibly broad (< /8), keep the explicit sources.
+func collapseIfAllNetworks(sources, allNetworkCIDRs []string) []string {
+	if len(sources) < 2 || len(allNetworkCIDRs) == 0 {
+		return sources
+	}
+	have := make(map[string]bool, len(sources))
+	for _, s := range sources {
+		have[s] = true
+	}
+	for _, c := range allNetworkCIDRs {
+		if !have[c] {
+			return sources // a team network isn't a source -> can't widen safely
+		}
+	}
+	super, prefix, ok := minimalSupernet(allNetworkCIDRs)
+	if !ok || prefix < 8 {
+		return sources
+	}
+	return []string{super}
+}
+
+// minimalSupernet returns the smallest single CIDR that contains all of the
+// given IPv4 CIDRs, with its prefix length. Pure, unit-tested offline.
+func minimalSupernet(cidrs []string) (cidr string, prefix int, ok bool) {
+	var lo, hi uint32
+	first := true
+	for _, c := range cidrs {
+		_, ipnet, err := net.ParseCIDR(c)
+		if err != nil {
+			return "", 0, false
+		}
+		base := ipnet.IP.To4()
+		mask := net.IP(ipnet.Mask).To4()
+		if base == nil || mask == nil {
+			return "", 0, false
+		}
+		n := binary.BigEndian.Uint32(base)
+		b := n | ^binary.BigEndian.Uint32(mask) // broadcast of this block
+		if first {
+			lo, hi, first = n, b, false
+			continue
+		}
+		if n < lo {
+			lo = n
+		}
+		if b > hi {
+			hi = b
+		}
+	}
+	if first {
+		return "", 0, false
+	}
+	// The minimal power-of-two block covering [lo, hi]: the prefix is the count of
+	// leading bits lo and hi share once aligned, found from the highest differing bit.
+	bits := 0
+	for x := lo ^ hi; x > 0; x >>= 1 {
+		bits++
+	}
+	prefix = 32 - bits
+	maskBits := ^uint32(0)
+	if prefix < 32 {
+		maskBits <<= uint(32 - prefix)
+	}
+	network := lo & maskBits
+	out := make(net.IP, 4)
+	binary.BigEndian.PutUint32(out, network)
+	return fmt.Sprintf("%s/%d", out.String(), prefix), prefix, true
+}
+
 // awsReservedAddress reports whether ip falls in AWS's per-subnet reserved range,
 // which AWS forbids assigning to an instance: the FIRST FOUR addresses (network,
 // VPC router, Amazon DNS, future use) and the BROADCAST address. reason names
@@ -1239,8 +1314,10 @@ func wrapPower(action, ref string, err error) error {
 // host with no declared ports gets no ingress -- reachable on nothing.
 func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, networks []builder.NetworkAccess) error {
 	cidrByName := make(map[string]string, len(networks))
+	allCIDRs := make([]string, 0, len(networks))
 	for _, na := range networks {
 		cidrByName[na.ExternalName] = na.CIDR
+		allCIDRs = append(allCIDRs, na.CIDR)
 	}
 	for _, na := range networks {
 		sources := []string{na.CIDR}
@@ -1249,6 +1326,13 @@ func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, netwo
 				sources = append(sources, c)
 			}
 		}
+		// AWS counts a rule per (port x source CIDR), capped at 60 per SG by
+		// default -- so a many-ported host visible from several networks blows the
+		// limit (16 ports x 4 networks = 64). When a host sees EVERY team network,
+		// its sources cover the whole VPC, so one supernet is equivalent and cuts
+		// the rules back to one per port. Partial visibility can't widen safely and
+		// is left as-is.
+		sources = collapseIfAllNetworks(sources, allCIDRs)
 		for _, h := range na.Hosts {
 			if h.ExternalRef == "" {
 				continue // not deployed yet; a later pass configures it
@@ -1285,6 +1369,13 @@ func (b *Builder) convergeHostFirewall(ctx context.Context, h builder.HostAccess
 		if _, err := b.ec2.AuthorizeSecurityGroupIngress(ctx, &ec2.AuthorizeSecurityGroupIngressInput{
 			GroupId: awssdk.String(sgID), IpPermissions: perms,
 		}); err != nil && !isDuplicate(err) {
+			if isRuleLimitExceeded(err) {
+				// Rules = declared ports x allowed sources; a many-ported, widely
+				// visible host exceeds AWS's 60-rule default. Retrying can't help, so
+				// fail permanently with the fix: raise the quota or trim the policy.
+				return fmt.Errorf("%w: %s needs more than AWS's limit of security-group rules (ports x visible-from sources). Raise the \"Inbound/outbound rules per security group\" quota (Service Quotas, default 60, up to 1000), or reduce this host's ports:/visible_from: %w",
+					builder.ErrPermanentConfig, h.ExternalRef, err)
+			}
 			return fmt.Errorf("authorizing firewall rules on %s: %w", sgID, err)
 		}
 	}

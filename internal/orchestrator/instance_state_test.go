@@ -20,21 +20,25 @@ func TestPollInstanceStates(t *testing.T) {
 	q := db.New(pool)
 	build := newTestBuildWithFakeBuilder(t, pool, "power-poll")
 
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
-		t.Fatalf("Reconcile: %v", err)
-	}
 	r := &runner.Runner{
 		Pool: pool, Builder: fake.New(pool), RepoRoot: "../../examples/lm-test",
 		ID: "power-poll-runner", LeaseDuration: 10 * time.Second, HeartbeatInterval: 2 * time.Second,
 		BuildID: &build.ID,
 	}
-	for {
-		worked, err := r.LeaseAndExecuteOne(ctx)
-		if err != nil {
-			t.Fatalf("LeaseAndExecuteOne: %v", err)
+	// Reconcile + drain, repeatedly: a host's deploy waits for its network, so the
+	// networks deploy on the first pass and the hosts on the next.
+	for pass := 0; pass < 4; pass++ {
+		if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+			t.Fatalf("Reconcile (pass %d): %v", pass, err)
 		}
-		if !worked {
-			break
+		for {
+			worked, err := r.LeaseAndExecuteOne(ctx)
+			if err != nil {
+				t.Fatalf("LeaseAndExecuteOne: %v", err)
+			}
+			if !worked {
+				break
+			}
 		}
 	}
 

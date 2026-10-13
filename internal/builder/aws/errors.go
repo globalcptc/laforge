@@ -86,3 +86,12 @@ func isECSClusterNotFound(err error) bool {
 func isLogGroupExists(err error) bool {
 	return apiErrorCode(err) == "ResourceAlreadyExistsException"
 }
+
+// isRuleLimitExceeded is AWS's "this security group already has the maximum
+// number of rules" (default 60 inbound/outbound). The rule count a host needs is
+// its declared ports times its allowed sources, so a many-ported, widely-visible
+// host (a DC) can exceed it. Retrying never helps -- the count won't shrink -- so
+// callers surface a permanent, actionable error instead of looping.
+func isRuleLimitExceeded(err error) bool {
+	return apiErrorCode(err) == "RulesPerSecurityGroupLimitExceeded"
+}

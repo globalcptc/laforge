@@ -4,9 +4,10 @@ INSERT INTO builder_config (
     incus_server_cert_pem, incus_ovn_uplink_network, incus_storage_pool,
     incus_operation_timeout_seconds, incus_images, incus_sizes, incus_hosts,
     incus_credential_id, external_access_ip, external_port_min, external_port_max,
-    incus_project, microcloud_public_access, aws_config, aws_credential_id, incus_one_team_per_host, color
+    incus_project, microcloud_public_access, aws_config, aws_credential_id, incus_one_team_per_host, color,
+    microcloud_host_blocklist
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
 ) RETURNING *;
 
 -- name: GetBuilderConfigByName :one
@@ -21,7 +22,8 @@ UPDATE builder_config SET
     incus_server_cert_pem = $6, incus_ovn_uplink_network = $7, incus_storage_pool = $8,
     incus_operation_timeout_seconds = $9, incus_images = $10, incus_sizes = $11, incus_hosts = $12,
     incus_credential_id = $13, external_access_ip = $14, external_port_min = $15, external_port_max = $16,
-    incus_project = $17, microcloud_public_access = $18, aws_config = $19, aws_credential_id = $20, incus_one_team_per_host = $21, color = $22, updated_at = now()
+    incus_project = $17, microcloud_public_access = $18, aws_config = $19, aws_credential_id = $20, incus_one_team_per_host = $21, color = $22,
+    microcloud_host_blocklist = $23, updated_at = now()
 WHERE name = $1
 RETURNING *;
 

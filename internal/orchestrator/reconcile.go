@@ -113,7 +113,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 		// true only when every copy of that object has fully FINISHED
 		// configuring; failedDeps[name] is true when any copy failed terminally
 		// (so a dependent can be failed rather than waiting on it forever).
-		finishedDeps, failedDeps, err := teamDepReadiness(ctx, q, team.ID)
+		finishedDeps, failedDeps, networkUp, networkFailed, err := teamDepReadiness(ctx, q, team.ID)
 		if err != nil {
 			return fmt.Errorf("team %d readiness: %w", teamNum, err)
 		}
@@ -129,7 +129,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 
 		for _, pl := range placements {
 			desired[pl.kind+"/"+pl.as] = true
-			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps); err != nil {
+			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps, networkUp, networkFailed); err != nil {
 				return fmt.Errorf("team %d, %s %q: %w", teamNum, pl.kind, pl.as, err)
 			}
 		}
@@ -312,7 +312,7 @@ func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, tea
 	return err
 }
 
-func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool) error {
+func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps, networkUp, networkFailed map[string]bool) error {
 	rctx, err := render.Resolve(c, envName, asName, teamNum)
 	if err != nil {
 		return fmt.Errorf("resolving: %w", err)
@@ -363,6 +363,19 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	}
 	if err := q.SetDeployedObjectTags(ctx, db.SetDeployedObjectTagsParams{ID: obj.ID, Tags: tagsJSON}); err != nil {
 		return fmt.Errorf("setting tags: %w", err)
+	}
+	// Hold the FIRST deploy of a box until its network is actually up: a builder
+	// can't place an instance in a subnet/bridge that DeployNetwork hasn't created
+	// yet. Without this the deploy task races ahead (the runner leases many tasks
+	// at once) and burns retry cycles against the hoster ("no subnet found ...
+	// DeployNetwork may not have run yet") -- the same wait, but noisy. This is a
+	// PHYSICAL prerequisite, distinct from depends_on (a box still deploys ahead of
+	// a dependency's configuration). We wait only while the network is still coming
+	// up: if its deploy terminally FAILED we don't gate, so the box deploys, fails
+	// on its own, and nothing strands forever. Only the initial deploy is gated --
+	// an already-up box's network is necessarily up, so rebuild/fingerprint runs.
+	if deployTasks && !infraUp(obj.Status) && networkName != "" && !networkUp[networkName] && !networkFailed[networkName] {
+		return nil
 	}
 	// The box deploys ahead of time: its deploy task is no longer gated on
 	// depends_on (that only ever waited for a dependency's instance to exist,
@@ -528,17 +541,28 @@ func orderedPlacements(env *loader.Environment, containerNames map[string]bool, 
 // merely come up is no longer enough -- a DC must be a configured DC); a
 // dependency that failed lets the dependent fail fast instead of waiting
 // forever.
-func teamDepReadiness(ctx context.Context, q *db.Queries, teamID pgtype.UUID) (finished, failed map[string]bool, err error) {
+func teamDepReadiness(ctx context.Context, q *db.Queries, teamID pgtype.UUID) (finished, failed, networkUp, networkFailed map[string]bool, err error) {
 	objs, err := q.ListDeployedObjectsByTeam(ctx, teamID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	finished = make(map[string]bool, len(objs))
 	failed = make(map[string]bool, len(objs))
+	// A host/container's first deploy waits for its network's subnet/bridge to
+	// exist (see reconcileCopy): networkUp[name] once the network's infrastructure
+	// is up, networkFailed[name] once its deploy terminally failed (so a host
+	// stops waiting and fails on its own instead of stranding forever).
+	networkUp = make(map[string]bool, len(objs))
+	networkFailed = make(map[string]bool, len(objs))
 	seen := make(map[string]bool, len(objs))
 	for _, o := range objs {
-		isFin := o.Status == "finished"
 		isFail := o.Status == "deploy_failed" || o.Status == "build_failed" || o.Status == "invalid"
+		if o.Kind == "network" {
+			networkUp[o.ObjectName] = infraUp(o.Status)
+			networkFailed[o.ObjectName] = isFail
+			continue
+		}
+		isFin := o.Status == "finished"
 		if !seen[o.ObjectName] {
 			seen[o.ObjectName] = true
 			finished[o.ObjectName] = isFin
@@ -548,7 +572,7 @@ func teamDepReadiness(ctx context.Context, q *db.Queries, teamID pgtype.UUID) (f
 			failed[o.ObjectName] = failed[o.ObjectName] || isFail
 		}
 	}
-	return finished, failed, nil
+	return finished, failed, networkUp, networkFailed, nil
 }
 
 // effectiveTags computes the tags stored on a deployed_object, cascading from

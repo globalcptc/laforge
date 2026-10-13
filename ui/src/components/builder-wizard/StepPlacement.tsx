@@ -20,12 +20,16 @@ export function StepPlacement({
   onExternalChange,
   microcloudPublicAccess,
   onPublicAccessChange,
+  hostBlocklist,
+  onBlocklistChange,
 }: {
   kind: Kind
   oneTeamPerHost: boolean
   onPlacementPolicyChange: (value: boolean) => void
   microcloudPublicAccess?: MicrocloudPublicAccess
   onPublicAccessChange: (value: MicrocloudPublicAccess) => void
+  hostBlocklist: string[]
+  onBlocklistChange: (value: string[]) => void
   hosts: HostDraft[]
   onChange: (hosts: HostDraft[]) => void
   externalAccessIp: string
@@ -35,6 +39,16 @@ export function StepPlacement({
 }) {
   const update = (i: number, patch: Partial<HostDraft>) => onChange(hosts.map((h, j) => (j === i ? { ...h, ...patch } : h)))
   const num = (v: string): number | undefined => (v.trim() === '' ? undefined : Number(v))
+
+  // MicroCloud host blocklist: cluster members LaForge must not place instances
+  // on. Free entry (chips) -- member names come from the cluster (e.g. micro-07).
+  const [blockEntry, setBlockEntry] = useState('')
+  const addBlocked = () => {
+    const v = blockEntry.trim()
+    if (v && !hostBlocklist.includes(v)) onBlocklistChange([...hostBlocklist, v])
+    setBlockEntry('')
+  }
+  const removeBlocked = (name: string) => onBlocklistChange(hostBlocklist.filter((n) => n !== name))
 
   // External IPs are stored as one comma-joined string (the builder parses it),
   // but edited as rows -- each row one IP or range. Local state keeps otherwise
@@ -143,6 +157,50 @@ export function StepPlacement({
           </details>
         </div>
       ))}
+
+      {/* MicroCloud host blocklist: members LaForge must not place instances on. */}
+      {kind === 'microcloud' && (
+        <div className="card p-4">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg">
+            <Server size={14} className="text-fg-muted" /> Host blocklist
+          </div>
+          <p className="mb-3 text-xs text-fg-muted">
+            Cluster members LaForge must <span className="font-medium text-fg">not</span> build on — a node under maintenance, GPU-reserved, or
+            flaky. Enter member names exactly as the cluster lists them (e.g. <span className="font-mono">micro-07-gpu</span>). While any are blocked,
+            LaForge places each instance on an allowed member instead of letting the cluster auto-schedule. Leave empty for no restriction.
+          </p>
+          {hostBlocklist.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {hostBlocklist.map((name) => (
+                <span key={name} className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-sunken px-2 py-0.5 text-xs text-fg">
+                  <span className="font-mono">{name}</span>
+                  <button type="button" onClick={() => removeBlocked(name)} className="text-fg-subtle hover:text-danger" aria-label={`Unblock ${name}`}>
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <Input
+                value={blockEntry}
+                onChange={(e) => setBlockEntry(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addBlocked()
+                  }
+                }}
+                placeholder="Member name, e.g. micro-07-gpu"
+              />
+            </div>
+            <Button variant="secondary" size="sm" onClick={addBlocked} disabled={!blockEntry.trim()}>
+              <Plus size={14} /> Block
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Builder-level external access -- one or more IPs, assigned one per team
           round-robin, with a port window; a host's public: ports get NAT'd in. */}
