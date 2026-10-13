@@ -30,11 +30,16 @@ func identityOf(obj db.DeployedObject) string {
 
 const wantObjects = 65 // 5 teams x 13 objects each, matching examples/lm-test -- see internal/orchestrator's own test for the breakdown
 
-// wantFirstPassTasks is how many deploy tasks a single reconcile creates: 65,
-// one per object. The box deploys ahead of time regardless of depends_on
-// (which now gates step execution, not the infrastructure deploy), so every
-// object gets its deploy task on the first pass.
-const wantFirstPassTasks = 65
+// wantDeployTasks is the total number of deploy tasks for the build: 65, one
+// per object. A box's first deploy waits for its network's subnet/bridge to
+// exist, so the networks (20, four per team) get their deploy tasks first and
+// the 45 hosts/containers get theirs once the networks are running -- 65 in
+// all, regardless of depends_on (which gates step execution, not the deploy).
+const wantDeployTasks = 65
+
+// wantNetworkTasks is how many deploy tasks a single reconcile creates before
+// any network is up: one per network (four per team, five teams).
+const wantNetworkTasks = 20
 
 // convergeRemaining interleaves reconcile + a healthy runner until every object
 // is running. In-process Reconcile is fine here -- the crash scenarios use the orchestrator binary;
@@ -345,12 +350,35 @@ func TestChaos_OrchestratorKilledMidReconcile(t *testing.T) {
 	if len(teams) != 5 {
 		t.Fatalf("teams = %d, want 5 (no duplicate team rows either)", len(teams))
 	}
+	// Before any network is up, the fresh pass creates exactly the network
+	// deploy tasks (a box's deploy waits for its network) -- and no duplicates
+	// from the interrupted first attempt.
 	tasks, err := q.ListTasksByBuild(ctx, build.ID)
 	if err != nil {
 		t.Fatalf("ListTasksByBuild: %v", err)
 	}
-	if len(tasks) != wantFirstPassTasks {
-		t.Fatalf("tasks = %d, want %d (one deploy task per object; deploy no longer gated on depends_on, no duplicates from the interrupted first pass)", len(tasks), wantFirstPassTasks)
+	if len(tasks) != wantNetworkTasks {
+		t.Fatalf("tasks = %d, want %d (one deploy task per network before any network is up; no duplicates from the interrupted first pass)", len(tasks), wantNetworkTasks)
+	}
+
+	// Bring the networks up as a completed DeployNetwork would, then a further
+	// orchestrator pass creates the host/container deploy tasks -- 65 in all,
+	// still with no duplicates.
+	if _, err := pool.Exec(ctx,
+		"UPDATE deployed_object SET status='running' WHERE kind='network' AND team_id IN (SELECT id FROM team WHERE build_id=$1)",
+		build.ID); err != nil {
+		t.Fatalf("marking networks up: %v", err)
+	}
+	cmd3 := exec.Command(orchestratorBin, "-db-url", testDBURL, "-repo", contentDirAbs, "-once")
+	if out3, err := cmd3.CombinedOutput(); err != nil {
+		t.Fatalf("third orchestrator run failed: %v\n%s", err, out3)
+	}
+	tasks, err = q.ListTasksByBuild(ctx, build.ID)
+	if err != nil {
+		t.Fatalf("ListTasksByBuild: %v", err)
+	}
+	if len(tasks) != wantDeployTasks {
+		t.Fatalf("tasks = %d, want %d (one deploy task per object once networks are up; no duplicates)", len(tasks), wantDeployTasks)
 	}
 
 	// Prove the end state is genuinely usable, not just "no duplicate

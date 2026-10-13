@@ -77,6 +77,9 @@ func attachAgentHealth(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 	out := make([]objectView, len(objs))
 	for i, o := range objs {
 		out[i] = objectView{DeployedObject: o}
+		if o.Kind == "network" {
+			continue // networks run no agent; they never carry agent health
+		}
 		if !infraUp(o.Status) {
 			continue // agent health only makes sense once the instance is up
 		}

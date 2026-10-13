@@ -121,8 +121,10 @@ func TestPublicAddressRunnerTemplatesAPIAndRebuild(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	reconcile()
-	drain()
+	reconcile() // Creates the network deploy tasks.
+	drain()     // Brings the networks up.
+	reconcile() // A host's deploy waits for its network; now it gets its task.
+	drain()     // Deploys the host and records its public IP.
 	reconcile() // Materializes scripts only after the public IP is recorded.
 	objs, err := env.q.ListDeployedObjectsByBuild(ctx, build.ID)
 	if err != nil {
