@@ -253,11 +253,21 @@ SELECT * FROM validator_result WHERE agent_task_id = $1 ORDER BY created_at;
 
 -- name: CreateAgentArtifact :exec
 -- Upsert: an object's deploy task can be retried, and re-delivering just
--- replaces the (regenerable) binary and token.
+-- replaces the (regenerable) binary -- but KEEPS the token the caller passes.
+-- A retry must reuse the object's existing token (see GetAgentArtifactTokenByObject
+-- in deliverAgent): the instance baked that token into its immutable user-data on
+-- the first attempt, so rotating it here would strand the running box on a token
+-- the DB no longer has, and every agent download would 404.
 INSERT INTO agent_artifact (deployed_object_id, platform, token, agent_binary)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (deployed_object_id) DO UPDATE SET
     platform = EXCLUDED.platform, token = EXCLUDED.token, agent_binary = EXCLUDED.agent_binary, created_at = now();
+
+-- name: GetAgentArtifactTokenByObject :one
+-- The object's current download token, so a retried delivery reuses it instead
+-- of rotating it (the instance's user-data baked the first attempt's token and
+-- can't be changed after launch).
+SELECT token FROM agent_artifact WHERE deployed_object_id = $1;
 
 -- name: GetAgentArtifactByToken :one
 -- What the api serves to a booting instance: the bytes for this one-time

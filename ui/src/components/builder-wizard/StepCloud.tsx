@@ -319,6 +319,18 @@ export function StepCloudImages({
     value: img.fingerprint,
     label: img.aliases?.[0] || img.fingerprint,
     hint: img.fingerprint,
+    // A readable detail line: publisher · architecture · platform · release date
+    // · description, so an AMI is identifiable without leaving the picker.
+    meta: [
+      img.properties.owner,
+      img.architecture,
+      img.properties.os,
+      img.properties.created ? `created ${img.properties.created.slice(0, 10)}` : '',
+      img.properties.description,
+    ]
+      .map((s) => (s ?? '').trim())
+      .filter(Boolean)
+      .join(' · '),
   }))
 
   async function search(q: string) {

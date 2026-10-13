@@ -140,7 +140,7 @@ func discoverInstanceTypes(ctx context.Context, c *ec2.Client, d *builder.Discov
 func appendImages(ctx context.Context, c *ec2.Client, d *builder.Discovery, owners []string, nameQuery string) {
 	in := &ec2.DescribeImagesInput{Owners: owners}
 	if nameQuery != "" {
-		in.Filters = []ec2types.Filter{{Name: awssdk.String("name"), Values: []string{"*" + nameQuery + "*"}}}
+		in.Filters = []ec2types.Filter{{Name: awssdk.String("name"), Values: nameFilterValues(nameQuery)}}
 		// Bound the server response -- a Marketplace name match can be enormous;
 		// we only keep up to maxDiscoveredImages anyway. (No MaxResults on the
 		// owned, unfiltered call: an account's own AMIs are few.)
@@ -180,5 +180,45 @@ func toImageInfo(img ec2types.Image) builder.ImageInfo {
 	}
 	info.Properties.OS = awssdk.ToString(img.PlatformDetails)
 	info.Properties.Description = awssdk.ToString(img.Description)
+	info.Properties.Created = awssdk.ToString(img.CreationDate)
+	info.Properties.Owner = ownerLabel(awssdk.ToString(img.OwnerId))
 	return info
+}
+
+// ownerLabel turns a bare AWS owner account id into a readable publisher name for
+// the well-known catalogs the search spans, so the picker shows "Canonical"
+// rather than "099720109477"; any other id is shown as-is.
+func ownerLabel(ownerID string) string {
+	switch ownerID {
+	case "099720109477":
+		return "Canonical"
+	case "801119661308":
+		return "Microsoft"
+	case "137112412989", "amazon":
+		return "Amazon"
+	}
+	return ownerID
+}
+
+// nameFilterValues turns a search term into the set of case-variant globs the
+// EC2 DescribeImages `name` filter needs: that filter is case-SENSITIVE, so a
+// lowercase "windows" never matches Microsoft's "Windows_Server-2022-..." names.
+// Matching the raw term plus its lower/Title/UPPER forms covers the real catalog
+// naming (Canonical lowercases, Microsoft Title-cases) without a client-side scan.
+func nameFilterValues(q string) []string {
+	variants := []string{
+		"*" + q + "*",
+		"*" + strings.ToLower(q) + "*",
+		"*" + strings.ToUpper(q) + "*",
+		"*" + strings.Title(strings.ToLower(q)) + "*", //nolint:staticcheck // ASCII title-case is exactly what AMI names use
+	}
+	seen := make(map[string]bool, len(variants))
+	out := make([]string, 0, len(variants))
+	for _, v := range variants {
+		if !seen[v] {
+			seen[v] = true
+			out = append(out, v)
+		}
+	}
+	return out
 }

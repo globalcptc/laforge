@@ -56,6 +56,11 @@ type ImageInfo struct {
 		OS          string `json:"os"`
 		Release     string `json:"release"`
 		Description string `json:"description"`
+		// Created/Owner are populated by cloud builders (AWS) so the picker can
+		// show an AMI's age and who published it (self vs amazon/Canonical/…);
+		// the on-prem builders leave them empty.
+		Created string `json:"created,omitempty"`
+		Owner   string `json:"owner,omitempty"`
 	} `json:"properties"`
 }
 

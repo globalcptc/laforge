@@ -109,6 +109,8 @@ func TestToImageInfo(t *testing.T) {
 		Architecture:    ec2types.ArchitectureValuesX8664,
 		PlatformDetails: awssdk.String("Linux/UNIX"),
 		Description:     awssdk.String("Canonical Ubuntu 22.04"),
+		CreationDate:    awssdk.String("2026-09-01T12:00:00.000Z"),
+		OwnerId:         awssdk.String("099720109477"),
 	}
 	got := toImageInfo(img)
 	if got.Fingerprint != "ami-0abc123" {
@@ -122,6 +124,33 @@ func TestToImageInfo(t *testing.T) {
 	}
 	if got.Properties.OS != "Linux/UNIX" || got.Properties.Description != "Canonical Ubuntu 22.04" {
 		t.Errorf("properties = %+v", got.Properties)
+	}
+	if got.Properties.Created != "2026-09-01T12:00:00.000Z" {
+		t.Errorf("Created = %q, want the AMI creation date", got.Properties.Created)
+	}
+	// A well-known owner id is shown as a readable publisher name.
+	if got.Properties.Owner != "Canonical" {
+		t.Errorf("Owner = %q, want Canonical (099720109477)", got.Properties.Owner)
+	}
+}
+
+func TestNameFilterValues(t *testing.T) {
+	// The EC2 name filter is case-sensitive, so "windows" must also be searched as
+	// "Windows"/"WINDOWS" to match Microsoft's Title-cased AMI names -- the bug
+	// that made the picker's search miss every Windows image.
+	got := nameFilterValues("windows")
+	want := map[string]bool{"*windows*": true, "*WINDOWS*": true, "*Windows*": true}
+	if len(got) != len(want) {
+		t.Fatalf("nameFilterValues(windows) = %v, want 3 case variants", got)
+	}
+	for _, v := range got {
+		if !want[v] {
+			t.Errorf("unexpected variant %q in %v", v, got)
+		}
+	}
+	// An already-mixed-case term still collapses duplicate variants (raw == Title here).
+	if vs := nameFilterValues("Kali"); len(vs) != 3 {
+		t.Errorf("nameFilterValues(Kali) = %v, want 3 distinct variants", vs)
 	}
 }
 

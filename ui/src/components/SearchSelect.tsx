@@ -6,6 +6,8 @@ export interface SearchOption {
   value: string
   label: string
   hint?: string
+  /** A third, muted line for extra detail (e.g. an AMI's arch · platform · date · description). */
+  meta?: string
 }
 
 // SearchSelect is the shared searchable combobox (the pattern BranchPicker /
@@ -77,9 +79,14 @@ export function SearchSelect({
   }, [search, hasSearch, minSearchChars])
 
   const q = search.trim().toLowerCase()
-  // With a server search the list is already scoped; client-filter only in the
-  // default (no onSearch) mode.
-  const filtered = onSearch ? options : options.filter((o) => !q || o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q) || (o.hint ?? '').toLowerCase().includes(q))
+  // Always client-filter the loaded options so typing narrows the list instantly
+  // -- even in server-search mode. There the server (debounced) brings in MORE
+  // options (the AMI catalog), but the already-loaded ones (owned AMIs, the last
+  // results) still filter live, so the picker never looks like it's ignoring what
+  // you type while a request is in flight.
+  const filtered = options.filter(
+    (o) => !q || o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q) || (o.hint ?? '').toLowerCase().includes(q) || (o.meta ?? '').toLowerCase().includes(q),
+  )
   // allowCustom: offer the typed text itself as a choice (when it isn't already
   // an option), so a value the list doesn't contain can still be entered.
   const typed = search.trim()
@@ -155,8 +162,9 @@ export function SearchSelect({
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate">{o.label}</span>
                   {o.hint && <span className="truncate font-mono text-xs text-fg-subtle">{o.hint}</span>}
+                  {o.meta && <span className="truncate text-xs text-fg-muted">{o.meta}</span>}
                 </span>
-                {o.value === value && <Check size={14} className="shrink-0" />}
+                {o.value === value && <Check size={14} className="shrink-0 self-start" />}
               </button>
             ))}
           </div>

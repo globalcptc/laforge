@@ -107,7 +107,11 @@ type CreateAgentArtifactParams struct {
 }
 
 // Upsert: an object's deploy task can be retried, and re-delivering just
-// replaces the (regenerable) binary and token.
+// replaces the (regenerable) binary -- but KEEPS the token the caller passes.
+// A retry must reuse the object's existing token (see GetAgentArtifactTokenByObject
+// in deliverAgent): the instance baked that token into its immutable user-data on
+// the first attempt, so rotating it here would strand the running box on a token
+// the DB no longer has, and every agent download would 404.
 func (q *Queries) CreateAgentArtifact(ctx context.Context, arg CreateAgentArtifactParams) error {
 	_, err := q.db.Exec(ctx, createAgentArtifact,
 		arg.DeployedObjectID,
@@ -340,6 +344,20 @@ func (q *Queries) GetAgentArtifactByToken(ctx context.Context, token string) (Ge
 	var i GetAgentArtifactByTokenRow
 	err := row.Scan(&i.DeployedObjectID, &i.Platform, &i.AgentBinary)
 	return i, err
+}
+
+const getAgentArtifactTokenByObject = `-- name: GetAgentArtifactTokenByObject :one
+SELECT token FROM agent_artifact WHERE deployed_object_id = $1
+`
+
+// The object's current download token, so a retried delivery reuses it instead
+// of rotating it (the instance's user-data baked the first attempt's token and
+// can't be changed after launch).
+func (q *Queries) GetAgentArtifactTokenByObject(ctx context.Context, deployedObjectID pgtype.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getAgentArtifactTokenByObject, deployedObjectID)
+	var token string
+	err := row.Scan(&token)
+	return token, err
 }
 
 const getAgentSessionByDeployedObject = `-- name: GetAgentSessionByDeployedObject :one

@@ -649,11 +649,22 @@ func (r *Runner) deliverAgent(ctx context.Context, q *db.Queries, obj db.Deploye
 	if !r.Delivery.Enabled() {
 		return agentdelivery.Delivery{}, nil
 	}
-	tokenBytes := make([]byte, 32)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		return agentdelivery.Delivery{}, fmt.Errorf("generating agent download token: %w", err)
+	// Reuse the object's existing token on a retry rather than minting a new one.
+	// A VM bakes this token into its user-data at launch, and that user-data is
+	// immutable; if attempt 1 created the instance (token T1) and attempt 2
+	// rotated the stored token to T2, the running box would keep asking for T1,
+	// which the DB no longer has -- every agent download 404s and the agent never
+	// installs. Keeping the token stable across retries makes it always match what
+	// the instance actually baked. Only mint a fresh token for a first delivery
+	// (no existing artifact, e.g. after a purge).
+	token, err := q.GetAgentArtifactTokenByObject(ctx, obj.ID)
+	if err != nil || token == "" {
+		tokenBytes := make([]byte, 32)
+		if _, err := rand.Read(tokenBytes); err != nil {
+			return agentdelivery.Delivery{}, fmt.Errorf("generating agent download token: %w", err)
+		}
+		token = hex.EncodeToString(tokenBytes)
 	}
-	token := hex.EncodeToString(tokenBytes)
 	// agent-debug (environment YAML) bakes a local debug log into the binary;
 	// off (the default, and on any lookup miss) means the agent is silent on the
 	// box and only reports to the servers. A missing row -- no environment yet,
