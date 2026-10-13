@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"syscall"
 	"time"
@@ -108,7 +109,13 @@ type pendingOperationError struct {
 func (e *pendingOperationError) Error() string { return e.Err.Error() }
 func (e *pendingOperationError) Unwrap() error { return e.Err }
 
-func (b *Builder) createInstance(ctx context.Context, name string, body interface{}) error {
+func (b *Builder) createInstance(ctx context.Context, name string, body interface{}, target string) error {
+	// Explicit cluster-member placement (the host blocklist, see placement.go):
+	// when set, create on this exact member instead of letting LXD auto-schedule.
+	path := "/1.0/instances"
+	if target != "" {
+		path += "?target=" + url.QueryEscape(target)
+	}
 	var pending *pendingOperationError
 	checkExisting := false
 	return b.retryInstanceStep(ctx, name, "creating", func() error {
@@ -132,7 +139,7 @@ func (b *Builder) createInstance(ctx context.Context, name string, body interfac
 				return err
 			}
 		}
-		_, err := b.Client.post(ctx, "/1.0/instances", body)
+		_, err := b.Client.post(ctx, path, body)
 		checkExisting = true
 		errors.As(err, &pending)
 		var apiErr *APIError

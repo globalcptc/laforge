@@ -59,6 +59,12 @@ type Config struct {
 	// until the base image has been built, in which case a container deploy
 	// fails with a clear "build the base image first" message.
 	DockerBaseFingerprint string
+	// HostBlocklist names cluster members LaForge must NOT place instances on
+	// (a member under maintenance, GPU-reserved, flaky, ...). When non-empty the
+	// builder explicitly targets an ALLOWED online member for each instance
+	// instead of letting LXD auto-schedule (which could land on a blocked one);
+	// empty means no restriction and LXD schedules as before. Per-cluster config.
+	HostBlocklist []string
 }
 
 // storagePoolOrDefault is deployInstance's own resolution of

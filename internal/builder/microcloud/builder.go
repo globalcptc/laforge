@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/globalcptc/laforge/internal/agentdelivery"
@@ -72,6 +73,12 @@ type Builder struct {
 	Config          Config
 	PublicAddresses PublicAddressAllocator
 	retryWait       func(context.Context, time.Duration) error
+
+	// Cached allowed cluster members (online, not on Config.HostBlocklist),
+	// resolved once per builder for placement. See placement.go.
+	membersOnce   sync.Once
+	membersCached []string
+	membersErr    error
 }
 
 func New(client *Client, config Config) *Builder {
@@ -632,7 +639,11 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 			return name, err
 		}
 	}
-	err := b.createInstance(ctx, name, request)
+	target, err := b.targetMember(ctx, name)
+	if err != nil {
+		return name, err
+	}
+	err = b.createInstance(ctx, name, request, target)
 	if err != nil {
 		// A copy whose requested root disk is smaller than the source snapshot's
 		// block volume fails here with "Block volumes cannot be shrunk" -- a

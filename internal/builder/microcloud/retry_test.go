@@ -43,7 +43,7 @@ func TestCreateRetriesWaitForOriginalOperation(t *testing.T) {
 	b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: time.Second}, Config{})
 	var delays []time.Duration
 	b.retryWait = func(_ context.Context, d time.Duration) error { delays = append(delays, d); return nil }
-	if err := b.createInstance(context.Background(), "box", map[string]string{"name": "box"}); err != nil {
+	if err := b.createInstance(context.Background(), "box", map[string]string{"name": "box"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	if creates != 1 || waits != 3 || reads != 0 || !reflect.DeepEqual(delays, []time.Duration{15 * time.Second, 30 * time.Second}) {
@@ -89,7 +89,7 @@ func TestCreateRetryChecksExactInstanceBeforeResubmitting(t *testing.T) {
 			b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client()}, Config{})
 			b.retryWait = func(context.Context, time.Duration) error { return nil }
 			body := map[string]interface{}{"name": "box", "config": map[string]string{"cloud-init.user-data": "same token", publicNICKey: "same IP"}}
-			if err := b.createInstance(context.Background(), "box", body); err != nil {
+			if err := b.createInstance(context.Background(), "box", body, ""); err != nil {
 				t.Fatal(err)
 			}
 			want := 2
