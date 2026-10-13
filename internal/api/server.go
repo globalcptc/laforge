@@ -229,6 +229,9 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /builds/{id}", s.handleGetBuild)
 	mux.HandleFunc("POST /builds/{id}/deploy", s.handleDeployBuild)
 	mux.HandleFunc("POST /builds/{id}/teardown", s.handleTeardownBuild)
+	// Admin-only, buried "force remove from database" for a dead build whose real
+	// infrastructure is already gone (teardown can never complete). DB-only.
+	mux.HandleFunc("DELETE /builds/{id}", s.handleForceDeleteBuild)
 	mux.HandleFunc("GET /builds/{id}/drift", s.handleDetectDrift)
 	mux.HandleFunc("GET /builds/{id}/readiness", s.handleGetBuildReadiness)
 	mux.HandleFunc("GET /builds/{id}/objects", s.handleListDeployedObjects)

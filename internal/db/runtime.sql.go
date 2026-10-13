@@ -596,6 +596,24 @@ func (q *Queries) FailTask(ctx context.Context, arg FailTaskParams) (Task, error
 	return i, err
 }
 
+const forceDeleteBuild = `-- name: ForceDeleteBuild :exec
+DELETE FROM build WHERE id = $1
+`
+
+// The admin "force remove from database" escape hatch for a build whose real
+// infrastructure is already gone (a volunteer deleted the hosts out from under
+// LaForge, so teardown can never complete and it's wedged in 'tearing_down').
+// Deletes the build row; every runtime row cascades (team -> deployed_object ->
+// agent_task/session/heartbeat/artifact/shell_session/external_access, plus
+// task, event, scheduled_task, attention_dismissal). The configured_build and
+// content_revision are left intact (build.configured_build_id is ON DELETE SET
+// NULL, and the revision is a parent, not a child). This touches NO hoster --
+// it is purely a database removal, which is why it is admin-only and buried.
+func (q *Queries) ForceDeleteBuild(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, forceDeleteBuild, id)
+	return err
+}
+
 const getBuild = `-- name: GetBuild :one
 SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id FROM build WHERE id = $1
 `

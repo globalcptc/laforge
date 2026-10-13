@@ -297,3 +297,35 @@ func (s *Server) handleTeardownBuild(w http.ResponseWriter, r *http.Request) {
 	})
 	writeJSON(w, http.StatusAccepted, updated)
 }
+
+// handleForceDeleteBuild is the admin escape hatch for a DEAD build: one whose
+// real infrastructure is already gone (a volunteer deleted the hosts without
+// using teardown, so orchestrator.Teardown can never finish and the build is
+// wedged in 'tearing_down' forever). It deletes the build and all its runtime
+// rows from the database, cascade -- and deliberately touches NO hoster, because
+// the premise is that there is nothing left to destroy. That makes it dangerous
+// on a LIVE build (it would orphan real VMs), so it is instance-admin-only, a
+// hard DELETE rather than a lifecycle transition, and buried in the UI behind a
+// type-to-confirm danger zone. The configured_build and content_revision survive
+// (the definition and its history), so this removes the run, not the config.
+func (s *Server) handleForceDeleteBuild(w http.ResponseWriter, r *http.Request) {
+	build, _, err := s.buildAndOwningRepository(r)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	sess, err := s.requireInstanceAdmin(r.Context(), r)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	// No event -- it would be cascade-deleted with the build. Log to the server's
+	// own stream instead, so there is a durable audit trail of who nuked what.
+	log.Printf("build %s (%s): force-deleted from the database by %s -- no hoster teardown performed",
+		build.ID, build.Status, sess.GithubLogin)
+	if err := s.Queries.ForceDeleteBuild(r.Context(), build.ID); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

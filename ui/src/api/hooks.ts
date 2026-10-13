@@ -263,6 +263,22 @@ export function useTeardownBuild(buildId: string) {
   })
 }
 
+// useForceDeleteBuild is the admin "force remove from database" escape hatch for
+// a DEAD build (its real hosts were deleted out-of-band, so teardown can never
+// finish). It deletes the build + all runtime rows, cascade, and touches NO
+// hoster -- so it's instance-admin-only on the backend and buried behind a
+// type-to-confirm danger zone in the UI. Invalidates the repo's build list.
+export function useForceDeleteBuild(buildId: string, repoId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete<void>(`/builds/${buildId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['builds', repoId] })
+      qc.removeQueries({ queryKey: ['build', buildId] })
+    },
+  })
+}
+
 export function useBuild(buildId: string | undefined) {
   return useQuery<BuildDetail>({
     queryKey: ['build', buildId],

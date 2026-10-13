@@ -92,17 +92,23 @@ func (onboarder) Rediscover(ctx context.Context, conn builder.Connection) (*buil
 	return d, nil
 }
 
-// recommendedComposeAMI resolves the latest Amazon Linux 2023 x86_64 AMI in the
-// region -- a sensible Docker-capable default for a compose-host (Docker and the
-// compose plugin are installed on first boot, so a stock AL2023 image works).
+// recommendedComposeAMI resolves the latest Ubuntu 22.04 LTS x86_64 AMI in the
+// region -- the Docker-capable default for a compose-host. Ubuntu (not Amazon
+// Linux) on purpose: the compose host runs the content's own authored steps, and
+// those scripts assume a Debian-family OS (observed as "Time setup supports
+// Debian, Ubuntu, and Kali" failing on AL2023). Matching the rest of the
+// environment's OS makes every content script behave the same everywhere. Docker
+// + the compose plugin install on first boot via get.docker.com, which supports
+// Ubuntu. Canonical's images are freely launchable (no Marketplace subscription).
 // Reuses the already-granted ec2:DescribeImages (no SSM dependency, no extra
 // IAM). Best-effort: a failure just leaves it empty and the operator picks one.
 func recommendedComposeAMI(ctx context.Context, c *ec2.Client, d *builder.Discovery) string {
 	out, err := c.DescribeImages(ctx, &ec2.DescribeImagesInput{
-		Owners: []string{"amazon"},
+		Owners: []string{"099720109477"}, // Canonical
 		Filters: []ec2types.Filter{
-			// Standard AL2023 (not -minimal), kernel-tagged, x86_64.
-			{Name: awssdk.String("name"), Values: []string{"al2023-ami-2023.*-kernel-*-x86_64"}},
+			// Ubuntu 22.04 LTS (jammy), server, x86_64 -- the hvm-ssd* wildcard
+			// covers both the ssd and newer gp3 image families.
+			{Name: awssdk.String("name"), Values: []string{"ubuntu/images/hvm-ssd*/ubuntu-jammy-22.04-amd64-server-*"}},
 			{Name: awssdk.String("state"), Values: []string{"available"}},
 			{Name: awssdk.String("architecture"), Values: []string{"x86_64"}},
 		},

@@ -431,7 +431,7 @@ export function StepCloudImages({
   return (
     <div className="flex flex-col gap-4">
       {infoBox('Map each os name content uses to an AMI. Your own AMIs are listed; type a name (e.g. “ubuntu”, “Windows”, “kali”) to search Amazon, Canonical, Microsoft and Marketplace images for this region. Or paste an exact AMI id and pick “Use …” — handy for a Marketplace image (which may need you to accept its terms in the account first).')}
-      {infoBox(`Using compose containers? Click “Add compose-host” — it maps the reserved “${COMPOSE_HOST_IMAGE}” image to the latest Amazon Linux 2023 AMI for this region (Docker is installed on first boot). Compose hosts boot an EC2 instance from it; there is no base image to build on AWS. You can swap in any other Docker-capable AMI.`)}
+      {infoBox(`Using compose containers? Click “Add compose-host” — it maps the reserved “${COMPOSE_HOST_IMAGE}” image to the latest Ubuntu 22.04 LTS AMI for this region (Docker is installed on first boot). Ubuntu on purpose: the compose host runs your content's own steps, so matching the rest of the environment's OS keeps those scripts working the same everywhere. Compose hosts boot an EC2 instance from it; there is no base image to build on AWS. You can swap in any other Docker-capable AMI.`)}
       {blocker && (
         <div className="rounded-token border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning">{blocker}</div>
       )}
@@ -490,7 +490,7 @@ export function StepCloudImages({
               size="sm"
               title={
                 discovery?.recommended_compose_ami
-                  ? `Maps compose-host to ${discovery.recommended_compose_ami} (latest Amazon Linux 2023)`
+                  ? `Maps compose-host to ${discovery.recommended_compose_ami} (latest Ubuntu 22.04 LTS)`
                   : 'Adds a compose-host image row — pick a Docker-capable AMI'
               }
               onClick={() =>

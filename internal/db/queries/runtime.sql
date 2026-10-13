@@ -9,6 +9,18 @@ SELECT * FROM build WHERE id = $1;
 -- name: SetBuildStatus :one
 UPDATE build SET status = $2 WHERE id = $1 RETURNING *;
 
+-- name: ForceDeleteBuild :exec
+-- The admin "force remove from database" escape hatch for a build whose real
+-- infrastructure is already gone (a volunteer deleted the hosts out from under
+-- LaForge, so teardown can never complete and it's wedged in 'tearing_down').
+-- Deletes the build row; every runtime row cascades (team -> deployed_object ->
+-- agent_task/session/heartbeat/artifact/shell_session/external_access, plus
+-- task, event, scheduled_task, attention_dismissal). The configured_build and
+-- content_revision are left intact (build.configured_build_id is ON DELETE SET
+-- NULL, and the revision is a parent, not a child). This touches NO hoster --
+-- it is purely a database removal, which is why it is admin-only and buried.
+DELETE FROM build WHERE id = $1;
+
 -- name: SetBuildReconcileError :exec
 -- The last reconcile outcome for a build: the error text when reconcile failed
 -- (e.g. build/builder incompatibility), or NULL to clear it after a success.

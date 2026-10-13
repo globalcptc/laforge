@@ -289,8 +289,13 @@ rest are discovered for you or have sane defaults.
   by default (Service Quotas → VPC → "IPv4 CIDR blocks per VPC" to raise it).
 - **Compose containers** run on an EC2 instance booted from the `compose-host`
   image (the agent runs `docker compose up` on it, same as the other builders) —
-  so map `compose-host` to a Docker-capable AMI in the Images step. This is one
-  EC2 instance per compose container; single-image containers stay on Fargate.
+  so map `compose-host` to a Docker-capable AMI in the Images step. **Use Ubuntu**
+  (the "Add compose-host" button pre-fills the latest Ubuntu 22.04 LTS): the host
+  runs your content's own steps, and most lab scripts assume a Debian-family OS,
+  so an Amazon Linux compose host makes them fail (e.g. "Time setup supports
+  Debian, Ubuntu, and Kali"). Matching the environment's OS keeps scripts
+  consistent. This is one EC2 instance per compose container; single-image
+  containers stay on Fargate.
   (Packing compose projects onto shared EC2-backed ECS capacity is a possible
   future density optimization, not built.)
 - **Close = full isolation.** Closing a team's access adds a deny-all ingress NACL

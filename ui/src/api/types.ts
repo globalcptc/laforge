@@ -755,7 +755,7 @@ export interface Discovery {
    *  (AMIs come back in `images`.) */
   regions?: string[]
   instance_types?: string[]
-  /** AWS only: latest Amazon Linux 2023 x86_64 AMI in the chosen region -- the
+  /** AWS only: latest Ubuntu 22.04 LTS x86_64 AMI in the chosen region -- the
    *  one-click "Add compose-host" pre-fills it. Empty when unresolved. */
   recommended_compose_ami?: string
 }
