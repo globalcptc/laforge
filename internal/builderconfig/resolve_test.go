@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/globalcptc/laforge/internal/agentpki"
 	"github.com/globalcptc/laforge/internal/builder/fake"
 	"github.com/globalcptc/laforge/internal/builder/incus"
@@ -121,6 +123,22 @@ func TestResolveMicrocloudConstructsARealClient(t *testing.T) {
 	}
 	if ib.Client.OperationTimeout.Seconds() != 300 {
 		t.Errorf("OperationTimeout = %v, want 300s", ib.Client.OperationTimeout)
+	}
+	// Both runner builders and the API's base-image client must coordinate
+	// networking through Postgres, even when credentials came from files.
+	pool := &pgxpool.Pool{} // Resolution does not query it for file credentials.
+	resolved, err := Resolve(pool, row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := ResolveMicrocloudClient(pool, row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []*microcloud.Client{resolved.(*microcloud.Builder).Client, client} {
+		if lock, ok := c.NetworkLock.(microcloud.SQLNetworkLocker); !ok || lock.Pool != pool {
+			t.Fatalf("client did not receive shared SQL networking lock: %#v", c.NetworkLock)
+		}
 	}
 
 	// Verification uses the same default and explicit budget as deployment,
