@@ -5,9 +5,40 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { API_BASE } from '../api/client'
-import { Badge, buttonClass } from '../ui'
+import { useDeployedObjects } from '../api/hooks'
+import type { ObjectStatus } from '../api/types'
+import { StatusBadge } from '../components/StatusBadge'
+import { Badge, buttonClass, EmptyState, Spinner } from '../ui'
 
 type Status = 'connecting' | 'open' | 'closed'
+
+// A shell exists only on a host/container that is actually up with a live agent.
+// This MUST match the api's shellReachable (internal/api/terminal.go): the
+// handshake is refused with 409 for any other status, which a browser surfaces
+// as a bare "can't establish a connection" error. We check the status up front
+// so the page can explain *why* instead of dialing a socket that will be
+// refused.
+const SHELL_REACHABLE: ReadonlySet<ObjectStatus> = new Set<ObjectStatus>(['running', 'building', 'finished'])
+
+// Why a shell can't be opened, in plain language, per non-reachable status.
+function shellUnavailableReason(status: ObjectStatus): string {
+  switch (status) {
+    case 'pending':
+    case 'deploying':
+      return 'This host isn’t running yet — a terminal needs a live agent. Try again once it’s up.'
+    case 'deploy_failed':
+      return 'This host failed to deploy, so there’s no agent to open a shell on.'
+    case 'build_failed':
+      return 'This host’s build failed, so it has no live agent to open a shell on.'
+    case 'invalid':
+      return 'This host is in an invalid state and can’t open a shell.'
+    case 'destroying':
+    case 'destroyed':
+      return 'This host has been torn down, so there’s no shell to open.'
+    default:
+      return 'This host isn’t in a state that can open a shell — a terminal needs a running host with a live agent.'
+  }
+}
 
 // BuildTerminal is a live, interactive root/admin shell on one host, opened
 // through its agent and relayed over a WebSocket to the api (GET
@@ -20,7 +51,18 @@ export function BuildTerminal() {
   const mountRef = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<Status>('connecting')
 
+  // The host's own status decides whether a shell is even possible. undefined
+  // while the object list is still loading (or the object is gone); a boolean
+  // once we know. We gate the socket on this so we never dial a doomed handshake.
+  const objects = useDeployedObjects(buildId)
+  const obj = objects.data?.find((o) => o.id === objectId)
+  const reachable = obj ? SHELL_REACHABLE.has(obj.status) : undefined
+
   useEffect(() => {
+    // Only open the socket when we know the host can take a shell. While the
+    // status is still loading (undefined) or not reachable (false) we render an
+    // explanation instead, so there's no mount div to attach to anyway.
+    if (reachable !== true) return
     const el = mountRef.current
     if (!el) return
 
@@ -101,7 +143,7 @@ export function BuildTerminal() {
       ws.close()
       term.dispose()
     }
-  }, [buildId, objectId])
+  }, [buildId, objectId, reachable])
 
   const tone = status === 'open' ? 'success' : status === 'connecting' ? 'warning' : 'neutral'
   const label = status === 'open' ? 'Connected' : status === 'connecting' ? 'Connecting…' : 'Closed'
@@ -111,9 +153,11 @@ export function BuildTerminal() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold text-fg">
           <TerminalIcon size={15} className="text-fg-muted" /> Terminal
-          <Badge tone={tone} className="ml-1">
-            {label}
-          </Badge>
+          {reachable === true && (
+            <Badge tone={tone} className="ml-1">
+              {label}
+            </Badge>
+          )}
         </div>
         <Link to="/repos/$repoId/builds/$buildId/hosts" params={{ repoId, buildId }} className={buttonClass({ variant: 'ghost', size: 'sm' })}>
           <ArrowLeft size={14} /> Back to hosts
@@ -122,7 +166,27 @@ export function BuildTerminal() {
       <p className="text-xs text-fg-muted">
         A live root/admin shell on this host through its agent, encrypted end to end. Closing this page ends the session.
       </p>
-      <div ref={mountRef} className="min-h-0 flex-1 overflow-hidden rounded-token border border-border bg-[#0b0618] p-2" />
+      {reachable === true ? (
+        <div ref={mountRef} className="min-h-0 flex-1 overflow-hidden rounded-token border border-border bg-[#0b0618] p-2" />
+      ) : (
+        <div className="flex min-h-0 flex-1 items-center justify-center rounded-token border border-border bg-surface-sunken">
+          {objects.isLoading || (reachable === undefined && !objects.isError) ? (
+            <Spinner />
+          ) : !obj ? (
+            <EmptyState title="Host not found" description="This host is no longer part of the build." />
+          ) : (
+            <EmptyState
+              title="No shell available"
+              description={
+                <span className="flex flex-col items-center gap-2">
+                  <StatusBadge status={obj.status} />
+                  <span>{shellUnavailableReason(obj.status)}</span>
+                </span>
+              }
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }
