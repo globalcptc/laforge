@@ -486,6 +486,12 @@
     background-color: var(--color-surface-raised);
     border-left: 1px solid var(--color-border);
     overflow-y: auto;
+    /* Pin overflow-x: without it, overflow-x defaults to `visible`, which the CSS
+       spec computes to `auto` when the other axis is `auto` -- so any sub-pixel
+       overflow (the full-bleed -mx-4 tab bar, the 1px border, a fractional
+       min(92vw, 28rem) width) produced a persistent horizontal scrollbar. Wide
+       content inside (metric tables, code blocks) carries its own overflow-x. */
+    overflow-x: hidden;
     overscroll-behavior: contain;
     /* Animate width changes (e.g. the object-log panel's expand/collapse)
        so the panel grows and shrinks smoothly rather than snapping. */
