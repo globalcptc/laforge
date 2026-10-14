@@ -151,13 +151,13 @@ export function BuildLayout() {
         })}
       </nav>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-2">
-        {build?.status === 'planned' && readiness.data?.checked && readiness.data.warnings.length > 0 && (
+        {build?.status === 'planned' && readiness.data?.checked && (readiness.data.warnings ?? []).length > 0 && (
           <div className="mb-3 flex items-start gap-2.5 rounded-token border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-sm text-warning">
             <TriangleAlert size={16} className="mt-0.5 shrink-0" />
             <div className="min-w-0">
               <div className="font-medium">This build may exceed the builder’s account quotas</div>
               <ul className="mt-1 list-disc space-y-0.5 pl-4 text-warning/90">
-                {readiness.data.warnings.map((warn, i) => (
+                {(readiness.data.warnings ?? []).map((warn, i) => (
                   <li key={i} className="break-words">{warn}</li>
                 ))}
               </ul>

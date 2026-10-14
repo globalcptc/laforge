@@ -58,7 +58,9 @@ func (s *Server) handleGetBuildReadiness(w http.ResponseWriter, r *http.Request)
 	}
 	checker, ok := bldr.(builder.ReadinessChecker)
 	if !ok {
-		writeJSON(w, http.StatusOK, readinessResponse{Checked: false}) // this builder has no quota wall to warn about
+		// Warnings is [], never nil: it serializes to a JSON array, not null, so
+		// the UI can read .length without guarding every path.
+		writeJSON(w, http.StatusOK, readinessResponse{Checked: false, Warnings: []string{}}) // this builder has no quota wall to warn about
 		return
 	}
 
@@ -77,7 +79,14 @@ func (s *Server) handleGetBuildReadiness(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadGateway, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, readinessResponse{Checked: true, Warnings: verdict.Warnings})
+	// Never emit null for warnings: a checker that found nothing returns a nil
+	// slice, which would JSON-marshal to null and break the UI's .length read
+	// (observed on a planned AWS build: "u.data.warnings is null").
+	warnings := verdict.Warnings
+	if warnings == nil {
+		warnings = []string{}
+	}
+	writeJSON(w, http.StatusOK, readinessResponse{Checked: true, Warnings: warnings})
 }
 
 func findEnvironment(c *loader.Content, name string) *loader.Environment {
