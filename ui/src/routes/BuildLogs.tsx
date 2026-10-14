@@ -1,5 +1,6 @@
 import { useParams } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { Radio, Search, ChevronRight, Download, Copy, Check } from 'lucide-react'
 import { useEvents, useLiveEvents } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
@@ -79,7 +80,24 @@ export function BuildLogs() {
   const { buildId } = useParams({ from: '/repos/$repoId/builds/$buildId/logs' })
   const { data: history } = useEvents(buildId)
   const [live, setLive] = useState<LFEvent[]>([])
-  const { connected } = useLiveEvents(buildId, (ev) => setLive((prev) => [...prev, ev]))
+  // Batch incoming live events instead of a setState per event. A busy build
+  // streams events faster than React can repaint; appending one at a time meant
+  // a full re-render (and an O(n) recompute of all/kinds/shown) on every event --
+  // the main cause of the "page is slowing down" warning. Buffer in a ref and
+  // flush on a short interval, so N events become one re-render.
+  const liveBuf = useRef<LFEvent[]>([])
+  const { connected } = useLiveEvents(buildId, (ev) => {
+    liveBuf.current.push(ev)
+  })
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (liveBuf.current.length === 0) return
+      const batch = liveBuf.current
+      liveBuf.current = []
+      setLive((prev) => [...prev, ...batch])
+    }, 400)
+    return () => clearInterval(t)
+  }, [])
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -95,16 +113,25 @@ export function BuildLogs() {
     })
   }
 
+  // The complete journal for Export/Copy: the full history + live, PLUS any live
+  // events still buffered (not yet flushed into `all`), so a download never
+  // misses the last ~400ms of an actively-streaming build. Not the capped render,
+  // and not the search/kind filter -- always everything.
+  function fullLog(): LFEvent[] {
+    const seen = new Set(all.map((e) => e.id))
+    return [...all, ...liveBuf.current.filter((e) => !seen.has(e.id))]
+  }
+
   // Export the whole journal (not the filtered view) as a timestamped .txt.
   function exportLogs() {
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
-    downloadText(`laforge-build-${buildId.slice(0, 8)}-logs-${stamp}.txt`, logsToText(all))
+    downloadText(`laforge-build-${buildId.slice(0, 8)}-logs-${stamp}.txt`, logsToText(fullLog()))
   }
 
   // Copy the whole journal to the clipboard, with a brief "Copied" confirmation.
   async function copyLogs() {
     try {
-      await navigator.clipboard.writeText(logsToText(all))
+      await navigator.clipboard.writeText(logsToText(fullLog()))
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -132,9 +159,23 @@ export function BuildLogs() {
     })
   }, [all, query, kind])
 
+  // Virtualize the list: only the rows in (and near) the viewport are in the DOM,
+  // so the whole journal -- tens of thousands of events on a big DC build -- stays
+  // fully scrollable without locking the main thread. Rows are variable height
+  // (they expand on click), so the virtualizer measures each rendered row and
+  // re-measures on expand/collapse (measureElement's ResizeObserver).
+  const parentRef = useRef<HTMLDivElement>(null)
+  const rowVirtualizer = useVirtualizer({
+    count: shown.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 29, // a collapsed row (py-1.5 line + border); refined by measurement
+    overscan: 16,
+    getItemKey: (index) => shown[index].id,
+  })
+
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+    <div className="flex h-full flex-col">
+      <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 text-xs text-fg-muted">
           <Radio size={12} className={connected ? 'text-success' : 'text-fg-subtle'} />
           {connected ? 'Live' : 'Reconnecting…'}
@@ -171,47 +212,59 @@ export function BuildLogs() {
       ) : shown.length === 0 ? (
         <EmptyState icon={Search} title="No events match" hint="Clear the search or kind filter to see the full journal." />
       ) : (
-        <div className="flex flex-col font-mono text-xs">
-          {shown.map((ev) => {
-            const isOpen = expanded.has(ev.id)
-            const detail = eventDetail(ev.payload)
-            return (
-              <div key={ev.id} className="border-b border-border">
-                {/* Whole row is a toggle: click to expand and read the full
-                    message + payload detail (errors are longer than one line). */}
-                <button
-                  type="button"
-                  onClick={() => toggle(ev.id)}
-                  className="flex w-full items-center gap-3 py-1.5 text-left hover:bg-surface-hover"
+        // The scroll container the virtualizer measures against. Only the rows in
+        // view are in the DOM; the sized inner div gives the scrollbar the full
+        // height so scrolling reaches every event.
+        <div ref={parentRef} className="min-h-0 flex-1 overflow-auto font-mono text-xs">
+          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }}>
+            {rowVirtualizer.getVirtualItems().map((vi) => {
+              const ev = shown[vi.index]
+              const isOpen = expanded.has(ev.id)
+              const detail = eventDetail(ev.payload)
+              return (
+                <div
+                  key={vi.key}
+                  data-index={vi.index}
+                  ref={rowVirtualizer.measureElement}
+                  className="absolute left-0 top-0 w-full border-b border-border"
+                  style={{ transform: `translateY(${vi.start}px)` }}
                 >
-                  <ChevronRight size={12} className={cn('shrink-0 text-fg-subtle transition-transform', isOpen && 'rotate-90')} />
-                  <span className="w-24 shrink-0 tabular-nums text-fg-muted">{fmt.time(ev.created_at)}</span>
-                  {ev.host ? (
-                    <span className="w-28 shrink-0 truncate text-fg-muted" title={ev.team_number != null ? `t${ev.team_number}/${ev.host}` : ev.host}>
-                      {ev.team_number != null && <span className="text-fg-subtle">t{ev.team_number}/</span>}
-                      {ev.host}
-                    </span>
-                  ) : (
-                    <span className="w-28 shrink-0 text-fg-subtle">build</span>
-                  )}
-                  <Badge tone={toneForKind(ev.kind)} className="shrink-0">
-                    {ev.kind}
-                  </Badge>
-                  <span className={cn('min-w-0 flex-1 text-fg', !isOpen && 'truncate')}>{ev.message}</span>
-                </button>
-                {isOpen && (
-                  <div className="pb-2 pl-[9.75rem] pr-3 text-fg-muted">
-                    <div className="whitespace-pre-wrap break-words">{ev.message}</div>
-                    {detail && detail !== ev.message && (
-                      <pre className="mt-1 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-token border border-border bg-surface-sunken p-2 text-fg">
-                        {detail}
-                      </pre>
+                  {/* Whole row is a toggle: click to expand and read the full
+                      message + payload detail (errors are longer than one line). */}
+                  <button
+                    type="button"
+                    onClick={() => toggle(ev.id)}
+                    className="flex w-full items-center gap-3 py-1.5 text-left hover:bg-surface-hover"
+                  >
+                    <ChevronRight size={12} className={cn('shrink-0 text-fg-subtle transition-transform', isOpen && 'rotate-90')} />
+                    <span className="w-24 shrink-0 tabular-nums text-fg-muted">{fmt.time(ev.created_at)}</span>
+                    {ev.host ? (
+                      <span className="w-28 shrink-0 truncate text-fg-muted" title={ev.team_number != null ? `t${ev.team_number}/${ev.host}` : ev.host}>
+                        {ev.team_number != null && <span className="text-fg-subtle">t{ev.team_number}/</span>}
+                        {ev.host}
+                      </span>
+                    ) : (
+                      <span className="w-28 shrink-0 text-fg-subtle">build</span>
                     )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+                    <Badge tone={toneForKind(ev.kind)} className="shrink-0">
+                      {ev.kind}
+                    </Badge>
+                    <span className={cn('min-w-0 flex-1 text-fg', !isOpen && 'truncate')}>{ev.message}</span>
+                  </button>
+                  {isOpen && (
+                    <div className="pb-2 pl-[9.75rem] pr-3 text-fg-muted">
+                      <div className="whitespace-pre-wrap break-words">{ev.message}</div>
+                      {detail && detail !== ev.message && (
+                        <pre className="mt-1 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-token border border-border bg-surface-sunken p-2 text-fg">
+                          {detail}
+                        </pre>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>
