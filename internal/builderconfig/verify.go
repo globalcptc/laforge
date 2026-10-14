@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/globalcptc/laforge/internal/builder/incus"
+	"github.com/globalcptc/laforge/internal/builder/microcloud"
 	"github.com/globalcptc/laforge/internal/db"
 )
 
@@ -131,8 +132,8 @@ func hostEndpoints(pool *pgxpool.Pool, row db.BuilderConfig) ([]labeledEndpoint,
 		}
 		// Images are per project when the project has features.images on.
 		ep.project = db.StrOrEmpty(row.IncusProject)
-		timeout := 0
-		if row.IncusOperationTimeoutSeconds != nil {
+		timeout := int(microcloud.DefaultOperationTimeout / time.Second)
+		if row.IncusOperationTimeoutSeconds != nil && *row.IncusOperationTimeoutSeconds > 0 {
 			timeout = int(*row.IncusOperationTimeoutSeconds)
 		}
 		return []labeledEndpoint{{label: ep.apiURL, ep: ep, timeoutSeconds: timeout}}, nil

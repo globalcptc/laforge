@@ -197,6 +197,14 @@ A token is single-use and expires; if enrollment fails, generate a new one.
 
 ## Builder settings
 
+**API and operation timeout** is available in the builder editor's Placement
+settings. New MicroCloud builders default to **10 minutes** (600 seconds); existing
+explicit values are preserved. Increase it for slow cluster reads or large Ceph
+image copies. It also controls each image/snapshot verification request when saving
+the builder, without a separate 30-second limit over the entire catalog. Cancelling
+the caller still cancels verification. The API field is
+`incus_operation_timeout_seconds`; an omitted or zero value uses the default.
+
 | Setting | What it is |
 | --- | --- |
 | Connection | The cluster endpoint and LaForge's client certificate, from enrollment. |
