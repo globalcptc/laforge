@@ -185,6 +185,9 @@ func ResolveMicrocloudClient(pool *pgxpool.Pool, row db.BuilderConfig) (*microcl
 		if err != nil {
 			return nil, fmt.Errorf("builder config %q: constructing client: %w", row.Name, err)
 		}
+		if pool != nil {
+			client.NetworkLock = microcloud.SQLNetworkLocker{Pool: pool}
+		}
 		return client, nil
 	case "incus":
 		return nil, fmt.Errorf("builder config %q: kind %q is a pool of Incus hosts -- use ResolveIncusHosts", row.Name, row.Kind)
@@ -378,6 +381,9 @@ func resolveMicrocloud(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builde
 	})
 	if pool != nil && row.ID.Valid {
 		b.PublicAddresses = microcloud.SQLPublicAddressAllocator{Pool: pool, BuilderID: row.ID}
+	}
+	if pool != nil {
+		b.Client.NetworkLock = microcloud.SQLNetworkLocker{Pool: pool}
 	}
 	return b, nil
 }

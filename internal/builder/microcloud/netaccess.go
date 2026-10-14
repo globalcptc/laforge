@@ -24,6 +24,11 @@ import (
 // cross-network ingress. Idempotent. Mirrors incus; needs its own live smoke-test
 // against a real MicroCloud (the mechanics are Incus-verified with real packets).
 func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, networks []builder.NetworkAccess) error {
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	incusName := make(map[string]string, len(networks))
 	cidr := make(map[string]string, len(networks))
 	for _, na := range networks {
@@ -142,6 +147,11 @@ func nicIngressRules(sources []string, h builder.HostAccess) []map[string]interf
 
 // ensureACLObject creates or replaces (idempotently) a network-ACL object.
 func (b *Builder) ensureACLObject(ctx context.Context, name, description string, ingress []map[string]interface{}) error {
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	acl := map[string]interface{}{
 		"name":        name,
 		"description": description,
