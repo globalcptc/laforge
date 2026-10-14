@@ -132,7 +132,7 @@ func shortName(externalName string) string {
 const (
 	lxdSnapLogsDir    = "/var/snap/lxd/common/lxd/logs/"
 	qemuMonitorSuffix = "/qemu.monitor"
-	unixSocketPathMax = 107 // 108-byte sun_path minus the trailing NUL
+	unixSocketPathMax = 107             // 108-byte sun_path minus the trailing NUL
 	minInstanceName   = len("lf-") + 12 // shortName is always "lf-"+12 hex = 15 bytes
 )
 
@@ -264,6 +264,11 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	if err != nil {
 		return "", fmt.Errorf("computing gateway address for %s: %w", spec.CIDR, err)
 	}
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return name, err
+	}
+	defer release()
 	// Adopt-if-present, by an explicit existence check rather than relying on the
 	// create call's error shape. On a CLUSTERED LXD (a real MicroCloud), re-POSTing
 	// an OVN network that already exists does NOT return a clean 409 -- it returns
@@ -271,7 +276,7 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	// path, which AlreadyExists() can't recognize. Found live against the 4-node
 	// cluster: without this pre-check the second (retried) DeployNetwork of an
 	// existing network errored instead of adopting, breaking the "ensure" contract.
-	if exists, err := b.networkExists(ctx, name); err != nil {
+	if exists, err := b.networkExists(ctx, name, bridgeAddr); err != nil {
 		return name, fmt.Errorf("checking whether network %s exists: %w", name, err)
 	} else if exists {
 		return name, nil // adopt
@@ -292,37 +297,42 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	if err != nil {
 		var apiErr *APIError
 		if errors.As(err, &apiErr) && apiErr.AlreadyExists() {
-			if exists, readErr := b.networkExists(ctx, name); readErr == nil && exists {
+			if exists, readErr := b.networkExists(ctx, name, bridgeAddr); readErr != nil {
+				return name, fmt.Errorf("validating existing network %s: %w", name, readErr)
+			} else if exists {
 				return name, nil
 			}
 		}
 		slog.ErrorContext(ctx, "MicroCloud primary network creation failed", "project", b.Client.Project, "network", name, "error", err)
 		return name, fmt.Errorf("creating network %s (from %s): %w", name, spec.ExternalName, err)
 	}
+	if exists, err := b.networkExists(ctx, name, bridgeAddr); err != nil {
+		return name, fmt.Errorf("validating created network %s: %w", name, err)
+	} else if !exists {
+		return name, fmt.Errorf("created network %s is missing on read-back", name)
+	}
 	slog.InfoContext(ctx, "MicroCloud primary OVN network created", "project", b.Client.Project, "network", name)
 	return name, nil
 }
 
 // networkExists reports whether a managed network of this exact name is already
-// present, via GET /1.0/networks/<name> (404 -> false). Used by DeployNetwork to
-// adopt idempotently on a clustered LXD, where a duplicate create doesn't surface
-// as a recognizable "already exists" error.
-func (b *Builder) networkExists(ctx context.Context, name string) (bool, error) {
+// present and has a valid, unique uplink allocation (404 -> false). Both new
+// networks and adoption paths must pass the same check before a network task
+// can finish and release dependent guests. Call with the networking lock held.
+func (b *Builder) networkExists(ctx context.Context, name, gateway string) (bool, error) {
 	raw, err := b.Client.get(ctx, "/1.0/networks/"+name)
 	if err == nil {
-		var state struct {
-			Status string `json:"status"`
-		}
+		var state allocatedNetwork
 		if err := json.Unmarshal(raw, &state); err != nil {
 			return false, err
 		}
-		if state.Status != "" && state.Status != "Created" {
-			return false, fmt.Errorf("network %s exists in state %s; cluster network creation must finish successfully before deploying boxes", name, state.Status)
+		if err := b.validateNetworkAllocation(ctx, name, gateway, state); err != nil {
+			return false, err
 		}
 		return true, nil
 	}
 	var apiErr *APIError
-	if errors.As(err, &apiErr) && apiErr.NotFound() {
+	if errors.As(err, &apiErr) && apiErr.HTTPStatus == 404 {
 		return false, nil
 	}
 	return false, err
@@ -353,11 +363,16 @@ func bridgeAddressCIDR(cidr string) (string, error) {
 }
 
 func (b *Builder) DestroyNetwork(ctx context.Context, team, externalRef string) error {
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	// Tear down the visible_from fabric (peers + ACL) first -- a peered OVN
 	// network can't be deleted, nor an attached ACL. Best-effort. See
 	// netaccess.go and the incus builder's identical teardown.
 	b.teardownNetworkAccess(ctx, externalRef)
-	_, err := b.Client.delete(ctx, "/1.0/networks/"+externalRef)
+	_, err = b.Client.delete(ctx, "/1.0/networks/"+externalRef)
 	if err != nil {
 		var apiErr *APIError
 		if errors.As(err, &apiErr) && apiErr.NotFound() {
@@ -898,12 +913,22 @@ func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 // matching "port reservations survive" for the equivalent network-level
 // case.
 func (b *Builder) CloseAccess(ctx context.Context, team string) error {
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	return b.forEachTeamInstance(ctx, team, func(name string, inst mcInstance) error {
 		return b.removeNIC(ctx, name)
 	})
 }
 
 func (b *Builder) OpenAccess(ctx context.Context, team string) error {
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	return b.forEachTeamInstance(ctx, team, func(name string, inst mcInstance) error {
 		return b.restoreNIC(ctx, name)
 	})

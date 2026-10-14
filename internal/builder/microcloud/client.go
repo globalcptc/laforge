@@ -38,6 +38,7 @@ type Client struct {
 	Project          string
 	HTTPClient       *http.Client
 	OperationTimeout time.Duration
+	NetworkLock      NetworkLocker
 }
 
 // NewClient builds a Client that presents clientCertPEM/clientKeyPEM and
@@ -270,6 +271,14 @@ type requestOptions struct {
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body interface{}, options ...requestOptions) (json.RawMessage, error) {
+	if isNetworkingMutation(method, path) {
+		lockedCtx, release, err := c.lockNetworking(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer release()
+		ctx = lockedCtx
+	}
 	// Keep the original caller context for waitForOperation. Submission
 	// and waiting each need their own bounded budget; time spent submitting
 	// must not consume the operation wait's budget. Both still obey the

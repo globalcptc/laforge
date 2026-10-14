@@ -308,6 +308,12 @@ func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, tea
 	if err != nil {
 		return err
 	}
+	// The runner has exhausted retries or reported a permanent network error.
+	// Keep that failure terminal until the object is explicitly reset;
+	// creating a fresh task here would silently reset the retry budget.
+	if obj.Status == "deploy_failed" {
+		return nil
+	}
 	_, err = reconcileObject(ctx, q, buildID, obj, fp, deployTasks)
 	return err
 }
@@ -364,17 +370,17 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	if err := q.SetDeployedObjectTags(ctx, db.SetDeployedObjectTagsParams{ID: obj.ID, Tags: tagsJSON}); err != nil {
 		return fmt.Errorf("setting tags: %w", err)
 	}
-	// Hold the FIRST deploy of a box until its network is actually up: a builder
-	// can't place an instance in a subnet/bridge that DeployNetwork hasn't created
-	// yet. Without this the deploy task races ahead (the runner leases many tasks
-	// at once) and burns retry cycles against the hoster ("no subnet found ...
-	// DeployNetwork may not have run yet") -- the same wait, but noisy. This is a
-	// PHYSICAL prerequisite, distinct from depends_on (a box still deploys ahead of
-	// a dependency's configuration). We wait only while the network is still coming
-	// up: if its deploy terminally FAILED we don't gate, so the box deploys, fails
-	// on its own, and nothing strands forever. Only the initial deploy is gated --
-	// an already-up box's network is necessarily up, so rebuild/fingerprint runs.
-	if deployTasks && !infraUp(obj.Status) && networkName != "" && !networkUp[networkName] && !networkFailed[networkName] {
+	// Hold a guest's deployment until its network is ready. A failed network may
+	// still exist at the hoster with an unusable allocation.
+	// Fail its dependent guests without bootstrapping them on that network. This
+	// also lets the build settle instead of leaving those guests pending forever.
+	if deployTasks && !infraUp(obj.Status) && obj.Status != "destroying" && obj.Status != "destroyed" && networkName != "" && !networkUp[networkName] {
+		if networkFailed[networkName] && obj.Status != "deploy_failed" {
+			_, err := q.MarkDeployedObjectDeployFailed(ctx, db.MarkDeployedObjectDeployFailedParams{
+				ID: obj.ID, LastError: db.StrPtr(fmt.Sprintf("network %q failed to deploy; resolve its failure before redeploying", networkName)),
+			})
+			return err
+		}
 		return nil
 	}
 	// The box deploys ahead of time: its deploy task is no longer gated on
