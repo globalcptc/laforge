@@ -156,6 +156,13 @@ type Script struct {
 	Timeout      int                      `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 	Args         []string                 `yaml:"args,omitempty" json:"args,omitempty"`
 	IgnoreErrors bool                     `yaml:"ignore_errors,omitempty" json:"ignore_errors,omitempty"`
+	// Reboots marks a script that reboots the host itself (dcpromo, a driver
+	// install, a Windows feature that requires a restart). Such a script never
+	// reports a result -- the reboot kills the agent mid-command -- so LaForge
+	// must not re-run it on the way back (it would hit "already done" errors like
+	// "This server is already domain joined"). Instead the agent reconnecting
+	// after the reboot is treated as the step completing. See internal/gateway.
+	Reboots      bool                     `yaml:"reboots,omitempty" json:"reboots,omitempty"`
 	Tags         map[string]string        `yaml:"tags,omitempty" json:"tags,omitempty"`
 	Findings     []Finding                `yaml:"findings,omitempty" json:"findings,omitempty"`
 	People       []PeopleRef              `yaml:"people,omitempty" json:"people,omitempty"`

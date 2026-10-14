@@ -67,6 +67,67 @@ func TestIgnoreErrorsStepIsToleratedAndDoesNotBlock(t *testing.T) {
 	}
 }
 
+// TestRebootsStepCompletesOnReconnectInsteadOfReRunning proves the reboot-aware
+// completion over the real protocol: a `reboots: true` step (dcpromo) reboots the
+// box, so the agent never reports a result and the step stays 'leased'. When the
+// agent comes back and asks for work, the gateway must COMPLETE that step (the
+// reconnect is the completion) and serve the next one -- NOT re-lease and re-run
+// it, which would hit "already domain joined". Without the feature the second
+// get-task returns nil (step 0 still leased), wedging the host.
+func TestRebootsStepCompletesOnReconnectInsteadOfReRunning(t *testing.T) {
+	adminPool := openAdminPool(t)
+	host := seedDeployedHost(t, adminPool)
+	adminQ := db.New(adminPool)
+	ctx := context.Background()
+
+	step0, err := adminQ.CreateAgentTask(ctx, db.CreateAgentTaskParams{
+		DeployedObjectID: host.deployedObjectID, StepIndex: 0, Command: "execute",
+		Payload: []byte(`{"command":"dcpromo"}`), Reboots: true,
+	})
+	if err != nil {
+		t.Fatalf("CreateAgentTask step0 (reboots): %v", err)
+	}
+	step1, err := adminQ.CreateAgentTask(ctx, db.CreateAgentTaskParams{
+		DeployedObjectID: host.deployedObjectID, StepIndex: 1, Command: "write_file",
+		Payload: []byte(`{"path":"/tmp/after","content":"ran"}`),
+	})
+	if err != nil {
+		t.Fatalf("CreateAgentTask step1: %v", err)
+	}
+
+	addr, ca, _ := startTestGateway(t)
+	client := dialTestAgent(t, addr, ca, host.deployedObjectID.String())
+	defer client.conn.Close()
+	client.heartbeat(t)
+
+	// First get-task leases the reboots step. The agent runs it; the box reboots
+	// and the agent never reports -- the step is left 'leased'.
+	task := client.getTask(t)
+	if task == nil || task.ID != step0.ID.String() {
+		t.Fatalf("first get-task = %+v, want reboots step0 %s", task, step0.ID)
+	}
+
+	// The agent reconnects after the reboot and asks for work. That reconnect
+	// completes the reboots step and serves step1 -- it must NOT re-offer step0.
+	next := client.getTask(t)
+	if next == nil {
+		t.Fatal("after reconnect, get-task returned nil -- the reboots step must auto-complete, not stay leased")
+	}
+	if next.ID == step0.ID.String() {
+		t.Fatal("after reconnect, get-task re-offered the reboots step -- it must complete it, not re-run it")
+	}
+	if next.ID != step1.ID.String() {
+		t.Fatalf("after reconnect, get-task = %s, want step1 %s", next.ID, step1.ID)
+	}
+	got, err := adminQ.GetAgentTask(ctx, step0.ID)
+	if err != nil {
+		t.Fatalf("GetAgentTask step0: %v", err)
+	}
+	if got.Status != "done" {
+		t.Fatalf("reboots step0 status = %q, want done (the reconnect completed it)", got.Status)
+	}
+}
+
 // TestGatewayEndToEnd is the real proof of the whole verb set, over a
 // real mTLS connection, against the gateway's actual restricted database
 // role: heartbeat records a session, get-task offers steps in order (not

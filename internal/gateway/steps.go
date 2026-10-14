@@ -69,6 +69,12 @@ type PlannedCommand struct {
 	// `script:`'s own `ignore_errors:` field, carried onto the execute command
 	// that actually runs it.
 	IgnoreErrors bool
+	// Reboots marks a command (a `script:` with `reboots: true`) that reboots the
+	// host itself, so the agent never reports a result for it. Carried onto the
+	// agent_task so the gateway completes it when the agent reconnects after the
+	// reboot, instead of re-leasing and re-running it. See internal/gateway's
+	// get-task handler.
+	Reboots bool
 }
 
 // languageInterpreter maps a script's language to how the agent should
@@ -327,7 +333,7 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 		// `args: ["--seed", "3"]`.
 		execArgs := append(append([]string{}, prefixArgs...), path)
 		execArgs = append(execArgs, script.Args...)
-		out = append(out, PlannedCommand{Command: agentproto.CmdExecute, IgnoreErrors: ignoreErrors, Payload: agentproto.ExecutePayload{
+		out = append(out, PlannedCommand{Command: agentproto.CmdExecute, IgnoreErrors: ignoreErrors, Reboots: script.Reboots, Payload: agentproto.ExecutePayload{
 			Command: interp, Args: execArgs, TimeoutSec: script.Timeout,
 		}})
 		// A script's OWN `validate:` block runs after its execution, on every

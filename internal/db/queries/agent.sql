@@ -84,13 +84,26 @@ WHERE team.build_id = $1;
 -- UnblockAgentTasksForObject once the dependency finishes. ad_hoc defaults false
 -- (strict ordered, failure-blocking lane); operator commands use
 -- CreateAdHocAgentTask instead.
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, status)
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status)
 VALUES (
   sqlc.arg(deployed_object_id), sqlc.arg(step_index), sqlc.arg(command),
-  sqlc.arg(payload), sqlc.arg(ignore_errors),
+  sqlc.arg(payload), sqlc.arg(ignore_errors), sqlc.arg(reboots),
   COALESCE(NULLIF(sqlc.arg(status)::text, ''), 'pending')
 )
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
+RETURNING *;
+
+-- name: CompleteLeasedRebootsTaskForHost :one
+-- The reboot-aware completion: a `reboots: true` step reboots the host, which
+-- kills the agent before it can report a result, so the step stays 'leased'. The
+-- agent only ever asks for a new task (get-task) when it has nothing in flight --
+-- so a get-task arriving while a reboots step is still 'leased' means the box
+-- rebooted and the agent is back. That reconnect IS the step's completion: mark
+-- it done here (instead of letting the lease expire and re-running the script on
+-- an already-changed box). Returns the row so get-task can log a step event; no
+-- row (ErrNoRows) when there's no leased reboots step, the normal case.
+UPDATE agent_task SET status = 'done', last_error = NULL, updated_at = now()
+WHERE deployed_object_id = $1 AND reboots = true AND status = 'leased'
 RETURNING *;
 
 -- name: UnblockAgentTasksForObject :exec

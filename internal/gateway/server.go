@@ -229,6 +229,16 @@ func remoteAddrString(conn net.Conn) *string {
 
 func (s *Server) handleGetTask(ctx context.Context, conn net.Conn, objID pgtype.UUID) {
 	q := db.New(s.Pool)
+	// Reboot-aware completion: the agent only asks for a task when it has nothing
+	// in flight, so a get-task arriving while a `reboots: true` step is still
+	// 'leased' means that step rebooted the box and the agent is now back. Treat
+	// the reconnect as the step completing -- otherwise the lease would expire and
+	// the script would re-run on an already-changed box ("already domain joined").
+	if done, err := q.CompleteLeasedRebootsTaskForHost(ctx, objID); err == nil {
+		s.logStepEvent(ctx, q, done, "step_done", "reboot step completed; host reconnected after reboot")
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		log.Printf("gateway: get-task: completing reboots step: %v", err)
+	}
 	task, err := q.NextAgentTaskForHost(ctx, db.NextAgentTaskForHostParams{
 		DeployedObjectID: objID, Column2: db.Interval(s.LeaseDuration),
 	})

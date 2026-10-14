@@ -45,6 +45,10 @@
           "type": "boolean",
           "description": "If true, a non-zero exit from this script warns instead of failing the whole build."
         },
+        "reboots": {
+          "type": "boolean",
+          "description": "If true, this script reboots the host itself (e.g. dcpromo). The agent won't report a result (the reboot kills it), so LaForge treats the agent reconnecting afterward as the step completing, instead of re-running the script on an already-changed box."
+        },
         "tags": {
           "$ref": "common.json#/$defs/tagsMap",
           "description": "Labels for searching, grouping, and ad-hoc targeting. Flow to every host/container running this script.",

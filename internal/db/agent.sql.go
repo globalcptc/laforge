@@ -15,7 +15,7 @@ import (
 const completeAgentTask = `-- name: CompleteAgentTask :one
 UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now()
 WHERE id = $1
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
 `
 
 type CompleteAgentTaskParams struct {
@@ -41,6 +41,44 @@ func (q *Queries) CompleteAgentTask(ctx context.Context, arg CompleteAgentTaskPa
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
+	)
+	return i, err
+}
+
+const completeLeasedRebootsTaskForHost = `-- name: CompleteLeasedRebootsTaskForHost :one
+UPDATE agent_task SET status = 'done', last_error = NULL, updated_at = now()
+WHERE deployed_object_id = $1 AND reboots = true AND status = 'leased'
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
+`
+
+// The reboot-aware completion: a `reboots: true` step reboots the host, which
+// kills the agent before it can report a result, so the step stays 'leased'. The
+// agent only ever asks for a new task (get-task) when it has nothing in flight --
+// so a get-task arriving while a reboots step is still 'leased' means the box
+// rebooted and the agent is back. That reconnect IS the step's completion: mark
+// it done here (instead of letting the lease expire and re-running the script on
+// an already-changed box). Returns the row so get-task can log a step event; no
+// row (ErrNoRows) when there's no leased reboots step, the normal case.
+func (q *Queries) CompleteLeasedRebootsTaskForHost(ctx context.Context, deployedObjectID pgtype.UUID) (AgentTask, error) {
+	row := q.db.QueryRow(ctx, completeLeasedRebootsTaskForHost, deployedObjectID)
+	var i AgentTask
+	err := row.Scan(
+		&i.ID,
+		&i.DeployedObjectID,
+		&i.StepIndex,
+		&i.Command,
+		&i.Payload,
+		&i.Status,
+		&i.LeaseExpiresAt,
+		&i.Attempts,
+		&i.Output,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IgnoreErrors,
+		&i.AdHoc,
+		&i.Reboots,
 	)
 	return i, err
 }
@@ -49,7 +87,7 @@ const createAdHocAgentTask = `-- name: CreateAdHocAgentTask :one
 INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, ad_hoc)
 VALUES ($1, $2, $3, $4, $5, true)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
 `
 
 type CreateAdHocAgentTaskParams struct {
@@ -88,6 +126,7 @@ func (q *Queries) CreateAdHocAgentTask(ctx context.Context, arg CreateAdHocAgent
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
 	)
 	return i, err
 }
@@ -166,14 +205,14 @@ func (q *Queries) CreateAgentHeartbeat(ctx context.Context, arg CreateAgentHeart
 }
 
 const createAgentTask = `-- name: CreateAgentTask :one
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, status)
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status)
 VALUES (
   $1, $2, $3,
-  $4, $5,
-  COALESCE(NULLIF($6::text, ''), 'pending')
+  $4, $5, $6,
+  COALESCE(NULLIF($7::text, ''), 'pending')
 )
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
 `
 
 type CreateAgentTaskParams struct {
@@ -182,6 +221,7 @@ type CreateAgentTaskParams struct {
 	Command          string          `json:"command"`
 	Payload          json.RawMessage `json:"payload"`
 	IgnoreErrors     bool            `json:"ignore_errors"`
+	Reboots          bool            `json:"reboots"`
 	Status           string          `json:"status"`
 }
 
@@ -198,6 +238,7 @@ func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams
 		arg.Command,
 		arg.Payload,
 		arg.IgnoreErrors,
+		arg.Reboots,
 		arg.Status,
 	)
 	var i AgentTask
@@ -216,6 +257,7 @@ func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
 	)
 	return i, err
 }
@@ -295,7 +337,7 @@ func (q *Queries) DeleteAgentTasksForObject(ctx context.Context, deployedObjectI
 const failAgentTask = `-- name: FailAgentTask :one
 UPDATE agent_task SET status = $2, last_error = $3, updated_at = now()
 WHERE id = $1
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
 `
 
 type FailAgentTaskParams struct {
@@ -322,6 +364,7 @@ func (q *Queries) FailAgentTask(ctx context.Context, arg FailAgentTaskParams) (A
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
 	)
 	return i, err
 }
@@ -378,7 +421,7 @@ func (q *Queries) GetAgentSessionByDeployedObject(ctx context.Context, deployedO
 }
 
 const getAgentTask = `-- name: GetAgentTask :one
-SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc FROM agent_task WHERE id = $1
+SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots FROM agent_task WHERE id = $1
 `
 
 func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, error) {
@@ -399,6 +442,7 @@ func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, 
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
 	)
 	return i, err
 }
@@ -562,7 +606,7 @@ func (q *Queries) ListAgentSessionsByBuild(ctx context.Context, buildID pgtype.U
 }
 
 const listAgentTasksByHost = `-- name: ListAgentTasksByHost :many
-SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc FROM agent_task WHERE deployed_object_id = $1 ORDER BY step_index
+SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots FROM agent_task WHERE deployed_object_id = $1 ORDER BY step_index
 `
 
 func (q *Queries) ListAgentTasksByHost(ctx context.Context, deployedObjectID pgtype.UUID) ([]AgentTask, error) {
@@ -589,6 +633,7 @@ func (q *Queries) ListAgentTasksByHost(ctx context.Context, deployedObjectID pgt
 			&i.UpdatedAt,
 			&i.IgnoreErrors,
 			&i.AdHoc,
+			&i.Reboots,
 		); err != nil {
 			return nil, err
 		}
@@ -721,7 +766,7 @@ WHERE id = (
     LIMIT 1
 )
 AND (status = 'pending' OR (status = 'leased' AND lease_expires_at < now()))
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
 `
 
 type NextAgentTaskForHostParams struct {
@@ -775,6 +820,7 @@ func (q *Queries) NextAgentTaskForHost(ctx context.Context, arg NextAgentTaskFor
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
 	)
 	return i, err
 }

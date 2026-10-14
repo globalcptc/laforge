@@ -8,6 +8,43 @@ import (
 	"github.com/globalcptc/laforge/internal/loader"
 )
 
+// TestExpandStepsCarriesScriptRebootsOntoExecute proves a `reboots: true` on a
+// script's config rides onto the execute command that runs it -- the flag the
+// gateway uses to complete a reboot-and-die step on the agent's reconnect
+// instead of re-running it (dcpromo's "already domain joined").
+func TestExpandStepsCarriesScriptRebootsOntoExecute(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatalf("loader.Load: %v", err)
+	}
+	// Mark the "base" script as rebooting, in memory -- real content, one field.
+	var marked bool
+	for i := range c.Scripts {
+		if c.Scripts[i].Name == "base" {
+			c.Scripts[i].Reboots = true
+			marked = true
+		}
+	}
+	if !marked {
+		t.Fatal("expected a 'base' script in examples/lm-test to mark")
+	}
+
+	cmds, _, err := ExpandSteps("../../examples/lm-test", c, "lm-test", "web01", 1)
+	if err != nil {
+		t.Fatalf("ExpandSteps: %v", err)
+	}
+	// web01's commands: set_password backstop, then base's write_file + execute,
+	// then download/extract, then vuln-sqli's write_file + execute. The base
+	// execute (cmds[2]) must carry Reboots; the vuln-sqli execute (cmds[6]) must
+	// not -- the flag is per-script, not blanket.
+	if cmds[2].Command != agentproto.CmdExecute || !cmds[2].Reboots {
+		t.Errorf("base execute (cmds[2]) = %+v, want an execute with Reboots=true", cmds[2])
+	}
+	if cmds[6].Command == agentproto.CmdExecute && cmds[6].Reboots {
+		t.Errorf("vuln-sqli execute (cmds[6]) should NOT carry Reboots -- only the marked script does")
+	}
+}
+
 // TestExpandStepsAdminPasswordBackstop proves ExpandSteps prepends a single
 // set_password for the host's built-in admin account from the environment's
 // root_password -- root on Linux, Administrator on Windows -- as the first
