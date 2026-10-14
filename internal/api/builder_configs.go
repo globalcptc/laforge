@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -264,15 +263,17 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 // done at save time so a gap is caught by the admin, not by a failed
 // deploy mid-event.
 func (s *Server) verifyImages(r *http.Request, params db.CreateBuilderConfigParams) error {
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
-	defer cancel()
-	return builderconfig.VerifyImages(ctx, s.Pool, db.BuilderConfig{
+	// Each host client bounds its reads using the configured operation timeout.
+	// A fixed deadline around the whole catalog would truncate slow reads and
+	// make otherwise healthy hosts fail as the number of checks grows.
+	return builderconfig.VerifyImages(r.Context(), s.Pool, db.BuilderConfig{
 		Kind: params.Kind, IncusApiUrl: params.IncusApiUrl, IncusClientCertPath: params.IncusClientCertPath,
 		IncusClientKeyPath: params.IncusClientKeyPath, IncusServerCertPem: params.IncusServerCertPem,
 		IncusImages: params.IncusImages, IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
-		IncusOneTeamPerHost:    params.IncusOneTeamPerHost,
-		IncusProject:           params.IncusProject,
-		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
+		IncusOperationTimeoutSeconds: params.IncusOperationTimeoutSeconds,
+		IncusOneTeamPerHost:          params.IncusOneTeamPerHost,
+		IncusProject:                 params.IncusProject,
+		MicrocloudPublicAccess:       params.MicrocloudPublicAccess,
 	})
 }
 

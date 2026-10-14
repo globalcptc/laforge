@@ -122,6 +122,33 @@ func TestResolveMicrocloudConstructsARealClient(t *testing.T) {
 	if ib.Client.OperationTimeout.Seconds() != 300 {
 		t.Errorf("OperationTimeout = %v, want 300s", ib.Client.OperationTimeout)
 	}
+
+	// Verification uses the same default and explicit budget as deployment,
+	// even though it constructs its client through the shared endpoint path.
+	for _, seconds := range []int32{0, 120, 900} {
+		row.IncusOperationTimeoutSeconds = &seconds
+		if seconds == 0 {
+			row.IncusOperationTimeoutSeconds = nil
+		}
+		want := seconds
+		if want == 0 {
+			want = 600
+		}
+		resolved, err := Resolve(nil, row)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := resolved.(*microcloud.Builder).Client.OperationTimeout.Seconds(); got != float64(want) {
+			t.Errorf("deployment budget = %v, want %d", got, want)
+		}
+		hosts, err := hostEndpoints(nil, row)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := hosts[0].timeoutSeconds; got != int(want) {
+			t.Errorf("verification budget = %d, want %d", got, want)
+		}
+	}
 }
 
 // TestResolveIncusPoolRequiresAtLeastOneHost proves kind "incus" now

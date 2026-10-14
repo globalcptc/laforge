@@ -7,7 +7,7 @@ import ts from 'typescript'
 // native TypeScript support (the existing development dependency compiles it).
 const source = readFileSync(new URL('../src/components/builder-wizard/model.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, {compilerOptions: {module: ts.ModuleKind.ESNext}}).outputText
-const { placementDefaults, isHostPlaced, uplinkCandidates, draftFromConfig, toRequest } = await import('data:text/javascript;base64,' + Buffer.from(compiled).toString('base64'))
+const { emptyHost, placementDefaults, isHostPlaced, uplinkCandidates, draftFromConfig, toRequest } = await import('data:text/javascript;base64,' + Buffer.from(compiled).toString('base64'))
 
 const connection = (supported) => ({ discovery: {
   storage_pools: [{name: 'default'}], native_bridge_supported: supported,
@@ -34,4 +34,23 @@ test('saved OVN settings stay OVN; bridge and strict placement round-trip', () =
   assert.equal(saved.incus_one_team_per_host,true)
   assert.equal(saved.incus_hosts[0].network_type,'bridge')
   assert.equal(saved.incus_hosts[0].ovn_uplink_network,undefined)
+})
+
+
+test('MicroCloud defaults to ten minutes and preserves configured timeouts', () => {
+  assert.equal(emptyHost('microcloud').timeoutSeconds, 600)
+  assert.equal(emptyHost('incus').timeoutSeconds, 120)
+  const config = {name: 'cluster', kind: 'microcloud', incus_credential_id: 'cluster-id'}
+  for (const unset of [null, undefined, 0]) {
+    const draft = draftFromConfig({...config, incus_operation_timeout_seconds: unset})
+    assert.equal(draft.hosts[0].timeoutSeconds, 600)
+    assert.equal(toRequest(draft).incus_operation_timeout_seconds, 600)
+  }
+  for (const timeout of [120, 900, 1200]) {
+    const draft = draftFromConfig({...config, incus_operation_timeout_seconds: timeout})
+    assert.equal(draft.hosts[0].timeoutSeconds, timeout)
+    assert.equal(toRequest(draft).incus_operation_timeout_seconds, timeout)
+    draft.hosts[0].timeoutSeconds = 1200
+    assert.equal(toRequest(draft).incus_operation_timeout_seconds, 1200)
+  }
 })

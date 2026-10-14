@@ -108,15 +108,14 @@ func NewClient(baseURL string, clientCertPEM, clientKeyPEM, serverCertPEM []byte
 		// time OperationTimeout actually promises it. Ordinary calls also
 		// honor that budget: cluster reads can exceed 30 seconds under load.
 		HTTPClient: &http.Client{Transport: &http.Transport{TLSClientConfig: tlsCfg}},
-		// 5 minutes: a win2019 VM's first image clone onto network-attached
-		// Ceph RBD genuinely runs past two minutes (found live -- deploys
-		// failed at "context deadline exceeded" with the old 120s default),
-		// and this budget bounds ordinary API calls as well as asynchronous
-		// operation waits. A builder config can raise it further via
-		// OperationTimeoutSeconds. Caller cancellation always wins.
-		OperationTimeout: 300 * time.Second,
+		// Busy Ceph clusters and large image copies can take several minutes.
+		// The builder can override this budget; caller cancellation always wins.
+		OperationTimeout: DefaultOperationTimeout,
 	}, nil
 }
+
+// DefaultOperationTimeout bounds cluster reads and operation waits when unset.
+const DefaultOperationTimeout = 10 * time.Minute
 
 // requestTimeout is the minimum per-request budget when a client does not
 // configure a longer cluster operation timeout. Every request remains bounded,
