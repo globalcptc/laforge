@@ -83,8 +83,14 @@ func (s *Server) handleTerminal(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, errors.New("only hosts and containers have a shell"))
 		return
 	}
-	if !shellReachable(obj.Status) {
-		writeError(w, http.StatusConflict, fmt.Errorf("object is %q -- a shell needs a running host with a live agent", obj.Status))
+	// A shell is gated on a LIVE AGENT, not a successful build. The terminal's
+	// main job is debugging the very scripts that fail, so a build_failed (or
+	// invalid) host whose agent is still checking in must still get a shell --
+	// that's exactly when an operator needs one. We look up the agent's last
+	// heartbeat; a missing session or a stale one is the only thing that blocks.
+	agentSess, sessErr := s.Queries.GetAgentSessionByDeployedObject(ctx, objectID)
+	if reason := shellBlockedReason(obj.Status, sessErr == nil, agentSess.LastHeartbeatAt.Time, time.Now()); reason != "" {
+		writeError(w, http.StatusConflict, errors.New(reason))
 		return
 	}
 
@@ -220,16 +226,34 @@ func (s *Server) pumpTerminal(c *websocket.Conn, raw net.Conn) {
 	}
 }
 
-// shellReachable reports whether an object's deploy status means its box is up
-// with an agent that could serve a shell. A box still deploying, failed, or torn
-// down cannot. (A dead-but-"running" agent is caught later by the relay's
-// attach timeout.)
-func shellReachable(status string) bool {
-	switch status {
-	case "running", "building", "finished":
-		return true
+// shellWindow is how recently the agent must have checked in for a shell to be
+// opened. It's the "late" band from health.go (not the tighter "healthy" one):
+// within it the agent is still polling and will pick up the pending session on
+// its next heartbeat, so a slightly-behind agent should not be denied a shell;
+// past it the agent is written off as missing and the relay would just time out.
+const shellWindow = lateWindow
+
+// shellBlockedReason returns "" if an interactive shell can be opened on an
+// object in this state, or a human-readable reason it cannot.
+//
+// A shell is gated on a LIVE AGENT, not a successful build. An operator mostly
+// opens a terminal to debug a script -- including the script that just failed --
+// so a build_failed or invalid host whose agent is still checking in MUST get a
+// shell. The only real requirements are therefore: the instance is actually up
+// at the hoster (infraUp, which already counts build_failed/invalid as up), and
+// the agent has heartbeat within shellWindow. A box still deploying, failed to
+// deploy, or torn down has no live agent to relay through.
+func shellBlockedReason(status string, hasSession bool, lastHeartbeat time.Time, now time.Time) string {
+	if !infraUp(status) {
+		return fmt.Sprintf("the host is %q -- a shell needs a deployed host, not one still deploying or torn down", status)
 	}
-	return false
+	if !hasSession {
+		return "the agent on this host hasn't checked in yet -- a shell needs a live agent"
+	}
+	if age := now.Sub(lastHeartbeat); age > shellWindow {
+		return fmt.Sprintf("the agent on this host last checked in %s ago -- a shell needs a live agent", age.Round(time.Second))
+	}
+	return ""
 }
 
 // auditShell writes one shell lifecycle event attributed to the host, so it

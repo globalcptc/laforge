@@ -6,37 +6,64 @@ import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { API_BASE } from '../api/client'
 import { useDeployedObjects } from '../api/hooks'
-import type { ObjectStatus } from '../api/types'
+import type { DeployedObject, ObjectStatus } from '../api/types'
 import { StatusBadge } from '../components/StatusBadge'
 import { Badge, buttonClass, EmptyState, Spinner } from '../ui'
 
 type Status = 'connecting' | 'open' | 'closed'
 
-// A shell exists only on a host/container that is actually up with a live agent.
-// This MUST match the api's shellReachable (internal/api/terminal.go): the
-// handshake is refused with 409 for any other status, which a browser surfaces
-// as a bare "can't establish a connection" error. We check the status up front
-// so the page can explain *why* instead of dialing a socket that will be
-// refused.
-const SHELL_REACHABLE: ReadonlySet<ObjectStatus> = new Set<ObjectStatus>(['running', 'building', 'finished'])
+// A shell is gated on a LIVE AGENT, not a successful build: the terminal's main
+// job is debugging scripts -- including the one that just failed -- so a
+// build_failed (or invalid) host whose agent is still checking in must still get
+// a shell. This MUST match the api's shellBlockedReason (internal/api/terminal.go),
+// which refuses the handshake with 409 otherwise (a browser surfaces that as a
+// bare "can't establish a connection"). We check up front so the page can explain
+// *why* instead of dialing a socket that will be refused.
+//
+// Returns null when a shell can be opened, or a human reason it can't. The agent
+// health ('healthy' | 'late' -> alive) is the real gate; only when there's no
+// agent health at all (the instance isn't up) do we fall back to the status.
+function shellBlockedReason(obj: DeployedObject): string | null {
+  switch (obj.agent?.agent_status) {
+    case 'healthy':
+    case 'late':
+      return null
+    case 'missing':
+      return 'The agent on this host isn’t responding — its last check-in was too long ago. A terminal needs a live agent.'
+    case 'booting':
+      return 'The agent on this host hasn’t checked in yet. It should connect shortly after boot — try again in a moment.'
+    default:
+      // No agent health means the instance isn't up (pending/deploying/torn down).
+      return shellUnavailableByStatus(obj.status)
+  }
+}
 
-// Why a shell can't be opened, in plain language, per non-reachable status.
-function shellUnavailableReason(status: ObjectStatus): string {
+function shellUnavailableByStatus(status: ObjectStatus): string {
   switch (status) {
     case 'pending':
     case 'deploying':
-      return 'This host isn’t running yet — a terminal needs a live agent. Try again once it’s up.'
+      return 'This host isn’t up yet — a terminal needs a running host with a live agent. Try again once it’s up.'
     case 'deploy_failed':
-      return 'This host failed to deploy, so there’s no agent to open a shell on.'
-    case 'build_failed':
-      return 'This host’s build failed, so it has no live agent to open a shell on.'
-    case 'invalid':
-      return 'This host is in an invalid state and can’t open a shell.'
+      return 'This host failed to deploy, so it never came up and has no agent to open a shell on.'
     case 'destroying':
     case 'destroyed':
       return 'This host has been torn down, so there’s no shell to open.'
     default:
-      return 'This host isn’t in a state that can open a shell — a terminal needs a running host with a live agent.'
+      return 'This host isn’t up with a live agent, so a shell can’t be opened.'
+  }
+}
+
+// Agent-health badge tone, used when explaining why a shell is blocked.
+function agentTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
+  switch (status) {
+    case 'healthy':
+      return 'success'
+    case 'late':
+      return 'warning'
+    case 'missing':
+      return 'danger'
+    default:
+      return 'neutral'
   }
 }
 
@@ -51,12 +78,13 @@ export function BuildTerminal() {
   const mountRef = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<Status>('connecting')
 
-  // The host's own status decides whether a shell is even possible. undefined
-  // while the object list is still loading (or the object is gone); a boolean
-  // once we know. We gate the socket on this so we never dial a doomed handshake.
+  // A live agent decides whether a shell is even possible. undefined while the
+  // object list is still loading (or the object is gone); a boolean once we know.
+  // We gate the socket on this so we never dial a doomed handshake.
   const objects = useDeployedObjects(buildId)
   const obj = objects.data?.find((o) => o.id === objectId)
-  const reachable = obj ? SHELL_REACHABLE.has(obj.status) : undefined
+  const blockedReason = obj ? shellBlockedReason(obj) : null
+  const reachable = obj ? blockedReason === null : undefined
 
   useEffect(() => {
     // Only open the socket when we know the host can take a shell. While the
@@ -179,8 +207,12 @@ export function BuildTerminal() {
               title="No shell available"
               description={
                 <span className="flex flex-col items-center gap-2">
-                  <StatusBadge status={obj.status} />
-                  <span>{shellUnavailableReason(obj.status)}</span>
+                  {obj.agent ? (
+                    <Badge tone={agentTone(obj.agent.agent_status)}>Agent {obj.agent.agent_status}</Badge>
+                  ) : (
+                    <StatusBadge status={obj.status} />
+                  )}
+                  <span>{blockedReason}</span>
                 </span>
               }
             />
