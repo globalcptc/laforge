@@ -93,6 +93,9 @@ export interface Draft {
   color?: string
   // MicroCloud only: cluster member names LaForge must not place instances on.
   hostBlocklist?: string[]
+  // Cap on how many of this builder's tasks deploy at once, below the global
+  // runner pool -- a knob to turn down a capacity-limited hoster. 0 = unlimited.
+  maxConcurrency?: number
 }
 
 let seq = 0
@@ -277,6 +280,7 @@ export function draftFromConfig(bc: BuilderConfig): Draft {
     externalPortMax: bc.external_port_max ?? undefined,
     color: bc.color ?? '',
     hostBlocklist: bc.microcloud_host_blocklist ?? [],
+    maxConcurrency: bc.max_concurrency ?? 0,
   }
 }
 
@@ -343,6 +347,7 @@ function requestBody(d: Draft): BuilderConfigRequest {
       incus_ovn_uplink_network: h.uplink,
       incus_project: h.project || undefined,
       incus_operation_timeout_seconds: h.timeoutSeconds,
+      max_concurrency: d.maxConcurrency || undefined,
     }
     if (h.credentialId) return { kind: 'microcloud', incus_credential_id: h.credentialId, ...placement, ...externalAccess, incus_images, incus_sizes }
     return {

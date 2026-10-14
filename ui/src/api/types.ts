@@ -673,6 +673,8 @@ export interface BuilderConfig {
   external_port_max: number | null
   /** User-chosen display color ("" = none, else a "#rrggbb" hex), shown as a pill wherever the builder name appears. */
   color?: string
+  /** Cap on how many of this builder's tasks deploy at once (below the global runner pool); 0 = unlimited. */
+  max_concurrency?: number
   created_at: string
   updated_at: string
 }
@@ -702,6 +704,7 @@ export interface BuilderConfigRequest {
   external_port_min?: number
   external_port_max?: number
   color?: string
+  max_concurrency?: number
 }
 
 // StoragePoolInfo/NetworkInfo/ImageInfo mirror internal/builder/incus's

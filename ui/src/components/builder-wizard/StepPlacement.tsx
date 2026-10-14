@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { PublicNICSettings } from './PublicNICSettings'
 import type { MicrocloudPublicAccess } from '../../api/types'
-import { AlertTriangle, FolderTree, Globe, HardDrive, Network, Plus, Server, X } from 'lucide-react'
+import { AlertTriangle, FolderTree, Gauge, Globe, HardDrive, Network, Plus, Server, X } from 'lucide-react'
 import { api, ApiError } from '../../api/client'
 import { builderConnectionPath } from '../../api/hooks'
 import type { BuilderConnection, ProjectInfo } from '../../api/types'
-import { Button, Field, Input, Select, Spinner } from '../../ui'
+import { Button, Field, Input, Select, Slider, Spinner } from '../../ui'
 import { TIMEOUT_OPTIONS, uplinkCandidates, type HostDraft, type Kind } from './model'
 
 export function StepPlacement({
@@ -22,6 +22,8 @@ export function StepPlacement({
   onPublicAccessChange,
   hostBlocklist,
   onBlocklistChange,
+  maxConcurrency,
+  onMaxConcurrencyChange,
 }: {
   kind: Kind
   oneTeamPerHost: boolean
@@ -30,6 +32,8 @@ export function StepPlacement({
   onPublicAccessChange: (value: MicrocloudPublicAccess) => void
   hostBlocklist: string[]
   onBlocklistChange: (value: string[]) => void
+  maxConcurrency: number
+  onMaxConcurrencyChange: (value: number) => void
   hosts: HostDraft[]
   onChange: (hosts: HostDraft[]) => void
   externalAccessIp: string
@@ -196,6 +200,28 @@ export function StepPlacement({
               <Plus size={14} /> Block
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* MicroCloud deploy concurrency: cap how many of this builder's hosts
+          deploy at once, independent of the global runner pool. */}
+      {kind === 'microcloud' && (
+        <div className="card p-4">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg">
+            <Gauge size={14} className="text-fg-muted" /> Deploy Concurrency
+          </div>
+          <p className="mb-3 text-xs text-fg-muted">
+            The most hosts LaForge deploys on this cluster at once. Turn it down if parallel deploys overwhelm the cluster; the global runner
+            pool still caps everything above this. <span className="font-medium text-fg">Unlimited</span> uses the full pool (the previous behavior).
+          </p>
+          <Slider
+            min={0}
+            max={50}
+            step={1}
+            value={maxConcurrency}
+            onChange={onMaxConcurrencyChange}
+            valueLabel={(v) => (v === 0 ? 'Unlimited' : `${v} host${v === 1 ? '' : 's'}`)}
+          />
         </div>
       )}
 

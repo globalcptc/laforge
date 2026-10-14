@@ -83,6 +83,11 @@ type builderConfigRequest struct {
 	// Color is a user-chosen display color for the builder's name pill ("" = none,
 	// else a "#rrggbb" hex). See validate() for the format check.
 	Color string `json:"color,omitempty"`
+	// MaxConcurrency caps how many of THIS builder's tasks may deploy at once,
+	// below the global RUNNER_CONCURRENCY pool -- a knob to turn down a
+	// capacity-limited hoster (e.g. a MicroCloud cluster). 0 = unlimited.
+	// Enforced as a soft cap in the task-lease query, so it applies to any kind.
+	MaxConcurrency int32 `json:"max_concurrency,omitempty"`
 }
 
 // validate turns req into the columns CreateBuilderConfig/UpdateBuilderConfig
@@ -184,6 +189,12 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 	if req.IncusHosts == nil {
 		hosts = []byte("[]")
 	}
+	// A negative cap is meaningless; treat it as 0 = unlimited. No upper clamp --
+	// a value above the global worker pool simply never binds.
+	maxConcurrency := req.MaxConcurrency
+	if maxConcurrency < 0 {
+		maxConcurrency = 0
+	}
 	params := db.CreateBuilderConfigParams{
 		Kind:                   req.Kind,
 		IncusOneTeamPerHost:    req.IncusOneTeamPerHost,
@@ -201,6 +212,7 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		ExternalAccessIp:       db.StrPtr(req.ExternalAccessIP),
 		Color:                  req.Color,
 		MicrocloudHostBlocklist: blocklist,
+		MaxConcurrency:          maxConcurrency,
 	}
 	if req.Kind == "microcloud" && req.IncusProject != "default" {
 		params.IncusProject = db.StrPtr(req.IncusProject)
@@ -443,6 +455,7 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		AwsCredentialID:         params.AwsCredentialID,
 		Color:                   params.Color,
 		MicrocloudHostBlocklist: params.MicrocloudHostBlocklist,
+		MaxConcurrency:          params.MaxConcurrency,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

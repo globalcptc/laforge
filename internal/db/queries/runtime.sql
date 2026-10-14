@@ -333,14 +333,36 @@ RETURNING *;
 -- FOR UPDATE SKIP LOCKED claims either a pending task or one
 -- whose lease has expired, atomically, so concurrent runners never block
 -- each other or double-claim the same row.
+--
+-- Per-builder concurrency cap: a candidate task is skipped while its
+-- builder_config already has max_concurrency tasks leased-and-live (so a
+-- capacity-limited hoster like MicroCloud can be turned down below the global
+-- RUNNER_CONCURRENCY pool). max_concurrency = 0 means unlimited; tasks with no
+-- builder_config (ad-hoc builds, or builds whose configured_build was cleared)
+-- are never capped. The cap is a SOFT limit -- concurrent leasers each read the
+-- in-flight count before committing, so it can transiently overshoot by the
+-- number of simultaneous leasers, which is fine for a "don't overwhelm it" knob.
 UPDATE task
 SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
     attempts = attempts + 1, updated_at = now()
 WHERE id = (
-    SELECT id FROM task
-    WHERE status = 'pending' OR (status = 'leased' AND lease_expires_at < now())
-    ORDER BY created_at
-    FOR UPDATE SKIP LOCKED
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    LEFT JOIN builder_config bc ON bc.name = cb.builder_config_name
+    WHERE (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+      AND (
+        bc.max_concurrency IS NULL OR bc.max_concurrency = 0
+        OR (
+            SELECT count(*) FROM task it
+            JOIN build ib ON ib.id = it.build_id
+            JOIN configured_build icb ON icb.id = ib.configured_build_id
+            WHERE icb.builder_config_name = bc.name
+              AND it.status = 'leased' AND it.lease_expires_at >= now()
+        ) < bc.max_concurrency
+      )
+    ORDER BY t.created_at
+    FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
 RETURNING *;

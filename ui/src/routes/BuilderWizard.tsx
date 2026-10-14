@@ -325,6 +325,8 @@ export function BuilderWizard() {
             onPublicAccessChange={(microcloudPublicAccess) => setDraft((d) => ({ ...d, microcloudPublicAccess }))}
             hostBlocklist={draft.hostBlocklist ?? []}
             onBlocklistChange={(hostBlocklist) => setDraft((d) => ({ ...d, hostBlocklist }))}
+            maxConcurrency={draft.maxConcurrency ?? 0}
+            onMaxConcurrencyChange={(maxConcurrency) => setDraft((d) => ({ ...d, maxConcurrency }))}
             externalAccessIp={draft.externalAccessIp}
             externalPortMin={draft.externalPortMin}
             externalPortMax={draft.externalPortMax}
