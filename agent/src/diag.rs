@@ -62,9 +62,21 @@ fn log_path() -> Option<PathBuf> {
     Some(exe.parent()?.join("laforge-agent.log"))
 }
 
+// Line ending for the log file, chosen for the target OS: CRLF on Windows so
+// the file opens correctly in Notepad (which treats a lone LF as no break and
+// shows everything on one line), plain LF everywhere else. This is the target's
+// convention, not the host's -- a Windows build (incl. the cross-compiled
+// windows-gnu agent) gets CRLF because cfg(windows) follows the target.
+#[cfg(windows)]
+const LINE_END: &str = "\r\n";
+#[cfg(not(windows))]
+const LINE_END: &str = "\n";
+
 /// write_line is the one place a diagnostic line is emitted; the dlog! macro
 /// calls it. Everything is serialized through the sink lock (diagnostics are
-/// low-frequency, so contention is a non-issue).
+/// low-frequency, so contention is a non-issue). The line terminator is the
+/// target OS's (LINE_END) rather than writeln!'s hardcoded "\n", so the Windows
+/// log file is CRLF-terminated and readable in Notepad.
 pub fn write_line(line: &str) {
     let mut guard = match SINK.write() {
         Ok(g) => g,
@@ -73,10 +85,10 @@ pub fn write_line(line: &str) {
     match &mut *guard {
         Sink::Silent => {}
         Sink::Stderr => {
-            let _ = writeln!(std::io::stderr(), "{line}");
+            let _ = write!(std::io::stderr(), "{line}{LINE_END}");
         }
         Sink::File(f) => {
-            let _ = writeln!(f, "{line}");
+            let _ = write!(f, "{line}{LINE_END}");
             let _ = f.flush();
         }
     }
