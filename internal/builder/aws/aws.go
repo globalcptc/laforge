@@ -853,18 +853,59 @@ func (b *Builder) subnetAZ(ctx context.Context) string {
 	}
 	az, err := b.resolveSubnetAZ(ctx)
 	if err != nil {
-		// Best-effort, but NOT silent and NOT cached. A swallowed failure here is
-		// exactly how subnets ended up in a legacy AZ (us-east-1e) that can't run
-		// t3 types: the optimization no-ops and AWS picks the AZ. Log it so the
-		// cause -- most often a missing ec2:DescribeInstanceTypeOfferings
-		// permission, or a transient throttle -- is visible, and leave it
-		// unresolved so the next subnet retries instead of inheriting the miss.
-		log.Printf("aws: could not resolve a type-safe subnet AZ; subnets will land in an AWS-chosen AZ that may not offer the configured instance types (grant ec2:DescribeInstanceTypeOfferings if this persists): %v", err)
+		// Type-aware resolution failed -- in practice almost always because the
+		// runner credential is DENIED ec2:DescribeInstanceTypeOfferings (a 403,
+		// confirmed in the field). We must NOT fall through to letting AWS pick
+		// the subnet's AZ: on this account AWS defaults to the legacy us-east-1e,
+		// which offers no t3/current types, so every host then fails to launch.
+		// Instead fall back to the first standard Availability Zone the account
+		// has (DescribeAvailabilityZones -- a far more commonly granted call). Not
+		// type-aware, but the alphabetically-first AZ (us-east-1a) is a current
+		// one, so it reliably beats AWS's legacy default. Grant
+		// ec2:DescribeInstanceTypeOfferings to restore the precise, type-checked
+		// choice (and the pre-launch guard and readiness warning).
+		log.Printf("aws: type-aware subnet AZ lookup failed (%v) -- falling back to the first standard AZ so subnets avoid AWS's legacy-AZ default; grant ec2:DescribeInstanceTypeOfferings to restore type-aware selection", err)
+		if fb, fbErr := b.firstStandardAZ(ctx); fbErr != nil {
+			log.Printf("aws: could not list Availability Zones for the fallback either (%v) -- letting AWS choose the subnet AZ, which may be unusable", fbErr)
+			return "" // both lookups denied/failed; nothing safe to pin to
+		} else if fb != "" {
+			b.azCached = fb
+			b.azResolved = true
+			return fb
+		}
 		return ""
 	}
 	b.azCached = az
 	b.azResolved = true
 	return az
+}
+
+// firstStandardAZ returns the alphabetically-first standard (opt-in-not-required)
+// Availability Zone the account has available in the region. It's the
+// permission-light fallback for subnetAZ when the type-aware lookup is denied:
+// DescribeAvailabilityZones is far more commonly granted than
+// DescribeInstanceTypeOfferings, and the first standard AZ (e.g. us-east-1a) is a
+// current one -- unlike AWS's own unspecified-AZ default, which on some accounts
+// is the legacy us-east-1e that can't run t3. Opt-in zones (Local Zones,
+// Wavelength) are excluded.
+func (b *Builder) firstStandardAZ(ctx context.Context) (string, error) {
+	out, err := b.ec2.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{
+		Filters: []ec2types.Filter{filter("state", "available"), filter("zone-type", "availability-zone")},
+	})
+	if err != nil {
+		return "", err
+	}
+	var names []string
+	for _, z := range out.AvailabilityZones {
+		if z.OptInStatus == ec2types.AvailabilityZoneOptInStatusOptInNotRequired {
+			names = append(names, awssdk.ToString(z.ZoneName))
+		}
+	}
+	if len(names) == 0 {
+		return "", fmt.Errorf("no standard Availability Zones returned")
+	}
+	sort.Strings(names)
+	return names[0], nil
 }
 
 func (b *Builder) resolveSubnetAZ(ctx context.Context) (string, error) {
