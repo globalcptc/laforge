@@ -187,7 +187,7 @@ export function StepPlacement({
             step={1}
             value={maxConcurrency}
             onChange={onMaxConcurrencyChange}
-            valueLabel={(v) => (v === 0 ? 'Unlimited' : `${v} host${v === 1 ? '' : 's'}`)}
+            valueLabel={(v) => (v === 0 ? 'Unlimited' : `${v} thread${v === 1 ? '' : 's'}`)}
           />
         </div>
       )}
