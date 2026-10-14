@@ -85,10 +85,18 @@ fn dial_attach(session_id: &str, addr: &str, host_only: &str, tls_config: &Arc<C
 }
 
 fn run_session(session_id: &str, addr: &str, host_only: &str, tls_config: Arc<ClientConfig>) -> io::Result<()> {
+    // Trace each step. The shell relay is where the agent is most likely to die
+    // (the PTY/ConPTY path), and with panic="abort" a panic leaves no close
+    // line -- so the LAST of these lines before the log goes quiet tells us
+    // exactly how far the session got. None of it is sensitive (plumbing, not
+    // payloads), and it only ever reaches the file on an agent-debug build.
+    dlog!("laforge-agent: shell {session_id}: dialing gateway relay (OUT) at {addr}");
     // Two strictly one-directional connections: OUT for PTY output, IN for
     // client input. Each is owned by exactly one thread (see the module doc).
     let mut tls_out = dial_attach(session_id, addr, host_only, &tls_config, SHELL_DIR_OUT)?;
+    dlog!("laforge-agent: shell {session_id}: OUT attached; dialing relay (IN)");
     let mut tls_in = dial_attach(session_id, addr, host_only, &tls_config, SHELL_DIR_IN)?;
+    dlog!("laforge-agent: shell {session_id}: IN attached; opening PTY");
 
     // Clones of the raw sockets so each side can unblock the other on exit.
     let out_sd = tls_out.sock.try_clone()?;
@@ -99,13 +107,17 @@ fn run_session(session_id: &str, addr: &str, host_only: &str, tls_config: Arc<Cl
     let pair = pty
         .openpty(PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 })
         .map_err(|e| io::Error::other(format!("openpty: {e}")))?;
+    let shell = shell_command();
+    let shell_prog = shell.get_argv().first().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    dlog!("laforge-agent: shell {session_id}: PTY open; spawning {shell_prog}");
     let child = Arc::new(Mutex::new(
-        pair.slave.spawn_command(shell_command()).map_err(|e| io::Error::other(format!("spawning shell: {e}")))?,
+        pair.slave.spawn_command(shell).map_err(|e| io::Error::other(format!("spawning shell: {e}")))?,
     ));
     drop(pair.slave); // we only need the master from here on
 
     let mut writer = pair.master.take_writer().map_err(|e| io::Error::other(format!("pty writer: {e}")))?;
     let mut reader = pair.master.try_clone_reader().map_err(|e| io::Error::other(format!("pty reader: {e}")))?;
+    dlog!("laforge-agent: shell {session_id}: shell spawned; relaying");
 
     // OUTPUT thread: PTY -> client. Pure blocking reads of the PTY master, pure
     // writes on the OUT connection. On exit (shell exited, or the client went

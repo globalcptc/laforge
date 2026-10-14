@@ -85,6 +85,10 @@ export function BuildTerminal() {
   const obj = objects.data?.find((o) => o.id === objectId)
   const blockedReason = obj ? shellBlockedReason(obj) : null
   const reachable = obj ? blockedReason === null : undefined
+  // The name we're connecting to, so the operator can see which host this shell
+  // is on. Prefer the as-name the agent itself uses (terminal.go does the same),
+  // falling back to the object name.
+  const hostName = obj ? obj.as_name || obj.object_name : undefined
 
   useEffect(() => {
     // Only open the socket when we know the host can take a shell. While the
@@ -179,10 +183,18 @@ export function BuildTerminal() {
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-semibold text-fg">
-          <TerminalIcon size={15} className="text-fg-muted" /> Terminal
+        <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-fg">
+          <TerminalIcon size={15} className="shrink-0 text-fg-muted" /> Terminal
+          {hostName && (
+            <>
+              <span className="text-fg-subtle">·</span>
+              <span className="truncate font-mono text-fg" title={hostName}>
+                {hostName}
+              </span>
+            </>
+          )}
           {reachable === true && (
-            <Badge tone={tone} className="ml-1">
+            <Badge tone={tone} className="ml-1 shrink-0">
               {label}
             </Badge>
           )}

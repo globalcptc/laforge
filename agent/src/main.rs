@@ -63,6 +63,13 @@ fn run_agent() -> ! {
     } else {
         diag::init_silent();
     }
+    // Make panics visible in the debug log. The release profile is
+    // panic="abort", so a panic anywhere (notably the shell relay's PTY threads)
+    // takes the whole agent down with no unwinding and no trace otherwise; the
+    // hook writes one line through the sink first. It reads the sink at panic
+    // time, so it still logs to the file once agent-debug upgrades the sink
+    // below, and stays silent on a production build.
+    diag::install_panic_hook();
 
     // Basic anti-debug/anti-tamper self-checks -- see antitamper.rs's own
     // doc comment for exactly what's real here and what's scoped out.
@@ -149,7 +156,27 @@ fn load_agent() -> Option<(identity::Identity, Arc<ClientConfig>, String)> {
         }
     };
     let host_only = identity.gateway_addr.split(':').next().unwrap_or(&identity.gateway_addr).to_string();
+    // Startup summary so every debug session opens with the context that matters
+    // for the common failures (which gateway we talk to, whether we're a
+    // container supervisor). No secrets -- the cert/key are never logged.
+    dlog!(
+        "laforge-agent: identity loaded; gateway={} supervise={}",
+        identity.gateway_addr,
+        std::env::var("LAFORGE_SUPERVISE").is_ok()
+    );
     Some((identity, tls_config, host_only))
+}
+
+// truncate caps a string at `max` chars for the debug log, noting the full
+// length when it cuts. Char-boundary safe, so it never panics on multibyte input
+// (which, under panic="abort", would take the whole agent down).
+fn truncate(s: &str, max: usize) -> String {
+    let total = s.chars().count();
+    if total <= max {
+        return s.to_string();
+    }
+    let cut: String = s.chars().take(max).collect();
+    format!("{cut}… ({total} chars total)")
 }
 
 // agent_loop is the steady-state connection loop: connect to the gateway, run a
@@ -292,6 +319,9 @@ fn build_tls_config(identity: &identity::Identity) -> Result<ClientConfig, Strin
 }
 
 fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq: Option<&Arc<applog::LogQueue>>, metrics: &mut metrics::Collector, shell_handled: &Arc<Mutex<HashSet<String>>>) -> io::Result<()> {
+    // Name the dial target: the "No such host is known" / connection-refused
+    // failures are far more actionable when the log says which address failed.
+    dlog!("laforge-agent: connecting to gateway {addr}");
     let tcp = TcpStream::connect(addr)?;
     tcp.set_nodelay(true).ok();
 
@@ -341,6 +371,13 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
             Some(Ok(report)) => {
                 inflight = None;
                 dlog!("laforge-agent: task {} -> {}", report.task_id, report.status);
+                // On a non-success, log the error so a failing step can be
+                // debugged from the host's own log. Truncated, and the error
+                // string only (not full stdout, which the server already stores
+                // and which is likelier to carry sensitive command output).
+                if report.status != "done" && !report.error.is_empty() {
+                    dlog!("laforge-agent: task {} error: {}", report.task_id, truncate(&report.error, 800));
+                }
                 let body = serde_json::to_vec(&report)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding report-status: {e}")))?;
                 protocol::write_frame(&mut tls, MessageType::ReportStatusRequest, &body)?;
