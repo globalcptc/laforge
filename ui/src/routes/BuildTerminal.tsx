@@ -27,7 +27,12 @@ export function BuildTerminal() {
     const term = new Terminal({
       cursorBlink: true,
       fontSize: 13,
-      fontFamily: 'var(--vscode-editor-font-family, ui-monospace, "JetBrains Mono", monospace)',
+      // A concrete font stack, NOT a CSS var: xterm measures the character cell by
+      // setting this on a canvas ctx.font, and canvas can't parse var(...) -- it
+      // then measured with a fallback font whose metrics didn't match the rendered
+      // glyphs, squashing the rows. "JetBrains Mono Variable" is the family the
+      // app's @fontsource-variable/jetbrains-mono actually registers.
+      fontFamily: '"JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
       theme: { background: '#0b0618' },
     })
     const fit = new FitAddon()
@@ -35,6 +40,21 @@ export function BuildTerminal() {
     term.open(el)
     fit.fit()
     term.focus()
+
+    // Re-fit once the web font is actually loaded: xterm measures the character
+    // cell from the font, so if it measured before @fontsource JetBrains Mono was
+    // ready, the rows would be sized to a fallback font (wrong ratio). Guarded so
+    // it never runs against a disposed terminal.
+    let disposed = false
+    document.fonts?.ready.then(() => {
+      if (!disposed) {
+        try {
+          fit.fit()
+        } catch {
+          /* terminal already gone */
+        }
+      }
+    })
 
     // http(s)://host → ws(s)://host, same origin as the api.
     const base = new URL(API_BASE, window.location.href)
@@ -74,6 +94,7 @@ export function BuildTerminal() {
     window.addEventListener('resize', onWindowResize)
 
     return () => {
+      disposed = true
       window.removeEventListener('resize', onWindowResize)
       onData.dispose()
       onResize.dispose()
