@@ -35,6 +35,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"sort"
@@ -130,15 +131,18 @@ type Builder struct {
 	quotas *servicequotas.Client
 	cfg    Config
 
-	// Cached AZ for every subnet this builder creates. Resolved once (azOnce) to
-	// an AZ that offers ALL the builder's configured instance types, because a
-	// subnet created without an explicit AZ lands in whichever AZ AWS picks -- and
-	// a legacy AZ like us-east-1e offers no t3/current types, so RunInstances into
-	// it fails "instance type not supported in your requested Availability Zone".
-	// Best-effort: "" means "couldn't determine one, let AWS choose" (the behavior
-	// before this optimization), never a hard failure.
-	azOnce   sync.Once
-	azCached string
+	// Cached AZ for every subnet this builder creates: an AZ that offers ALL the
+	// builder's configured instance types, because a subnet created without an
+	// explicit AZ lands in whichever AZ AWS picks -- and a legacy AZ like
+	// us-east-1e offers no t3/current types, so RunInstances into it fails
+	// "instance type not supported in your requested Availability Zone".
+	// Best-effort: "" means "couldn't determine one, let AWS choose", never a hard
+	// failure. Resolved under azMu and cached only on SUCCESS (azResolved) -- a
+	// transient/permission failure must not stick as "" and silently disable
+	// AZ-pinning for every later subnet.
+	azMu       sync.Mutex
+	azCached   string
+	azResolved bool
 }
 
 // New constructs the builder from the ambient AWS credential/region chain,
@@ -793,17 +797,44 @@ func (b *Builder) findSubnet(ctx context.Context, externalName string) (string, 
 	return "", nil
 }
 
-// subnetForNetwork resolves a network's ExternalName to its subnet id and VPC id
-// (a security group is VPC-scoped, so callers need both).
-func (b *Builder) subnetForNetwork(ctx context.Context, networkExternalName string) (subnetID, vpcID, cidr string, err error) {
+// subnetForNetwork resolves a network's ExternalName to its subnet id, VPC id,
+// CIDR, and Availability Zone (a security group is VPC-scoped, so callers need
+// the VPC; the AZ lets the launch path verify it can run the host's instance
+// type before RunInstances fails opaquely).
+func (b *Builder) subnetForNetwork(ctx context.Context, networkExternalName string) (subnetID, vpcID, cidr, az string, err error) {
 	out, err := b.ec2.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{Filters: []ec2types.Filter{nameFilter(networkExternalName)}})
 	if err != nil {
-		return "", "", "", fmt.Errorf("looking up subnet for network %q: %w", networkExternalName, err)
+		return "", "", "", "", fmt.Errorf("looking up subnet for network %q: %w", networkExternalName, err)
 	}
 	if len(out.Subnets) == 0 {
-		return "", "", "", fmt.Errorf("no subnet found for network %q -- its DeployNetwork may not have run yet", networkExternalName)
+		return "", "", "", "", fmt.Errorf("no subnet found for network %q -- its DeployNetwork may not have run yet", networkExternalName)
 	}
-	return awssdk.ToString(out.Subnets[0].SubnetId), awssdk.ToString(out.Subnets[0].VpcId), awssdk.ToString(out.Subnets[0].CidrBlock), nil
+	s := out.Subnets[0]
+	return awssdk.ToString(s.SubnetId), awssdk.ToString(s.VpcId), awssdk.ToString(s.CidrBlock), awssdk.ToString(s.AvailabilityZone), nil
+}
+
+// azOffersType reports whether instanceType is offered in az, and returns the
+// sorted list of AZs in the region that DO offer it (for a clear error).
+// BEST-EFFORT: on any API error it returns ok=true so a missing
+// ec2:DescribeInstanceTypeOfferings permission (or a throttle) never becomes a
+// false launch block -- RunInstances stays the backstop.
+func (b *Builder) azOffersType(ctx context.Context, az, instanceType string) (ok bool, supported []string, err error) {
+	out, err := b.ec2.DescribeInstanceTypeOfferings(ctx, &ec2.DescribeInstanceTypeOfferingsInput{
+		LocationType: ec2types.LocationTypeAvailabilityZone,
+		Filters:      []ec2types.Filter{filter("instance-type", instanceType)},
+	})
+	if err != nil {
+		return true, nil, err
+	}
+	for _, o := range out.InstanceTypeOfferings {
+		loc := awssdk.ToString(o.Location)
+		supported = append(supported, loc)
+		if loc == az {
+			ok = true
+		}
+	}
+	sort.Strings(supported)
+	return ok, supported, nil
 }
 
 // subnetAZ returns an Availability Zone that offers EVERY instance type in the
@@ -815,14 +846,25 @@ func (b *Builder) subnetForNetwork(ctx context.Context, networkExternalName stri
 // or no single AZ offers every type). This is an optimization, never a gate: a
 // missing permission must not fail the whole build's network deploys.
 func (b *Builder) subnetAZ(ctx context.Context) string {
-	b.azOnce.Do(func() {
-		az, err := b.resolveSubnetAZ(ctx)
-		if err != nil {
-			az = "" // fall back to AWS's choice; don't fail the deploy
-		}
-		b.azCached = az
-	})
-	return b.azCached
+	b.azMu.Lock()
+	defer b.azMu.Unlock()
+	if b.azResolved {
+		return b.azCached
+	}
+	az, err := b.resolveSubnetAZ(ctx)
+	if err != nil {
+		// Best-effort, but NOT silent and NOT cached. A swallowed failure here is
+		// exactly how subnets ended up in a legacy AZ (us-east-1e) that can't run
+		// t3 types: the optimization no-ops and AWS picks the AZ. Log it so the
+		// cause -- most often a missing ec2:DescribeInstanceTypeOfferings
+		// permission, or a transient throttle -- is visible, and leave it
+		// unresolved so the next subnet retries instead of inheriting the miss.
+		log.Printf("aws: could not resolve a type-safe subnet AZ; subnets will land in an AWS-chosen AZ that may not offer the configured instance types (grant ec2:DescribeInstanceTypeOfferings if this persists): %v", err)
+		return ""
+	}
+	b.azCached = az
+	b.azResolved = true
+	return az
 }
 
 func (b *Builder) resolveSubnetAZ(ctx context.Context) (string, error) {
@@ -988,9 +1030,24 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	if !ok {
 		return "", fmt.Errorf("no instance-type mapping for size %q (configure the builder's size map)", spec.Size)
 	}
-	subnetID, vpcID, cidr, err := b.subnetForNetwork(ctx, spec.Network)
+	subnetID, vpcID, cidr, az, err := b.subnetForNetwork(ctx, spec.Network)
 	if err != nil {
 		return "", err
+	}
+	// The subnet's AZ decides where the instance lands, and a legacy AZ (e.g.
+	// us-east-1e) offers no t3/current types -- RunInstances then fails with an
+	// opaque, retried 400. Catch it here as a clear PERMANENT error naming the
+	// AZs that WOULD work, so the fix (tear down + redeploy so the subnet is
+	// recreated in a good AZ -- see subnetAZ -- and grant
+	// ec2:DescribeInstanceTypeOfferings so auto-pinning works) is obvious instead
+	// of three rounds of the AWS message. Best-effort: skipped if the offerings
+	// lookup itself can't run, so a missing permission never turns into a false
+	// block -- RunInstances stays the backstop.
+	if az != "" {
+		if offered, supported, offErr := b.azOffersType(ctx, az, instanceType); offErr == nil && !offered {
+			return "", fmt.Errorf("host %q: its network's subnet is in Availability Zone %s, which does not offer instance type %q (supported in this region: %s) -- tear down and redeploy so the subnet is recreated in a supported AZ, and ensure the runner credential has ec2:DescribeInstanceTypeOfferings so AZ auto-pinning works: %w",
+				spec.ExternalName, az, instanceType, strings.Join(supported, ", "), builder.ErrPermanentConfig)
+		}
 	}
 	// A host whose content address lands in AWS's reserved range can never launch
 	// (AWS rejects it outright), so fail now with a clear, PERMANENT error -- no
