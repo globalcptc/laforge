@@ -88,7 +88,6 @@ func newTestBuildWithFakeBuilder(t *testing.T, pool *pgxpool.Pool, name string) 
 
 	bc, err := q.CreateBuilderConfig(ctx, db.CreateBuilderConfigParams{
 		Name: name + "-builder", Kind: "fake", IncusImages: []byte("{}"), IncusSizes: []byte("{}"), IncusHosts: []byte("[]"),
-		MicrocloudHostBlocklist: []byte("[]"),
 	})
 	if err != nil {
 		t.Fatalf("CreateBuilderConfig: %v", err)

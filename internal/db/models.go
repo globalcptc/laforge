@@ -117,8 +117,8 @@ type BuilderConfig struct {
 	AwsCredentialID              pgtype.UUID        `json:"aws_credential_id"`
 	IncusOneTeamPerHost          bool               `json:"incus_one_team_per_host"`
 	Color                        string             `json:"color"`
-	MicrocloudHostBlocklist      json.RawMessage    `json:"microcloud_host_blocklist"`
 	MaxConcurrency               int32              `json:"max_concurrency"`
+	MicrocloudClusterGroup       string             `json:"microcloud_cluster_group"`
 }
 
 type BuilderCredential struct {

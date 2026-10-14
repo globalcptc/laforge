@@ -1,5 +1,7 @@
 package microcloud
 
+import "strings"
+
 // Config is a builder config's Incus-specific half: "each builder config
 // maps abstract names to concrete images/sizes/container templates."
 // Never exposed to content authors, never taking vars -- server-side only,
@@ -59,12 +61,24 @@ type Config struct {
 	// until the base image has been built, in which case a container deploy
 	// fails with a clear "build the base image first" message.
 	DockerBaseFingerprint string
-	// HostBlocklist names cluster members LaForge must NOT place instances on
-	// (a member under maintenance, GPU-reserved, flaky, ...). When non-empty the
-	// builder explicitly targets an ALLOWED online member for each instance
-	// instead of letting LXD auto-schedule (which could land on a blocked one);
-	// empty means no restriction and LXD schedules as before. Per-cluster config.
-	HostBlocklist []string
+	// ClusterGroup is the LXD cluster group every instance is created into
+	// (`?target=@<group>`), letting LXD/MicroCloud schedule across that group's
+	// members. "default" is the whole cluster. LaForge does NOT pick a specific
+	// member or balance placement itself -- that's LXD's job. Empty means no
+	// explicit target at all (also LXD's default scheduling). Per-cluster config.
+	ClusterGroup string
+}
+
+// clusterTargetParam is the `target` query-param value for creating an instance
+// in this cluster group: "@<group>" (an LXD cluster group is addressed with a
+// leading @), or "" when no group is set (let LXD schedule with no explicit
+// target). See retry.go's createInstance.
+func (c Config) clusterTargetParam() string {
+	g := strings.TrimSpace(c.ClusterGroup)
+	if g == "" {
+		return ""
+	}
+	return "@" + g
 }
 
 // storagePoolOrDefault is deployInstance's own resolution of

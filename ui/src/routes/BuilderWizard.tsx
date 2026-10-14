@@ -323,8 +323,8 @@ export function BuilderWizard() {
             onChange={(hosts) => setDraft((d) => ({ ...d, hosts }))}
             microcloudPublicAccess={draft.microcloudPublicAccess}
             onPublicAccessChange={(microcloudPublicAccess) => setDraft((d) => ({ ...d, microcloudPublicAccess }))}
-            hostBlocklist={draft.hostBlocklist ?? []}
-            onBlocklistChange={(hostBlocklist) => setDraft((d) => ({ ...d, hostBlocklist }))}
+            clusterGroup={draft.clusterGroup ?? 'default'}
+            onClusterGroupChange={(clusterGroup) => setDraft((d) => ({ ...d, clusterGroup }))}
             maxConcurrency={draft.maxConcurrency ?? 0}
             onMaxConcurrencyChange={(maxConcurrency) => setDraft((d) => ({ ...d, maxConcurrency }))}
             externalAccessIp={draft.externalAccessIp}

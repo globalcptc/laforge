@@ -63,7 +63,6 @@ func TestResolveBuilderFromDBResolvesRealBuilderConfig(t *testing.T) {
 	if _, err := q.CreateBuilderConfig(ctx, db.CreateBuilderConfigParams{
 		Name: "resolve-builder-real-config", Kind: "fake",
 		IncusImages: []byte("{}"), IncusSizes: []byte("{}"), IncusHosts: []byte("[]"),
-		MicrocloudHostBlocklist: []byte("[]"),
 	}); err != nil {
 		t.Fatalf("CreateBuilderConfig: %v", err)
 	}

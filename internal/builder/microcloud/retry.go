@@ -110,8 +110,9 @@ func (e *pendingOperationError) Error() string { return e.Err.Error() }
 func (e *pendingOperationError) Unwrap() error { return e.Err }
 
 func (b *Builder) createInstance(ctx context.Context, name string, body interface{}, target string) error {
-	// Explicit cluster-member placement (the host blocklist, see placement.go):
-	// when set, create on this exact member instead of letting LXD auto-schedule.
+	// Cluster-group placement (see placement.go): target is "@<group>" so LXD
+	// schedules the instance within that group, or "" to let LXD schedule with no
+	// explicit target. LaForge never names a specific member.
 	path := "/1.0/instances"
 	if target != "" {
 		path += "?target=" + url.QueryEscape(target)

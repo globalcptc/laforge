@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { PublicNICSettings } from './PublicNICSettings'
 import type { MicrocloudPublicAccess } from '../../api/types'
-import { AlertTriangle, FolderTree, Gauge, Globe, HardDrive, Network, Plus, Server, X } from 'lucide-react'
+import { AlertTriangle, Boxes, FolderTree, Gauge, Globe, HardDrive, Network, Plus, Server, X } from 'lucide-react'
 import { api, ApiError } from '../../api/client'
 import { builderConnectionPath } from '../../api/hooks'
 import type { BuilderConnection, ProjectInfo } from '../../api/types'
@@ -20,8 +20,8 @@ export function StepPlacement({
   onExternalChange,
   microcloudPublicAccess,
   onPublicAccessChange,
-  hostBlocklist,
-  onBlocklistChange,
+  clusterGroup,
+  onClusterGroupChange,
   maxConcurrency,
   onMaxConcurrencyChange,
 }: {
@@ -30,8 +30,8 @@ export function StepPlacement({
   onPlacementPolicyChange: (value: boolean) => void
   microcloudPublicAccess?: MicrocloudPublicAccess
   onPublicAccessChange: (value: MicrocloudPublicAccess) => void
-  hostBlocklist: string[]
-  onBlocklistChange: (value: string[]) => void
+  clusterGroup: string
+  onClusterGroupChange: (value: string) => void
   maxConcurrency: number
   onMaxConcurrencyChange: (value: number) => void
   hosts: HostDraft[]
@@ -43,16 +43,6 @@ export function StepPlacement({
 }) {
   const update = (i: number, patch: Partial<HostDraft>) => onChange(hosts.map((h, j) => (j === i ? { ...h, ...patch } : h)))
   const num = (v: string): number | undefined => (v.trim() === '' ? undefined : Number(v))
-
-  // MicroCloud host blocklist: cluster members LaForge must not place instances
-  // on. Free entry (chips) -- member names come from the cluster (e.g. micro-07).
-  const [blockEntry, setBlockEntry] = useState('')
-  const addBlocked = () => {
-    const v = blockEntry.trim()
-    if (v && !hostBlocklist.includes(v)) onBlocklistChange([...hostBlocklist, v])
-    setBlockEntry('')
-  }
-  const removeBlocked = (name: string) => onBlocklistChange(hostBlocklist.filter((n) => n !== name))
 
   // External IPs are stored as one comma-joined string (the builder parses it),
   // but edited as rows -- each row one IP or range. Local state keeps otherwise
@@ -159,47 +149,24 @@ export function StepPlacement({
         </div>
       ))}
 
-      {/* MicroCloud host blocklist: members LaForge must not place instances on. */}
+      {/* MicroCloud cluster group: LaForge targets this group and lets LXD
+          schedule across its members -- it never picks a member itself. */}
       {kind === 'microcloud' && (
         <div className="card p-4">
           <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg">
-            <Server size={14} className="text-fg-muted" /> Host blocklist
+            <Boxes size={14} className="text-fg-muted" /> Cluster Group
           </div>
           <p className="mb-3 text-xs text-fg-muted">
-            Cluster members LaForge must <span className="font-medium text-fg">not</span> build on — a node under maintenance, GPU-reserved, or
-            flaky. Enter member names exactly as the cluster lists them (e.g. <span className="font-mono">micro-07-gpu</span>). While any are blocked,
-            LaForge places each instance on an allowed member instead of letting the cluster auto-schedule. Leave empty for no restriction.
+            The LXD cluster group LaForge deploys into. MicroCloud/LXD schedules each instance across the group's members — LaForge does
+            <span className="font-medium text-fg"> not</span> pick a member or balance placement itself. <span className="font-mono">default</span> is
+            the whole cluster; use a named group to confine deploys to a subset.
           </p>
-          {hostBlocklist.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              {hostBlocklist.map((name) => (
-                <span key={name} className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-sunken px-2 py-0.5 text-xs text-fg">
-                  <span className="font-mono">{name}</span>
-                  <button type="button" onClick={() => removeBlocked(name)} className="text-fg-subtle hover:text-danger" aria-label={`Unblock ${name}`}>
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <Input
-                value={blockEntry}
-                onChange={(e) => setBlockEntry(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    addBlocked()
-                  }
-                }}
-                placeholder="Member name, e.g. micro-07-gpu"
-              />
-            </div>
-            <Button variant="secondary" size="sm" onClick={addBlocked} disabled={!blockEntry.trim()}>
-              <Plus size={14} /> Block
-            </Button>
-          </div>
+          <Input
+            value={clusterGroup}
+            onChange={(e) => onClusterGroupChange(e.target.value)}
+            placeholder="default"
+            className="font-mono"
+          />
         </div>
       )}
 
