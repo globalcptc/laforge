@@ -137,6 +137,25 @@ func (q *Queries) CountFakeHosterResourcesByRef(ctx context.Context, externalRef
 	return count, err
 }
 
+const countLeasableTasksForBuilder = `-- name: CountLeasableTasksForBuilder :one
+SELECT count(*) FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE coalesce(cb.builder_config_name, '') = $1
+  AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+`
+
+// How many leasable tasks (pending or expired-lease) one configured builder
+// still has across all its builds. A builder's pool uses this to know when its
+// queue is drained (0) so it can exit; the supervisor restarts it when work
+// reappears.
+func (q *Queries) CountLeasableTasksForBuilder(ctx context.Context, builderConfigName string) (int64, error) {
+	row := q.db.QueryRow(ctx, countLeasableTasksForBuilder, builderConfigName)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAgentStepEvent = `-- name: CreateAgentStepEvent :exec
 INSERT INTO event (build_id, deployed_object_id, kind, message, payload)
 VALUES ($1, $2, $3, $4, $5)
@@ -1057,11 +1076,24 @@ UPDATE task
 SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
     attempts = attempts + 1, updated_at = now()
 WHERE id = (
-    SELECT t2.id FROM task t2
-    WHERE t2.build_id = $3
-      AND (t2.status = 'pending' OR (t2.status = 'leased' AND t2.lease_expires_at < now()))
-    ORDER BY t2.created_at
-    FOR UPDATE SKIP LOCKED
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    LEFT JOIN builder_config bc ON bc.name = cb.builder_config_name
+    WHERE t.build_id = $3
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+      AND (
+        bc.max_concurrency IS NULL OR bc.max_concurrency = 0
+        OR (
+            SELECT count(*) FROM task it
+            JOIN build ib ON ib.id = it.build_id
+            JOIN configured_build icb ON icb.id = ib.configured_build_id
+            WHERE icb.builder_config_name = bc.name
+              AND it.status = 'leased' AND it.lease_expires_at >= now()
+        ) < bc.max_concurrency
+      )
+    ORDER BY t.created_at
+    FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
 RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
@@ -1073,17 +1105,69 @@ type LeaseTaskForBuildParams struct {
 	BuildID    pgtype.UUID     `json:"build_id"`
 }
 
-// Identical to LeaseTask, scoped to one build. Production runners always
-// use LeaseTask (a real runner pool draws from every build's work, which
-// is the whole point of a shared pool) -- this exists for tests: several
-// packages' tests run concurrently against the same shared laforge_dev
-// database (Go parallelizes across packages by default), each reconciling
-// its own build under the same "lm-test" environment, and an unscoped
-// LeaseTask would let one test's runner lease and complete a *different*
-// test's task. Scoping by build_id is test isolation, not a product
-// feature -- see internal/chaos and internal/runner's tests.
+// LeaseTask scoped to ONE build. This is the production lease path for the
+// per-build-lane runner (each build's lane leases only its own tasks, so no
+// build's queue ever sits behind another's -- there is no cross-build FIFO).
+// It is ALSO what the tests use for isolation: several packages' tests run
+// concurrently against the same shared laforge_dev database, each driving its
+// own build, and scoping by build_id keeps one test's runner from completing
+// another's task. The per-builder max_concurrency cap is still enforced here --
+// it is a deliberate CROSS-build cap on a shared hoster, the one place two
+// builds on the same capped builder legitimately share a limit.
 func (q *Queries) LeaseTaskForBuild(ctx context.Context, arg LeaseTaskForBuildParams) (Task, error) {
 	row := q.db.QueryRow(ctx, leaseTaskForBuild, arg.LeaseOwner, arg.Column2, arg.BuildID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const leaseTaskForBuilder = `-- name: LeaseTaskForBuilder :one
+UPDATE task
+SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
+    attempts = attempts + 1, updated_at = now()
+WHERE id = (
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    WHERE coalesce(cb.builder_config_name, '') = $3
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+    ORDER BY t.created_at
+    FOR UPDATE OF t SKIP LOCKED
+    LIMIT 1
+)
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+`
+
+type LeaseTaskForBuilderParams struct {
+	LeaseOwner        *string         `json:"lease_owner"`
+	Column2           pgtype.Interval `json:"column_2"`
+	BuilderConfigName string          `json:"builder_config_name"`
+}
+
+// Lease the next leasable task that belongs to one CONFIGURED BUILDER (across
+// every build using it), oldest first. This is the production lease path: the
+// runner runs one worker pool PER configured builder, sized to that builder's
+// own concurrency limit (builder_config.max_concurrency), because concurrency is
+// a property of the hardware -- the cluster/account/host-pool -- not of a build.
+// All builds on a builder share its pool; different builders never contend. A
+// build with no configured_build (ad-hoc/fake) has builder key ” and its own
+// pool. There is NO cap subquery here -- the per-builder pool's size is the
+// limit, so the scheduler stays a dumb, fair lease.
+func (q *Queries) LeaseTaskForBuilder(ctx context.Context, arg LeaseTaskForBuilderParams) (Task, error) {
+	row := q.db.QueryRow(ctx, leaseTaskForBuilder, arg.LeaseOwner, arg.Column2, arg.BuilderConfigName)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -1160,6 +1244,38 @@ func (q *Queries) ListActiveBuilds(ctx context.Context) ([]ListActiveBuildsRow, 
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBuildersWithLeasableTasks = `-- name: ListBuildersWithLeasableTasks :many
+SELECT DISTINCT coalesce(cb.builder_config_name, '') AS builder_config_name
+FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now())
+`
+
+// The distinct configured builders (by builder_config name; ” for builds with
+// no configured_build) that currently have at least one leasable task. The
+// runner's supervisor polls this to decide which builders need a worker pool
+// running -- cheap, and builders never couple to each other.
+func (q *Queries) ListBuildersWithLeasableTasks(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, listBuildersWithLeasableTasks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var builder_config_name string
+		if err := rows.Scan(&builder_config_name); err != nil {
+			return nil, err
+		}
+		items = append(items, builder_config_name)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

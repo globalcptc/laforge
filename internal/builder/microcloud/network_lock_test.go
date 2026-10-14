@@ -91,30 +91,35 @@ func TestNetworkingMutationsShareLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer release()
-	// Separate Client, default process lock. Cleanup ACLs and instance ports use
-	// the same lock as network creation, including targeted cluster requests.
+	// Separate Client, default process lock. ONLY network-resource operations
+	// (/1.0/networks and its subresources) take the lock -- that's the OVN
+	// control-plane constraint. Instances and standalone ACLs do NOT, so host
+	// deploys never take turns.
 	c := &Client{BaseURL: srv.URL, HTTPClient: srv.Client()}
 	for _, route := range []struct{ method, path string }{
 		{"POST", "/1.0/networks"}, {"DELETE", "/1.0/networks/test"},
 		{"PATCH", "/1.0/networks/test"}, {"POST", "/1.0/networks/test/peers"},
-		{"POST", "/1.0/networks/test/forwards"}, {"POST", "/1.0/network-acls"},
-		{"PUT", "/1.0/network-acls/test"}, {"DELETE", "/1.0/network-acls/test"},
-		{"POST", "/1.0/instances?target=member-a"}, {"PATCH", "/1.0/instances/test"},
-		{"DELETE", "/1.0/instances/test"}, {"PUT", "/1.0/instances/test/state"},
+		{"POST", "/1.0/networks/test/forwards"},
 	} {
 		t.Run(route.method+route.path, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 			defer cancel()
 			if _, err := c.do(ctx, route.method, route.path, nil); !errors.Is(err, context.DeadlineExceeded) {
-				t.Fatalf("mutation bypassed lock: %v", err)
+				t.Fatalf("network mutation bypassed lock: %v", err)
 			}
 		})
 	}
 	if requests.Load() != 0 {
-		t.Fatalf("%d requests bypassed held lock", requests.Load())
+		t.Fatalf("%d network requests bypassed held lock", requests.Load())
 	}
+	// These run concurrently with a held network lock: instances, ACLs, and
+	// everything else are NOT serialized.
 	for _, route := range []struct{ method, path string }{
-		{"GET", "/1.0/networks"}, {"POST", "/1.0/instances/test/exec"},
+		{"GET", "/1.0/networks"},
+		{"POST", "/1.0/instances?target=member-a"}, {"PATCH", "/1.0/instances/test"},
+		{"DELETE", "/1.0/instances/test"}, {"PUT", "/1.0/instances/test/state"},
+		{"POST", "/1.0/instances/test/exec"},
+		{"POST", "/1.0/network-acls"}, {"PUT", "/1.0/network-acls/test"}, {"DELETE", "/1.0/network-acls/test"},
 		{"POST", "/1.0/storage-pools/remote/volumes/custom"},
 	} {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -141,7 +146,7 @@ func TestNetworkingLockHeldUntilAsyncOperationCompletes(t *testing.T) {
 	defer srv.Close()
 	c := &Client{BaseURL: srv.URL, HTTPClient: srv.Client()}
 	done := make(chan error, 1)
-	go func() { _, err := c.post(context.Background(), "/1.0/instances", nil); done <- err }()
+	go func() { _, err := c.post(context.Background(), "/1.0/networks", nil); done <- err }()
 	select {
 	case <-waiting:
 	case err := <-done:

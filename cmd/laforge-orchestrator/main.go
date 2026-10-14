@@ -63,7 +63,13 @@ func main() {
 	}
 
 	ctx := context.Background()
-	q, pool, err := db.Open(ctx, *dbURL)
+	// Per-build reconcile lanes run one reconcile goroutine per active build, so
+	// the pool must hold more than the default max(4, NumCPU): a lane briefly
+	// holds a connection for its queries (and some hoster/access calls), and many
+	// builds reconcile at once. Configurable; Postgres max_connections is the
+	// ceiling, and lanes never hold a connection across the slow parts of a deploy
+	// (those are the runner's tasks).
+	q, pool, err := db.OpenWithMaxConns(ctx, *dbURL, int32(envIntDefault("ORCHESTRATOR_MAX_CONNS", 32)))
 	if err != nil {
 		log.Fatalf("connecting to database: %v", err)
 	}
@@ -239,6 +245,77 @@ func main() {
 		// stretches far past the -interval the ticker nominally asks for.
 		if d := time.Since(cycleStart); d >= slowCycleThreshold {
 			log.Printf("reconcile pass: %d builds (%d in parallel) in %s", len(builds), limit, d.Round(time.Millisecond))
+		}
+	}
+
+	// Per-build reconcile lanes: one goroutine per non-terminal build, each
+	// reconciling ITS build on its own cadence. This replaces the shared-pass
+	// model (reconcileAll) for steady-state running: there, a pass drained every
+	// build before the next pass could start AND the build list was snapshotted at
+	// pass start, so a brand-new build was not even discovered -- let alone have
+	// its first deploy_network task created -- until the current pass (bounded by
+	// the slowest build's timeout) finished. With lanes, a slow build only delays
+	// its OWN next tick; a new build gets a lane within one supervisor poll and
+	// reconciles immediately. reconcileAll is still used for -once and the startup
+	// pass. The lanes are independent (distinct build_ids/rows), so no locking
+	// beyond the registry itself.
+	type reconcileLane struct{ cancel context.CancelFunc }
+	var lanesMu sync.Mutex
+	lanes := map[string]*reconcileLane{}
+
+	runReconcileLane := func(lctx context.Context, buildID pgtype.UUID) {
+		// Reconcile immediately on start (don't wait a full interval), then every
+		// interval. Exits when cancelled (the supervisor reaps a build that has
+		// gone terminal) or when the build can no longer be loaded (deleted).
+		for {
+			b, err := q.GetBuild(lctx, buildID)
+			if err != nil {
+				return
+			}
+			reconcileOne(b)
+			select {
+			case <-lctx.Done():
+				return
+			case <-time.After(*interval):
+			}
+		}
+	}
+
+	superviseReconcileLanes := func() {
+		builds, err := q.ListBuildsByStatus(ctx, []string{"planned", "deploying", "building", "tearing_down"})
+		if err != nil {
+			log.Printf("listing builds: %v", err)
+			return
+		}
+		active := make(map[string]bool, len(builds))
+		lanesMu.Lock()
+		defer lanesMu.Unlock()
+		for _, b := range builds {
+			key := b.ID.String()
+			active[key] = true
+			if _, running := lanes[key]; running {
+				continue
+			}
+			lctx, cancel := context.WithCancel(ctx)
+			h := &reconcileLane{cancel: cancel}
+			lanes[key] = h
+			buildID := b.ID
+			go func() {
+				runReconcileLane(lctx, buildID)
+				cancel()
+				lanesMu.Lock()
+				if lanes[key] == h { // don't delete a newer lane for the same build
+					delete(lanes, key)
+				}
+				lanesMu.Unlock()
+			}()
+		}
+		// Reap lanes whose build has gone terminal / disappeared: cancel them and
+		// let their own cleanup remove them from the registry.
+		for key, lane := range lanes {
+			if !active[key] {
+				lane.cancel()
+			}
 		}
 	}
 
@@ -461,7 +538,11 @@ func main() {
 	for {
 		select {
 		case <-t.C:
-			reconcileAll()
+			// Keep each active build's reconcile lane running (start new builds'
+			// lanes, reap terminal ones). The lanes reconcile on their own cadence;
+			// this just supervises their lifecycle, so one slow build never blocks
+			// another's reconcile or a new build's first task.
+			superviseReconcileLanes()
 		case <-checkoutCleanupTicker.C:
 			cleanupCheckouts()
 		case <-heartbeatTicker.C:

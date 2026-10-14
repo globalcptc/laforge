@@ -368,27 +368,87 @@ WHERE id = (
 RETURNING *;
 
 -- name: LeaseTaskForBuild :one
--- Identical to LeaseTask, scoped to one build. Production runners always
--- use LeaseTask (a real runner pool draws from every build's work, which
--- is the whole point of a shared pool) -- this exists for tests: several
--- packages' tests run concurrently against the same shared laforge_dev
--- database (Go parallelizes across packages by default), each reconciling
--- its own build under the same "lm-test" environment, and an unscoped
--- LeaseTask would let one test's runner lease and complete a *different*
--- test's task. Scoping by build_id is test isolation, not a product
--- feature -- see internal/chaos and internal/runner's tests.
+-- LeaseTask scoped to ONE build. This is the production lease path for the
+-- per-build-lane runner (each build's lane leases only its own tasks, so no
+-- build's queue ever sits behind another's -- there is no cross-build FIFO).
+-- It is ALSO what the tests use for isolation: several packages' tests run
+-- concurrently against the same shared laforge_dev database, each driving its
+-- own build, and scoping by build_id keeps one test's runner from completing
+-- another's task. The per-builder max_concurrency cap is still enforced here --
+-- it is a deliberate CROSS-build cap on a shared hoster, the one place two
+-- builds on the same capped builder legitimately share a limit.
 UPDATE task
 SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
     attempts = attempts + 1, updated_at = now()
 WHERE id = (
-    SELECT t2.id FROM task t2
-    WHERE t2.build_id = $3
-      AND (t2.status = 'pending' OR (t2.status = 'leased' AND t2.lease_expires_at < now()))
-    ORDER BY t2.created_at
-    FOR UPDATE SKIP LOCKED
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    LEFT JOIN builder_config bc ON bc.name = cb.builder_config_name
+    WHERE t.build_id = $3
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+      AND (
+        bc.max_concurrency IS NULL OR bc.max_concurrency = 0
+        OR (
+            SELECT count(*) FROM task it
+            JOIN build ib ON ib.id = it.build_id
+            JOIN configured_build icb ON icb.id = ib.configured_build_id
+            WHERE icb.builder_config_name = bc.name
+              AND it.status = 'leased' AND it.lease_expires_at >= now()
+        ) < bc.max_concurrency
+      )
+    ORDER BY t.created_at
+    FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
 RETURNING *;
+
+-- name: LeaseTaskForBuilder :one
+-- Lease the next leasable task that belongs to one CONFIGURED BUILDER (across
+-- every build using it), oldest first. This is the production lease path: the
+-- runner runs one worker pool PER configured builder, sized to that builder's
+-- own concurrency limit (builder_config.max_concurrency), because concurrency is
+-- a property of the hardware -- the cluster/account/host-pool -- not of a build.
+-- All builds on a builder share its pool; different builders never contend. A
+-- build with no configured_build (ad-hoc/fake) has builder key '' and its own
+-- pool. There is NO cap subquery here -- the per-builder pool's size is the
+-- limit, so the scheduler stays a dumb, fair lease.
+UPDATE task
+SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
+    attempts = attempts + 1, updated_at = now()
+WHERE id = (
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    WHERE coalesce(cb.builder_config_name, '') = $3
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+    ORDER BY t.created_at
+    FOR UPDATE OF t SKIP LOCKED
+    LIMIT 1
+)
+RETURNING *;
+
+-- name: ListBuildersWithLeasableTasks :many
+-- The distinct configured builders (by builder_config name; '' for builds with
+-- no configured_build) that currently have at least one leasable task. The
+-- runner's supervisor polls this to decide which builders need a worker pool
+-- running -- cheap, and builders never couple to each other.
+SELECT DISTINCT coalesce(cb.builder_config_name, '') AS builder_config_name
+FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now());
+
+-- name: CountLeasableTasksForBuilder :one
+-- How many leasable tasks (pending or expired-lease) one configured builder
+-- still has across all its builds. A builder's pool uses this to know when its
+-- queue is drained (0) so it can exit; the supervisor restarts it when work
+-- reappears.
+SELECT count(*) FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE coalesce(cb.builder_config_name, '') = $1
+  AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()));
 
 -- name: HeartbeatTask :execrows
 -- Zero rows affected means the lease was already reclaimed out from under

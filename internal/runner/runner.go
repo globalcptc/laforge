@@ -165,6 +165,26 @@ func (r *Runner) LeaseOne(ctx context.Context) (*db.Task, error) {
 	return &task, nil
 }
 
+// LeaseOneForBuilder leases the next leasable task belonging to ONE configured
+// builder (across all its builds), or (nil, nil) when that builder has nothing
+// leasable right now. This is the production lease path: the runner runs one
+// worker pool per configured builder (concurrency is a property of the hardware,
+// not of a build), so builders never contend and builds on the same builder
+// share its pool. builderConfigName is "" for builds with no configured_build.
+func (r *Runner) LeaseOneForBuilder(ctx context.Context, builderConfigName string) (*db.Task, error) {
+	q := db.New(r.Pool)
+	task, err := q.LeaseTaskForBuilder(ctx, db.LeaseTaskForBuilderParams{
+		LeaseOwner: db.StrPtr(r.ID), Column2: db.Interval(r.LeaseDuration), BuilderConfigName: builderConfigName,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("leasing a task for builder %q: %w", builderConfigName, err)
+	}
+	return &task, nil
+}
+
 // LeaseAndExecuteOne leases the next available task, if any, executes it
 // against r.Builder, and records the result. Returns (false, nil) when
 // there was nothing leasable right now, distinct from an error, so a

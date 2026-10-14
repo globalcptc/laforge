@@ -16,12 +16,16 @@ type NetworkLocker interface {
 	Lock(context.Context) (func(), error)
 }
 
-// SQLNetworkLocker coordinates all runners using the same database. The lock
-// deliberately spans configurations, projects, uplinks and API URLs: different
-// endpoints or credentials can reach the same cluster, and there is no stable
-// cluster identity in the builder configuration.
+// SQLNetworkLocker coordinates all runners using the same database. It
+// serializes OVN NETWORK operations (creating/deleting the network itself),
+// which the cluster's OVN control plane cannot do concurrently -- NOT instance
+// creation or ACLs, which run at the builder's own pool concurrency. The lock is
+// keyed PER CLUSTER (Key, the builder_config name), so operations on different
+// configured clusters never wait on each other; an empty Key falls back to one
+// shared lock.
 type SQLNetworkLocker struct {
 	Pool *pgxpool.Pool
+	Key  string
 }
 
 func (l SQLNetworkLocker) Lock(ctx context.Context) (func(), error) {
@@ -41,7 +45,7 @@ func (l SQLNetworkLocker) Lock(ctx context.Context) (func(), error) {
 			}
 		}
 		var locked bool
-		err = tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended('microcloud-networking', 0))`).Scan(&locked)
+		err = tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended('microcloud-networking:' || $1, 0))`, l.Key).Scan(&locked)
 		if err == nil && locked {
 			return release, nil
 		}
@@ -99,23 +103,17 @@ func (c *Client) lockNetworking(ctx context.Context) (context.Context, func(), e
 	return context.WithValue(ctx, networkLockContextKey{}, true), release, nil
 }
 
+// isNetworkingMutation reports whether a request is an OVN NETWORK lifecycle
+// operation that the cluster's control plane cannot run concurrently -- creating,
+// updating or deleting the network itself (/1.0/networks). That is the ONLY
+// MicroCloud operation that must be serialized. Instance creation/deletion and
+// ACLs do add/remove OVN ports, but the cluster handles those concurrently;
+// serializing them (as an earlier, broader version did) needlessly made every
+// host deploy take turns. Those now run at the builder's own pool concurrency.
 func isNetworkingMutation(method, path string) bool {
 	if method == http.MethodGet {
 		return false
 	}
 	path, _, _ = strings.Cut(path, "?")
-	for _, collection := range []string{"/1.0/networks", "/1.0/network-acls"} {
-		if path == collection || strings.HasPrefix(path, collection+"/") {
-			return true
-		}
-	}
-	// Instance creation, deletion, device updates and power changes also add or
-	// remove OVN ports. Exec, files, snapshots and storage operations do not.
-	if path == "/1.0/instances" {
-		return true
-	}
-	if name, ok := strings.CutPrefix(path, "/1.0/instances/"); ok {
-		return !strings.Contains(name, "/") || strings.HasSuffix(name, "/state")
-	}
-	return false
+	return path == "/1.0/networks" || strings.HasPrefix(path, "/1.0/networks/")
 }

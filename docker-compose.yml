@@ -138,13 +138,18 @@ services:
       # never committed. AGENT_BASE_DIR is already set to /agent-base in the
       # image; restated here for visibility.
       AGENT_BASE_DIR: /agent-base
-      # Deploy hosts in parallel instead of one at a time. Each worker is an
-      # independent lease->execute loop; FOR UPDATE SKIP LOCKED keeps concurrent
-      # leasing safe, and a worker only holds a DB connection briefly (the
-      # multi-minute deploy is an HTTP call to the hoster). Bound in practice by
-      # the hoster's own concurrent-create capacity and Postgres max_connections
-      # (raised on the db service). Tune freely. See cmd/laforge-runner.
-      RUNNER_CONCURRENCY: "50"
+      # The runner runs ONE WORKER POOL PER CONFIGURED BUILDER: all builds on a
+      # builder share its pool, sized to that builder's own concurrency limit
+      # (builder_config.max_concurrency, set per builder in the UI; 0 =
+      # unbounded). Concurrency is a property of the hardware -- the
+      # cluster/account/host-pool -- not of a build, so different builders never
+      # contend and builds on the same builder share its capacity. There is no
+      # global concurrency knob: RUNNER_CONCURRENCY is now only the legacy/test
+      # (-build-id) path's worker count, not production. A task holds a DB
+      # connection only briefly (the multi-minute deploy is an HTTP call to the
+      # hoster), so every pool shares one modest Postgres pool. See
+      # cmd/laforge-runner.
+      RUNNER_MAX_CONNS: "50"
     # The default builder is still the fake one (internal/builder/fake);
     # a build with a real configured_build resolves its own real
     # builder_config by name (ResolveBuilderFromDB) and deploys to that
