@@ -173,6 +173,23 @@ export function BuildLogs() {
     getItemKey: (index) => shown[index].id,
   })
 
+  // Tail-follow: keep the newest event in view as the build streams, but only
+  // while the user is already at the bottom -- if they've scrolled up to read
+  // history, leave them there. atBottomRef is updated on scroll (the last known
+  // position, so it reflects where they were BEFORE new rows pushed the content).
+  const atBottomRef = useRef(true)
+  function onScroll() {
+    const el = parentRef.current
+    if (!el) return
+    atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60
+  }
+  useEffect(() => {
+    if (atBottomRef.current && shown.length > 0) {
+      rowVirtualizer.scrollToIndex(shown.length - 1, { align: 'end' })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown.length])
+
   return (
     <div className="flex h-full flex-col">
       <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
@@ -215,7 +232,7 @@ export function BuildLogs() {
         // The scroll container the virtualizer measures against. Only the rows in
         // view are in the DOM; the sized inner div gives the scrollbar the full
         // height so scrolling reaches every event.
-        <div ref={parentRef} className="min-h-0 flex-1 overflow-auto font-mono text-xs">
+        <div ref={parentRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto font-mono text-xs">
           <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }}>
             {rowVirtualizer.getVirtualItems().map((vi) => {
               const ev = shown[vi.index]
