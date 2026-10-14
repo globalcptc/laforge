@@ -98,7 +98,9 @@ export interface Draft {
 let seq = 0
 export const newKey = () => `host-${++seq}`
 
-export const emptyHost = (): HostDraft => ({ key: newKey(), storagePool: '', uplink: '', timeoutSeconds: 120 })
+export const defaultTimeoutSeconds = (kind: Kind): number => kind === 'microcloud' ? 600 : 120
+
+export const emptyHost = (kind: Kind = 'incus'): HostDraft => ({ key: newKey(), storagePool: '', uplink: '', timeoutSeconds: defaultTimeoutSeconds(kind) })
 
 export const CPU_OPTIONS = ['1', '2', '4', '8', '16']
 export const MEMORY_OPTIONS = ['512MiB', '1GiB', '2GiB', '4GiB', '8GiB', '16GiB', '32GiB']
@@ -236,7 +238,7 @@ export function draftFromConfig(bc: BuilderConfig): Draft {
       storagePool: bc.incus_storage_pool ?? '',
       uplink: bc.incus_ovn_uplink_network ?? '',
       project: bc.incus_project ?? '',
-      timeoutSeconds: bc.incus_operation_timeout_seconds ?? 120,
+      timeoutSeconds: (bc.incus_operation_timeout_seconds ?? 0) > 0 ? bc.incus_operation_timeout_seconds! : defaultTimeoutSeconds('microcloud'),
     }
     if (bc.incus_credential_id) h.credentialId = bc.incus_credential_id
     else if (bc.incus_api_url)

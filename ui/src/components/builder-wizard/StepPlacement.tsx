@@ -141,20 +141,17 @@ export function StepPlacement({
             </div>
           )}
 
-          <details className="mt-3 text-xs text-fg-muted">
-            <summary className="cursor-pointer select-none">Advanced</summary>
-            <div className="mt-2 max-w-xs">
-              <Field label="Wait for slow operations up to" hint={kind === 'microcloud' ? 'Applies to API reads and provisioning operations. Busy clusters and large image copies can take minutes.' : 'Large images on network storage can take minutes to copy.'} className="mb-0">
-                <Select value={String(h.timeoutSeconds)} onChange={(e) => update(i, { timeoutSeconds: Number(e.target.value) })}>
-                  {TIMEOUT_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s < 60 ? `${s} seconds` : `${s / 60} minute${s === 60 ? '' : 's'}`}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-          </details>
+          <div className="mt-4 max-w-sm">
+            <Field label="API and operation timeout" hint={kind === 'microcloud' ? 'Per request, including image and snapshot checks when saving. Defaults to 10 minutes for slow clusters and large copies.' : 'Per request, including image and snapshot checks when saving and provisioning operations.'} className="mb-0">
+              <Select value={String(h.timeoutSeconds)} onChange={(e) => update(i, { timeoutSeconds: Number(e.target.value) })}>
+                {[...new Set([...TIMEOUT_OPTIONS, h.timeoutSeconds])].sort((a, b) => a - b).map((s) => (
+                  <option key={s} value={s}>
+                    {s < 60 ? `${s} seconds` : `${s / 60} minute${s === 60 ? '' : 's'}`}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
         </div>
       ))}
 

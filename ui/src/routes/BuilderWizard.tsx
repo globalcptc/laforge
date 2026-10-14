@@ -10,6 +10,7 @@ import {
   availableImages,
   draftFromConfig,
   emptyHost,
+  defaultTimeoutSeconds,
   imagesFromConfig,
   isCloud,
   isHostPlaced,
@@ -133,7 +134,7 @@ export function BuilderWizard() {
   const create = useCreateBuilderConfig()
   const update = useUpdateBuilderConfig()
 
-  const [draft, setDraft] = useState<Draft>({ name: '', kind: 'microcloud', hosts: [emptyHost()], images: [], sizes: [], externalAccessIp: '' })
+  const [draft, setDraft] = useState<Draft>({ name: '', kind: 'microcloud', hosts: [emptyHost('microcloud')], images: [], sizes: [], externalAccessIp: '' })
   const [initialized, setInitialized] = useState(false)
   // Edit mode skips the Connect step, so host connections are auto-read once after
   // the draft loads (see the effect below). This guards that one-shot.
@@ -224,7 +225,11 @@ export function BuilderWizard() {
     setDraft((d) => ({
       ...d,
       kind,
-      hosts: (kind === 'microcloud' ? [d.hosts[0] ?? emptyHost()] : d.hosts.length ? d.hosts : [emptyHost()]).map((h) => ({ ...h, networkType: kind === 'incus' ? h.networkType ?? 'bridge' : undefined })),
+      hosts: (kind === 'microcloud' ? [d.hosts[0] ?? emptyHost(kind)] : d.hosts.length ? d.hosts : [emptyHost(kind)]).map((h) => ({
+        ...h,
+        timeoutSeconds: h.timeoutSeconds === defaultTimeoutSeconds(d.kind) ? defaultTimeoutSeconds(kind) : h.timeoutSeconds,
+        networkType: kind === 'incus' ? h.networkType ?? 'bridge' : undefined,
+      })),
       oneTeamPerHost: kind === 'incus' ? d.oneTeamPerHost ?? true : false,
       // Seed a cloud builder with the standard size names (empty types to fill
       // in) and one blank image row, so it starts as a form to complete.
