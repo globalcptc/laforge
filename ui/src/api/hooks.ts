@@ -263,6 +263,37 @@ export function useTeardownBuild(buildId: string) {
   })
 }
 
+// useRetryTeardown is the explicit retry for a teardown that stopped on a
+// permanent builder error (objects in destroy_failed, the build's
+// reconcile_error banner saying why): after fixing the builder, every stuck
+// object goes back to destroying and a fresh destroy is requested at once.
+// levelManage on the backend, like teardown itself.
+export function useRetryTeardown(buildId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<Build>(`/builds/${buildId}/teardown/retry`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['build', buildId] })
+      qc.invalidateQueries({ queryKey: ['objects', buildId] })
+    },
+  })
+}
+
+// useForceTornDown is the admin escape hatch for a teardown that cannot finish:
+// the build is declared torn_down and its remaining objects recorded destroyed
+// WITHOUT any hoster call. Instance-admin-only on the backend; the build row
+// and its history stay (unlike useForceDeleteBuild).
+export function useForceTornDown(buildId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<Build>(`/builds/${buildId}/teardown/force`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['build', buildId] })
+      qc.invalidateQueries({ queryKey: ['objects', buildId] })
+    },
+  })
+}
+
 // useForceDeleteBuild is the admin "force remove from database" escape hatch for
 // a DEAD build (its real hosts were deleted out-of-band, so teardown can never
 // finish). It deletes the build + all runtime rows, cascade, and touches NO

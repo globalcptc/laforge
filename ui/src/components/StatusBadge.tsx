@@ -58,7 +58,9 @@ type Kind =
   | 'tearing_down'
   | 'torn_down'
   | 'purged'
+  | 'discarded'
   | 'destroying'
+  | 'destroy_failed'
   | 'destroyed'
   | 'open'
   | 'closed'
@@ -100,7 +102,15 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   // Destroyed is a terminal resting state -- no animation.
   torn_down: { icon: PowerOff, tone: 'neutral', label: 'Destroyed' },
   purged: { icon: Trash2, tone: 'neutral', label: 'Purged' },
+  // A planned build that was superseded by a newer commit or whose configured
+  // build was removed -- never deployed, nothing was ever created. Terminal,
+  // resting, grey like the other history states.
+  discarded: { icon: MinusCircle, tone: 'neutral', label: 'Discarded' },
   destroying: { icon: Loader, anim: 'spin', tone: 'pink', label: 'Destroying' },
+  // The destroy-side twin of Creation Failed: the hoster refused to remove the
+  // instance for a reason retrying cannot fix, so teardown stopped here. Terminal
+  // and still until an operator retries the teardown or forces the build down.
+  destroy_failed: { icon: ServerCrash, tone: 'danger', label: 'Destroy Failed' },
   destroyed: { icon: MinusCircle, tone: 'neutral', label: 'Destroyed' },
   open: { icon: CircleCheck, tone: 'success', label: 'Open' },
   closed: { icon: MinusCircle, tone: 'warning', label: 'Closed' },
@@ -146,7 +156,9 @@ const STATUS_DESC: Partial<Record<Kind, string>> = {
   tearing_down: 'Teardown in progress.',
   torn_down: 'Removed from the hoster.',
   purged: 'Records cleared after teardown.',
+  discarded: 'Planned build set aside — a newer commit superseded it, or its configured build was removed. Nothing was ever created.',
   destroying: 'Being removed during teardown.',
+  destroy_failed: 'The hoster could not remove the instance; teardown is stuck until retried.',
   destroyed: 'Removed from the hoster.',
   open: 'External ingress is allowed.',
   closed: 'Ingress is blocked; connections dropped.',
@@ -270,6 +282,7 @@ export const LIFECYCLE_STATES = [
   'build_failed',
   'invalid',
   'destroying',
+  'destroy_failed',
   'torn_down',
 ] as const
 export const AGENT_STATES = ['healthy', 'late', 'missing'] as const

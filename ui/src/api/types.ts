@@ -72,7 +72,7 @@ export interface Build {
   configured_build_id: string | null
   content_revision_id: string
   environment_name: string
-  status: 'planned' | 'deploying' | 'building' | 'finished' | 'failed' | 'tearing_down' | 'torn_down' | 'purged'
+  status: 'planned' | 'deploying' | 'building' | 'finished' | 'failed' | 'tearing_down' | 'torn_down' | 'purged' | 'discarded'
   created_at: string
   // Set when the orchestrator's last reconcile of this build failed for a
   // reason that isn't a content error -- most often a build/builder
@@ -116,6 +116,7 @@ export type ObjectStatus =
   | 'build_failed'
   | 'invalid'
   | 'destroying'
+  | 'destroy_failed'
   | 'destroyed'
 export type AgentStatus = 'booting' | 'healthy' | 'late' | 'missing'
 
@@ -471,6 +472,8 @@ export interface ConfigFinding {
 
 export interface ObjectConfig {
   public_address: string
+  /** The instance's assigned internal IP (resolved from content). */
+  address?: string
   kind: string
   name: string
   os?: string

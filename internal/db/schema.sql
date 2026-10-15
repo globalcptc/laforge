@@ -1,8 +1,8 @@
 --
 -- PostgreSQL database dump
 --
--- Dumped from database version 17.11
--- Dumped by pg_dump version 17.11
+-- Dumped from database version 16.15 (Homebrew)
+-- Dumped by pg_dump version 16.15 (Homebrew)
 --
 -- Name: laforge_notify_event(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -107,7 +107,7 @@ CREATE TABLE public.build (
     auto_built boolean DEFAULT false NOT NULL,
     reconcile_error text,
     created_by_account_id uuid,
-    CONSTRAINT build_status_check CHECK ((status = ANY (ARRAY['planned'::text, 'deploying'::text, 'building'::text, 'finished'::text, 'failed'::text, 'tearing_down'::text, 'torn_down'::text, 'purged'::text])))
+    CONSTRAINT build_status_check CHECK ((status = ANY (ARRAY['planned'::text, 'deploying'::text, 'building'::text, 'finished'::text, 'failed'::text, 'tearing_down'::text, 'torn_down'::text, 'purged'::text, 'discarded'::text])))
 );
 --
 -- Name: builder_config; Type: TABLE; Schema: public; Owner: -
@@ -228,6 +228,16 @@ CREATE TABLE public.configured_build (
     auto_deploy_enabled boolean DEFAULT true NOT NULL
 );
 --
+-- Name: configured_build_favorite; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.configured_build_favorite (
+    account_id uuid NOT NULL REFERENCES public.account(id) ON DELETE CASCADE,
+    configured_build_id uuid NOT NULL REFERENCES public.configured_build(id) ON DELETE CASCADE,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (account_id, configured_build_id)
+);
+--
 -- Name: container; Type: TABLE; Schema: public; Owner: -
 --
 CREATE TABLE public.container (
@@ -285,7 +295,7 @@ CREATE TABLE public.deployed_object (
     blocked_on jsonb,
     public_address text DEFAULT ''::text NOT NULL,
     CONSTRAINT deployed_object_kind_check CHECK ((kind = ANY (ARRAY['network'::text, 'host'::text, 'container'::text, 'dns'::text]))),
-    CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroying'::text, 'destroyed'::text])))
+    CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroying'::text, 'destroy_failed'::text, 'destroyed'::text])))
 );
 --
 -- Name: environment; Type: TABLE; Schema: public; Owner: -
@@ -613,6 +623,7 @@ CREATE TABLE public.task (
     last_error text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    permanent boolean DEFAULT false NOT NULL,
     CONSTRAINT task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text])))
 );
 --
@@ -1054,6 +1065,10 @@ CREATE INDEX shell_session_live_idx ON public.shell_session USING btree (status)
 -- Name: task_leasable_idx; Type: INDEX; Schema: public; Owner: -
 --
 CREATE INDEX task_leasable_idx ON public.task USING btree (status, lease_expires_at);
+--
+-- Name: task_object_history_idx; Type: INDEX; Schema: public; Owner: -
+--
+CREATE INDEX task_object_history_idx ON public.task USING btree (deployed_object_id, created_at DESC) WHERE (deployed_object_id IS NOT NULL);
 --
 -- Name: task_one_open_per_object; Type: INDEX; Schema: public; Owner: -
 --

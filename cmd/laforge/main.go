@@ -161,6 +161,10 @@ http://localhost:8080).
   laforge build lock <configured-build-id> <on|off>
       Configure a build (branch + environment file + builder config),
       inspect it, and toggle follow mode / the competition-started lock.
+  laforge build teardown <build-id> [--retry | --force]
+      Tear down a build's infrastructure. --retry resumes a teardown that
+      stopped on a permanent builder error (after fixing the builder);
+      --force marks a wedged teardown torn down with no hoster call (admin).
 
   laforge builders
       List every configured builder: name, kind, hoster URL, and image count.

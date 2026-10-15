@@ -9,6 +9,24 @@ SELECT * FROM configured_build WHERE id = $1;
 -- name: ListConfiguredBuildsByRepository :many
 SELECT * FROM configured_build WHERE repository_id = $1 ORDER BY created_at;
 
+-- name: ListConfiguredBuildsByRepositoryForAccount :many
+-- Configured builds for a repo, each flagged whether THIS account has favorited
+-- it; favorited rows sort first (then newest), so a user's starred branches lead
+-- their list. Favorites are a per-viewer preference (configured_build_favorite).
+SELECT cb.*, (fav.account_id IS NOT NULL) AS favorited
+FROM configured_build cb
+LEFT JOIN configured_build_favorite fav
+  ON fav.configured_build_id = cb.id AND fav.account_id = $2
+WHERE cb.repository_id = $1
+ORDER BY favorited DESC, cb.created_at;
+
+-- name: AddConfiguredBuildFavorite :exec
+INSERT INTO configured_build_favorite (account_id, configured_build_id)
+VALUES ($1, $2) ON CONFLICT DO NOTHING;
+
+-- name: RemoveConfiguredBuildFavorite :exec
+DELETE FROM configured_build_favorite WHERE account_id = $1 AND configured_build_id = $2;
+
 -- name: ListConfiguredBuildsByRepositoryAndBranch :many
 -- Every configured build tracking this branch, whatever repo a webhook
 -- push landed on -- the reconciliation step in internal/ingest walks all
@@ -47,4 +65,5 @@ SELECT EXISTS (
 -- name: DeleteConfiguredBuild :exec
 -- Removes the configured build. build.configured_build_id is ON DELETE SET NULL,
 -- so existing builds are kept as detached history rather than cascade-deleted.
+-- The API discards its planned builds first (DiscardPlannedBuildsForConfiguredBuild).
 DELETE FROM configured_build WHERE id = $1;

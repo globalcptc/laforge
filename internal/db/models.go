@@ -181,6 +181,12 @@ type ConfiguredBuild struct {
 	AutoDeployEnabled        bool               `json:"auto_deploy_enabled"`
 }
 
+type ConfiguredBuildFavorite struct {
+	AccountID         pgtype.UUID        `json:"account_id"`
+	ConfiguredBuildID pgtype.UUID        `json:"configured_build_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+}
+
 type Container struct {
 	ID                pgtype.UUID     `json:"id"`
 	ContentRevisionID pgtype.UUID     `json:"content_revision_id"`
@@ -493,6 +499,7 @@ type Task struct {
 	LastError        *string            `json:"last_error"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Permanent        bool               `json:"permanent"`
 }
 
 type Team struct {

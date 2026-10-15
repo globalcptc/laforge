@@ -291,6 +291,32 @@ UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = 
 -- "Infra: Running" next to a "Destroyed" lifecycle badge.
 UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING *;
 
+-- name: MarkDeployedObjectDestroyFailed :one
+-- The destroy-side twin of MarkDeployedObjectDeployFailed: the hoster could not
+-- remove this object and the failure is permanent (builder configuration), so
+-- Teardown stops re-queuing destroys for it. Terminal until an operator retries
+-- the teardown (ResetDestroyFailedObjectsForBuild) or forces the build down.
+UPDATE deployed_object SET status = 'destroy_failed', last_error = $2, updated_at = now()
+WHERE id = $1 RETURNING *;
+
+-- name: ResetDestroyFailedObjectsForBuild :many
+-- The explicit operator retry after fixing the builder: every destroy_failed
+-- object of the build goes back to 'destroying' so a fresh terminal destroy can
+-- be requested for it.
+UPDATE deployed_object SET status = 'destroying', last_error = NULL, updated_at = now()
+WHERE status = 'destroy_failed'
+  AND team_id IN (SELECT id FROM team WHERE build_id = $1)
+RETURNING *;
+
+-- name: ForceDestroyObjectsForBuild :execrows
+-- The operator's "declare it gone" escape hatch for a wedged teardown: every
+-- object not yet destroyed is recorded as destroyed WITHOUT any hoster call
+-- (same column resets as MarkDeployedObjectDestroyed). The caller is asserting
+-- the real infrastructure is already gone or will be cleaned up by hand.
+UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), last_error = NULL, updated_at = now()
+WHERE status <> 'destroyed'
+  AND team_id IN (SELECT id FROM team WHERE build_id = $1);
+
 -- name: ResetDeployedObjectForRedeploy :one
 -- Used after a destroy that happened only because the fingerprint changed
 -- ("rebuild means recreate"): back to pending, cleared external_ref/
@@ -486,9 +512,34 @@ WHERE id = $1 AND lease_owner = $2
 RETURNING *;
 
 -- name: FailTask :one
-UPDATE task SET status = 'failed', last_error = $3, updated_at = now()
+-- permanent records the runner's own classification of the failure
+-- (builder.ErrPermanentConfig): a failure retrying cannot fix. The
+-- orchestrator's teardown reads it back to stop re-queuing a destroy that can
+-- never succeed (see ListLatestDestroyTasksByBuild).
+UPDATE task SET status = 'failed', last_error = $3, permanent = $4, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
 RETURNING *;
+
+-- name: ListLatestDestroyTasksByBuild :many
+-- The most recent destroy task per object of a build, with how many destroy
+-- tasks for that object have failed so far -- what Teardown decides from: an
+-- open task means a destroy is in flight (nothing to do), a failed permanent one
+-- means stop (destroy_failed), a failed transient one is re-queued only once a
+-- backoff scaled by failed_count has elapsed since it failed (updated_at).
+SELECT DISTINCT ON (t.deployed_object_id) t.*,
+    (SELECT count(*) FROM task f
+     WHERE f.deployed_object_id = t.deployed_object_id
+       AND f.kind LIKE 'destroy_%' AND f.status = 'failed')::int AS failed_count
+FROM task t
+WHERE t.build_id = $1 AND t.deployed_object_id IS NOT NULL AND t.kind LIKE 'destroy_%'
+ORDER BY t.deployed_object_id, t.created_at DESC;
+
+-- name: CancelOpenTasksForBuild :execrows
+-- Closes every pending/leased task of a build as failed with the given reason.
+-- Used when a teardown is forced to torn_down: nothing should keep working on
+-- a build the operator has declared gone.
+UPDATE task SET status = 'failed', last_error = $2, updated_at = now()
+WHERE build_id = $1 AND status IN ('pending', 'leased');
 
 -- name: GetTask :one
 SELECT * FROM task WHERE id = $1;
@@ -678,3 +729,42 @@ GROUP BY team.build_id, agent_task.status;
 
 -- name: SetDeployedObjectPublicAddress :exec
 UPDATE deployed_object SET public_address = $2, updated_at = now() WHERE id = $1;
+
+-- name: DiscardSupersededPlannedBuilds :many
+-- A newer planned build (keep_id) was just created for this configured build:
+-- every OTHER planned build it has is now a superseded revision nobody will
+-- deploy, so it goes terminal as 'discarded' (migration 00063). Keeps at most
+-- one planned build per configured_build, which is what stops planned builds
+-- accumulating one per push forever and each holding an orchestrator lane.
+-- Only 'planned' rows are touched: anything deploying/building/finished is real
+-- infrastructure and is handled by apply-in-place or teardown, never this.
+UPDATE build SET status = 'discarded'
+WHERE configured_build_id = sqlc.arg(configured_build_id)
+  AND status = 'planned'
+  AND id <> sqlc.arg(keep_id)
+RETURNING *;
+
+-- name: DiscardPlannedBuildsForConfiguredBuild :many
+-- The configured build is being removed: its planned builds (never deployed,
+-- nothing at a hoster) have no future, so they go terminal as 'discarded'
+-- rather than lingering as detached 'planned' rows that the orchestrator would
+-- keep reconciling and that nobody could meaningfully deploy.
+UPDATE build SET status = 'discarded'
+WHERE configured_build_id = $1 AND status = 'planned'
+RETURNING *;
+
+-- name: DiscardStalePlannedBuilds :many
+-- The sweep behind the two queries above, for rows that predate them: a planned
+-- build is stale when its configured_build is gone (configured_build_id was set
+-- NULL by the FK on delete) or when a newer planned build exists for the same
+-- configured_build. Run by the orchestrator at startup and on its slow
+-- housekeeping tick, so an upgraded instance heals its backlog without manual
+-- SQL and a planned build never slips through the two write paths.
+UPDATE build AS b SET status = 'discarded'
+WHERE b.status = 'planned'
+  AND (b.configured_build_id IS NULL
+       OR EXISTS (SELECT 1 FROM build AS n
+                  WHERE n.configured_build_id = b.configured_build_id
+                    AND n.status = 'planned'
+                    AND (n.created_at, n.id) > (b.created_at, b.id)))
+RETURNING *;

@@ -519,6 +519,10 @@ func (s *Server) reconcile(ctx context.Context, repo db.Repository, branch, ref 
 			log.Printf("webhook: %s@%s: auto-build for configured build %s failed: %v", slug, branch, cb.ID, err)
 			continue
 		}
+		// The new commit's build supersedes any older planned build of this
+		// configured build -- one planned build per configured build, not one
+		// per push forever (see discardSupersededPlanned).
+		s.discardSupersededPlanned(ctx, cb.ID, build)
 
 		if !cb.AutoDeployEnabled {
 			log.Printf("webhook: %s@%s: auto-built build %s; auto-deploy is OFF for this configured build, leaving it planned (click Deploy, or turn auto-deploy on)", slug, branch, build.ID)

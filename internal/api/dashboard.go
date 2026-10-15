@@ -42,7 +42,7 @@ const (
 )
 
 // classifyHealth maps one object to a single ByHealth bucket. Teardown
-// states (destroying/destroyed) return "" and are dropped by the caller:
+// states (destroying/destroy_failed/destroyed) return "" and are dropped by the caller:
 // "is this build healthy right now" is not a meaningful question for
 // something being intentionally destroyed.
 //
@@ -63,7 +63,7 @@ func classifyHealth(o objectView, failedSteps map[string]bool) string {
 		return healthFailedInfra
 	case "build_failed", "invalid":
 		return healthFailedSteps
-	case "destroying", "destroyed":
+	case "destroying", "destroy_failed", "destroyed":
 		return ""
 	}
 	// The instance is gone or powered off at the hoster -- an infra failure,

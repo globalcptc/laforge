@@ -51,6 +51,7 @@ func main() {
 	interval := flag.Duration("interval", 2*time.Second, "how often to reconcile every non-terminal build")
 	reconcileConcurrency := flag.Int("reconcile-concurrency", envIntDefault("RECONCILE_CONCURRENCY", 8), "how many builds to reconcile in PARALLEL each pass. Reconciles are per-build independent, so a bounded worker pool keeps one slow build (a cold checkout, a hanging hoster API) from blocking the rest. Default 8; 1 restores the old serial behavior.")
 	reconcileBuildTimeout := flag.Duration("reconcile-build-timeout", envDurationDefault("RECONCILE_BUILD_TIMEOUT", 2*time.Minute), "max time one build's reconcile may take (checkout + hoster calls) before its context is cancelled, so a hanging builder fails fast and the next pass retries instead of holding a worker. 0 disables.")
+	plannedInterval := flag.Duration("planned-interval", envDurationDefault("PLANNED_RECONCILE_INTERVAL", 60*time.Second), "how often to reconcile a PLANNED build. A planned build touches no hoster and its content is immutable, so its pass only re-derives teams/fingerprints and the builder-compatibility verdict; once a minute tracks a builder config change without the checkout + content load every -interval that let 150 stale planned builds starve a live one. Live builds (deploying/building/tearing_down) reconcile every -interval and take priority for the -reconcile-concurrency slots; a planned build that is deployed moves to the live cadence within one -interval.")
 	heartbeatRetention := flag.Duration("heartbeat-retention", 72*time.Hour, "how long to keep agent_heartbeat rows (an append-only log with no other retention policy -- see migrations/00007's own doc comment); 0 disables cleanup")
 	scheduleInterval := flag.Duration("schedule-interval", 5*time.Second, "how often to check for due scheduled_task rows (schedule: entries and ad-hoc scheduled tasks)")
 	accessInterval := flag.Duration("access-interval", 15*time.Second, "how often to enforce each live build's authored access: windows (open/close teams on schedule)")
@@ -115,12 +116,15 @@ func main() {
 	// simply retries. Reconciles are per-build independent (distinct build_ids,
 	// distinct team/object rows) and the DB pool, the checkout cache, and log are
 	// all concurrency-safe, so running them in parallel needs no other locking.
-	reconcileOne := func(b db.Build) {
+	// pctx is the caller's context: the process context for reconcileAll, or
+	// the lane's own context for a lane pass (cancelled when the lane is
+	// reaped, so a torn-down build's in-flight pass stops too).
+	reconcileOne := func(pctx context.Context, b db.Build) {
 		buildStart := time.Now()
-		bctx := ctx
+		bctx := pctx
 		if *reconcileBuildTimeout > 0 {
 			var cancel context.CancelFunc
-			bctx, cancel = context.WithTimeout(ctx, *reconcileBuildTimeout)
+			bctx, cancel = context.WithTimeout(pctx, *reconcileBuildTimeout)
 			defer cancel()
 		}
 		lastMark := buildStart
@@ -236,7 +240,7 @@ func main() {
 			go func() {
 				defer wg.Done()
 				defer func() { <-sem }()
-				reconcileOne(b)
+				reconcileOne(ctx, b)
 			}()
 		}
 		wg.Wait()
@@ -256,30 +260,22 @@ func main() {
 	// its first deploy_network task created -- until the current pass (bounded by
 	// the slowest build's timeout) finished. With lanes, a slow build only delays
 	// its OWN next tick; a new build gets a lane within one supervisor poll and
-	// reconciles immediately. reconcileAll is still used for -once and the startup
-	// pass. The lanes are independent (distinct build_ids/rows), so no locking
-	// beyond the registry itself.
-	type reconcileLane struct{ cancel context.CancelFunc }
-	var lanesMu sync.Mutex
-	lanes := map[string]*reconcileLane{}
-
-	runReconcileLane := func(lctx context.Context, buildID pgtype.UUID) {
-		// Reconcile immediately on start (don't wait a full interval), then every
-		// interval. Exits when cancelled (the supervisor reaps a build that has
-		// gone terminal) or when the build can no longer be loaded (deleted).
-		for {
-			b, err := q.GetBuild(lctx, buildID)
-			if err != nil {
-				return
-			}
-			reconcileOne(b)
-			select {
-			case <-lctx.Done():
-				return
-			case <-time.After(*interval):
-			}
-		}
-	}
+	// reconciles immediately. reconcileAll is still used for -once.
+	//
+	// The lanes are BOUNDED (internal/orchestrator/lanes.go): every pass takes
+	// one of -reconcile-concurrency slots from a priority semaphore -- live
+	// builds (deploying/building/tearing_down) first, planned builds only on
+	// the slots live ones leave free, and never more than half of them -- and a
+	// planned build runs a pass only every -planned-interval. Unbounded, 153
+	// stale planned builds each doing a checkout + content load every 2s put
+	// the orchestrator above 300% CPU on a 2-core box and the one live build's
+	// pass could no longer finish inside RECONCILE_BUILD_TIMEOUT: it restarted
+	// from team 1 every pass. A lane also exits on its own as soon as it loads
+	// its build in a terminal status, instead of reconciling a torn-down build
+	// until the supervisor's next listing happens to omit it.
+	lanes := orchestrator.NewLanes(orchestrator.LaneConfig{
+		Concurrency: *reconcileConcurrency, Interval: *interval, PlannedInterval: *plannedInterval,
+	}, q.GetBuild, reconcileOne)
 
 	superviseReconcileLanes := func() {
 		builds, err := q.ListBuildsByStatus(ctx, []string{"planned", "deploying", "building", "tearing_down"})
@@ -287,35 +283,23 @@ func main() {
 			log.Printf("listing builds: %v", err)
 			return
 		}
-		active := make(map[string]bool, len(builds))
-		lanesMu.Lock()
-		defer lanesMu.Unlock()
-		for _, b := range builds {
-			key := b.ID.String()
-			active[key] = true
-			if _, running := lanes[key]; running {
-				continue
-			}
-			lctx, cancel := context.WithCancel(ctx)
-			h := &reconcileLane{cancel: cancel}
-			lanes[key] = h
-			buildID := b.ID
-			go func() {
-				runReconcileLane(lctx, buildID)
-				cancel()
-				lanesMu.Lock()
-				if lanes[key] == h { // don't delete a newer lane for the same build
-					delete(lanes, key)
-				}
-				lanesMu.Unlock()
-			}()
+		lanes.Supervise(ctx, builds)
+	}
+
+	// Stale planned builds -- superseded by a newer planned build of the same
+	// configured build, or orphaned by a removed configured build -- go
+	// terminal ('discarded') so they stop holding a lane. The API keeps this
+	// true as builds are created/removed; this sweep heals a backlog that
+	// predates it and backstops those paths. Startup + the slow housekeeping
+	// tick: a miss costs one planned-cadence pass, nothing more.
+	discardStalePlannedBuilds := func() {
+		n, err := orchestrator.DiscardStalePlannedBuilds(ctx, pool)
+		if err != nil {
+			log.Printf("discarding stale planned builds: %v", err)
+			return
 		}
-		// Reap lanes whose build has gone terminal / disappeared: cancel them and
-		// let their own cleanup remove them from the registry.
-		for key, lane := range lanes {
-			if !active[key] {
-				lane.cancel()
-			}
+		if n > 0 {
+			log.Printf("discarded %d stale planned build(s) (superseded, or their configured build was removed)", n)
 		}
 	}
 
@@ -489,7 +473,16 @@ func main() {
 		}
 	}
 
-	reconcileAll()
+	if *once {
+		reconcileAll()
+	} else {
+		// No separate startup pass: a lane reconciles its build immediately
+		// when started, so starting the lanes IS the startup pass -- bounded
+		// by the same slot budget, instead of one unbounded reconcileAll over
+		// every planned build before the ticker even begins.
+		discardStalePlannedBuilds()
+		superviseReconcileLanes()
+	}
 	cleanupHeartbeats()
 	cleanupSessions()
 	dispatchScheduledTasks()
@@ -549,6 +542,7 @@ func main() {
 			cleanupHeartbeats()
 			cleanupSessions()
 			cleanupBuilderMetrics()
+			discardStalePlannedBuilds()
 		case <-scheduleTicker.C:
 			dispatchScheduledTasks()
 		case <-accessTicker.C:

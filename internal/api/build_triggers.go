@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/globalcptc/laforge/internal/db"
+	"github.com/globalcptc/laforge/internal/orchestrator"
 )
 
 // triggerBuild is "Build: resolve the environment at a commit ... touches
@@ -72,6 +73,41 @@ func (s *Server) triggerBuild(ctx context.Context, cb db.ConfiguredBuild, auto b
 	return s.Queries.CreateBuild(ctx, db.CreateBuildParams{
 		ConfiguredBuildID: cb.ID, ContentRevisionID: cb.CurrentContentRevisionID, EnvironmentName: env.Name, AutoBuilt: auto, CreatedByAccountID: createdBy,
 	})
+}
+
+// discardSupersededPlanned keeps "at most one planned build per configured
+// build" on the ingest path: a CI-passing push just auto-built `newer` for cb
+// (webhook.go's reconcile), so every OTHER planned build cb still has is a
+// superseded revision nobody will deploy, and goes terminal as 'discarded'
+// (migration 00063). Without this, every push left one more planned build
+// behind forever -- prod reached 153, each holding a 2-second reconcile lane in
+// the orchestrator and together starving the live build. Only 'planned' rows
+// are touched; a deploying/building/finished build is real infrastructure and
+// is handled by apply-in-place or teardown, never here. Deliberately not
+// called from handleTriggerBuild: Build Now deploys its build immediately, so
+// it never leaves a planned sibling behind, and an operator's existing planned
+// build stays deployable. The discarded rows stay as history (with an event
+// naming what superseded them); a failure here is logged, not returned -- the
+// new build exists either way, and the orchestrator's own sweep
+// (DiscardStalePlannedBuilds) catches anything missed.
+func (s *Server) discardSupersededPlanned(ctx context.Context, cbID pgtype.UUID, newer db.Build) {
+	old, err := s.Queries.DiscardSupersededPlannedBuilds(ctx, db.DiscardSupersededPlannedBuildsParams{
+		ConfiguredBuildID: cbID, KeepID: newer.ID,
+	})
+	if err != nil {
+		log.Printf("discarding planned builds superseded by %s: %v", newer.ID, err)
+		return
+	}
+	for _, b := range old {
+		log.Printf("build %s: planned build discarded, superseded by %s", b.ID, newer.ID)
+		if _, err := s.Queries.CreateEvent(ctx, db.CreateEventParams{
+			BuildID: b.ID, Kind: "build.discarded",
+			Message: "planned build discarded: superseded by a newer build of the same configured build",
+			Payload: []byte(fmt.Sprintf(`{"superseded_by":%q}`, newer.ID.String())),
+		}); err != nil {
+			log.Printf("recording discard event for build %s: %v", b.ID, err)
+		}
+	}
 }
 
 // errNothingPending and errEnvironmentNotFound are applyUpcoming's own
@@ -282,7 +318,7 @@ func (s *Server) handleTeardownBuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch build.Status {
-	case "tearing_down", "torn_down", "purged":
+	case "tearing_down", "torn_down", "purged", "discarded":
 		writeError(w, http.StatusConflict, errors.New("build is already "+build.Status))
 		return
 	}
@@ -296,6 +332,89 @@ func (s *Server) handleTeardownBuild(w http.ResponseWriter, r *http.Request) {
 		Message: sess.GithubLogin + " requested teardown", Payload: []byte("{}"),
 	})
 	writeJSON(w, http.StatusAccepted, updated)
+}
+
+// handleRetryTeardown is the explicit operator retry for a teardown that
+// stopped: internal/orchestrator.Teardown moves an object to 'destroy_failed'
+// (and never re-queues it) once its destroy failed with a permanent builder
+// error, because retrying the same configuration can never succeed. Once the
+// operator has fixed the builder, this puts every such object back into
+// 'destroying', clears the build's stuck banner, and requests a fresh destroy
+// immediately. Same levelManage floor as teardown itself -- it acts on live
+// infrastructure. Only meaningful on a build that is tearing_down.
+func (s *Server) handleRetryTeardown(w http.ResponseWriter, r *http.Request) {
+	build, repo, err := s.buildAndOwningRepository(r)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	sess, err := s.requireLevel(r.Context(), r, repo, levelManage)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if build.Status != "tearing_down" {
+		writeError(w, http.StatusConflict, errors.New("build is "+build.Status+", not tearing_down"))
+		return
+	}
+	created, err := orchestrator.RetryTeardown(r.Context(), s.Pool, build.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
+		BuildID: build.ID, Kind: "build.teardown.retried",
+		Message: fmt.Sprintf("%s retried teardown (%d destroy task(s) requested)", sess.GithubLogin, created), Payload: []byte("{}"),
+	})
+	updated, err := s.Queries.GetBuild(r.Context(), build.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, updated)
+}
+
+// handleForceTornDown is the admin escape hatch for a teardown that cannot
+// finish: it declares the build torn down WITHOUT touching any hoster
+// (internal/orchestrator.ForceTornDown closes the build's open tasks, records
+// every remaining object as destroyed, and moves the build to 'torn_down').
+// The premise is that the real infrastructure is already gone or will be
+// removed by hand -- on a live build this orphans real instances, so like
+// force-delete it is instance-admin-only. Unlike force-delete, the build and
+// its history stay. Only a build already tearing_down can be forced: an
+// operator must have asked for a real teardown first.
+func (s *Server) handleForceTornDown(w http.ResponseWriter, r *http.Request) {
+	build, _, err := s.buildAndOwningRepository(r)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	sess, err := s.requireInstanceAdmin(r.Context(), r)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if build.Status != "tearing_down" {
+		writeError(w, http.StatusConflict, errors.New("build is "+build.Status+", not tearing_down"))
+		return
+	}
+	forced, err := orchestrator.ForceTornDown(r.Context(), s.Pool, build.ID, "teardown forced to torn_down by "+sess.GithubLogin)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	log.Printf("build %s: teardown forced to torn_down by %s -- %d object(s) recorded destroyed, no hoster call made",
+		build.ID, sess.GithubLogin, forced)
+	s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
+		BuildID: build.ID, Kind: "build.teardown.forced",
+		Message: fmt.Sprintf("%s forced the build to torn down (%d object(s) recorded destroyed without a hoster call)", sess.GithubLogin, forced), Payload: []byte("{}"),
+	})
+	updated, err := s.Queries.GetBuild(r.Context(), build.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
 }
 
 // handleForceDeleteBuild is the admin escape hatch for a DEAD build: one whose

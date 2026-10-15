@@ -1,7 +1,17 @@
 import { useState } from 'react'
 import { Link, Outlet, useNavigate, useParams, useRouterState } from '@tanstack/react-router'
-import { GitCommitHorizontal, Rocket, Trash2, TriangleAlert } from 'lucide-react'
-import { useBuild, useBuildReadiness, useBuilders, useDeployBuild, useForceDeleteBuild, useMe, useTeardownBuild } from '../api/hooks'
+import { GitCommitHorizontal, PowerOff, RotateCcw, Rocket, Trash2, TriangleAlert } from 'lucide-react'
+import {
+  useBuild,
+  useBuildReadiness,
+  useBuilders,
+  useDeployBuild,
+  useForceDeleteBuild,
+  useForceTornDown,
+  useMe,
+  useRetryTeardown,
+  useTeardownBuild,
+} from '../api/hooks'
 import { StatusBadge } from '../components/StatusBadge'
 import { BuilderPill } from '../components/BuilderPill'
 import { ApiError } from '../api/client'
@@ -29,6 +39,8 @@ export function BuildLayout() {
   const deploy = useDeployBuild(buildId)
   const teardown = useTeardownBuild(buildId)
   const forceDelete = useForceDeleteBuild(buildId, repoId)
+  const retryTeardown = useRetryTeardown(buildId)
+  const forceTornDown = useForceTornDown(buildId)
   const me = useMe()
   const navigate = useNavigate()
   // Pre-deploy quota warnings matter only while the build can still be deployed.
@@ -37,6 +49,7 @@ export function BuildLayout() {
   const [teardownError, setTeardownError] = useState<string | null>(null)
   const [forceConfirm, setForceConfirm] = useState('')
   const [forceError, setForceError] = useState<string | null>(null)
+  const [forceDownError, setForceDownError] = useState<string | null>(null)
   const toast = useToast()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const base = `/repos/${repoId}/builds/${buildId}`
@@ -64,6 +77,27 @@ export function BuildLayout() {
       const message = e instanceof ApiError ? e.message : 'Teardown failed'
       setTeardownError(message)
       toast({ title: 'Teardown failed', description: message, tone: 'danger', duration: 0 })
+    }
+  }
+
+  async function onRetryTeardown() {
+    try {
+      await retryTeardown.mutateAsync()
+    } catch (e) {
+      const message = e instanceof ApiError ? e.message : 'Retry failed'
+      toast({ title: 'Teardown retry failed', description: message, tone: 'danger', duration: 0 })
+    }
+  }
+
+  async function onForceTornDown() {
+    setForceDownError(null)
+    try {
+      await forceTornDown.mutateAsync()
+      toast({ title: 'Build marked torn down', description: 'No hosts were destroyed; clean up any that remain by hand.', tone: 'info' })
+    } catch (e) {
+      const message = e instanceof ApiError ? e.message : 'Force torn down failed'
+      setForceDownError(message)
+      toast({ title: 'Force torn down failed', description: message, tone: 'danger', duration: 0 })
     }
   }
 
@@ -164,12 +198,26 @@ export function BuildLayout() {
             </div>
           </div>
         )}
+        {/* reconcile_error carries two things: a deploy that can't start
+            (builder/content incompatibility) and, while tearing_down, a
+            teardown that stopped because the hoster refused a destroy for a
+            reason retrying can't fix. The second gets its own title and the
+            explicit retry the orchestrator waits for. */}
         {build?.reconcile_error && (
           <div className="mb-3 flex items-start gap-2.5 rounded-token border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
             <TriangleAlert size={16} className="mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <div className="font-medium">This build is blocked and can’t deploy</div>
+            <div className="min-w-0 flex-1">
+              <div className="font-medium">
+                {build.status === 'tearing_down' ? 'Teardown Is Stuck' : 'This build is blocked and can’t deploy'}
+              </div>
               <div className="mt-0.5 break-words text-danger/90">{build.reconcile_error}</div>
+              {build.status === 'tearing_down' && (
+                <div className="mt-2">
+                  <Button variant="primary" onClick={onRetryTeardown} disabled={retryTeardown.isPending}>
+                    <RotateCcw size={12} /> {retryTeardown.isPending ? 'Retrying…' : 'Retry Teardown'}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -184,6 +232,25 @@ export function BuildLayout() {
         {me.data?.is_instance_admin && build && (
           <details className="mt-10 border-t border-border pt-3 text-xs text-fg-subtle">
             <summary className="cursor-pointer select-none text-fg-subtle hover:text-fg-muted">Admin</summary>
+            {build.status === 'tearing_down' && (
+              <div className="mt-3 max-w-xl rounded-token border border-warning/30 bg-warning-soft/40 p-3.5">
+                <div className="flex items-center gap-2 text-sm font-semibold text-warning">
+                  <TriangleAlert size={14} /> Force Torn Down
+                </div>
+                <p className="mt-1.5 text-fg-muted">
+                  Marks this build torn down and every remaining host, container, and network as destroyed{' '}
+                  <span className="font-semibold text-fg">without</span> asking the hoster to remove anything. Use it for a teardown
+                  that cannot finish when the real infrastructure is already gone or you will remove it by hand. The build and its
+                  history stay.
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Button variant="danger" onClick={onForceTornDown} disabled={forceTornDown.isPending}>
+                    <PowerOff size={12} /> {forceTornDown.isPending ? 'Marking…' : 'Force Torn Down'}
+                  </Button>
+                </div>
+                {forceDownError && <div className="mt-2 text-danger">{forceDownError}</div>}
+              </div>
+            )}
             <div className="mt-3 max-w-xl rounded-token border border-danger/30 bg-danger-soft/40 p-3.5">
               <div className="flex items-center gap-2 text-sm font-semibold text-danger">
                 <TriangleAlert size={14} /> Force remove from database

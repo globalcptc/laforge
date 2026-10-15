@@ -229,6 +229,11 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /builds/{id}", s.handleGetBuild)
 	mux.HandleFunc("POST /builds/{id}/deploy", s.handleDeployBuild)
 	mux.HandleFunc("POST /builds/{id}/teardown", s.handleTeardownBuild)
+	// A teardown that stopped on a permanent builder error: retry after fixing
+	// the builder (levelManage), or declare the build torn down without any
+	// hoster call (instance-admin-only; the infrastructure is already gone).
+	mux.HandleFunc("POST /builds/{id}/teardown/retry", s.handleRetryTeardown)
+	mux.HandleFunc("POST /builds/{id}/teardown/force", s.handleForceTornDown)
 	// Admin-only, buried "force remove from database" for a dead build whose real
 	// infrastructure is already gone (teardown can never complete). DB-only.
 	mux.HandleFunc("DELETE /builds/{id}", s.handleForceDeleteBuild)

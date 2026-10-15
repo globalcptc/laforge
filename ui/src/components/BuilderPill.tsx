@@ -42,9 +42,9 @@ export function BuilderPill({
   color?: string | null
   kind?: string
   icon?: boolean
-  // 'sm' sits inline next to small body text without towering over it (e.g. the
-  // Configured Builds branch line); 'md' is the standalone default.
-  size?: 'sm' | 'md'
+  // 'xs' is the most compact (dense lists like Configured Builds); 'sm' sits
+  // inline next to small body text; 'md' is the standalone default.
+  size?: 'xs' | 'sm' | 'md'
   className?: string
   title?: string
 }) {
@@ -52,19 +52,20 @@ export function BuilderPill({
   const Icon = kind ? KIND_ICON[kind] : undefined
   const colored = !!color && /^#[0-9a-fA-F]{6}$/.test(color)
   const style = colored ? { backgroundColor: color!, color: contrastText(color!), borderColor: color! } : undefined
-  const sm = size === 'sm'
+  const sizeClass = { xs: 'gap-0.5 px-1 py-0 text-[10px]/3', sm: 'gap-0.5 px-1.5 py-0 text-[11px]/4', md: 'gap-1 px-2 py-0.5 text-xs' }[size]
+  const iconSize = { xs: 9, sm: 10, md: 11 }[size]
   return (
     <span
       className={cn(
         'inline-flex shrink-0 items-center rounded-full border font-medium',
-        sm ? 'gap-0.5 px-1.5 py-0 text-[11px]/4' : 'gap-1 px-2 py-0.5 text-xs',
+        sizeClass,
         !colored && 'border-border bg-surface-sunken text-fg',
         className,
       )}
       style={style}
       title={title ?? name}
     >
-      {icon && Icon && <Icon size={sm ? 10 : 11} />}
+      {icon && Icon && <Icon size={iconSize} />}
       {name}
     </span>
   )

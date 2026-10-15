@@ -45,6 +45,27 @@ func (q *Queries) ApplyContentRevisionToBuild(ctx context.Context, arg ApplyCont
 	return i, err
 }
 
+const cancelOpenTasksForBuild = `-- name: CancelOpenTasksForBuild :execrows
+UPDATE task SET status = 'failed', last_error = $2, updated_at = now()
+WHERE build_id = $1 AND status IN ('pending', 'leased')
+`
+
+type CancelOpenTasksForBuildParams struct {
+	BuildID   pgtype.UUID `json:"build_id"`
+	LastError *string     `json:"last_error"`
+}
+
+// Closes every pending/leased task of a build as failed with the given reason.
+// Used when a teardown is forced to torn_down: nothing should keep working on
+// a build the operator has declared gone.
+func (q *Queries) CancelOpenTasksForBuild(ctx context.Context, arg CancelOpenTasksForBuildParams) (int64, error) {
+	result, err := q.db.Exec(ctx, cancelOpenTasksForBuild, arg.BuildID, arg.LastError)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const clearTeamAccessOverride = `-- name: ClearTeamAccessOverride :exec
 UPDATE team SET access_override_state = '', access_override_until = NULL WHERE id = $1
 `
@@ -59,7 +80,7 @@ func (q *Queries) ClearTeamAccessOverride(ctx context.Context, id pgtype.UUID) e
 const completeTask = `-- name: CompleteTask :one
 UPDATE task SET status = 'done', last_error = NULL, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type CompleteTaskParams struct {
@@ -83,6 +104,7 @@ func (q *Queries) CompleteTask(ctx context.Context, arg CompleteTaskParams) (Tas
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -305,7 +327,7 @@ INSERT INTO task (build_id, deployed_object_id, kind, payload)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (deployed_object_id) WHERE status IN ('pending', 'leased') AND deployed_object_id IS NOT NULL
 DO NOTHING
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type CreateTaskIfNoneOpenParams struct {
@@ -342,6 +364,7 @@ func (q *Queries) CreateTaskIfNoneOpen(ctx context.Context, arg CreateTaskIfNone
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -349,7 +372,7 @@ func (q *Queries) CreateTaskIfNoneOpen(ctx context.Context, arg CreateTaskIfNone
 const createTeamTask = `-- name: CreateTeamTask :one
 INSERT INTO task (build_id, deployed_object_id, kind, payload)
 VALUES ($1, NULL, $2, $3)
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type CreateTeamTaskParams struct {
@@ -378,6 +401,7 @@ func (q *Queries) CreateTeamTask(ctx context.Context, arg CreateTeamTaskParams) 
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -387,7 +411,7 @@ UPDATE task SET status = 'leased', last_error = $3,
     attempts = GREATEST(attempts - 1, 0),
     lease_expires_at = now() + $4::interval, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type DeferTaskParams struct {
@@ -419,6 +443,7 @@ func (q *Queries) DeferTask(ctx context.Context, arg DeferTaskParams) (Task, err
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -466,6 +491,143 @@ func (q *Queries) DestroyFakeHosterResource(ctx context.Context, externalRef str
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const discardPlannedBuildsForConfiguredBuild = `-- name: DiscardPlannedBuildsForConfiguredBuild :many
+UPDATE build SET status = 'discarded'
+WHERE configured_build_id = $1 AND status = 'planned'
+RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id
+`
+
+// The configured build is being removed: its planned builds (never deployed,
+// nothing at a hoster) have no future, so they go terminal as 'discarded'
+// rather than lingering as detached 'planned' rows that the orchestrator would
+// keep reconciling and that nobody could meaningfully deploy.
+func (q *Queries) DiscardPlannedBuildsForConfiguredBuild(ctx context.Context, configuredBuildID pgtype.UUID) ([]Build, error) {
+	rows, err := q.db.Query(ctx, discardPlannedBuildsForConfiguredBuild, configuredBuildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Build
+	for rows.Next() {
+		var i Build
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConfiguredBuildID,
+			&i.ContentRevisionID,
+			&i.EnvironmentName,
+			&i.Status,
+			&i.CreatedAt,
+			&i.AutoBuilt,
+			&i.ReconcileError,
+			&i.CreatedByAccountID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const discardStalePlannedBuilds = `-- name: DiscardStalePlannedBuilds :many
+UPDATE build AS b SET status = 'discarded'
+WHERE b.status = 'planned'
+  AND (b.configured_build_id IS NULL
+       OR EXISTS (SELECT 1 FROM build AS n
+                  WHERE n.configured_build_id = b.configured_build_id
+                    AND n.status = 'planned'
+                    AND (n.created_at, n.id) > (b.created_at, b.id)))
+RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id
+`
+
+// The sweep behind the two queries above, for rows that predate them: a planned
+// build is stale when its configured_build is gone (configured_build_id was set
+// NULL by the FK on delete) or when a newer planned build exists for the same
+// configured_build. Run by the orchestrator at startup and on its slow
+// housekeeping tick, so an upgraded instance heals its backlog without manual
+// SQL and a planned build never slips through the two write paths.
+func (q *Queries) DiscardStalePlannedBuilds(ctx context.Context) ([]Build, error) {
+	rows, err := q.db.Query(ctx, discardStalePlannedBuilds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Build
+	for rows.Next() {
+		var i Build
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConfiguredBuildID,
+			&i.ContentRevisionID,
+			&i.EnvironmentName,
+			&i.Status,
+			&i.CreatedAt,
+			&i.AutoBuilt,
+			&i.ReconcileError,
+			&i.CreatedByAccountID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const discardSupersededPlannedBuilds = `-- name: DiscardSupersededPlannedBuilds :many
+UPDATE build SET status = 'discarded'
+WHERE configured_build_id = $1
+  AND status = 'planned'
+  AND id <> $2
+RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id
+`
+
+type DiscardSupersededPlannedBuildsParams struct {
+	ConfiguredBuildID pgtype.UUID `json:"configured_build_id"`
+	KeepID            pgtype.UUID `json:"keep_id"`
+}
+
+// A newer planned build (keep_id) was just created for this configured build:
+// every OTHER planned build it has is now a superseded revision nobody will
+// deploy, so it goes terminal as 'discarded' (migration 00063). Keeps at most
+// one planned build per configured_build, which is what stops planned builds
+// accumulating one per push forever and each holding an orchestrator lane.
+// Only 'planned' rows are touched: anything deploying/building/finished is real
+// infrastructure and is handled by apply-in-place or teardown, never this.
+func (q *Queries) DiscardSupersededPlannedBuilds(ctx context.Context, arg DiscardSupersededPlannedBuildsParams) ([]Build, error) {
+	rows, err := q.db.Query(ctx, discardSupersededPlannedBuilds, arg.ConfiguredBuildID, arg.KeepID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Build
+	for rows.Next() {
+		var i Build
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConfiguredBuildID,
+			&i.ContentRevisionID,
+			&i.EnvironmentName,
+			&i.Status,
+			&i.CreatedAt,
+			&i.AutoBuilt,
+			&i.ReconcileError,
+			&i.CreatedByAccountID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const ensureDeployedObject = `-- name: EnsureDeployedObject :one
@@ -584,19 +746,29 @@ func (q *Queries) EnsureTeam(ctx context.Context, arg EnsureTeamParams) (Team, e
 }
 
 const failTask = `-- name: FailTask :one
-UPDATE task SET status = 'failed', last_error = $3, updated_at = now()
+UPDATE task SET status = 'failed', last_error = $3, permanent = $4, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type FailTaskParams struct {
 	ID         pgtype.UUID `json:"id"`
 	LeaseOwner *string     `json:"lease_owner"`
 	LastError  *string     `json:"last_error"`
+	Permanent  bool        `json:"permanent"`
 }
 
+// permanent records the runner's own classification of the failure
+// (builder.ErrPermanentConfig): a failure retrying cannot fix. The
+// orchestrator's teardown reads it back to stop re-queuing a destroy that can
+// never succeed (see ListLatestDestroyTasksByBuild).
 func (q *Queries) FailTask(ctx context.Context, arg FailTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, failTask, arg.ID, arg.LeaseOwner, arg.LastError)
+	row := q.db.QueryRow(ctx, failTask,
+		arg.ID,
+		arg.LeaseOwner,
+		arg.LastError,
+		arg.Permanent,
+	)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -611,6 +783,7 @@ func (q *Queries) FailTask(ctx context.Context, arg FailTaskParams) (Task, error
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -631,6 +804,24 @@ DELETE FROM build WHERE id = $1
 func (q *Queries) ForceDeleteBuild(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, forceDeleteBuild, id)
 	return err
+}
+
+const forceDestroyObjectsForBuild = `-- name: ForceDestroyObjectsForBuild :execrows
+UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), last_error = NULL, updated_at = now()
+WHERE status <> 'destroyed'
+  AND team_id IN (SELECT id FROM team WHERE build_id = $1)
+`
+
+// The operator's "declare it gone" escape hatch for a wedged teardown: every
+// object not yet destroyed is recorded as destroyed WITHOUT any hoster call
+// (same column resets as MarkDeployedObjectDestroyed). The caller is asserting
+// the real infrastructure is already gone or will be cleaned up by hand.
+func (q *Queries) ForceDestroyObjectsForBuild(ctx context.Context, buildID pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, forceDestroyObjectsForBuild, buildID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getBuild = `-- name: GetBuild :one
@@ -811,7 +1002,7 @@ func (q *Queries) GetLogContextByDeployedObject(ctx context.Context, id pgtype.U
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at FROM task WHERE id = $1
+SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent FROM task WHERE id = $1
 `
 
 func (q *Queries) GetTask(ctx context.Context, id pgtype.UUID) (Task, error) {
@@ -830,6 +1021,7 @@ func (q *Queries) GetTask(ctx context.Context, id pgtype.UUID) (Task, error) {
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -1031,7 +1223,7 @@ WHERE id = (
     FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type LeaseTaskParams struct {
@@ -1067,6 +1259,7 @@ func (q *Queries) LeaseTask(ctx context.Context, arg LeaseTaskParams) (Task, err
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -1096,7 +1289,7 @@ WHERE id = (
     FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type LeaseTaskForBuildParams struct {
@@ -1130,6 +1323,7 @@ func (q *Queries) LeaseTaskForBuild(ctx context.Context, arg LeaseTaskForBuildPa
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -1148,7 +1342,7 @@ WHERE id = (
     FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type LeaseTaskForBuilderParams struct {
@@ -1182,6 +1376,7 @@ func (q *Queries) LeaseTaskForBuilder(ctx context.Context, arg LeaseTaskForBuild
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -1782,8 +1977,75 @@ func (q *Queries) ListFakeHosterResources(ctx context.Context) ([]FakeHosterReso
 	return items, nil
 }
 
+const listLatestDestroyTasksByBuild = `-- name: ListLatestDestroyTasksByBuild :many
+SELECT DISTINCT ON (t.deployed_object_id) t.id, t.build_id, t.deployed_object_id, t.kind, t.payload, t.status, t.attempts, t.lease_owner, t.lease_expires_at, t.last_error, t.created_at, t.updated_at, t.permanent,
+    (SELECT count(*) FROM task f
+     WHERE f.deployed_object_id = t.deployed_object_id
+       AND f.kind LIKE 'destroy_%' AND f.status = 'failed')::int AS failed_count
+FROM task t
+WHERE t.build_id = $1 AND t.deployed_object_id IS NOT NULL AND t.kind LIKE 'destroy_%'
+ORDER BY t.deployed_object_id, t.created_at DESC
+`
+
+type ListLatestDestroyTasksByBuildRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	BuildID          pgtype.UUID        `json:"build_id"`
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	Kind             string             `json:"kind"`
+	Payload          json.RawMessage    `json:"payload"`
+	Status           string             `json:"status"`
+	Attempts         int32              `json:"attempts"`
+	LeaseOwner       *string            `json:"lease_owner"`
+	LeaseExpiresAt   pgtype.Timestamptz `json:"lease_expires_at"`
+	LastError        *string            `json:"last_error"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Permanent        bool               `json:"permanent"`
+	FailedCount      int32              `json:"failed_count"`
+}
+
+// The most recent destroy task per object of a build, with how many destroy
+// tasks for that object have failed so far -- what Teardown decides from: an
+// open task means a destroy is in flight (nothing to do), a failed permanent one
+// means stop (destroy_failed), a failed transient one is re-queued only once a
+// backoff scaled by failed_count has elapsed since it failed (updated_at).
+func (q *Queries) ListLatestDestroyTasksByBuild(ctx context.Context, buildID pgtype.UUID) ([]ListLatestDestroyTasksByBuildRow, error) {
+	rows, err := q.db.Query(ctx, listLatestDestroyTasksByBuild, buildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLatestDestroyTasksByBuildRow
+	for rows.Next() {
+		var i ListLatestDestroyTasksByBuildRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BuildID,
+			&i.DeployedObjectID,
+			&i.Kind,
+			&i.Payload,
+			&i.Status,
+			&i.Attempts,
+			&i.LeaseOwner,
+			&i.LeaseExpiresAt,
+			&i.LastError,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Permanent,
+			&i.FailedCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTasksByBuild = `-- name: ListTasksByBuild :many
-SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at FROM task WHERE build_id = $1 ORDER BY created_at
+SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent FROM task WHERE build_id = $1 ORDER BY created_at
 `
 
 func (q *Queries) ListTasksByBuild(ctx context.Context, buildID pgtype.UUID) ([]Task, error) {
@@ -1808,6 +2070,7 @@ func (q *Queries) ListTasksByBuild(ctx context.Context, buildID pgtype.UUID) ([]
 			&i.LastError,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Permanent,
 		); err != nil {
 			return nil, err
 		}
@@ -1893,6 +2156,45 @@ UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $
 
 func (q *Queries) MarkDeployedObjectDeploying(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
 	row := q.db.QueryRow(ctx, markDeployedObjectDeploying, id)
+	var i DeployedObject
+	err := row.Scan(
+		&i.ID,
+		&i.TeamID,
+		&i.Kind,
+		&i.ObjectName,
+		&i.AsName,
+		&i.NetworkName,
+		&i.Fingerprint,
+		&i.Status,
+		&i.ExternalRef,
+		&i.LastError,
+		&i.UpdatedAt,
+		&i.PowerState,
+		&i.PowerStateCheckedAt,
+		&i.Tags,
+		&i.StepsMaterializedAt,
+		&i.BlockedOn,
+		&i.PublicAddress,
+	)
+	return i, err
+}
+
+const markDeployedObjectDestroyFailed = `-- name: MarkDeployedObjectDestroyFailed :one
+UPDATE deployed_object SET status = 'destroy_failed', last_error = $2, updated_at = now()
+WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address
+`
+
+type MarkDeployedObjectDestroyFailedParams struct {
+	ID        pgtype.UUID `json:"id"`
+	LastError *string     `json:"last_error"`
+}
+
+// The destroy-side twin of MarkDeployedObjectDeployFailed: the hoster could not
+// remove this object and the failure is permanent (builder configuration), so
+// Teardown stops re-queuing destroys for it. Terminal until an operator retries
+// the teardown (ResetDestroyFailedObjectsForBuild) or forces the build down.
+func (q *Queries) MarkDeployedObjectDestroyFailed(ctx context.Context, arg MarkDeployedObjectDestroyFailedParams) (DeployedObject, error) {
+	row := q.db.QueryRow(ctx, markDeployedObjectDestroyFailed, arg.ID, arg.LastError)
 	var i DeployedObject
 	err := row.Scan(
 		&i.ID,
@@ -2077,11 +2379,59 @@ func (q *Queries) ResetDeployedObjectForRedeploy(ctx context.Context, id pgtype.
 	return i, err
 }
 
+const resetDestroyFailedObjectsForBuild = `-- name: ResetDestroyFailedObjectsForBuild :many
+UPDATE deployed_object SET status = 'destroying', last_error = NULL, updated_at = now()
+WHERE status = 'destroy_failed'
+  AND team_id IN (SELECT id FROM team WHERE build_id = $1)
+RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address
+`
+
+// The explicit operator retry after fixing the builder: every destroy_failed
+// object of the build goes back to 'destroying' so a fresh terminal destroy can
+// be requested for it.
+func (q *Queries) ResetDestroyFailedObjectsForBuild(ctx context.Context, buildID pgtype.UUID) ([]DeployedObject, error) {
+	rows, err := q.db.Query(ctx, resetDestroyFailedObjectsForBuild, buildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DeployedObject
+	for rows.Next() {
+		var i DeployedObject
+		if err := rows.Scan(
+			&i.ID,
+			&i.TeamID,
+			&i.Kind,
+			&i.ObjectName,
+			&i.AsName,
+			&i.NetworkName,
+			&i.Fingerprint,
+			&i.Status,
+			&i.ExternalRef,
+			&i.LastError,
+			&i.UpdatedAt,
+			&i.PowerState,
+			&i.PowerStateCheckedAt,
+			&i.Tags,
+			&i.StepsMaterializedAt,
+			&i.BlockedOn,
+			&i.PublicAddress,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const retryTask = `-- name: RetryTask :one
 UPDATE task SET status = 'leased', last_error = $3,
     lease_expires_at = now() + $4::interval, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type RetryTaskParams struct {
@@ -2122,6 +2472,7 @@ func (q *Queries) RetryTask(ctx context.Context, arg RetryTaskParams) (Task, err
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }

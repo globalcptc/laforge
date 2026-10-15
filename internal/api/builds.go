@@ -171,8 +171,12 @@ func summarizeIssues(branch string, issues []ingest.ValidationIssue) string {
 
 // handleDeleteConfiguredBuild removes a configured build. Refused while it has
 // any live build (deploying/building/finished/tearing_down) so a config is never
-// detached from a running deployment -- tear those down first. Existing builds
-// survive as detached history (the FK is ON DELETE SET NULL).
+// detached from a running deployment -- tear those down first. Its planned
+// builds are discarded first (terminal 'discarded', migration 00063): with the
+// configured build gone they have no future, and left 'planned' they would be
+// detached rows the orchestrator kept reconciling forever (prod accumulated 107
+// of them). Every other build survives as detached history (the FK is ON
+// DELETE SET NULL).
 func (s *Server) handleDeleteConfiguredBuild(w http.ResponseWriter, r *http.Request) {
 	cb, repo, err := s.buildAndOwningRepo(r)
 	if err != nil {
@@ -191,6 +195,20 @@ func (s *Server) handleDeleteConfiguredBuild(w http.ResponseWriter, r *http.Requ
 	if live {
 		writeError(w, http.StatusConflict, errors.New("this configured build has live builds (deploying, building, finished, or tearing down) -- tear them down before removing it"))
 		return
+	}
+	discarded, err := s.Queries.DiscardPlannedBuildsForConfiguredBuild(r.Context(), cb.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	for _, b := range discarded {
+		if _, err := s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
+			BuildID: b.ID, Kind: "build.discarded",
+			Message: "planned build discarded: its configured build was removed",
+			Payload: []byte("{}"),
+		}); err != nil {
+			log.Printf("recording discard event for build %s: %v", b.ID, err)
+		}
 	}
 	if err := s.Queries.DeleteConfiguredBuild(r.Context(), cb.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)

@@ -196,7 +196,7 @@ function ConfiguredBuildRow({
   }
 
   async function onRemove() {
-    if (!window.confirm(`Remove the configured build for ${cb.environment_path} on ${cb.branch}? Existing builds are kept as history.`)) return
+    if (!window.confirm(`Remove the configured build for ${cb.environment_path} on ${cb.branch}? Its planned builds are discarded; deployed builds are kept as history.`)) return
     setError(null)
     try {
       await remove.mutateAsync(cb.id)
@@ -252,7 +252,7 @@ function ConfiguredBuildRow({
             </div>
             <div className="mt-0.5 flex items-center gap-1.5 text-xs text-fg-muted">
               <span className="truncate">{cb.environment_path}</span>
-              <BuilderPill name={cb.builder_config_name} color={builderColor} kind={builderKind} size="sm" />
+              <BuilderPill name={cb.builder_config_name} color={builderColor} kind={builderKind} size="xs" />
             </div>
           </div>
         </button>
@@ -319,7 +319,7 @@ function ConfiguredBuildRow({
           title={
             hasLiveBuild
               ? 'Cannot remove: this build has live builds (deploying, building, finished, or tearing down). Tear them down first.'
-              : 'Remove this configured build. Existing builds are kept as history.'
+              : 'Remove this configured build. Its planned builds are discarded; deployed builds are kept as history.'
           }
           className="flex shrink-0 items-center rounded-token-sm border border-border p-1 text-fg-muted hover:border-danger hover:text-danger disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-fg-muted"
           aria-label="Remove configured build"
@@ -446,6 +446,7 @@ function buildStatusColor(status: Build['status']): string {
     case 'tearing_down':
     case 'torn_down':
     case 'purged':
+    case 'discarded':
     default:
       return 'bg-border-strong'
   }

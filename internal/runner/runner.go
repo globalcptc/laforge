@@ -245,9 +245,12 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 		// A permanent configuration error (e.g. a project name too long for the
 		// hoster's socket-path limit) can't be fixed by retrying -- fail it now
 		// instead of burning the whole retry budget on a deterministic failure.
+		// The classification is recorded on the failed row (task.permanent) so
+		// the orchestrator's teardown can stop re-queuing a destroy that can
+		// never succeed, instead of creating a fresh one every pass forever.
 		permanent := errors.Is(execErr, builder.ErrPermanentConfig)
 		if permanent || task.Attempts >= MaxAttempts {
-			q.FailTask(ctx, db.FailTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error())})
+			q.FailTask(ctx, db.FailTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Permanent: permanent})
 			// Only a failed DEPLOY task marks the object deploy_failed -- a
 			// failed destroy leaves the object in 'destroying' for a later
 			// teardown/reconcile pass to retry, and must not be mislabeled

@@ -125,7 +125,7 @@ func resolveRepoID(c *apiClient, ownerRepo string) (db.Repository, error) {
 
 func runBuild(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: laforge build <configure|list|status|auto-deploy|lock> ...")
+		return fmt.Errorf("usage: laforge build <configure|list|status|auto-deploy|lock|teardown> ...")
 	}
 	c := newAPIClient()
 	switch args[0] {
@@ -139,8 +139,10 @@ func runBuild(args []string) error {
 		return runBuildSetAutoDeploy(c, args[1:])
 	case "lock":
 		return runBuildSetLock(c, args[1:])
+	case "teardown":
+		return runBuildTeardown(c, args[1:])
 	default:
-		return fmt.Errorf("unknown build subcommand %q (want configure, list, status, auto-deploy, or lock)", args[0])
+		return fmt.Errorf("unknown build subcommand %q (want configure, list, status, auto-deploy, lock, or teardown)", args[0])
 	}
 }
 
@@ -264,4 +266,45 @@ func parseOnOffArgs(cmd string, args []string) (id string, on bool, err error) {
 		return "", false, fmt.Errorf("expected \"on\" or \"off\", got %q", args[1])
 	}
 	return args[0], on, nil
+}
+
+// runBuildTeardown is the CLI face of the three teardown endpoints. The id is
+// a build run's id (the one in the UI's /builds/<id> URL), not a configured
+// build's. Plain: request the teardown (POST /builds/{id}/teardown). --retry:
+// a teardown that stopped on a permanent builder error is retried after the
+// builder was fixed. --force: declare a wedged teardown torn down WITHOUT any
+// hoster call (instance admins only; the infrastructure must already be gone
+// or be cleaned up by hand).
+func runBuildTeardown(c *apiClient, args []string) error {
+	fs := flag.NewFlagSet("build teardown", flag.ExitOnError)
+	retry := fs.Bool("retry", false, "retry a teardown that stopped on a permanent builder error (after fixing the builder)")
+	force := fs.Bool("force", false, "mark the build torn down without destroying anything at the hoster (admin only)")
+	positionals, flagArgs := splitArgs(args, map[string]bool{"retry": true, "force": true})
+	fs.Parse(flagArgs)
+	if len(positionals) != 1 {
+		return fmt.Errorf("usage: laforge build teardown <build-id> [--retry | --force]")
+	}
+	if *retry && *force {
+		return fmt.Errorf("--retry and --force are mutually exclusive")
+	}
+	path := "/builds/" + positionals[0] + "/teardown"
+	switch {
+	case *retry:
+		path += "/retry"
+	case *force:
+		path += "/force"
+	}
+	var b db.Build
+	if err := c.do("POST", path, nil, &b); err != nil {
+		return err
+	}
+	switch {
+	case *retry:
+		fmt.Printf("build %s: teardown retried, status=%s\n", b.ID.String(), b.Status)
+	case *force:
+		fmt.Printf("build %s: forced to %s (no hoster call made)\n", b.ID.String(), b.Status)
+	default:
+		fmt.Printf("build %s: status=%s\n", b.ID.String(), b.Status)
+	}
+	return nil
 }

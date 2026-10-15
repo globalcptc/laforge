@@ -228,16 +228,22 @@ func (p *Pool) ConfigureExternalAccess(ctx context.Context, team string, hosts [
 
 // ValidateTeamCount is called before reconciliation queues any deployment tasks.
 func (p *Pool) ValidateTeamCount(teams int) error {
+	// Every refusal here is a property of the pool's configuration, not of the
+	// hoster's momentary state: retrying the same task against the same host
+	// list can never change the answer. Marked permanent so the runner fails
+	// the task on its first attempt and the orchestrator's teardown stops
+	// re-queuing destroys for it (the wedged-teardown loop this classification
+	// exists to end), instead of both retrying forever.
 	if len(p.Hosts) == 0 {
-		return errors.New("incus pool has no hosts configured")
+		return fmt.Errorf("%w: incus pool has no hosts configured", builder.ErrPermanentConfig)
 	}
 	if p.OneTeamPerHost && teams > len(p.Hosts) {
-		return fmt.Errorf("one team per host requires %d distinct Incus hosts, but only %d are configured", teams, len(p.Hosts))
+		return fmt.Errorf("%w: one team per host requires %d distinct Incus hosts, but only %d are configured", builder.ErrPermanentConfig, teams, len(p.Hosts))
 	}
 	// Content repeats the same subnets for every team; a native bridge host cannot take a second copy.
 	for n := len(p.Hosts); n < teams; n++ {
 		if p.Hosts[n%len(p.Hosts)].Config.NetworkMode() == "bridge" {
-			return fmt.Errorf("team %d would reuse a bridge host's subnets: configure at least %d distinct hosts for %d teams", n+1, teams, teams)
+			return fmt.Errorf("%w: team %d would reuse a bridge host's subnets: configure at least %d distinct hosts for %d teams", builder.ErrPermanentConfig, n+1, teams, teams)
 		}
 	}
 	return nil

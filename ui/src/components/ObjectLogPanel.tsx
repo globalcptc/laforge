@@ -461,6 +461,8 @@ function InfoTab({
         {teamNumber != null && <InfoRow label="Team" value={String(teamNumber)} />}
         <InfoRow label="Kind" value={kind} />
         {object?.network_name && <InfoRow label="Network" value={object.network_name} mono />}
+        {config?.address && <InfoRow label="IP address" value={config.address} mono />}
+        {object?.public_address && <InfoRow label="Public IP" value={object.public_address} mono />}
         {object && (
           <InfoRow label="State" valueNode={<StatusBadge status={object.status} kind={kind} blockedOn={object.blocked_on} />} />
         )}
