@@ -2,6 +2,8 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -328,26 +330,38 @@ func TestGatewayRetryThenFailCap(t *testing.T) {
 		if err != nil {
 			t.Fatalf("attempt %d: ListEventsByDeployedObject: %v", attempt, err)
 		}
-		// Every get-task that hands out the step logs a step_started, so the
-		// host's timeline shows each attempt -- retries are visible, by design.
-		// A transient failure under the cap logs no OUTCOME event (step_failed
-		// fires only on the terminal failure), so after attempt N there are N
-		// step_started events, plus one step_failed once it's terminal.
+		// Every get-task that hands out the step logs a step_started, and
+		// every failed attempt logs its outcome: step_retry (carrying the
+		// attempt and the error) under the cap, step_failed once terminal --
+		// so after attempt N there are exactly 2N events, retries included.
+		if len(events) != 2*attempt {
+			t.Fatalf("attempt %d: %d event(s), want %d (a step_started + an outcome per attempt)", attempt, len(events), 2*attempt)
+		}
+		last := events[len(events)-1]
 		if attempt < MaxAttempts {
 			if dbTask.Status != "pending" {
 				t.Fatalf("attempt %d: status = %q, want pending (still under MaxAttempts=%d)", attempt, dbTask.Status, MaxAttempts)
 			}
-			if len(events) != attempt {
-				t.Fatalf("attempt %d: %d event(s), want %d (one step_started per attempt, no outcome event yet)", attempt, len(events), attempt)
+			wantMsg := fmt.Sprintf("step 0 (execute) failed on attempt %d/%d, retrying: /bin/false", attempt, MaxAttempts)
+			if last.Kind != "step_retry" || last.Message != wantMsg {
+				t.Fatalf("attempt %d: event = %q/%q, want step_retry/%q", attempt, last.Kind, last.Message, wantMsg)
+			}
+			var p struct {
+				Detail      string `json:"detail"`
+				Attempt     int    `json:"attempt"`
+				MaxAttempts int    `json:"max_attempts"`
+			}
+			if err := json.Unmarshal(last.Payload, &p); err != nil {
+				t.Fatalf("attempt %d: decoding step_retry payload %s: %v", attempt, last.Payload, err)
+			}
+			if p.Detail != "exit status 1" || p.Attempt != attempt || p.MaxAttempts != MaxAttempts {
+				t.Fatalf("attempt %d: step_retry payload = %+v, want detail %q attempt %d max %d", attempt, p, "exit status 1", attempt, MaxAttempts)
 			}
 		} else {
 			if dbTask.Status != "failed" {
 				t.Fatalf("attempt %d: status = %q, want failed (reached MaxAttempts=%d)", attempt, dbTask.Status, MaxAttempts)
 			}
-			if len(events) != attempt+1 {
-				t.Fatalf("attempt %d: %d event(s) after terminal failure, want %d (%d step_started + 1 step_failed)", attempt, len(events), attempt+1, attempt)
-			}
-			if last := events[len(events)-1]; last.Kind != "step_failed" {
+			if last.Kind != "step_failed" {
 				t.Fatalf("terminal event kind = %q, want step_failed", last.Kind)
 			}
 		}
@@ -357,6 +371,71 @@ func TestGatewayRetryThenFailCap(t *testing.T) {
 	task := client.getTask(t)
 	if task != nil {
 		t.Fatalf("get-task after the task reached MaxAttempts and failed = %+v, want nil", task)
+	}
+}
+
+// TestGatewayRetryThenSucceedKeepsTheError is the visibility half of retries:
+// a step that fails once and then succeeds must leave its first attempt's
+// error in the host's timeline (a step_retry event), even though the success
+// clears agent_task.last_error -- and the step_done says which attempt won.
+// This is the shape that hid a script bug failing every Windows host's first
+// attempt: nothing recorded the failure once the retry passed.
+func TestGatewayRetryThenSucceedKeepsTheError(t *testing.T) {
+	adminPool := openAdminPool(t)
+	host := seedDeployedHost(t, adminPool)
+	adminQ := db.New(adminPool)
+	ctx := context.Background()
+
+	if _, err := adminQ.CreateAgentTask(ctx, db.CreateAgentTaskParams{
+		DeployedObjectID: host.deployedObjectID, StepIndex: 0, Command: "execute", Payload: []byte(`{"command":"/bin/flaky"}`),
+	}); err != nil {
+		t.Fatalf("CreateAgentTask: %v", err)
+	}
+
+	addr, ca, _ := startTestGateway(t)
+	client := dialTestAgent(t, addr, ca, host.deployedObjectID.String())
+	defer client.conn.Close()
+	client.heartbeat(t)
+
+	task := client.getTask(t)
+	if task == nil {
+		t.Fatal("get-task returned nil, want step 0")
+	}
+	if resp := client.reportStatus(t, task.ID, "failed", "", "Join-Domain: The specified domain does not exist"); !resp.OK {
+		t.Fatal("report-status(failed) returned OK=false")
+	}
+	task = client.getTask(t)
+	if task == nil {
+		t.Fatal("get-task after a retryable failure returned nil, want step 0 again")
+	}
+	if resp := client.reportStatus(t, task.ID, "done", "joined", ""); !resp.OK {
+		t.Fatal("report-status(done) returned OK=false")
+	}
+
+	events, err := stepEvents(adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID))
+	if err != nil {
+		t.Fatalf("ListEventsByDeployedObject: %v", err)
+	}
+	var kinds []string
+	for _, e := range events {
+		kinds = append(kinds, e.Kind)
+	}
+	want := []string{"step_started", "step_retry", "step_started", "step_done"}
+	if fmt.Sprint(kinds) != fmt.Sprint(want) {
+		t.Fatalf("event kinds = %v, want %v", kinds, want)
+	}
+	var p struct {
+		Detail  string `json:"detail"`
+		Attempt int    `json:"attempt"`
+	}
+	if err := json.Unmarshal(events[1].Payload, &p); err != nil {
+		t.Fatalf("decoding step_retry payload: %v", err)
+	}
+	if p.Detail != "Join-Domain: The specified domain does not exist" || p.Attempt != 1 {
+		t.Fatalf("step_retry payload = %+v, want the first attempt's error at attempt 1", p)
+	}
+	if got, wantMsg := events[3].Message, "step 0 (execute) done on attempt 2: /bin/flaky"; got != wantMsg {
+		t.Fatalf("step_done message = %q, want %q", got, wantMsg)
 	}
 }
 

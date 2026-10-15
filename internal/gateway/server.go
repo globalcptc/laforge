@@ -419,11 +419,20 @@ func (s *Server) handleReportStatus(ctx context.Context, conn net.Conn, payload 
 				// agent_heartbeat's own append-only log already gives
 				// every other check-in.
 				s.recordValidatorResults(ctx, q, taskID, req.ValidatorResults)
-				if status == "failed" {
-					// Only the terminal failure gets a step_failed
-					// event, not every transient retry attempt under
-					// MaxAttempts -- matching the granularity deploy/
-					// destroy lifecycle events already use.
+				if status == "pending" {
+					// A retryable failure under MaxAttempts gets its own
+					// step_retry event carrying the attempt and the error.
+					// Without it a retry was invisible: the step just
+					// re-ran, and a later success wiped last_error, so a
+					// script that failed its first attempt on every host
+					// looked identical to one that never failed.
+					s.logStepEventWith(ctx, q, task, "step_retry", req.Error, map[string]any{
+						"attempt": task.Attempts, "max_attempts": attemptLimit(task),
+					})
+				} else if status == "failed" {
+					// The terminal failure gets step_failed -- the event
+					// that fails the build -- distinct from the
+					// step_retry events for the attempts before it.
 					s.logStepEvent(ctx, q, task, "step_failed", req.Error)
 				} else if status == "ignored" {
 					// A tolerated terminal failure still gets its own event so
@@ -478,6 +487,12 @@ func (s *Server) recordValidatorResults(ctx context.Context, q *db.Queries, task
 // journal being writable, same principle CreateAgentHeartbeat's own
 // doc comment already states for heartbeats.
 func (s *Server) logStepEvent(ctx context.Context, q *db.Queries, task db.AgentTask, kind, detail string) {
+	s.logStepEventWith(ctx, q, task, kind, detail, nil)
+}
+
+// logStepEventWith is logStepEvent with extra structured payload fields
+// alongside detail (step_retry's attempt / max_attempts).
+func (s *Server) logStepEventWith(ctx context.Context, q *db.Queries, task db.AgentTask, kind, detail string, extra map[string]any) {
 	buildID, err := q.GetBuildIDByDeployedObject(ctx, task.DeployedObjectID)
 	if err != nil {
 		log.Printf("gateway: logStepEvent: resolving build for %s: %v", task.DeployedObjectID, err)
@@ -489,6 +504,13 @@ func (s *Server) logStepEvent(ctx context.Context, q *db.Queries, task db.AgentT
 		outcome = "started"
 	case "step_done":
 		outcome = "done"
+		// A step that only succeeded after retrying says so, so a flaky step
+		// stands out even with the step_retry events filtered away.
+		if task.Attempts > 1 {
+			outcome = fmt.Sprintf("done on attempt %d", task.Attempts)
+		}
+	case "step_retry":
+		outcome = fmt.Sprintf("failed on attempt %d/%d, retrying", task.Attempts, attemptLimit(task))
 	case "step_ignored":
 		outcome = "failed but ignored"
 	}
@@ -499,7 +521,11 @@ func (s *Server) logStepEvent(ctx context.Context, q *db.Queries, task db.AgentT
 	if desc := stepDescriptor(task); desc != "" {
 		message += ": " + desc
 	}
-	payloadBody, _ := json.Marshal(map[string]string{"detail": detail})
+	payload := map[string]any{"detail": detail}
+	for k, v := range extra {
+		payload[k] = v
+	}
+	payloadBody, _ := json.Marshal(payload)
 	if err := q.CreateAgentStepEvent(ctx, db.CreateAgentStepEventParams{
 		BuildID: buildID, DeployedObjectID: task.DeployedObjectID, Kind: kind, Message: message, Payload: payloadBody,
 	}); err != nil {
@@ -575,11 +601,16 @@ func failureIsTerminal(task db.AgentTask, req agentproto.ReportStatusRequestPayl
 	if req.IsTimeout() {
 		return true
 	}
-	limit := int32(MaxAttempts)
+	return task.Attempts >= attemptLimit(task)
+}
+
+// attemptLimit is the task's own attempt cap (a script's `retries:`), falling
+// back to MaxAttempts.
+func attemptLimit(task db.AgentTask) int32 {
 	if task.MaxAttempts != nil {
-		limit = *task.MaxAttempts
+		return *task.MaxAttempts
 	}
-	return task.Attempts >= limit
+	return MaxAttempts
 }
 
 // logContext is one object's enrichment identity, cached in Server.logCtx.

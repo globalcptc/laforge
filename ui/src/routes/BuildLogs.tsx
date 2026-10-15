@@ -47,7 +47,7 @@ function downloadText(filename: string, text: string) {
 function toneForKind(kind: string): 'danger' | 'success' | 'warning' | 'info' | 'purple' | 'sky' | 'indigo' | 'ink' | 'neutral' {
   const k = kind.toLowerCase()
   if (k.includes('fail') || k.includes('error') || k.includes('invalid')) return 'danger'
-  if (k.includes('ignored') || k.includes('skip') || k.includes('note') || k.includes('warn')) return 'warning'
+  if (k.includes('ignored') || k.includes('retry') || k.includes('skip') || k.includes('note') || k.includes('warn')) return 'warning'
   if (k.includes('done') || k.includes('finish') || k.includes('complete') || k.includes('succeed') || k.includes('deployed') || k.includes('opened') || k.includes('configured') || k.includes('materialized')) return 'success'
   if (k.startsWith('access')) return 'purple'
   if (k.startsWith('network')) return 'sky'
@@ -60,7 +60,7 @@ function toneForKind(kind: string): 'danger' | 'success' | 'warning' | 'info' | 
 // eventDetail extracts the meaningful extra text an event carries BEYOND its
 // one-line message, so a row is only expandable when there is genuinely more to
 // read. Three payload shapes occur in practice:
-//   - a non-empty `detail` string: step_failed stores the full command error
+//   - a non-empty `detail` string: step_failed/step_retry store the full command error
 //     there (step_started/step_done carry an empty one -> nothing to show);
 //   - a non-empty object: builder.* events carry the whole request (os, size,
 //     ports, cidr, external_name...) -> render it as aligned "key: value" lines,
