@@ -544,7 +544,7 @@ func stepDescriptor(task db.AgentTask) string {
 		Command string   `json:"command"`
 		Args    []string `json:"args"`
 		Path    string   `json:"path"`
-		URL     string   `json:"url"`
+		From    string   `json:"from"`
 	}
 	if len(task.Payload) > 0 {
 		_ = json.Unmarshal(task.Payload, &p)
@@ -563,8 +563,10 @@ func stepDescriptor(task db.AgentTask) string {
 			return baseName(p.Path)
 		}
 	case "download":
-		if p.URL != "" {
-			return p.URL
+		// agentproto's download payload names its source "from" (and its
+		// destination "to"); the URL is what a reader recognizes.
+		if p.From != "" {
+			return p.From
 		}
 	}
 	return ""
