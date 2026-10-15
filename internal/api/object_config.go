@@ -33,7 +33,25 @@ type objectConfig struct {
 	Vars      map[string]string `json:"vars,omitempty"`
 	Tags      map[string]string `json:"tags,omitempty"`
 	DependsOn []string          `json:"depends_on,omitempty"`
-	Findings  []loader.Finding  `json:"findings,omitempty"`
+	// WaitsFor lists the step-level waits on other hosts, e.g.
+	// "bff-dc-01 · domain-ready" -- finer-grained than depends_on.
+	WaitsFor []string         `json:"waits_for,omitempty"`
+	Findings []loader.Finding `json:"findings,omitempty"`
+}
+
+// stepWaitLabels lists each distinct wait_for in steps, in step order.
+func stepWaitLabels(steps []loader.Step) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, st := range steps {
+		for _, w := range st.WaitFor() {
+			if l := w.Label(); !seen[l] {
+				seen[l] = true
+				out = append(out, l)
+			}
+		}
+	}
+	return out
 }
 
 // handleObjectConfig returns one host/container's full authored config from the
@@ -86,6 +104,7 @@ func (s *Server) handleObjectConfig(w http.ResponseWriter, r *http.Request) {
 				cfg.OS, cfg.Size, cfg.Disk = h.OS, h.Size, h.Disk
 				cfg.TCPPorts, cfg.UDPPorts = h.Ports.TCP, h.Ports.UDP
 				cfg.Vars, cfg.Tags, cfg.DependsOn, cfg.Findings = h.Vars, h.Tags, h.DependsOn, h.Findings
+				cfg.WaitsFor = stepWaitLabels(h.Steps)
 				break
 			}
 		}
@@ -97,6 +116,7 @@ func (s *Server) handleObjectConfig(w http.ResponseWriter, r *http.Request) {
 				cfg.TCPPorts, cfg.UDPPorts = c.Ports.TCP, c.Ports.UDP
 				cfg.Env, cfg.Vars, cfg.Tags = c.Env, c.Vars, c.Tags
 				cfg.DependsOn, cfg.Findings = c.DependsOn, c.Findings
+				cfg.WaitsFor = stepWaitLabels(c.Steps)
 				break
 			}
 		}

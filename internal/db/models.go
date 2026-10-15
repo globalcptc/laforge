@@ -74,6 +74,9 @@ type AgentTask struct {
 	StartedAt        pgtype.Timestamptz `json:"started_at"`
 	FinishedAt       pgtype.Timestamptz `json:"finished_at"`
 	MaxAttempts      *int32             `json:"max_attempts"`
+	Milestone        *string            `json:"milestone"`
+	StepScript       *string            `json:"step_script"`
+	WaitFor          json.RawMessage    `json:"wait_for"`
 }
 
 type AttentionDismissal struct {

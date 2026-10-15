@@ -365,6 +365,12 @@ type stepView struct {
 	// does), so the UI can show how long each authored step took.
 	StartedAt  *time.Time `json:"started_at,omitempty"`
 	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	// WaitFor names what this step (the first command of an authored step
+	// with a `wait_for:`) waits on, e.g. "bff-dc-01 · domain-ready"; it and
+	// every step after it stay blocked until all of them are reached.
+	// Milestone is the authored step's own `milestone:` name.
+	WaitFor   []string `json:"wait_for,omitempty"`
+	Milestone string   `json:"milestone,omitempty"`
 }
 
 type validatorView struct {
@@ -413,6 +419,15 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 			LastError: db.StrOrEmpty(t.LastError), Output: db.StrOrEmpty(t.Output), Validators: vs,
 			GroupIndex: int(t.StepIndex),
 		}
+		if len(t.WaitFor) > 0 {
+			var waits []loader.WaitFor
+			if json.Unmarshal(t.WaitFor, &waits) == nil {
+				for _, w := range waits {
+					v.WaitFor = append(v.WaitFor, w.Label())
+				}
+			}
+		}
+		v.Milestone = db.StrOrEmpty(t.Milestone)
 		if t.StartedAt.Valid {
 			v.StartedAt = &t.StartedAt.Time
 		}

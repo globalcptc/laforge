@@ -98,6 +98,13 @@ This note covers the whole 3.0 line.
   (roots first, for efficiency), but a dependent's **steps** don't run until its
   dependencies have fully *finished* configuring — a domain controller must be a working
   DC, not just a booted Windows box.
+- **Step-level waits: `wait_for` and `milestone`.** A step can wait on just the point
+  another host needs to reach, e.g. a workstation's `win-join-domain` waits for the DC's
+  `domain-ready` milestone. The steps before the wait run straight away, and the DC's
+  logging tail no longer holds anyone up. Every reference is checked at push time, a
+  failed target fails the waiting host with a clear reason, and `rebuild: false` keeps a
+  waiter out of its target's rebuild cascade. See
+  [CONFIGURATION.md](../CONFIGURATION.md#waiting-on-another-host-wait_for-and-milestone).
 - **Force-rebuild** a host and all its downstream dependents from the UI, and **clean
   teardown** at the end of an event.
 

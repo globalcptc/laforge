@@ -201,8 +201,8 @@ export function StatusBadge({
   // explanation is already on screen (the legend).
   tooltip?: boolean
   // When set and non-empty on a 'building' object, the badge reads "Dependency
-  // Blocked" instead of "Running Steps": the steps are queued but held until
-  // these dependencies finish.
+  // Blocked" instead of "Running Steps": its next steps are queued but held
+  // until these dependencies (depends_on, or a step's wait_for) are ready.
   blockedOn?: string[] | null
 }) {
   const isBlocked = status === 'building' && !!blockedOn && blockedOn.length > 0
@@ -212,7 +212,7 @@ export function StatusBadge({
   if (isBlocked) {
     style = { icon: Hourglass, tone: 'warning', label: 'Dependency Blocked' }
     label = 'Dependency Blocked'
-    desc = `Waiting on ${blockedOn!.join(', ')} to finish before this host’s steps run.`
+    desc = `Waiting on ${blockedOn!.join(', ')} before this host’s next steps run.`
   }
   const Icon = style.icon
   const animClass = style.anim === 'spin' ? 'animate-spin' : style.anim === 'pulse' ? 'animate-pulse' : undefined

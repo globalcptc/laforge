@@ -147,9 +147,10 @@ export interface DeployedObject {
   power_state?: PowerState
   power_state_checked_at?: string | null
   agent?: AgentHealth
-  // Dependencies this object's steps are waiting on (its `depends_on` that
-  // haven't finished yet). Set while its steps are materialized but blocked;
-  // null/empty once released. Drives the "Dependency Blocked" state.
+  // What this object's next steps are waiting on: its `depends_on` that
+  // haven't finished yet, or -- once it has worked up to a step with a
+  // `wait_for:` -- that gate's targets ("bff-dc-01 · domain-ready"). Null/empty
+  // while it has steps it can run. Drives the "Dependency Blocked" state.
   blocked_on?: string[] | null
 }
 
@@ -370,10 +371,14 @@ export interface StepValidator {
 export interface StepStatus {
   step_index: number
   command: string
-  status: 'pending' | 'leased' | 'done' | 'failed'
+  status: 'pending' | 'leased' | 'done' | 'failed' | 'ignored' | 'blocked'
   attempts: number
   last_error?: string
   output?: string
+  /** Set on the first command of a step with `wait_for:` -- what it (and every step after it) waits on, e.g. "bff-dc-01 · domain-ready". */
+  wait_for?: string[]
+  /** The authored step's own `milestone:` name, which other hosts can wait on. */
+  milestone?: string
   // Which authored step this expanded command belongs to, so the sub-commands
   // of one step (write_file + execute + validate) group under one heading.
   group_index: number
@@ -489,6 +494,8 @@ export interface ObjectConfig {
   vars?: Record<string, string>
   tags?: Record<string, string>
   depends_on?: string[]
+  /** Step-level waits on other hosts (`wait_for:`), e.g. "bff-dc-01 · domain-ready". */
+  waits_for?: string[]
   findings?: ConfigFinding[]
 }
 

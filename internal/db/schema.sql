@@ -88,6 +88,9 @@ CREATE TABLE public.agent_task (
     started_at timestamp with time zone,
     finished_at timestamp with time zone,
     max_attempts integer,
+    milestone text,
+    step_script text,
+    wait_for jsonb,
     CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text, 'blocked'::text])))
 );
 --
@@ -236,12 +239,10 @@ CREATE TABLE public.configured_build (
 --
 -- Name: configured_build_favorite; Type: TABLE; Schema: public; Owner: -
 --
-
 CREATE TABLE public.configured_build_favorite (
-    account_id uuid NOT NULL REFERENCES public.account(id) ON DELETE CASCADE,
-    configured_build_id uuid NOT NULL REFERENCES public.configured_build(id) ON DELETE CASCADE,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (account_id, configured_build_id)
+    account_id uuid NOT NULL,
+    configured_build_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 --
 -- Name: container; Type: TABLE; Schema: public; Owner: -
@@ -750,6 +751,11 @@ ALTER TABLE ONLY public.builder_image_build
 ALTER TABLE ONLY public.builder_metric_sample
     ADD CONSTRAINT builder_metric_sample_pkey PRIMARY KEY (id);
 --
+-- Name: configured_build_favorite configured_build_favorite_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.configured_build_favorite
+    ADD CONSTRAINT configured_build_favorite_pkey PRIMARY KEY (account_id, configured_build_id);
+--
 -- Name: configured_build configured_build_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 ALTER TABLE ONLY public.configured_build
@@ -1007,6 +1013,10 @@ CREATE INDEX agent_session_fingerprint_idx ON public.agent_session USING btree (
 --
 CREATE INDEX agent_task_leasable_idx ON public.agent_task USING btree (deployed_object_id, status, step_index);
 --
+-- Name: agent_task_milestone_idx; Type: INDEX; Schema: public; Owner: -
+--
+CREATE INDEX agent_task_milestone_idx ON public.agent_task USING btree (deployed_object_id) WHERE ((milestone IS NOT NULL) OR (step_script IS NOT NULL));
+--
 -- Name: builder_image_build_by_builder_idx; Type: INDEX; Schema: public; Owner: -
 --
 CREATE INDEX builder_image_build_by_builder_idx ON public.builder_image_build USING btree (builder_config_id, created_at DESC);
@@ -1161,6 +1171,16 @@ ALTER TABLE ONLY public.builder_metric_sample
 --
 ALTER TABLE ONLY public.configured_build
     ADD CONSTRAINT configured_build_current_content_revision_id_fkey FOREIGN KEY (current_content_revision_id) REFERENCES public.content_revision(id);
+--
+-- Name: configured_build_favorite configured_build_favorite_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.configured_build_favorite
+    ADD CONSTRAINT configured_build_favorite_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.account(id) ON DELETE CASCADE;
+--
+-- Name: configured_build_favorite configured_build_favorite_configured_build_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.configured_build_favorite
+    ADD CONSTRAINT configured_build_favorite_configured_build_id_fkey FOREIGN KEY (configured_build_id) REFERENCES public.configured_build(id) ON DELETE CASCADE;
 --
 -- Name: configured_build configured_build_repository_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --

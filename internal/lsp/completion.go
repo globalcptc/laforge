@@ -34,6 +34,11 @@ func Completion(w *Workspace, relPath, text string, pos protocol.Position) []pro
 		return scriptCompletion(content, script, text, pos)
 	}
 	if strings.HasSuffix(relPath, ".yaml") || strings.HasSuffix(relPath, ".yml") {
+		// A value inside a step's wait_for: needs the loaded content (host
+		// names, their milestones), which the schema-only path below lacks.
+		if items, handled := waitForValueCompletion(content, text, pos); handled {
+			return items
+		}
 		return configCompletion(text, pos)
 	}
 	return nil

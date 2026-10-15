@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal } from 'lucide-react'
+import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag } from 'lucide-react'
 import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
@@ -258,13 +258,16 @@ function RenderedSteps({ steps }: { steps: RenderedStep[] }) {
 // with its live status (pending → running → done / failed) and, when a step
 // has validators, whether each passed. This is the execution truth (the
 // real agent_task rows), distinct from the Render tab's rendered script.
-const STEP_STYLE: Record<string, { icon: typeof CircleCheck; tone: 'neutral' | 'info' | 'success' | 'danger'; label: string; spin?: boolean }> = {
+const STEP_STYLE: Record<string, { icon: typeof CircleCheck; tone: 'neutral' | 'info' | 'success' | 'warning' | 'danger'; label: string; spin?: boolean }> = {
   pending: { icon: CircleDashed, tone: 'neutral', label: 'Pending' },
   leased: { icon: Loader, tone: 'info', label: 'Running', spin: true },
   done: { icon: CircleCheck, tone: 'success', label: 'Done' },
   failed: { icon: CircleX, tone: 'danger', label: 'Failed' },
-  // Queued but held until this host's dependencies finish -- visible, not yet run.
-  blocked: { icon: CircleDashed, tone: 'neutral', label: 'Blocked' },
+  // Queued but held until a dependency (depends_on, or this or an earlier
+  // step's wait_for) is ready -- visible, not yet run.
+  blocked: { icon: Hourglass, tone: 'warning', label: 'Dependency Blocked' },
+  // An ignore_errors step that failed: tolerated, the host moved on past it.
+  ignored: { icon: CircleX, tone: 'neutral', label: 'Ignored' },
 }
 
 function StepBadge({ status }: { status: string }) {
@@ -338,11 +341,11 @@ function StepStatusList({ steps }: { steps: StepStatus[] }) {
   // Group consecutive steps that came from the same authored step, so the
   // expanded sub-commands (write file, execute, validate) read as one step
   // under a named heading rather than a flat wall of rows.
-  const groups: { key: number; label?: string; steps: StepStatus[] }[] = []
+  const groups: { key: number; label?: string; steps: StepStatus[]; waitFor?: string[]; milestone?: string }[] = []
   for (const s of steps) {
     const last = groups[groups.length - 1]
     if (last && last.key === s.group_index) last.steps.push(s)
-    else groups.push({ key: s.group_index, label: s.group_label, steps: [s] })
+    else groups.push({ key: s.group_index, label: s.group_label, steps: [s], waitFor: s.wait_for, milestone: s.milestone })
   }
   return (
     <div className="flex flex-col gap-3">
@@ -351,11 +354,31 @@ function StepStatusList({ steps }: { steps: StepStatus[] }) {
           {g.label && (
             <div className="flex items-center gap-2 px-0.5">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">{g.label}</span>
+              {g.milestone && (
+                <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-accent" title="Other hosts can wait_for this milestone">
+                  <Flag size={11} /> {g.milestone}
+                </span>
+              )}
               <span className="h-px flex-1 bg-border" />
               {(() => {
                 const ms = groupDurationMs(g.steps)
                 return ms != null ? <span className="shrink-0 font-mono text-[11px] tabular-nums text-fg-subtle">{formatStepDuration(ms)}</span> : null
               })()}
+            </div>
+          )}
+          {g.waitFor && g.waitFor.length > 0 && (
+            <div
+              className={cn(
+                'flex items-center gap-1.5 px-0.5 text-[11px]',
+                g.steps.some((s) => s.status === 'blocked') ? 'text-warning' : 'text-fg-subtle',
+              )}
+            >
+              <Hourglass size={11} className="shrink-0" />
+              <span>
+                {g.steps.some((s) => s.status === 'blocked') ? 'Waits for' : 'Waited for'}{' '}
+                <span className="font-mono">{g.waitFor.join(', ')}</span>
+                {g.steps.some((s) => s.status === 'blocked') && ' before this and every later step run'}
+              </span>
             </div>
           )}
           {g.steps.map((s) => (
@@ -504,6 +527,7 @@ function InfoTab({
             {config.command && config.command.length > 0 && <InfoRow label="Command" value={config.command.join(' ')} mono />}
             {ports && <InfoRow label="Open ports" value={ports} mono />}
             {config.depends_on && config.depends_on.length > 0 && <InfoRow label="Depends on" value={config.depends_on.join(', ')} mono />}
+            {config.waits_for && config.waits_for.length > 0 && <InfoRow label="Waits for" value={config.waits_for.join(', ')} mono />}
             {envLabel && <InfoRow label="Environment" value={envLabel} mono />}
             {varsLabel && <InfoRow label="Vars" value={varsLabel} mono />}
             {tagsLabel && <InfoRow label="Tags" value={tagsLabel} mono />}

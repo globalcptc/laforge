@@ -23,12 +23,18 @@ import (
 // the box deploys ahead, the operator sees the queued steps and WHY they wait,
 // and the agent still never runs a step against a half-built dependency.
 //
+// A step's own `wait_for:` is the finer-grained version of the same hold: the
+// steps before it are queued 'pending' and run at once, and only that step and
+// the ones after it are 'blocked' until the target host reaches the named
+// milestone/step (see step_gates.go). gates is this team's readiness for those
+// points; nil when the content uses no wait_for.
+//
 // Idempotent across reconcile passes: steps_materialized_at is stamped once per
 // deploy (even with zero authored steps, so the lifecycle advancer can finish a
-// stepless object); after that, each pass only releases the block when the
-// dependencies have finished. A redeploy clears the stamp
+// stepless object); after that, each pass only releases what the dependencies
+// and gates now allow. A redeploy clears the stamp
 // (ResetDeployedObjectForRedeploy) so steps re-materialize for the rebuilt box.
-func materializeStepsIfReady(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, buildID pgtype.UUID, obj db.DeployedObject, teamNum int, asName string, dependsOn []string, placed, finishedDeps, failedDeps map[string]bool, active bool) error {
+func materializeStepsIfReady(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, buildID pgtype.UUID, obj db.DeployedObject, teamNum int, asName string, dependsOn []string, placed, finishedDeps, failedDeps map[string]bool, gates *teamGates, active bool) error {
 	if !active {
 		return nil // planned/terminal build: never queue real agent work
 	}
@@ -64,18 +70,13 @@ func materializeStepsIfReady(ctx context.Context, q *db.Queries, repoRoot string
 	}
 
 	if obj.StepsMaterializedAt.Valid {
-		// Already materialized. The only thing left is to release it the moment
-		// its dependencies have all finished: flip blocked steps to pending and
-		// clear the reason. No-ops once released, so this is cheap every pass.
-		if len(blockedOn) == 0 {
-			if err := q.UnblockAgentTasksForObject(ctx, obj.ID); err != nil {
-				return fmt.Errorf("releasing blocked steps: %w", err)
-			}
-			return q.SetDeployedObjectBlockedOn(ctx, db.SetDeployedObjectBlockedOnParams{ID: obj.ID, BlockedOn: nil})
-		}
-		return nil
+		// Already materialized. The only thing left is to release steps as
+		// their dependencies finish and their gates are satisfied: flip blocked
+		// steps to pending and keep the reason current. No-ops once released,
+		// so this is cheap every pass.
+		return releaseStepGates(ctx, q, obj, blockedOn, gates)
 	}
-	return materializeSteps(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, blockedOn)
+	return materializeSteps(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, blockedOn, gates)
 }
 
 // materializeSteps expands an object's authored steps into agent_task rows and
@@ -84,9 +85,12 @@ func materializeStepsIfReady(ctx context.Context, q *db.Queries, repoRoot string
 // use, so a step queued here and one queued by hand produce byte-identical
 // commands. New rows start at NextStepIndexForHost so they never collide with
 // an ad-hoc/scheduled command that happened to land first.
-func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, buildID pgtype.UUID, obj db.DeployedObject, teamNum int, asName string, blockedOn []string) error {
+func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, buildID pgtype.UUID, obj db.DeployedObject, teamNum int, asName string, blockedOn []string, gates *teamGates) error {
 	// Steps queued while a dependency is still unfinished start 'blocked':
-	// visible and counted as open, but never leased until released.
+	// visible and counted as open, but never leased until released. Without
+	// one, steps start 'pending' up to the first step with a wait_for, and
+	// 'blocked' from there on; releaseStepGates below lets through whatever
+	// the gates already allow.
 	status := "pending"
 	if len(blockedOn) > 0 {
 		status = "blocked"
@@ -112,8 +116,19 @@ func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *lo
 		if err != nil {
 			return fmt.Errorf("encoding payload for step %d: %w", i, err)
 		}
+		var waitFor json.RawMessage
+		if len(cmd.WaitFor) > 0 {
+			status = "blocked" // this gate and every step after it
+			waitFor, _ = json.Marshal(cmd.WaitFor)
+			for _, w := range cmd.WaitFor {
+				if gates != nil && !gates.placed[w.Host] {
+					notes = append(notes, fmt.Sprintf("%s: wait_for %s skipped -- this environment doesn't place %q", asName, w.Label(), w.Host))
+				}
+			}
+		}
 		if _, err := q.CreateAgentTask(ctx, db.CreateAgentTaskParams{
 			DeployedObjectID: obj.ID, StepIndex: next + int32(i), Command: cmd.Command, Payload: payload, IgnoreErrors: cmd.IgnoreErrors, Reboots: cmd.Reboots, Status: status, MaxAttempts: cmd.MaxAttempts,
+			Milestone: optStr(cmd.Milestone), StepScript: optStr(cmd.StepScript), WaitFor: waitFor,
 		}); err != nil {
 			return fmt.Errorf("queuing step %d (%s): %w", i, cmd.Command, err)
 		}
@@ -126,6 +141,12 @@ func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *lo
 	}
 	if err := q.SetDeployedObjectBlockedOn(ctx, db.SetDeployedObjectBlockedOnParams{ID: obj.ID, BlockedOn: blockedJSON}); err != nil {
 		return fmt.Errorf("recording blocked_on: %w", err)
+	}
+	obj.BlockedOn = blockedJSON
+	// Let through whatever the step gates already allow (all of it, when no
+	// step waits), and name the gate the host is held at.
+	if err := releaseStepGates(ctx, q, obj, blockedOn, gates); err != nil {
+		return err
 	}
 	// Stamp even for zero steps: it is what lets the lifecycle advancer finish
 	// a stepless object instead of treating it as still waiting.
@@ -143,4 +164,12 @@ func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *lo
 		})
 	}
 	return nil
+}
+
+// optStr is nil for "", so an unset milestone/script stores as NULL.
+func optStr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

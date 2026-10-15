@@ -407,3 +407,50 @@ func TestExpandStepsCarriesScriptRetries(t *testing.T) {
 		t.Errorf("vuln-sqli sets no retries:, but its execute carried MaxAttempts %d", *cmds[6].MaxAttempts)
 	}
 }
+
+// TestExpandStepsCarriesStepGates proves the step-gate marks ride onto the
+// expanded commands: a step's milestone and script name land on EVERY command
+// it expands into (so another host's wait_for can tell when it is done), and a
+// step's wait_for lands on its FIRST command only (the gate row).
+func TestExpandStepsCarriesStepGates(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatalf("loader.Load: %v", err)
+	}
+	for i := range c.Hosts {
+		if c.Hosts[i].Name == "webserver" {
+			c.Hosts[i].Steps[0]["milestone"] = "base-done"
+			c.Hosts[i].Steps[len(c.Hosts[i].Steps)-1]["wait_for"] = map[string]interface{}{"host": "database", "milestone": "ready"}
+			defer delete(c.Hosts[i].Steps[0], "milestone")
+			defer delete(c.Hosts[i].Steps[len(c.Hosts[i].Steps)-1], "wait_for")
+		}
+	}
+	cmds, _, err := ExpandSteps("../../examples/lm-test", c, "lm-test", "web01", 1)
+	if err != nil {
+		t.Fatalf("ExpandSteps: %v", err)
+	}
+	// cmds[0] is the admin-password backstop (no authored step); base is 1-2.
+	if cmds[0].Milestone != "" || cmds[0].WaitFor != nil {
+		t.Errorf("backstop carries gate marks: %+v", cmds[0])
+	}
+	for _, k := range []int{1, 2} {
+		if cmds[k].Milestone != "base-done" || cmds[k].StepScript != "base" {
+			t.Errorf("cmds[%d] milestone/script = %q/%q, want base-done/base", k, cmds[k].Milestone, cmds[k].StepScript)
+		}
+	}
+	lastGroup := cmds[len(cmds)-1].Group
+	first := -1
+	for k := range cmds {
+		if cmds[k].Group == lastGroup {
+			if first < 0 {
+				first = k
+			}
+			if k != first && cmds[k].WaitFor != nil {
+				t.Errorf("cmds[%d] (not the step's first command) carries wait_for", k)
+			}
+		}
+	}
+	if w := cmds[first].WaitFor; len(w) != 1 || w[0].Host != "database" || w[0].Milestone != "ready" {
+		t.Errorf("gated step's first command wait_for = %+v", w)
+	}
+}

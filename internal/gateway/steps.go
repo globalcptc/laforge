@@ -78,6 +78,15 @@ type PlannedCommand struct {
 	// MaxAttempts is the script's `retries:` override as an attempt cap
 	// (retries + 1), carried onto the agent_task. nil = the gateway default.
 	MaxAttempts *int32
+	// Milestone and StepScript name the authored step this command came from --
+	// its `milestone:` and, for a `script:` step, the script -- on every command
+	// it expanded into, so another host's wait_for can tell when the step is
+	// done. WaitFor is the step's own `wait_for:`, set only on its FIRST
+	// command: that row is the gate the rest of the host's steps queue behind.
+	// ExpandSteps sets all three; ExpandOneStep leaves them zero.
+	Milestone  string
+	StepScript string
+	WaitFor    []loader.WaitFor
 }
 
 // scriptMaxAttempts converts a script's `retries:` into an attempt cap.
@@ -221,9 +230,15 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		// Stamp every command this authored step expanded into with the same
 		// group, so its sub-commands stay visually together under one heading.
 		label := StepGroupLabel(step)
+		script, _ := step["script"].(string)
 		for k := range cmds {
 			cmds[k].Group = first + i
 			cmds[k].GroupLabel = label
+			cmds[k].Milestone = step.Milestone()
+			cmds[k].StepScript = script
+		}
+		if len(cmds) > 0 {
+			cmds[0].WaitFor = step.WaitFor()
 		}
 		out = append(out, cmds...)
 		notes = append(notes, ns...)

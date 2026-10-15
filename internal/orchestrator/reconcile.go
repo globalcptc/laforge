@@ -107,6 +107,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 	// lease queries serve higher priorities first, across every team, and the
 	// Incus builder's per-host admission queue does the same.
 	placements := orderedPlacements(env, containerNames, c.DependencyDepth(), c.DependentCounts())
+	usesWaitFor := contentUsesWaitFor(c)
 
 	for teamNum := 1; teamNum <= env.Teams; teamNum++ {
 		team, err := q.EnsureTeam(ctx, db.EnsureTeamParams{BuildID: buildID, TeamNumber: int32(teamNum)})
@@ -123,6 +124,14 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 		if err != nil {
 			return fmt.Errorf("team %d readiness: %w", teamNum, err)
 		}
+		// Step-level wait_for readiness (milestones/steps reached per copy),
+		// read only when some step actually waits.
+		var gates *teamGates
+		if usesWaitFor && materializeActive {
+			if gates, err = loadTeamGates(ctx, q, team.ID, placed, finishedDeps, failedDeps); err != nil {
+				return fmt.Errorf("team %d step gates: %w", teamNum, err)
+			}
+		}
 
 		desired := make(map[string]bool)
 
@@ -135,7 +144,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 
 		for _, pl := range placements {
 			desired[pl.kind+"/"+pl.as] = true
-			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, pl.priority, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps, networkUp, networkFailed); err != nil {
+			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, pl.priority, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps, gates, networkUp, networkFailed); err != nil {
 				return fmt.Errorf("team %d, %s %q: %w", teamNum, pl.kind, pl.as, err)
 			}
 		}
@@ -324,7 +333,7 @@ func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, tea
 	return err
 }
 
-func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, priority int, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps, networkUp, networkFailed map[string]bool) error {
+func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, priority int, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool, gates *teamGates, networkUp, networkFailed map[string]bool) error {
 	rctx, err := render.Resolve(c, envName, asName, teamNum)
 	if err != nil {
 		return fmt.Errorf("resolving: %w", err)
@@ -411,7 +420,7 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	// status and steps_materialized_at are current via EnsureDeployedObject's
 	// RETURNING), so this converges over successive passes as dependencies
 	// finish.
-	if err := materializeStepsIfReady(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, dependsOn, placed, finishedDeps, failedDeps, materializeActive); err != nil {
+	if err := materializeStepsIfReady(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, dependsOn, placed, finishedDeps, failedDeps, gates, materializeActive); err != nil {
 		return fmt.Errorf("materializing steps: %w", err)
 	}
 	return nil

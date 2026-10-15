@@ -39,11 +39,96 @@ type Step map[string]interface{}
 // exists by the time a Step reaches here.
 func (s Step) ActionKey() string {
 	for k := range s {
-		if k != "validate" && k != "when" {
+		if !stepModifierKeys[k] {
 			return k
 		}
 	}
 	return ""
+}
+
+// stepModifierKeys are the keys a step or schedule entry may carry beside its
+// one action: validate (checks after it), when (a schedule entry's timing),
+// wait_for (hold this step until another host is ready) and milestone (a name
+// other hosts' wait_for can point at). None of them is ever an action.
+var stepModifierKeys = map[string]bool{"validate": true, "when": true, "wait_for": true, "milestone": true}
+
+// WaitFor is one entry of a step's `wait_for:` -- hold this step, and every
+// step after it, until Host (the same team's copy, every copy of it) reaches
+// Milestone, or has run the script step named Step, or -- with neither -- has
+// finished all of its steps.
+type WaitFor struct {
+	Host      string `json:"host"`
+	Milestone string `json:"milestone,omitempty"`
+	Step      string `json:"step,omitempty"`
+	// Rebuild, when false, keeps this host out of the target's rebuild
+	// cascade. Nil means the default, true.
+	Rebuild *bool `json:"rebuild,omitempty"`
+}
+
+// RebuildsWithTarget reports whether rebuilding Host (with include dependents)
+// also rebuilds the host that waits on it -- `rebuild:` defaults to true.
+func (w WaitFor) RebuildsWithTarget() bool {
+	return w.Rebuild == nil || *w.Rebuild
+}
+
+// Label is the human name of what this wait is for, as the UI's Dependency
+// Blocked note shows it: "bff-dc-01 · domain-ready", "bff-dc-01 · step
+// win-domain-populate", or a bare "bff-dc-01" for a whole-host wait.
+func (w WaitFor) Label() string {
+	switch {
+	case w.Milestone != "":
+		return w.Host + " · " + w.Milestone
+	case w.Step != "":
+		return w.Host + " · step " + w.Step
+	default:
+		return w.Host
+	}
+}
+
+// Milestone is the step's `milestone:` name, or "" when it declares none.
+func (s Step) Milestone() string {
+	m, _ := s["milestone"].(string)
+	return m
+}
+
+// WaitFor decodes the step's `wait_for:` -- a single mapping or a list of
+// them -- into its entries. A step without one returns nil. Malformed entries
+// (the schema rejects them first) are skipped rather than guessed at.
+func (s Step) WaitFor() []WaitFor {
+	raw, ok := s["wait_for"]
+	if !ok || raw == nil {
+		return nil
+	}
+	var items []interface{}
+	if list, ok := raw.([]interface{}); ok {
+		items = list
+	} else {
+		items = []interface{}{raw}
+	}
+	var out []WaitFor
+	for _, it := range items {
+		var m map[string]interface{}
+		switch x := it.(type) {
+		case map[string]interface{}:
+			m = x
+		case Step:
+			m = map[string]interface{}(x)
+		default:
+			continue
+		}
+		w := WaitFor{}
+		w.Host, _ = m["host"].(string)
+		w.Milestone, _ = m["milestone"].(string)
+		w.Step, _ = m["step"].(string)
+		if b, ok := m["rebuild"].(bool); ok {
+			w.Rebuild = &b
+		}
+		if w.Host == "" {
+			continue
+		}
+		out = append(out, w)
+	}
+	return out
 }
 
 // Every SourceFile below is set by the loader after decode (see loader.go)

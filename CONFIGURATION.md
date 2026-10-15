@@ -12,6 +12,7 @@ autocomplete and hover documentation while you type, plus live validation.
 - [Your first environment (the simplest thing that works)](#your-first-environment)
 - [Environment](#environment) · [Network](#network) · [Host](#host) · [Container](#container) · [Script](#script) · [People (CSV)](#people-csv)
 - [Steps: the action kinds](#steps-the-action-kinds)
+- [Waiting on another host: `wait_for` and `milestone`](#waiting-on-another-host-wait_for-and-milestone)
 - [Validators](#validators)
 - [Schedules: natural-language timing](#schedules)
 - [Templating: what's in scope in a script](#templating)
@@ -326,7 +327,7 @@ host:
 | `disk` | Disk size in GB. |
 | `ports` | TCP/UDP ports this host listens on — the ingress firewall allowlist (see [Ports](#ports)). |
 | `public` | (Optional) The subset of `ports` to expose **outside** the competition network (e.g. RDP for direct access). A property of the host, so it lives here — not on the topology placement. Every port listed must also appear in `ports`. Omit, or set to `false`, to keep the host private. The builder realizes it (a public IP, or a port-NAT on a shared external IP) and the assigned address:port shows in the build's external access view (`laforge access`). |
-| `depends_on` | Other hosts, containers, or networks that must be up before this host builds — e.g. a workstation waiting on its domain controller. Names the **object**, not one copy: every copy of that object in the same team is waited on. This host's own network is always waited on implicitly. |
+| `depends_on` | Other hosts, containers, or networks that must be **finished** before **any** of this host's steps run. The box still deploys right away, and its steps show as *Dependency Blocked* until every dependency has completed all of its own steps. Names the **object**, not one copy: every copy of that object in the same team is waited on. This host's own network is always waited on implicitly. To wait on just part of another host, or only from part-way through this host's steps, use a step's [`wait_for`](#waiting-on-another-host-wait_for-and-milestone) instead. |
 | `steps` | The ordered setup steps, run once after provisioning (see [Steps](#steps-the-action-kinds)). |
 | `schedule` | Recurring or anchor-relative triggers, independent of `steps:` order — each fires on its own clock (see [Schedules](#schedules)). |
 | `vars` | Key/value data for this host's scripts, on top of what cascades from its environment and network. |
@@ -557,7 +558,206 @@ recurring work, use [`schedule:`](#schedules) instead.)
 | `service` | Starts, stops, or manages a systemd (Linux) or Windows service. |
 | `reboot` | Reboots the host. The agent reports success first, then re-registers once it's back. Takes an optional `delay:` (a duration string like `"30s"`) to wait before rebooting; `reboot: {}` reboots immediately. |
 
-Any step can carry a `validate:` block that runs after it (see below).
+Any step can carry a `validate:` block that runs after it (see below). A step can also
+carry a [`wait_for:`](#waiting-on-another-host-wait_for-and-milestone), which holds it until
+another host is ready, and a [`milestone:`](#waiting-on-another-host-wait_for-and-milestone)
+name that other hosts can wait on.
+
+---
+
+## Waiting on another host: `wait_for` and `milestone`
+
+`depends_on` is all-or-nothing: **none** of a host's steps run until the dependency has
+finished **all** of its steps. That is often far more waiting than you need. A workstation
+can install software, set its hostname and reboot without a domain controller. It only
+needs the DC when it joins the domain. Even then, it needs a DC whose domain and DNS are
+up, not a finished DC. That point usually comes well before the DC finishes setting up
+logging and monitoring.
+
+Two step fields let you say exactly that:
+
+- **`milestone:`** names a point in a host's steps that other hosts can wait on.
+- **`wait_for:`** holds a step, and every step after it, until another host reaches a
+  milestone, a step, or the end of its steps.
+
+### Example: a workstation that joins the domain
+
+The domain controller marks the point where the domain is ready to join:
+
+```yaml
+host:
+  name: bff-dc-01
+  os: win2019
+  steps:
+    - script: winbase
+    - script: win-domain-create
+    - reboot: {}
+    - script: win-dns-server-configure
+    - script: win-domain-populate
+      milestone: domain-ready       # domain, DNS and the user roster are in place
+    - script: win-sysmon-install    # logging and monitoring: nobody waits on these
+    - script: win-splunk-forwarder
+```
+
+The workstation runs everything it can on its own, then waits just before it joins:
+
+```yaml
+host:
+  name: bff-ws-2019
+  os: win2019
+  # no depends_on: the wait_for below says exactly where the DC is needed
+  steps:
+    - script: win-time-configure    # these run as soon as the box is up
+    - script: winbase
+    - script: prepare-windows
+    - script: win-reboot-record
+    - reboot: {}
+    - script: win-reboot-check
+    - script: win-join-domain       # this step and every step after it wait
+      wait_for:
+        host: bff-dc-01
+        milestone: domain-ready
+    - script: win-reboot-record
+    - reboot: {}
+    - script: win-domain-member-check
+```
+
+Here is how the two hosts proceed:
+
+1. Both boxes deploy at the same time.
+2. While the DC is still building its domain, the workstation runs `win-time-configure`
+   through `win-reboot-check`.
+3. When the workstation reaches `win-join-domain`, it stops. In the UI's step list, that
+   step and every step after it show as **Dependency Blocked**, under a note that reads
+   *Waits for bff-dc-01 · domain-ready*. The host's own status changes from *Running
+   Steps* to **Dependency Blocked** once it has nothing left to run before the wait.
+4. As soon as `win-domain-populate` and its `validate:` checks complete on **the same
+   team's** DC, the workstation's steps are released and it joins the domain.
+5. Meanwhile the DC carries on with Sysmon and Splunk. Nobody waits on those.
+
+### Two ways to wait
+
+**Work up to a step, then wait.** Put `wait_for` on the first step that needs the other host.
+Every step before it runs straight away. The wait only begins when the host reaches that
+step. The workstation above works this way.
+
+**Hold a host until another host is finished.** Put `wait_for` on the step you want to hold,
+and give only the `host`. That step waits until the other host has finished **all** of its
+steps. This is like `depends_on`, except that the steps before it still run straight away:
+
+```yaml
+steps:
+  - script: install-tools           # runs straight away
+  - script: configure-dns-client    # waits until every step on bff-dc-01 is done
+    wait_for:
+      host: bff-dc-01
+```
+
+To hold **all** of a host's steps until another host finishes, use `depends_on`, or put
+`wait_for` on the first step.
+
+### `wait_for` fields
+
+```yaml
+wait_for:
+  host: bff-dc-01           # required
+  milestone: domain-ready   # optional; use milestone OR step, never both
+  rebuild: true             # optional, default true
+```
+
+| Field | What it is |
+| --- | --- |
+| `host` | The host or container to wait on, by its object `name` (the same name `depends_on` uses). It always means the copy in **the same team**. If the environment places that object more than once per team, every copy must reach the point. |
+| `milestone` | Wait until that host completes the step marked with this `milestone:` name. This is the recommended form. |
+| `step` | Wait until that host has run the `script:` step with this script name, e.g. `step: win-domain-populate`. The script must appear exactly once in that host's steps. If it appears more than once, mark the one you mean with a `milestone:` and use that instead. |
+| `rebuild` | Whether rebuilding the host you wait on (with *include dependents*) also rebuilds **this** host. Defaults to `true`. Set it to `false` when this host is still fine after the target is rebuilt, e.g. it only copied a file or checked DNS once. See [Rebuilds and `wait_for`](#rebuilds-and-wait_for). |
+
+If you give neither `milestone` nor `step`, the wait lasts until that host has finished
+**all** of its steps.
+
+A step can wait on several hosts at once. Give `wait_for` a list. The step is released only
+when **every** entry is satisfied:
+
+```yaml
+- script: app-configure
+  wait_for:
+    - host: db-01
+      milestone: schema-loaded
+    - host: bff-dc-01
+      milestone: domain-ready
+```
+
+`wait_for` works on hosts and containers, in any combination. A container can wait on a
+host, and a host can wait on a container. It goes on `steps:` entries only. A
+[`schedule:`](#schedules) entry runs on its own clock, so it can't wait.
+
+### `milestone` fields
+
+`milestone:` is a short name you can put on any step. It may contain letters, digits, `-`
+and `_`. The milestone is reached when that step and its `validate:` checks complete. If
+the step is an `ignore_errors` script that fails, the milestone still counts as reached,
+because the host moves on past it.
+
+Milestone names must be unique within a host. Different hosts may use the same name (for
+example, `ready`). The `host` in `wait_for` says which host you mean.
+
+Prefer `milestone` over `step`. A milestone says what the point **means** ("domain-ready").
+The DC's author can then reorder, rename or split scripts without breaking every host that
+waits on it, because the milestone moves with whichever step finishes the job.
+
+### When the host you wait on fails
+
+Sometimes the target can never reach the point you are waiting for:
+
+- the step you wait on fails for good (after its retries, and without `ignore_errors`), or
+- the host you wait on fails to build.
+
+When that happens, the waiting host is marked **failed** with a reason such as `waiting on
+bff-dc-01 · domain-ready, which failed`. This is the same way a failed `depends_on`
+dependency is reported. Steps that already ran stay done. Fix and rebuild the target, then
+rebuild the waiting host.
+
+### Rebuilds and `wait_for`
+
+When you rebuild a host with **include dependents**, LaForge also rebuilds every host that
+depends on it. By default, that includes every host that has a `wait_for` on it. Set
+`rebuild: false` on a `wait_for` to leave the waiting host alone.
+
+Waiting hosts handle a target rebuild like this:
+
+- A host that is still **blocked** on the target keeps waiting. It now waits for the
+  rebuilt target to reach the milestone again.
+- A host that has already passed its wait is not re-run unless it is rebuilt too.
+
+### Checks LaForge runs on your content
+
+`laforge check`, the VS Code extension and every push report these as errors:
+
+- `host` names an object that doesn't exist.
+- `milestone` isn't declared on any step of that host.
+- `step` isn't a `script:` step of that host, or it appears more than once.
+- Both `milestone` and `step` are set.
+- A host waits on itself.
+- Two steps on one host declare the same milestone.
+- Waits form a loop (for example, A waits on B while B waits on A), whether through
+  `wait_for`, `depends_on` or a mix of the two.
+- `wait_for` appears on a `schedule:` entry.
+
+If the environment doesn't place the target in the team at all, LaForge skips that
+`wait_for` at build time and notes it in the build's events, the same as `depends_on`.
+
+### `wait_for` vs `depends_on`
+
+| | `depends_on` | `wait_for` |
+| --- | --- | --- |
+| Where it goes | On the host | On one step |
+| What waits | All of this host's steps | That step and every step after it |
+| Waits until | The other host finishes all its steps | A milestone, a step, or all its steps |
+| Box deploy | Not delayed. Dependencies are deployed first. | Not delayed. Targets are deployed first. |
+| Rebuild cascade | Always | Unless `rebuild: false` |
+
+You can use both on one host. Note that a `depends_on` already holds every step of the
+host, so a `wait_for` on the same target adds nothing.
 
 ---
 

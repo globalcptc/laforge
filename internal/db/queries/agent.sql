@@ -99,13 +99,16 @@ WHERE team.build_id = $1;
 -- UnblockAgentTasksForObject once the dependency finishes. ad_hoc defaults false
 -- (strict ordered, failure-blocking lane); operator commands use
 -- CreateAdHocAgentTask instead. max_attempts is the script's `retries:`
--- override (retries + 1); NULL leaves the gateway default.
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status, max_attempts)
+-- override (retries + 1); NULL leaves the gateway default. milestone/
+-- step_script name the authored step the row came from (what another
+-- host's wait_for can target); wait_for is set only on the first row of a
+-- step that itself waits (see migration 00068).
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status, max_attempts, milestone, step_script, wait_for)
 VALUES (
   sqlc.arg(deployed_object_id), sqlc.arg(step_index), sqlc.arg(command),
   sqlc.arg(payload), sqlc.arg(ignore_errors), sqlc.arg(reboots),
   COALESCE(NULLIF(sqlc.arg(status)::text, ''), 'pending'),
-  sqlc.narg(max_attempts)
+  sqlc.narg(max_attempts), sqlc.narg(milestone), sqlc.narg(step_script), sqlc.narg(wait_for)
 )
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
 RETURNING *;
@@ -157,6 +160,43 @@ WHERE r.id = nxt.reboot_id
 -- 'blocked' task to 'pending' so the agent can lease them in order.
 UPDATE agent_task SET status = 'pending', updated_at = now()
 WHERE deployed_object_id = $1 AND status = 'blocked';
+
+-- name: UnblockAgentTasksBelowIndex :exec
+-- Release an object's blocked steps that sit below its first still-unsatisfied
+-- step-level gate (wait_for): the gate row and everything after it stay
+-- blocked; the steps before it become leasable in order.
+UPDATE agent_task SET status = 'pending', updated_at = now()
+WHERE deployed_object_id = $1 AND status = 'blocked' AND step_index < sqlc.arg(below)::integer;
+
+-- name: ListBlockedStepGatesForObject :many
+-- The step-level gates an object is still held at, in step order: each row is
+-- the first command of an authored step with a wait_for, not yet released.
+SELECT step_index, wait_for FROM agent_task
+WHERE deployed_object_id = $1 AND status = 'blocked' AND wait_for IS NOT NULL
+ORDER BY step_index;
+
+-- name: CountOpenAuthoredStepsBelowIndex :one
+-- How many authored steps before a gate are still unfinished -- zero means the
+-- host has worked up to the gate and is now actually waiting on it.
+SELECT count(*)::bigint FROM agent_task
+WHERE deployed_object_id = $1 AND NOT ad_hoc AND step_index < sqlc.arg(below)::integer
+  AND status NOT IN ('done', 'ignored');
+
+-- name: ListStepGateProgressByTeam :many
+-- Where every host/container in a team stands on each of its milestone/script
+-- points: per deployed object and point, how many of its rows exist and how
+-- many are reached (done/ignored) or failed. A wait_for on the same team is
+-- satisfied once every copy of its target has all rows of the point reached.
+SELECT deployed_object.id AS deployed_object_id, deployed_object.object_name,
+       agent_task.milestone, agent_task.step_script,
+       count(*)::bigint AS total,
+       count(*) FILTER (WHERE agent_task.status IN ('done', 'ignored'))::bigint AS reached,
+       count(*) FILTER (WHERE agent_task.status = 'failed')::bigint AS failed
+FROM agent_task
+JOIN deployed_object ON deployed_object.id = agent_task.deployed_object_id
+WHERE deployed_object.team_id = $1 AND NOT agent_task.ad_hoc
+  AND (agent_task.milestone IS NOT NULL OR agent_task.step_script IS NOT NULL)
+GROUP BY deployed_object.id, deployed_object.object_name, agent_task.milestone, agent_task.step_script;
 
 -- name: CreateAdHocAgentTask :one
 -- Operator-dispatched tasks (immediate `run` and scheduled dispatch). ad_hoc =

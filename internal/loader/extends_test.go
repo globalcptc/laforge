@@ -230,7 +230,7 @@ func TestDependsOnCycleIsCaught(t *testing.T) {
 		"hosts/b.yaml": "host:\n  name: b\n  os: ubuntu22\n  size: small\n  disk: 20\n  depends_on: [a]\n",
 	})
 	c, _ := loader.Load(root)
-	if !containsSubstring(errorMessages(c), "depends_on cycle") {
+	if !containsSubstring(errorMessages(c), "depends_on/wait_for cycle") {
 		t.Fatalf("expected a depends_on cycle error, got: %v", errorMessages(c))
 	}
 }
