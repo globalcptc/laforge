@@ -364,44 +364,50 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
         // keep flowing at the poll cadence -- including while a task runs.
         flush_logs(&mut tls, logq)?;
 
-        // If a task is running on the worker thread, poll (don't block) for its
-        // result. Taking the Result out through `map` drops the borrow of
-        // `inflight` before the match, so the arms can clear it.
-        match inflight.as_ref().map(|rx| rx.try_recv()) {
-            Some(Ok(report)) => {
-                inflight = None;
-                dlog!("laforge-agent: task {} -> {}", report.task_id, report.status);
-                // On a non-success, log the error so a failing step can be
-                // debugged from the host's own log. Truncated, and the error
-                // string only (not full stdout, which the server already stores
-                // and which is likelier to carry sensitive command output).
-                if report.status != "done" && !report.error.is_empty() {
-                    dlog!("laforge-agent: task {} error: {}", report.task_id, truncate(&report.error, 800));
+        // If a task is running on the worker thread, WAIT for its result -- but
+        // bounded by one poll interval. recv_timeout wakes the instant the worker
+        // sends (so a trivial command reports in ~its real runtime, not a whole
+        // ~15-20s poll tick later), yet a genuinely long command still times out
+        // after one interval and loops back so we keep heartbeating at the poll
+        // cadence. This replaced a try_recv + full sleep(next_poll_ms), which made
+        // EVERY execute pay a dead ~15-20s before its (seconds-old) result was even
+        // noticed -- ~9-12 min of pure wait on a 40-execute host. Borrowing `rx`
+        // keeps `inflight` owned here; the arms clear it.
+        if let Some(rx) = inflight.as_ref() {
+            match rx.recv_timeout(Duration::from_millis(hb.next_poll_ms)) {
+                Ok(report) => {
+                    inflight = None;
+                    dlog!("laforge-agent: task {} -> {}", report.task_id, report.status);
+                    // On a non-success, log the error so a failing step can be
+                    // debugged from the host's own log. Truncated, and the error
+                    // string only (not full stdout, which the server already stores
+                    // and which is likelier to carry sensitive command output).
+                    if report.status != "done" && !report.error.is_empty() {
+                        dlog!("laforge-agent: task {} error: {}", report.task_id, truncate(&report.error, 800));
+                    }
+                    let body = serde_json::to_vec(&report)
+                        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding report-status: {e}")))?;
+                    protocol::write_frame(&mut tls, MessageType::ReportStatusRequest, &body)?;
+                    let (mt, _body) = protocol::read_frame(&mut tls)?;
+                    expect(mt, MessageType::ReportStatusResponse)?;
+                    // Known work may be queued -- poll again without waiting.
+                    continue;
                 }
-                let body = serde_json::to_vec(&report)
-                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding report-status: {e}")))?;
-                protocol::write_frame(&mut tls, MessageType::ReportStatusRequest, &body)?;
-                let (mt, _body) = protocol::read_frame(&mut tls)?;
-                expect(mt, MessageType::ReportStatusResponse)?;
-                // Known work may be queued -- poll again without waiting.
-                continue;
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    // Task still running: recv_timeout already waited a full poll
+                    // interval, so loop straight back to heartbeat (no extra sleep)
+                    // and don't ask for another -- one in flight at a time.
+                    continue;
+                }
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    // The worker ended without sending a result (a panic in command
+                    // execution -- not expected). Drop it; the gateway's lease
+                    // expiry re-leases the task.
+                    inflight = None;
+                    dlog!("laforge-agent: task worker ended with no result; it will be re-leased on lease expiry");
+                    continue;
+                }
             }
-            Some(Err(mpsc::TryRecvError::Empty)) => {
-                // Task still running: keep heartbeating at the poll cadence, but
-                // don't ask for another (one in flight at a time).
-                std::thread::sleep(Duration::from_millis(hb.next_poll_ms));
-                continue;
-            }
-            Some(Err(mpsc::TryRecvError::Disconnected)) => {
-                // The worker ended without sending a result (a panic in command
-                // execution -- not expected). Drop it; the gateway's lease expiry
-                // re-leases the task.
-                inflight = None;
-                dlog!("laforge-agent: task worker ended with no result; it will be re-leased on lease expiry");
-                std::thread::sleep(Duration::from_millis(hb.next_poll_ms));
-                continue;
-            }
-            None => {} // nothing in flight -- fall through and ask for work
         }
 
         protocol::write_frame(&mut tls, MessageType::GetTaskRequest, &[])?;

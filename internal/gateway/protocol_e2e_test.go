@@ -230,15 +230,15 @@ func TestGatewayEndToEnd(t *testing.T) {
 	if len(events) != 2 {
 		t.Fatalf("events after step 0 done = %d, want 2 (step_started + step_done)", len(events))
 	}
-	if events[0].Kind != "step_started" || events[0].Message != "step 0 (write_file) started" {
-		t.Fatalf("event[0] = %q/%q, want step_started/%q", events[0].Kind, events[0].Message, "step 0 (write_file) started")
+	if events[0].Kind != "step_started" || events[0].Message != "step 0 (write_file) started: a" {
+		t.Fatalf("event[0] = %q/%q, want step_started/%q", events[0].Kind, events[0].Message, "step 0 (write_file) started: a")
 	}
 	done := events[1]
 	if done.Kind != "step_done" {
 		t.Fatalf("event kind = %q, want step_done", done.Kind)
 	}
-	if done.Message != "step 0 (write_file) done" {
-		t.Fatalf("event message = %q, want %q", done.Message, "step 0 (write_file) done")
+	if done.Message != "step 0 (write_file) done: a" {
+		t.Fatalf("event message = %q, want %q", done.Message, "step 0 (write_file) done: a")
 	}
 	if done.BuildID != host.buildID {
 		t.Fatalf("event build_id = %v, want %v", done.BuildID, host.buildID)
@@ -272,11 +272,11 @@ func TestGatewayEndToEnd(t *testing.T) {
 	if len(events) != 4 {
 		t.Fatalf("events after both steps done = %d, want 4 (start+done per step)", len(events))
 	}
-	if events[2].Message != "step 1 (execute) started" {
-		t.Fatalf("event[2] message = %q, want %q", events[2].Message, "step 1 (execute) started")
+	if events[2].Message != "step 1 (execute) started: a" {
+		t.Fatalf("event[2] message = %q, want %q", events[2].Message, "step 1 (execute) started: a")
 	}
-	if events[3].Message != "step 1 (execute) done" {
-		t.Fatalf("event[3] message = %q, want %q", events[3].Message, "step 1 (execute) done")
+	if events[3].Message != "step 1 (execute) done: a" {
+		t.Fatalf("event[3] message = %q, want %q", events[3].Message, "step 1 (execute) done: a")
 	}
 
 	task4 := client.getTask(t)

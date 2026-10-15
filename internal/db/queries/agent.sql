@@ -106,6 +106,35 @@ UPDATE agent_task SET status = 'done', last_error = NULL, updated_at = now()
 WHERE deployed_object_id = $1 AND reboots = true AND status = 'leased'
 RETURNING *;
 
+-- name: StampRebootDurationsForHost :exec
+-- Make a reboot step's duration cover the WHOLE reboot. The agent acks a reboot
+-- 'done' BEFORE rebooting (durable completion -- see CompleteLeasedRebootsTaskForHost
+-- and the agent's reboot branch), so its finished_at lands at the ack (~seconds)
+-- and the real downtime (shutdown + boot + agent reconnect) hides in the gap
+-- before the next step is leased. Pull that gap in: set the reboot step's
+-- finished_at to the next step that actually started (its started_at IS the
+-- reconnect moment, since steps lease strictly in order and the next one can't
+-- start until the agent is back). Keyed on a fixed timestamp, not now(), so it's
+-- idempotent and converges -- safe to run on every get-task. Only ever EXTENDS
+-- (finished_at < next start), never shrinks, and a reboot with no later started
+-- step (last step, or next step blocked/failed) keeps its ack-time finish.
+UPDATE agent_task r
+SET finished_at = nxt.started_at, updated_at = now()
+FROM (
+  SELECT r2.id AS reboot_id,
+         (SELECT n.started_at FROM agent_task n
+            WHERE n.deployed_object_id = r2.deployed_object_id
+              AND n.step_index > r2.step_index
+              AND n.started_at IS NOT NULL
+            ORDER BY n.step_index
+            LIMIT 1) AS started_at
+  FROM agent_task r2
+  WHERE r2.deployed_object_id = $1 AND r2.reboots = true AND r2.status = 'done'
+) nxt
+WHERE r.id = nxt.reboot_id
+  AND nxt.started_at IS NOT NULL
+  AND (r.finished_at IS NULL OR r.finished_at < nxt.started_at);
+
 -- name: UnblockAgentTasksForObject :exec
 -- Release an object's steps once its dependencies have finished: flip every
 -- 'blocked' task to 'pending' so the agent can lease them in order.

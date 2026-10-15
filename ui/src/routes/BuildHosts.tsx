@@ -2,7 +2,7 @@ import { useParams } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Box, CalendarClock, CheckCircle2, ChevronDown, Container, Hammer, Info, Network, Play, Power, Radar, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, useDetectDrift, usePowerAction, useRebuild, useTopology } from '../api/hooks'
-import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel } from '../components/StatusBadge'
+import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
 import { ObjectLogPanel } from '../components/ObjectLogPanel'
 import { TaskActionFields, buildTaskPayload, taskFormValid } from '../components/TaskActionForm'
@@ -31,6 +31,48 @@ function KindBadge({ kind }: { kind: string }) {
     <Badge tone="neutral" className="rounded-full py-0.5">
       <Icon size={11} /> {m.label}
     </Badge>
+  )
+}
+
+// Canonical order for the team-row status bars -- the same lifecycle order
+// (and, via statusFillClass, the same colours) the Overview charts and host
+// badges use, with any unexpected status appended so nothing is dropped.
+const TEAM_BAR_ORDER: string[] = [...LIFECYCLE_STATES, 'destroyed', 'planned']
+
+// TeamNetworkBars renders one compact stacked status bar PER NETWORK on a team
+// header row: each network's hosts/containers split by their standard status,
+// in the same colours as the Overview "State by Team" bars. Deliberately tiny
+// (h-2 bars, 10px labels) so it sits inline on the existing team row without
+// making it any taller -- a glance-level "which network on which team is red."
+function TeamNetworkBars({ networks, className }: { networks: { name: string; hosts: DeployedObject[] }[]; className?: string }) {
+  const nets = networks.filter((n) => n.hosts.length > 0)
+  if (nets.length === 0) return null
+  return (
+    <div className={cn('flex flex-nowrap items-center gap-3', className)}>
+      {nets.map((net) => {
+        const counts = new Map<string, number>()
+        for (const h of net.hosts) counts.set(h.status, (counts.get(h.status) ?? 0) + 1)
+        const ordered = [...TEAM_BAR_ORDER.filter((s) => counts.has(s)), ...[...counts.keys()].filter((s) => !TEAM_BAR_ORDER.includes(s))]
+        const total = net.hosts.length
+        const legend = ordered.map((s) => `${statusLabel(s)}: ${counts.get(s)}`).join(' · ')
+        return (
+          <div key={net.name || '—'} className="flex shrink-0 items-center gap-1.5" title={`${net.name || 'no network'} — ${legend}`}>
+            <span className="max-w-[6rem] truncate text-[10px] font-medium text-fg-subtle">{net.name || 'no network'}</span>
+            <div className="flex h-2 w-16 shrink-0 overflow-hidden rounded-full bg-surface-sunken">
+              {ordered.map((s) => (
+                <div
+                  key={s}
+                  className={statusFillClass(s)}
+                  style={{ width: `${((counts.get(s) ?? 0) / total) * 100}%` }}
+                  title={`${statusLabel(s)}: ${counts.get(s)}`}
+                />
+              ))}
+            </div>
+            <span className="text-[10px] tabular-nums text-fg-subtle">{total}</span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -443,12 +485,17 @@ export function BuildHosts() {
                         )}
                       </Td>
                       <Td colSpan={7}>
-                        <button onClick={() => toggleTeamCollapse(team.teamNumber)} className="flex items-center gap-1.5 text-sm font-semibold text-fg">
-                          <ChevronDown size={14} className={cn('text-fg-subtle transition-transform', teamCollapsed && '-rotate-90')} />
-                          <Users size={14} className="text-fg-subtle" />
-                          Team {team.teamNumber}
-                          <span className="font-normal text-fg-subtle">({team.count})</span>
-                        </button>
+                        <div className="flex items-center gap-4">
+                          <button onClick={() => toggleTeamCollapse(team.teamNumber)} className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-fg">
+                            <ChevronDown size={14} className={cn('text-fg-subtle transition-transform', teamCollapsed && '-rotate-90')} />
+                            <Users size={14} className="text-fg-subtle" />
+                            Team {team.teamNumber}
+                            <span className="font-normal text-fg-subtle">({team.count})</span>
+                          </button>
+                          {/* Per-network status bars, standard statuses, inline so the row
+                              stays one line tall -- see TeamNetworkBars. */}
+                          <TeamNetworkBars networks={team.networks} className="ml-auto overflow-x-auto" />
+                        </div>
                       </Td>
                     </tr>
                     {!teamCollapsed &&

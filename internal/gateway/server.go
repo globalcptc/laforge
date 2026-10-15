@@ -256,6 +256,13 @@ func (s *Server) handleGetTask(ctx context.Context, conn net.Conn, objID pgtype.
 	default:
 		log.Printf("gateway: get-task: %v", err)
 	}
+	// Now that any next step has been leased (its started_at = this reconnect),
+	// fold the reboot downtime into the preceding reboot step so its duration
+	// reflects the whole reboot, not just the pre-reboot ack. Idempotent; a
+	// failure is non-fatal to handing out the task.
+	if err := q.StampRebootDurationsForHost(ctx, objID); err != nil {
+		log.Printf("gateway: get-task: stamping reboot durations for %s: %v", objID, err)
+	}
 	body, _ := json.Marshal(resp)
 	if err := agentproto.WriteFrame(conn, agentproto.GetTaskResponse, body); err != nil {
 		log.Printf("gateway: get-task: writing response: %v", err)
@@ -385,12 +392,77 @@ func (s *Server) logStepEvent(ctx context.Context, q *db.Queries, task db.AgentT
 		outcome = "failed but ignored"
 	}
 	message := fmt.Sprintf("step %d (%s) %s", task.StepIndex, task.Command, outcome)
+	// Name WHAT the step runs, inline on the message, so a reader learns something
+	// from "step 19 (execute) started: win-domain-controller.ps1" without having to
+	// expand (step start/done carry no payload detail to expand into anyway).
+	if desc := stepDescriptor(task); desc != "" {
+		message += ": " + desc
+	}
 	payloadBody, _ := json.Marshal(map[string]string{"detail": detail})
 	if err := q.CreateAgentStepEvent(ctx, db.CreateAgentStepEventParams{
 		BuildID: buildID, DeployedObjectID: task.DeployedObjectID, Kind: kind, Message: message, Payload: payloadBody,
 	}); err != nil {
 		log.Printf("gateway: logStepEvent: writing event for %s: %v", task.DeployedObjectID, err)
 	}
+}
+
+// stepDescriptor turns a step's command payload into a short, recognizable hint
+// about what the step actually does. "step 19 (execute) started" says nothing;
+// "...: win-domain-controller.ps1" names the script, and the script name is also
+// how a reader maps a log line back to the authored step (they're generated as
+// laforge-step-<n>-<slug>). Best-effort and display-only: an unparseable or
+// featureless payload yields "", leaving the bare "step N (command) outcome".
+func stepDescriptor(task db.AgentTask) string {
+	var p struct {
+		Command string   `json:"command"`
+		Args    []string `json:"args"`
+		Path    string   `json:"path"`
+		URL     string   `json:"url"`
+	}
+	if len(task.Payload) > 0 {
+		_ = json.Unmarshal(task.Payload, &p)
+	}
+	switch task.Command {
+	case "execute":
+		// The script the command runs is the thing a reader recognizes (the long
+		// temp path collapses to its basename); with no script arg it's a bare
+		// command (dcpromo, /bin/false) -- show that whole, un-basenamed.
+		if f := firstScriptArg(p.Args); f != "" {
+			return baseName(f)
+		}
+		return p.Command
+	case "write_file":
+		if p.Path != "" {
+			return baseName(p.Path)
+		}
+	case "download":
+		if p.URL != "" {
+			return p.URL
+		}
+	}
+	return ""
+}
+
+// firstScriptArg returns the first non-flag argument -- for "powershell.exe -File
+// C:\...\x.ps1" that's the script, for "/bin/bash /tmp/x.sh" likewise. Flags
+// (leading '-') are skipped so "-File" doesn't win over the path it introduces.
+func firstScriptArg(args []string) string {
+	for _, a := range args {
+		if a == "" || strings.HasPrefix(a, "-") {
+			continue
+		}
+		return a
+	}
+	return ""
+}
+
+// baseName is the last path segment, handling Windows '\\' and POSIX '/' alike
+// (the agent runs both, so a single filepath call wouldn't cover the other OS).
+func baseName(p string) string {
+	if i := strings.LastIndexAny(p, `/\`); i >= 0 {
+		return p[i+1:]
+	}
+	return p
 }
 
 // currentAttempts returns how many times a task has been attempted and whether

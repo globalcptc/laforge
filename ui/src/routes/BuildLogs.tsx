@@ -57,15 +57,30 @@ function toneForKind(kind: string): 'danger' | 'success' | 'warning' | 'info' | 
   return 'neutral'
 }
 
-// eventDetail pulls the full text an event carries in its payload (step events
-// store the whole command output / error under `detail`, while the message is
-// only a short one-liner) so an expanded row can show the real error.
+// eventDetail extracts the meaningful extra text an event carries BEYOND its
+// one-line message, so a row is only expandable when there is genuinely more to
+// read. Three payload shapes occur in practice:
+//   - a non-empty `detail` string: step_failed stores the full command error
+//     there (step_started/step_done carry an empty one -> nothing to show);
+//   - a non-empty object: builder.* events carry the whole request (os, size,
+//     ports, cidr, external_name...) -> render it as aligned "key: value" lines,
+//     which is the real detail, NOT a repeat of the message;
+//   - an empty object ({}): task.*, *.configured, *.reconciled -> nothing.
+// Returning '' means "no detail": the caller renders a plain, non-expandable row.
 function eventDetail(payload: unknown): string {
-  if (payload && typeof payload === 'object' && 'detail' in payload) {
-    const d = (payload as { detail?: unknown }).detail
-    if (typeof d === 'string' && d.trim() !== '') return d
-  }
-  return ''
+  if (!payload || typeof payload !== 'object') return ''
+  const obj = payload as Record<string, unknown>
+  if (typeof obj.detail === 'string' && obj.detail.trim() !== '') return obj.detail.trim()
+  const lines = Object.keys(obj)
+    .filter((k) => k !== 'detail')
+    .map((k) => {
+      const v = obj[k]
+      if (v == null || v === '') return ''
+      const val = typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)
+      return `${k}: ${val}`
+    })
+    .filter(Boolean)
+  return lines.join('\n')
 }
 
 // "Build → Logs: the event journal as a hierarchy... Live over SSE while
@@ -154,7 +169,11 @@ export function BuildLogs() {
     return all.filter((e) => {
       if (kind && e.kind !== kind) return false
       if (!q) return true
-      return [e.message, e.kind, e.host ?? '', e.team_number != null ? `team ${e.team_number}` : '']
+      // Match the host both bare ("bff-dc-01") and as the team-qualified label
+      // the row actually shows ("t1/bff-dc-01") -- searching the displayed form
+      // returned nothing before, since no single field held the combined string.
+      const qualified = e.host && e.team_number != null ? `t${e.team_number}/${e.host}` : ''
+      return [e.message, e.kind, e.host ?? '', qualified, e.team_number != null ? `team ${e.team_number}` : '']
         .some((v) => v.toLowerCase().includes(q))
     })
   }, [all, query, kind])
@@ -192,7 +211,7 @@ export function BuildLogs() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
+      <div className="sticky top-0 z-20 mb-3 flex shrink-0 flex-wrap items-center gap-2 bg-surface pb-3 pt-1">
         <div className="flex items-center gap-2 text-xs text-fg-muted">
           <Radio size={12} className={connected ? 'text-success' : 'text-fg-subtle'} />
           {connected ? 'Live' : 'Reconnecting…'}
@@ -236,8 +255,38 @@ export function BuildLogs() {
           <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }}>
             {rowVirtualizer.getVirtualItems().map((vi) => {
               const ev = shown[vi.index]
-              const isOpen = expanded.has(ev.id)
               const detail = eventDetail(ev.payload)
+              // Only rows that carry real extra detail (a step error, a builder
+              // request payload) are expandable. The majority -- step start/done,
+              // task lifecycle, access/network reconciles -- have no payload beyond
+              // their one-line message, so they render as a plain, non-clickable
+              // row (no chevron, nothing to expand into a pointless repeat).
+              const expandable = detail !== ''
+              const isOpen = expandable && expanded.has(ev.id)
+              // Shared leading cells (chevron slot, time, host, kind, message) so
+              // the clickable and plain variants line up pixel-for-pixel.
+              const lead = (
+                <>
+                  {expandable ? (
+                    <ChevronRight size={12} className={cn('shrink-0 text-fg-subtle transition-transform', isOpen && 'rotate-90')} />
+                  ) : (
+                    <span className="w-3 shrink-0" />
+                  )}
+                  <span className="w-24 shrink-0 tabular-nums text-fg-muted">{fmt.time(ev.created_at)}</span>
+                  {ev.host ? (
+                    <span className="w-28 shrink-0 truncate text-fg-muted" title={ev.team_number != null ? `t${ev.team_number}/${ev.host}` : ev.host}>
+                      {ev.team_number != null && <span className="text-fg-subtle">t{ev.team_number}/</span>}
+                      {ev.host}
+                    </span>
+                  ) : (
+                    <span className="w-28 shrink-0 text-fg-subtle">build</span>
+                  )}
+                  <Badge tone={toneForKind(ev.kind)} className="shrink-0">
+                    {ev.kind}
+                  </Badge>
+                  <span className={cn('min-w-0 flex-1 text-fg', !isOpen && 'truncate')} title={ev.message}>{ev.message}</span>
+                </>
+              )
               return (
                 <div
                   key={vi.key}
@@ -246,37 +295,23 @@ export function BuildLogs() {
                   className="absolute left-0 top-0 w-full border-b border-border"
                   style={{ transform: `translateY(${vi.start}px)` }}
                 >
-                  {/* Whole row is a toggle: click to expand and read the full
-                      message + payload detail (errors are longer than one line). */}
-                  <button
-                    type="button"
-                    onClick={() => toggle(ev.id)}
-                    className="flex w-full items-center gap-3 py-1.5 text-left hover:bg-surface-hover"
-                  >
-                    <ChevronRight size={12} className={cn('shrink-0 text-fg-subtle transition-transform', isOpen && 'rotate-90')} />
-                    <span className="w-24 shrink-0 tabular-nums text-fg-muted">{fmt.time(ev.created_at)}</span>
-                    {ev.host ? (
-                      <span className="w-28 shrink-0 truncate text-fg-muted" title={ev.team_number != null ? `t${ev.team_number}/${ev.host}` : ev.host}>
-                        {ev.team_number != null && <span className="text-fg-subtle">t{ev.team_number}/</span>}
-                        {ev.host}
-                      </span>
-                    ) : (
-                      <span className="w-28 shrink-0 text-fg-subtle">build</span>
-                    )}
-                    <Badge tone={toneForKind(ev.kind)} className="shrink-0">
-                      {ev.kind}
-                    </Badge>
-                    <span className={cn('min-w-0 flex-1 text-fg', !isOpen && 'truncate')}>{ev.message}</span>
-                  </button>
+                  {expandable ? (
+                    <button
+                      type="button"
+                      onClick={() => toggle(ev.id)}
+                      className="flex w-full items-center gap-3 py-1.5 text-left hover:bg-surface-hover"
+                    >
+                      {lead}
+                    </button>
+                  ) : (
+                    <div className="flex w-full items-center gap-3 py-1.5">{lead}</div>
+                  )}
                   {isOpen && (
-                    <div className="pb-2 pl-[9.75rem] pr-3 text-fg-muted">
-                      <div className="whitespace-pre-wrap break-words">{ev.message}</div>
-                      {detail && detail !== ev.message && (
-                        <pre className="mt-1 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-token border border-border bg-surface-sunken p-2 text-fg">
-                          {detail}
-                        </pre>
-                      )}
-                    </div>
+                    // Only the detail -- the message is already on the row above, so
+                    // we never repeat it here.
+                    <pre className="mb-2 ml-[9.75rem] mr-3 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-token border border-border bg-surface-sunken p-2 text-fg">
+                      {detail}
+                    </pre>
                   )}
                 </div>
               )
