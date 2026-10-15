@@ -303,6 +303,25 @@ type MetricProvider interface {
 	Stats(ctx context.Context) (Stats, error)
 }
 
+// ConsoleLogReader is the OPTIONAL instance-console contract: a builder that can
+// read a deployed instance's console output (boot messages, cloud-init or
+// cloudbase-init progress) implements it, and is probed for it
+// (b.(ConsoleLogReader)) like MetricProvider. The orchestrator captures it when
+// a host's agent never checks in, since the console is the one view of a guest
+// that doesn't depend on the agent. ConsoleLog returns at most the last maxBytes
+// of the log.
+type ConsoleLogReader interface {
+	ConsoleLog(ctx context.Context, team, externalRef string, maxBytes int) (string, error)
+}
+
+// TailBytes keeps the last max bytes of a console log (max <= 0 keeps it all).
+func TailBytes(b []byte, max int) string {
+	if max > 0 && len(b) > max {
+		b = b[len(b)-max:]
+	}
+	return string(b)
+}
+
 // Demand is what an environment will need from its builder, estimated across all
 // teams BEFORE any hoster call, so a quota wall is caught up front instead of
 // mid-deploy (the sibling of the AWS IAM pre-flight check). Builder-agnostic: it

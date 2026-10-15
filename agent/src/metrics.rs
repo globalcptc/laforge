@@ -12,13 +12,16 @@
 // leaves its field None, never fails the heartbeat.
 
 use crate::protocol::HeartbeatRequestPayload;
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use sysinfo::{Disks, Networks, System};
 
 pub struct Collector {
     sys: System,
     nets: Networks,
     last: Instant,
+    // When this agent process started (Unix seconds). The Collector is created
+    // once per process, at startup, so its creation time is the agent's.
+    started_at: Option<i64>,
 }
 
 impl Collector {
@@ -30,6 +33,7 @@ impl Collector {
             sys,
             nets: Networks::new_with_refreshed_list(),
             last: Instant::now(),
+            started_at: SystemTime::now().duration_since(UNIX_EPOCH).ok().map(|d| d.as_secs() as i64),
         }
     }
 
@@ -78,6 +82,14 @@ impl Collector {
             disk_pct: Some(disk),
             net_rx_bps: Some(rx as f64 / elapsed),
             net_tx_bps: Some(tx as f64 / elapsed),
+            inflight_task_id: None,
+            // Read every heartbeat rather than cached: cheap, and an OS clock
+            // step (NTP sync after boot) changes the derived boot time.
+            boot_time: match System::boot_time() {
+                0 => None,
+                t => Some(t as i64),
+            },
+            agent_started_at: self.started_at,
         }
     }
 }

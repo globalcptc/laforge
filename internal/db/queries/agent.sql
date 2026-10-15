@@ -3,12 +3,27 @@
 -- last_heartbeat_at (and cert_fingerprint, in case a host was ever
 -- re-provisioned with a new identity -- shouldn't happen mid-build, but
 -- recording the fingerprint that's actually presenting is more honest
--- than assuming it never changes).
-INSERT INTO agent_session (deployed_object_id, cert_fingerprint)
-VALUES ($1, $2)
+-- than assuming it never changes). boot_at/agent_started_at are the agent's
+-- latest boot report; a heartbeat without one (an older agent) keeps the last.
+INSERT INTO agent_session (deployed_object_id, cert_fingerprint, boot_at, agent_started_at)
+VALUES (sqlc.arg(deployed_object_id), sqlc.arg(cert_fingerprint), sqlc.narg(boot_at), sqlc.narg(agent_started_at))
 ON CONFLICT (deployed_object_id) DO UPDATE
-    SET cert_fingerprint = EXCLUDED.cert_fingerprint, last_heartbeat_at = now()
+    SET cert_fingerprint = EXCLUDED.cert_fingerprint, last_heartbeat_at = now(),
+        boot_at = COALESCE(EXCLUDED.boot_at, agent_session.boot_at),
+        agent_started_at = COALESCE(EXCLUDED.agent_started_at, agent_session.agent_started_at)
 RETURNING *;
+
+-- name: GetAgentCheckinContext :one
+-- What the gateway needs, before recording a heartbeat, to tell whether this
+-- is the agent's FIRST check-in since the object was (re)deployed: the deploy
+-- time, the previous heartbeat (NULL when the agent has never checked in), and
+-- whether the never-checked-in watchdog already flagged it. A rebuilt host
+-- keeps its old agent_session row, so "first" means "no heartbeat since
+-- deployed_at", not "no session row".
+SELECT o.deployed_at, o.agent_checkin_overdue_at, s.last_heartbeat_at
+FROM deployed_object o
+LEFT JOIN agent_session s ON s.deployed_object_id = o.id
+WHERE o.id = $1;
 
 -- name: GetAgentSessionByDeployedObject :one
 SELECT * FROM agent_session WHERE deployed_object_id = $1;
@@ -28,8 +43,8 @@ SELECT * FROM agent_session ORDER BY last_heartbeat_at DESC;
 -- theoretical concern) -- so this query only ever needs the INSERT
 -- privilege migrations/00007 actually grants, matching its own "no
 -- SELECT" design intent instead of contradicting it.
-INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps, boot_at, agent_started_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
 
 -- name: DeleteAgentHeartbeatsOlderThan :execrows
 -- The real answer to migrations/00007's own "deliberately unaddressed:
@@ -83,12 +98,14 @@ WHERE team.build_id = $1;
 -- counted as open but never leased, and is flipped to 'pending' by
 -- UnblockAgentTasksForObject once the dependency finishes. ad_hoc defaults false
 -- (strict ordered, failure-blocking lane); operator commands use
--- CreateAdHocAgentTask instead.
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status)
+-- CreateAdHocAgentTask instead. max_attempts is the script's `retries:`
+-- override (retries + 1); NULL leaves the gateway default.
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status, max_attempts)
 VALUES (
   sqlc.arg(deployed_object_id), sqlc.arg(step_index), sqlc.arg(command),
   sqlc.arg(payload), sqlc.arg(ignore_errors), sqlc.arg(reboots),
-  COALESCE(NULLIF(sqlc.arg(status)::text, ''), 'pending')
+  COALESCE(NULLIF(sqlc.arg(status)::text, ''), 'pending'),
+  sqlc.narg(max_attempts)
 )
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
 RETURNING *;
@@ -219,6 +236,16 @@ WHERE id = (
 )
 AND (status = 'pending' OR (status = 'leased' AND lease_expires_at < now()))
 RETURNING *;
+
+-- name: RenewAgentTaskLease :execrows
+-- Heartbeat-driven lease renewal. The agent names the task it is still running
+-- on every heartbeat; extending that task's lease keeps a long step (anything
+-- past one lease, 60s by default) from expiring and being leased AGAIN, which
+-- ran the same script twice at once after a reconnect. Scoped to the agent's
+-- own object and to a task that is still 'leased', so a stale or forged id
+-- changes nothing.
+UPDATE agent_task SET lease_expires_at = now() + sqlc.arg(lease)::interval, updated_at = now()
+WHERE id = sqlc.arg(id) AND deployed_object_id = sqlc.arg(deployed_object_id) AND status = 'leased';
 
 -- name: CompleteAgentTask :one
 UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now(),

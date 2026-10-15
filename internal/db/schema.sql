@@ -50,7 +50,9 @@ CREATE TABLE public.agent_heartbeat (
     mem_pct double precision,
     disk_pct double precision,
     net_rx_bps double precision,
-    net_tx_bps double precision
+    net_tx_bps double precision,
+    boot_at timestamp with time zone,
+    agent_started_at timestamp with time zone
 );
 --
 -- Name: agent_session; Type: TABLE; Schema: public; Owner: -
@@ -60,7 +62,9 @@ CREATE TABLE public.agent_session (
     deployed_object_id uuid NOT NULL,
     cert_fingerprint text NOT NULL,
     first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
-    last_heartbeat_at timestamp with time zone DEFAULT now() NOT NULL
+    last_heartbeat_at timestamp with time zone DEFAULT now() NOT NULL,
+    boot_at timestamp with time zone,
+    agent_started_at timestamp with time zone
 );
 --
 -- Name: agent_task; Type: TABLE; Schema: public; Owner: -
@@ -83,6 +87,7 @@ CREATE TABLE public.agent_task (
     reboots boolean DEFAULT false NOT NULL,
     started_at timestamp with time zone,
     finished_at timestamp with time zone,
+    max_attempts integer,
     CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text, 'blocked'::text])))
 );
 --
@@ -294,6 +299,9 @@ CREATE TABLE public.deployed_object (
     steps_materialized_at timestamp with time zone,
     blocked_on jsonb,
     public_address text DEFAULT ''::text NOT NULL,
+    deployed_at timestamp with time zone,
+    agent_platform text DEFAULT ''::text NOT NULL,
+    agent_checkin_overdue_at timestamp with time zone,
     CONSTRAINT deployed_object_kind_check CHECK ((kind = ANY (ARRAY['network'::text, 'host'::text, 'container'::text, 'dns'::text]))),
     CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroying'::text, 'destroy_failed'::text, 'destroyed'::text])))
 );

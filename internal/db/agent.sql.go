@@ -16,7 +16,7 @@ const completeAgentTask = `-- name: CompleteAgentTask :one
 UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now(),
     finished_at = now()
 WHERE id = $1
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts
 `
 
 type CompleteAgentTaskParams struct {
@@ -45,6 +45,7 @@ func (q *Queries) CompleteAgentTask(ctx context.Context, arg CompleteAgentTaskPa
 		&i.Reboots,
 		&i.StartedAt,
 		&i.FinishedAt,
+		&i.MaxAttempts,
 	)
 	return i, err
 }
@@ -52,7 +53,7 @@ func (q *Queries) CompleteAgentTask(ctx context.Context, arg CompleteAgentTaskPa
 const completeLeasedRebootsTaskForHost = `-- name: CompleteLeasedRebootsTaskForHost :one
 UPDATE agent_task SET status = 'done', last_error = NULL, updated_at = now()
 WHERE deployed_object_id = $1 AND reboots = true AND status = 'leased'
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts
 `
 
 // The reboot-aware completion: a `reboots: true` step reboots the host, which
@@ -84,6 +85,7 @@ func (q *Queries) CompleteLeasedRebootsTaskForHost(ctx context.Context, deployed
 		&i.Reboots,
 		&i.StartedAt,
 		&i.FinishedAt,
+		&i.MaxAttempts,
 	)
 	return i, err
 }
@@ -92,7 +94,7 @@ const createAdHocAgentTask = `-- name: CreateAdHocAgentTask :one
 INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, ad_hoc)
 VALUES ($1, $2, $3, $4, $5, true)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts
 `
 
 type CreateAdHocAgentTaskParams struct {
@@ -134,6 +136,7 @@ func (q *Queries) CreateAdHocAgentTask(ctx context.Context, arg CreateAdHocAgent
 		&i.Reboots,
 		&i.StartedAt,
 		&i.FinishedAt,
+		&i.MaxAttempts,
 	)
 	return i, err
 }
@@ -169,20 +172,22 @@ func (q *Queries) CreateAgentArtifact(ctx context.Context, arg CreateAgentArtifa
 }
 
 const createAgentHeartbeat = `-- name: CreateAgentHeartbeat :exec
-INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps, boot_at, agent_started_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 `
 
 type CreateAgentHeartbeatParams struct {
-	DeployedObjectID pgtype.UUID `json:"deployed_object_id"`
-	CertFingerprint  string      `json:"cert_fingerprint"`
-	RemoteAddr       *string     `json:"remote_addr"`
-	NextPollMs       *int32      `json:"next_poll_ms"`
-	CpuPct           *float64    `json:"cpu_pct"`
-	MemPct           *float64    `json:"mem_pct"`
-	DiskPct          *float64    `json:"disk_pct"`
-	NetRxBps         *float64    `json:"net_rx_bps"`
-	NetTxBps         *float64    `json:"net_tx_bps"`
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	CertFingerprint  string             `json:"cert_fingerprint"`
+	RemoteAddr       *string            `json:"remote_addr"`
+	NextPollMs       *int32             `json:"next_poll_ms"`
+	CpuPct           *float64           `json:"cpu_pct"`
+	MemPct           *float64           `json:"mem_pct"`
+	DiskPct          *float64           `json:"disk_pct"`
+	NetRxBps         *float64           `json:"net_rx_bps"`
+	NetTxBps         *float64           `json:"net_tx_bps"`
+	BootAt           pgtype.Timestamptz `json:"boot_at"`
+	AgentStartedAt   pgtype.Timestamptz `json:"agent_started_at"`
 }
 
 // The append-only counterpart to UpsertAgentSession -- called alongside
@@ -207,19 +212,22 @@ func (q *Queries) CreateAgentHeartbeat(ctx context.Context, arg CreateAgentHeart
 		arg.DiskPct,
 		arg.NetRxBps,
 		arg.NetTxBps,
+		arg.BootAt,
+		arg.AgentStartedAt,
 	)
 	return err
 }
 
 const createAgentTask = `-- name: CreateAgentTask :one
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status)
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status, max_attempts)
 VALUES (
   $1, $2, $3,
   $4, $5, $6,
-  COALESCE(NULLIF($7::text, ''), 'pending')
+  COALESCE(NULLIF($7::text, ''), 'pending'),
+  $8
 )
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts
 `
 
 type CreateAgentTaskParams struct {
@@ -230,6 +238,7 @@ type CreateAgentTaskParams struct {
 	IgnoreErrors     bool            `json:"ignore_errors"`
 	Reboots          bool            `json:"reboots"`
 	Status           string          `json:"status"`
+	MaxAttempts      *int32          `json:"max_attempts"`
 }
 
 // Authored deploy steps. status is 'pending' normally, or 'blocked' when the
@@ -237,7 +246,8 @@ type CreateAgentTaskParams struct {
 // counted as open but never leased, and is flipped to 'pending' by
 // UnblockAgentTasksForObject once the dependency finishes. ad_hoc defaults false
 // (strict ordered, failure-blocking lane); operator commands use
-// CreateAdHocAgentTask instead.
+// CreateAdHocAgentTask instead. max_attempts is the script's `retries:`
+// override (retries + 1); NULL leaves the gateway default.
 func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams) (AgentTask, error) {
 	row := q.db.QueryRow(ctx, createAgentTask,
 		arg.DeployedObjectID,
@@ -247,6 +257,7 @@ func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams
 		arg.IgnoreErrors,
 		arg.Reboots,
 		arg.Status,
+		arg.MaxAttempts,
 	)
 	var i AgentTask
 	err := row.Scan(
@@ -267,6 +278,7 @@ func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams
 		&i.Reboots,
 		&i.StartedAt,
 		&i.FinishedAt,
+		&i.MaxAttempts,
 	)
 	return i, err
 }
@@ -347,7 +359,7 @@ const failAgentTask = `-- name: FailAgentTask :one
 UPDATE agent_task SET status = $2, last_error = $3, updated_at = now(),
     finished_at = CASE WHEN $2 IN ('failed', 'ignored') THEN now() ELSE finished_at END
 WHERE id = $1
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts
 `
 
 type FailAgentTaskParams struct {
@@ -383,6 +395,7 @@ func (q *Queries) FailAgentTask(ctx context.Context, arg FailAgentTaskParams) (A
 		&i.Reboots,
 		&i.StartedAt,
 		&i.FinishedAt,
+		&i.MaxAttempts,
 	)
 	return i, err
 }
@@ -421,8 +434,34 @@ func (q *Queries) GetAgentArtifactTokenByObject(ctx context.Context, deployedObj
 	return token, err
 }
 
+const getAgentCheckinContext = `-- name: GetAgentCheckinContext :one
+SELECT o.deployed_at, o.agent_checkin_overdue_at, s.last_heartbeat_at
+FROM deployed_object o
+LEFT JOIN agent_session s ON s.deployed_object_id = o.id
+WHERE o.id = $1
+`
+
+type GetAgentCheckinContextRow struct {
+	DeployedAt            pgtype.Timestamptz `json:"deployed_at"`
+	AgentCheckinOverdueAt pgtype.Timestamptz `json:"agent_checkin_overdue_at"`
+	LastHeartbeatAt       pgtype.Timestamptz `json:"last_heartbeat_at"`
+}
+
+// What the gateway needs, before recording a heartbeat, to tell whether this
+// is the agent's FIRST check-in since the object was (re)deployed: the deploy
+// time, the previous heartbeat (NULL when the agent has never checked in), and
+// whether the never-checked-in watchdog already flagged it. A rebuilt host
+// keeps its old agent_session row, so "first" means "no heartbeat since
+// deployed_at", not "no session row".
+func (q *Queries) GetAgentCheckinContext(ctx context.Context, id pgtype.UUID) (GetAgentCheckinContextRow, error) {
+	row := q.db.QueryRow(ctx, getAgentCheckinContext, id)
+	var i GetAgentCheckinContextRow
+	err := row.Scan(&i.DeployedAt, &i.AgentCheckinOverdueAt, &i.LastHeartbeatAt)
+	return i, err
+}
+
 const getAgentSessionByDeployedObject = `-- name: GetAgentSessionByDeployedObject :one
-SELECT id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at FROM agent_session WHERE deployed_object_id = $1
+SELECT id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at, boot_at, agent_started_at FROM agent_session WHERE deployed_object_id = $1
 `
 
 func (q *Queries) GetAgentSessionByDeployedObject(ctx context.Context, deployedObjectID pgtype.UUID) (AgentSession, error) {
@@ -434,12 +473,14 @@ func (q *Queries) GetAgentSessionByDeployedObject(ctx context.Context, deployedO
 		&i.CertFingerprint,
 		&i.FirstSeenAt,
 		&i.LastHeartbeatAt,
+		&i.BootAt,
+		&i.AgentStartedAt,
 	)
 	return i, err
 }
 
 const getAgentTask = `-- name: GetAgentTask :one
-SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at FROM agent_task WHERE id = $1
+SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts FROM agent_task WHERE id = $1
 `
 
 func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, error) {
@@ -463,12 +504,13 @@ func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, 
 		&i.Reboots,
 		&i.StartedAt,
 		&i.FinishedAt,
+		&i.MaxAttempts,
 	)
 	return i, err
 }
 
 const listAgentHeartbeatsByBuild = `-- name: ListAgentHeartbeatsByBuild :many
-SELECT agent_heartbeat.id, agent_heartbeat.deployed_object_id, agent_heartbeat.cert_fingerprint, agent_heartbeat.remote_addr, agent_heartbeat.next_poll_ms, agent_heartbeat.created_at, agent_heartbeat.cpu_pct, agent_heartbeat.mem_pct, agent_heartbeat.disk_pct, agent_heartbeat.net_rx_bps, agent_heartbeat.net_tx_bps FROM agent_heartbeat
+SELECT agent_heartbeat.id, agent_heartbeat.deployed_object_id, agent_heartbeat.cert_fingerprint, agent_heartbeat.remote_addr, agent_heartbeat.next_poll_ms, agent_heartbeat.created_at, agent_heartbeat.cpu_pct, agent_heartbeat.mem_pct, agent_heartbeat.disk_pct, agent_heartbeat.net_rx_bps, agent_heartbeat.net_tx_bps, agent_heartbeat.boot_at, agent_heartbeat.agent_started_at FROM agent_heartbeat
 JOIN deployed_object ON deployed_object.id = agent_heartbeat.deployed_object_id
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1
@@ -500,6 +542,8 @@ func (q *Queries) ListAgentHeartbeatsByBuild(ctx context.Context, buildID pgtype
 			&i.DiskPct,
 			&i.NetRxBps,
 			&i.NetTxBps,
+			&i.BootAt,
+			&i.AgentStartedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -512,7 +556,7 @@ func (q *Queries) ListAgentHeartbeatsByBuild(ctx context.Context, buildID pgtype
 }
 
 const listAgentHeartbeatsByObject = `-- name: ListAgentHeartbeatsByObject :many
-SELECT id, deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, created_at, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps FROM agent_heartbeat WHERE deployed_object_id = $1 ORDER BY created_at DESC LIMIT $2
+SELECT id, deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, created_at, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps, boot_at, agent_started_at FROM agent_heartbeat WHERE deployed_object_id = $1 ORDER BY created_at DESC LIMIT $2
 `
 
 type ListAgentHeartbeatsByObjectParams struct {
@@ -546,6 +590,8 @@ func (q *Queries) ListAgentHeartbeatsByObject(ctx context.Context, arg ListAgent
 			&i.DiskPct,
 			&i.NetRxBps,
 			&i.NetTxBps,
+			&i.BootAt,
+			&i.AgentStartedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -558,7 +604,7 @@ func (q *Queries) ListAgentHeartbeatsByObject(ctx context.Context, arg ListAgent
 }
 
 const listAgentSessions = `-- name: ListAgentSessions :many
-SELECT id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at FROM agent_session ORDER BY last_heartbeat_at DESC
+SELECT id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at, boot_at, agent_started_at FROM agent_session ORDER BY last_heartbeat_at DESC
 `
 
 func (q *Queries) ListAgentSessions(ctx context.Context) ([]AgentSession, error) {
@@ -576,6 +622,8 @@ func (q *Queries) ListAgentSessions(ctx context.Context) ([]AgentSession, error)
 			&i.CertFingerprint,
 			&i.FirstSeenAt,
 			&i.LastHeartbeatAt,
+			&i.BootAt,
+			&i.AgentStartedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -588,7 +636,7 @@ func (q *Queries) ListAgentSessions(ctx context.Context) ([]AgentSession, error)
 }
 
 const listAgentSessionsByBuild = `-- name: ListAgentSessionsByBuild :many
-SELECT agent_session.id, agent_session.deployed_object_id, agent_session.cert_fingerprint, agent_session.first_seen_at, agent_session.last_heartbeat_at FROM agent_session
+SELECT agent_session.id, agent_session.deployed_object_id, agent_session.cert_fingerprint, agent_session.first_seen_at, agent_session.last_heartbeat_at, agent_session.boot_at, agent_session.agent_started_at FROM agent_session
 JOIN deployed_object ON deployed_object.id = agent_session.deployed_object_id
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1
@@ -614,6 +662,8 @@ func (q *Queries) ListAgentSessionsByBuild(ctx context.Context, buildID pgtype.U
 			&i.CertFingerprint,
 			&i.FirstSeenAt,
 			&i.LastHeartbeatAt,
+			&i.BootAt,
+			&i.AgentStartedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -626,7 +676,7 @@ func (q *Queries) ListAgentSessionsByBuild(ctx context.Context, buildID pgtype.U
 }
 
 const listAgentTasksByHost = `-- name: ListAgentTasksByHost :many
-SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at FROM agent_task WHERE deployed_object_id = $1 ORDER BY step_index
+SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts FROM agent_task WHERE deployed_object_id = $1 ORDER BY step_index
 `
 
 func (q *Queries) ListAgentTasksByHost(ctx context.Context, deployedObjectID pgtype.UUID) ([]AgentTask, error) {
@@ -656,6 +706,7 @@ func (q *Queries) ListAgentTasksByHost(ctx context.Context, deployedObjectID pgt
 			&i.Reboots,
 			&i.StartedAt,
 			&i.FinishedAt,
+			&i.MaxAttempts,
 		); err != nil {
 			return nil, err
 		}
@@ -789,7 +840,7 @@ WHERE id = (
     LIMIT 1
 )
 AND (status = 'pending' OR (status = 'leased' AND lease_expires_at < now()))
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts
 `
 
 type NextAgentTaskForHostParams struct {
@@ -846,6 +897,7 @@ func (q *Queries) NextAgentTaskForHost(ctx context.Context, arg NextAgentTaskFor
 		&i.Reboots,
 		&i.StartedAt,
 		&i.FinishedAt,
+		&i.MaxAttempts,
 	)
 	return i, err
 }
@@ -896,6 +948,31 @@ func (q *Queries) RecordValidatorResult(ctx context.Context, arg RecordValidator
 		arg.Message,
 	)
 	return err
+}
+
+const renewAgentTaskLease = `-- name: RenewAgentTaskLease :execrows
+UPDATE agent_task SET lease_expires_at = now() + $1::interval, updated_at = now()
+WHERE id = $2 AND deployed_object_id = $3 AND status = 'leased'
+`
+
+type RenewAgentTaskLeaseParams struct {
+	Lease            pgtype.Interval `json:"lease"`
+	ID               pgtype.UUID     `json:"id"`
+	DeployedObjectID pgtype.UUID     `json:"deployed_object_id"`
+}
+
+// Heartbeat-driven lease renewal. The agent names the task it is still running
+// on every heartbeat; extending that task's lease keeps a long step (anything
+// past one lease, 60s by default) from expiring and being leased AGAIN, which
+// ran the same script twice at once after a reconnect. Scoped to the agent's
+// own object and to a task that is still 'leased', so a stale or forged id
+// changes nothing.
+func (q *Queries) RenewAgentTaskLease(ctx context.Context, arg RenewAgentTaskLeaseParams) (int64, error) {
+	result, err := q.db.Exec(ctx, renewAgentTaskLease, arg.Lease, arg.ID, arg.DeployedObjectID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const stampRebootDurationsForHost = `-- name: StampRebootDurationsForHost :exec
@@ -1063,25 +1140,35 @@ func (q *Queries) UnblockAgentTasksForObject(ctx context.Context, deployedObject
 }
 
 const upsertAgentSession = `-- name: UpsertAgentSession :one
-INSERT INTO agent_session (deployed_object_id, cert_fingerprint)
-VALUES ($1, $2)
+INSERT INTO agent_session (deployed_object_id, cert_fingerprint, boot_at, agent_started_at)
+VALUES ($1, $2, $3, $4)
 ON CONFLICT (deployed_object_id) DO UPDATE
-    SET cert_fingerprint = EXCLUDED.cert_fingerprint, last_heartbeat_at = now()
-RETURNING id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at
+    SET cert_fingerprint = EXCLUDED.cert_fingerprint, last_heartbeat_at = now(),
+        boot_at = COALESCE(EXCLUDED.boot_at, agent_session.boot_at),
+        agent_started_at = COALESCE(EXCLUDED.agent_started_at, agent_session.agent_started_at)
+RETURNING id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at, boot_at, agent_started_at
 `
 
 type UpsertAgentSessionParams struct {
-	DeployedObjectID pgtype.UUID `json:"deployed_object_id"`
-	CertFingerprint  string      `json:"cert_fingerprint"`
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	CertFingerprint  string             `json:"cert_fingerprint"`
+	BootAt           pgtype.Timestamptz `json:"boot_at"`
+	AgentStartedAt   pgtype.Timestamptz `json:"agent_started_at"`
 }
 
 // First heartbeat creates the row; every later one just bumps
 // last_heartbeat_at (and cert_fingerprint, in case a host was ever
 // re-provisioned with a new identity -- shouldn't happen mid-build, but
 // recording the fingerprint that's actually presenting is more honest
-// than assuming it never changes).
+// than assuming it never changes). boot_at/agent_started_at are the agent's
+// latest boot report; a heartbeat without one (an older agent) keeps the last.
 func (q *Queries) UpsertAgentSession(ctx context.Context, arg UpsertAgentSessionParams) (AgentSession, error) {
-	row := q.db.QueryRow(ctx, upsertAgentSession, arg.DeployedObjectID, arg.CertFingerprint)
+	row := q.db.QueryRow(ctx, upsertAgentSession,
+		arg.DeployedObjectID,
+		arg.CertFingerprint,
+		arg.BootAt,
+		arg.AgentStartedAt,
+	)
 	var i AgentSession
 	err := row.Scan(
 		&i.ID,
@@ -1089,6 +1176,8 @@ func (q *Queries) UpsertAgentSession(ctx context.Context, arg UpsertAgentSession
 		&i.CertFingerprint,
 		&i.FirstSeenAt,
 		&i.LastHeartbeatAt,
+		&i.BootAt,
+		&i.AgentStartedAt,
 	)
 	return i, err
 }

@@ -113,7 +113,7 @@ func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *lo
 			return fmt.Errorf("encoding payload for step %d: %w", i, err)
 		}
 		if _, err := q.CreateAgentTask(ctx, db.CreateAgentTaskParams{
-			DeployedObjectID: obj.ID, StepIndex: next + int32(i), Command: cmd.Command, Payload: payload, IgnoreErrors: cmd.IgnoreErrors, Reboots: cmd.Reboots, Status: status,
+			DeployedObjectID: obj.ID, StepIndex: next + int32(i), Command: cmd.Command, Payload: payload, IgnoreErrors: cmd.IgnoreErrors, Reboots: cmd.Reboots, Status: status, MaxAttempts: cmd.MaxAttempts,
 		}); err != nil {
 			return fmt.Errorf("queuing step %d (%s): %w", i, cmd.Command, err)
 		}

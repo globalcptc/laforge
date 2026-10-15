@@ -62,6 +62,11 @@ func TestAgentHealthComputedFromRealHeartbeats(t *testing.T) {
 		t.Fatalf("UpsertAgentSession (healthy): %v", err)
 	}
 	staleAt := time.Now().Add(-10 * time.Minute)
+	// The stale session must postdate the deploy: a heartbeat from before
+	// deployed_at belongs to a previous instance (a rebuild) and is ignored.
+	if _, err := env.server.Pool.Exec(ctx, `UPDATE deployed_object SET deployed_at = $2 WHERE id = $1`, missingHost.ID, staleAt.Add(-time.Minute)); err != nil {
+		t.Fatalf("backdating deploy: %v", err)
+	}
 	if _, err := env.server.Pool.Exec(ctx,
 		`INSERT INTO agent_session (deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at) VALUES ($1, $2, $3, $3)`,
 		missingHost.ID, "fp-missing", staleAt,
@@ -115,5 +120,61 @@ func TestAgentHealthComputedFromRealHeartbeats(t *testing.T) {
 		if v.Kind == "network" && v.Agent != nil {
 			t.Fatalf("network %s carries agent health %+v, want nil", v.ObjectName, v.Agent)
 		}
+	}
+}
+
+// TestAgentHealthNeverCheckedIn: a host the check-in watchdog flagged reads as
+// missing (so it reaches the needs-attention list) instead of booting forever,
+// and a rebuilt host's pre-redeploy session doesn't count as its new agent
+// being in.
+func TestAgentHealthNeverCheckedIn(t *testing.T) {
+	env := setupAPITest(t)
+	build := realBuildFixture(t, env)
+	ctx := context.Background()
+
+	objs, err := env.q.ListDeployedObjectsByBuild(ctx, build.ID)
+	if err != nil {
+		t.Fatalf("ListDeployedObjectsByBuild: %v", err)
+	}
+	var hosts []db.DeployedObject
+	for _, o := range objs {
+		if o.Kind == "host" {
+			hosts = append(hosts, o)
+		}
+	}
+	if len(hosts) < 2 {
+		t.Fatalf("fixture has %d host(s), want at least 2", len(hosts))
+	}
+	overdue, rebuilt := hosts[0], hosts[1]
+	for _, o := range []db.DeployedObject{overdue, rebuilt} {
+		if _, err := env.q.MarkDeployedObjectRunning(ctx, db.MarkDeployedObjectRunningParams{ID: o.ID, ExternalRef: db.StrPtr("ext"), Fingerprint: "f"}); err != nil {
+			t.Fatalf("MarkDeployedObjectRunning: %v", err)
+		}
+	}
+	if _, err := env.q.MarkAgentCheckinOverdue(ctx, overdue.ID); err != nil {
+		t.Fatalf("MarkAgentCheckinOverdue: %v", err)
+	}
+	old := time.Now().Add(-time.Hour)
+	if _, err := env.server.Pool.Exec(ctx,
+		`INSERT INTO agent_session (deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at) VALUES ($1, 'fp', $2, $2)`,
+		rebuilt.ID, old,
+	); err != nil {
+		t.Fatalf("inserting pre-redeploy session: %v", err)
+	}
+
+	objs, _ = env.q.ListDeployedObjectsByBuild(ctx, build.ID)
+	views, err := attachAgentHealth(ctx, env.q, build.ID, objs)
+	if err != nil {
+		t.Fatalf("attachAgentHealth: %v", err)
+	}
+	byID := make(map[string]objectView, len(views))
+	for _, v := range views {
+		byID[v.ID.String()] = v
+	}
+	if got := byID[overdue.ID.String()].Agent; got == nil || got.Status != "missing" || got.LastHeartbeatAt != nil {
+		t.Fatalf("overdue never-checked-in host agent = %+v, want missing with no heartbeat", got)
+	}
+	if got := byID[rebuilt.ID.String()].Agent; got == nil || got.Status != "booting" {
+		t.Fatalf("rebuilt host with only a pre-redeploy session = %+v, want booting", got)
 	}
 }

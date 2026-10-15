@@ -202,9 +202,12 @@ fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<Cl
     // id re-advertised on a later heartbeat before its attach completes is not
     // started twice. Lives across reconnects; ids are unique per open.
     let shell_handled: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
+    // The running task and any finished-but-unacknowledged result, kept across
+    // reconnects -- see TaskState.
+    let mut tasks = TaskState::default();
     loop {
         let started = Instant::now();
-        match run_session(&identity.gateway_addr, host_only, tls_config.clone(), logq.as_ref(), &mut metrics, &shell_handled) {
+        match run_session(&identity.gateway_addr, host_only, tls_config.clone(), logq.as_ref(), &mut metrics, &shell_handled, &mut tasks) {
             Ok(()) => {}
             Err(e) => dlog!("laforge-agent: session ended: {e}"),
         }
@@ -318,7 +321,44 @@ fn build_tls_config(identity: &identity::Identity) -> Result<ClientConfig, Strin
         .map_err(|e| format!("building client config: {e}"))
 }
 
-fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq: Option<&Arc<applog::LogQueue>>, metrics: &mut metrics::Collector, shell_handled: &Arc<Mutex<HashSet<String>>>) -> io::Result<()> {
+// TaskState is the agent's task work that must OUTLIVE a session. A dropped TLS
+// connection used to restart run_session with nothing in flight while the old
+// worker thread kept running its script; the agent then asked for work, the
+// gateway re-leased the same (expired) step, and the script ran twice at once.
+// Keeping the in-flight receiver here means a reconnected session goes on
+// waiting for that worker -- heartbeating, but never asking for another task --
+// and reports its result when it lands. A result whose report was cut off by a
+// disconnect waits in `unreported` and is sent first on the next session.
+#[derive(Default)]
+struct TaskState {
+    inflight: Option<Inflight>,
+    unreported: Option<ReportStatusRequestPayload>,
+}
+
+// One task running on a worker thread: its id (named on every heartbeat so the
+// gateway keeps renewing its lease) and the channel its result arrives on.
+struct Inflight {
+    task_id: String,
+    rx: mpsc::Receiver<ReportStatusRequestPayload>,
+}
+
+// send_report ships the pending result and clears it once the gateway acks. If
+// the connection fails first, the result stays pending for the next session.
+fn send_report<S: Read + Write>(tls: &mut S, tasks: &mut TaskState) -> io::Result<()> {
+    let report = match tasks.unreported.as_ref() {
+        Some(r) => r,
+        None => return Ok(()),
+    };
+    let body = serde_json::to_vec(report)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding report-status: {e}")))?;
+    protocol::write_frame(tls, MessageType::ReportStatusRequest, &body)?;
+    let (mt, _body) = protocol::read_frame(tls)?;
+    expect(mt, MessageType::ReportStatusResponse)?;
+    tasks.unreported = None;
+    Ok(())
+}
+
+fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq: Option<&Arc<applog::LogQueue>>, metrics: &mut metrics::Collector, shell_handled: &Arc<Mutex<HashSet<String>>>, tasks: &mut TaskState) -> io::Result<()> {
     // Name the dial target: the "No such host is known" / connection-refused
     // failures are far more actionable when the log says which address failed.
     dlog!("laforge-agent: connecting to gateway {addr}");
@@ -334,18 +374,23 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
     let conn = ClientConnection::new(tls_config, server_name).map_err(|e| io::Error::other(format!("starting TLS: {e}")))?;
     let mut tls = StreamOwned::new(conn, tcp);
 
-    // The task currently executing on a worker thread, if any. Its result comes
-    // back here over the channel. While this is Some, the loop keeps
+    // tasks.inflight is the task executing on a worker thread, if any (possibly
+    // started in an earlier session). While it is Some, the loop keeps
     // heartbeating (so shells still open and the agent stays healthy) but does
     // NOT ask for another task -- one in flight at a time, preserving the
     // gateway's ordered lease model.
-    let mut inflight: Option<mpsc::Receiver<ReportStatusRequestPayload>> = None;
+    if let Some(t) = tasks.inflight.as_ref() {
+        dlog!("laforge-agent: reconnected with task {} still running; waiting for its result", t.task_id);
+    }
 
     loop {
-        // Sample basic host metrics and carry them on the heartbeat. Best-effort:
+        // Sample basic host metrics and carry them on the heartbeat, along with
+        // the in-flight task's id (the gateway renews its lease). Best-effort:
         // if serialization somehow fails, send an empty heartbeat rather than
         // dropping the check-in.
-        let hb_body = serde_json::to_vec(&metrics.sample()).unwrap_or_default();
+        let mut hb_req = metrics.sample();
+        hb_req.inflight_task_id = tasks.inflight.as_ref().map(|t| t.task_id.clone());
+        let hb_body = serde_json::to_vec(&hb_req).unwrap_or_default();
         protocol::write_frame(&mut tls, MessageType::HeartbeatRequest, &hb_body)?;
         let (mt, body) = protocol::read_frame(&mut tls)?;
         expect(mt, MessageType::HeartbeatResponse)?;
@@ -364,6 +409,13 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
         // keep flowing at the poll cadence -- including while a task runs.
         flush_logs(&mut tls, logq)?;
 
+        // A result the previous session finished but couldn't deliver goes
+        // first -- before any new task is asked for.
+        if tasks.unreported.is_some() {
+            send_report(&mut tls, tasks)?;
+            continue;
+        }
+
         // If a task is running on the worker thread, WAIT for its result -- but
         // bounded by one poll interval. recv_timeout wakes the instant the worker
         // sends (so a trivial command reports in ~its real runtime, not a whole
@@ -373,10 +425,10 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
         // EVERY execute pay a dead ~15-20s before its (seconds-old) result was even
         // noticed -- ~9-12 min of pure wait on a 40-execute host. Borrowing `rx`
         // keeps `inflight` owned here; the arms clear it.
-        if let Some(rx) = inflight.as_ref() {
-            match rx.recv_timeout(Duration::from_millis(hb.next_poll_ms)) {
+        if let Some(t) = tasks.inflight.as_ref() {
+            match t.rx.recv_timeout(Duration::from_millis(hb.next_poll_ms)) {
                 Ok(report) => {
-                    inflight = None;
+                    tasks.inflight = None;
                     dlog!("laforge-agent: task {} -> {}", report.task_id, report.status);
                     // On a non-success, log the error so a failing step can be
                     // debugged from the host's own log. Truncated, and the error
@@ -385,11 +437,10 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
                     if report.status != "done" && !report.error.is_empty() {
                         dlog!("laforge-agent: task {} error: {}", report.task_id, truncate(&report.error, 800));
                     }
-                    let body = serde_json::to_vec(&report)
-                        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding report-status: {e}")))?;
-                    protocol::write_frame(&mut tls, MessageType::ReportStatusRequest, &body)?;
-                    let (mt, _body) = protocol::read_frame(&mut tls)?;
-                    expect(mt, MessageType::ReportStatusResponse)?;
+                    // Held in TaskState until acked, so a disconnect mid-report
+                    // re-sends it on the next session instead of losing it.
+                    tasks.unreported = Some(report);
+                    send_report(&mut tls, tasks)?;
                     // Known work may be queued -- poll again without waiting.
                     continue;
                 }
@@ -403,7 +454,7 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
                     // The worker ended without sending a result (a panic in command
                     // execution -- not expected). Drop it; the gateway's lease
                     // expiry re-leases the task.
-                    inflight = None;
+                    tasks.inflight = None;
                     dlog!("laforge-agent: task worker ended with no result; it will be re-leased on lease expiry");
                     continue;
                 }
@@ -456,6 +507,7 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
             // touches the command and the result channel -- this loop stays the
             // sole owner of the TLS connection.
             dlog!("laforge-agent: running task {} ({})", task.id, task.command);
+            let task_id = task.id.clone();
             let (tx, rx) = mpsc::channel();
             std::thread::spawn(move || {
                 let outcome = if task.command == "validate" {
@@ -470,12 +522,11 @@ fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq:
                     error: outcome.error,
                     validator_results: outcome.validator_results,
                 };
-                // A failed send means the loop went away (connection dropped ->
-                // reconnect); the result is simply lost and the task re-leases on
-                // expiry, exactly as a synchronous report that failed would.
+                // The receiver lives in TaskState across reconnects, so this
+                // only fails if the agent itself is going away.
                 let _ = tx.send(report);
             });
-            inflight = Some(rx);
+            tasks.inflight = Some(Inflight { task_id, rx });
             // Come back next iteration to heartbeat and poll for the result.
             continue;
         }
@@ -511,4 +562,93 @@ fn expect(got: MessageType, want: MessageType) -> io::Result<()> {
         return Err(io::Error::new(io::ErrorKind::InvalidData, format!("got message type {got:?}, want {want:?}")));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    // A fake gateway connection: reads come from a canned buffer, writes are
+    // captured. An empty read buffer behaves like a connection that dropped
+    // before the gateway answered.
+    struct FakeConn {
+        input: Cursor<Vec<u8>>,
+        output: Vec<u8>,
+    }
+
+    impl Read for FakeConn {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            self.input.read(buf)
+        }
+    }
+
+    impl Write for FakeConn {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.output.write(buf)
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn report() -> ReportStatusRequestPayload {
+        ReportStatusRequestPayload {
+            task_id: "t-1".to_string(),
+            status: "done".to_string(),
+            output: "ok".to_string(),
+            error: String::new(),
+            validator_results: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn report_cleared_once_acked() {
+        let mut ack = Vec::new();
+        protocol::write_frame(&mut ack, MessageType::ReportStatusResponse, br#"{"ok":true}"#).unwrap();
+        let mut conn = FakeConn { input: Cursor::new(ack), output: Vec::new() };
+        let mut tasks = TaskState { inflight: None, unreported: Some(report()) };
+        send_report(&mut conn, &mut tasks).unwrap();
+        assert!(tasks.unreported.is_none());
+        let (mt, body) = protocol::read_frame(&mut Cursor::new(conn.output)).unwrap();
+        assert_eq!(mt, MessageType::ReportStatusRequest);
+        assert!(String::from_utf8(body).unwrap().contains("\"task_id\":\"t-1\""));
+    }
+
+    #[test]
+    fn report_kept_when_connection_drops_before_ack() {
+        let mut conn = FakeConn { input: Cursor::new(Vec::new()), output: Vec::new() };
+        let mut tasks = TaskState { inflight: None, unreported: Some(report()) };
+        assert!(send_report(&mut conn, &mut tasks).is_err());
+        assert_eq!(tasks.unreported.as_ref().map(|r| r.task_id.as_str()), Some("t-1"));
+    }
+
+    #[test]
+    fn inflight_receiver_survives_a_dropped_session() {
+        // The worker's result arrives on a receiver owned by TaskState, not by
+        // the session -- so it is still there after the session that started it
+        // has returned.
+        let mut tasks = TaskState::default();
+        let (tx, rx) = mpsc::channel();
+        tasks.inflight = Some(Inflight { task_id: "t-2".to_string(), rx });
+        // (session ends here; tasks lives on in agent_loop)
+        tx.send(report()).unwrap();
+        let got = tasks.inflight.as_ref().unwrap().rx.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert_eq!(got.task_id, "t-1");
+    }
+
+    #[test]
+    fn heartbeat_names_inflight_task_and_boot_times() {
+        let mut m = metrics::Collector::new();
+        let mut hb = m.sample();
+        hb.inflight_task_id = Some("t-3".to_string());
+        let v: serde_json::Value = serde_json::from_slice(&serde_json::to_vec(&hb).unwrap()).unwrap();
+        assert_eq!(v["inflight_task_id"], "t-3");
+        assert!(v["agent_started_at"].as_i64().unwrap() > 1_600_000_000);
+        // boot_time is best-effort, but every CI/dev OS reports one.
+        assert!(v["boot_time"].as_i64().unwrap() <= v["agent_started_at"].as_i64().unwrap());
+        // No in-flight task: the field is omitted entirely.
+        let idle = serde_json::to_value(m.sample()).unwrap();
+        assert!(idle.get("inflight_task_id").is_none());
+    }
 }

@@ -75,6 +75,18 @@ type PlannedCommand struct {
 	// reboot, instead of re-leasing and re-running it. See internal/gateway's
 	// get-task handler.
 	Reboots bool
+	// MaxAttempts is the script's `retries:` override as an attempt cap
+	// (retries + 1), carried onto the agent_task. nil = the gateway default.
+	MaxAttempts *int32
+}
+
+// scriptMaxAttempts converts a script's `retries:` into an attempt cap.
+func scriptMaxAttempts(retries *int) *int32 {
+	if retries == nil || *retries < 0 {
+		return nil
+	}
+	n := int32(*retries + 1)
+	return &n
 }
 
 // languageInterpreter maps a script's language to how the agent should
@@ -333,7 +345,8 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 		// `args: ["--seed", "3"]`.
 		execArgs := append(append([]string{}, prefixArgs...), path)
 		execArgs = append(execArgs, script.Args...)
-		out = append(out, PlannedCommand{Command: agentproto.CmdExecute, IgnoreErrors: ignoreErrors, Reboots: script.Reboots, Payload: agentproto.ExecutePayload{
+		maxAttempts := scriptMaxAttempts(script.Retries)
+		out = append(out, PlannedCommand{Command: agentproto.CmdExecute, IgnoreErrors: ignoreErrors, Reboots: script.Reboots, MaxAttempts: maxAttempts, Payload: agentproto.ExecutePayload{
 			Command: interp, Args: execArgs, TimeoutSec: script.Timeout,
 		}})
 		// A script's OWN `validate:` block runs after its execution, on every
@@ -348,7 +361,7 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 			if err != nil {
 				return nil, nil, fmt.Errorf("step %d (script %s) validate: %w", i, name, err)
 			}
-			out = append(out, PlannedCommand{Command: agentproto.CmdValidate, IgnoreErrors: ignoreErrors, Payload: agentproto.ValidatePayload{Checks: checks}})
+			out = append(out, PlannedCommand{Command: agentproto.CmdValidate, IgnoreErrors: ignoreErrors, MaxAttempts: maxAttempts, Payload: agentproto.ValidatePayload{Checks: checks}})
 		}
 
 	case "run":

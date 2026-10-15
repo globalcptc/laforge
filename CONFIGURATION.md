@@ -490,9 +490,10 @@ A host runs it with a `script:` step: `- script: create-users`.
 | `description` | Human-readable description of what the script does. |
 | `language` | Which interpreter runs the rendered source (e.g. `bash`, `powershell`). |
 | `source` | Path to the source file, alongside this definition (e.g. `install-mysql.sh`). |
-| `timeout` | Seconds before the step running this script is killed as failed. |
+| `timeout` | Seconds before the step running this script is killed as failed. A step that hits its timeout is not retried. |
 | `args` | Extra arguments passed to the script when it runs. |
 | `ignore_errors` | If true, a non-zero exit warns instead of failing the whole build. |
+| `retries` | How many times a failed run is retried before the step fails (default 2). Set `retries: 0` for a long, deterministic script such as a wait loop, which would only fail the same way again. |
 | `tags` | Labels; also flow to every host/container running this script. |
 | `findings` | Findings this script introduces — they travel with it to every host that runs it. |
 | `people` | People this script concerns, e.g. accounts it creates. Folded into `{{ .people }}` when the script renders. |

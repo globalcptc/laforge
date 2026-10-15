@@ -100,6 +100,18 @@ pub struct HeartbeatRequestPayload {
     pub net_rx_bps: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub net_tx_bps: Option<f64>,
+    /// The task still running on the worker thread, if any. The gateway renews
+    /// its lease on every heartbeat, so a long step is never re-leased (and run
+    /// a second time alongside this one) while the agent is still working on it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inflight_task_id: Option<String>,
+    /// Unix seconds: when the OS booted, and when this agent process started.
+    /// The gateway uses them to split "deployed -> first check-in" into boot,
+    /// agent start and connect.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub boot_time: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_started_at: Option<i64>,
 }
 
 #[derive(serde::Deserialize, Debug)]

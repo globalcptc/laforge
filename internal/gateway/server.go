@@ -162,16 +162,36 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 
 func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtype.UUID, fingerprint string, payload []byte) {
 	q := db.New(s.Pool)
-	if _, err := q.UpsertAgentSession(ctx, db.UpsertAgentSessionParams{
-		DeployedObjectID: objID, CertFingerprint: fingerprint,
-	}); err != nil {
-		log.Printf("gateway: heartbeat: recording session: %v", err)
-	}
 	// Host metrics, when the agent sent them -- a malformed or empty payload
 	// just leaves them nil (older agents send none), never fails the heartbeat.
 	var metrics agentproto.HeartbeatRequestPayload
 	if len(payload) > 0 {
 		_ = json.Unmarshal(payload, &metrics)
+	}
+	bootAt, agentStartedAt := unixTimestamptz(metrics.BootTime), unixTimestamptz(metrics.AgentStartedAt)
+	// Read the check-in context BEFORE the upsert below moves last_heartbeat_at,
+	// so this heartbeat can tell whether it's the first since the object was
+	// deployed. Best-effort: a failure only skips the check-in event.
+	checkin, checkinErr := q.GetAgentCheckinContext(ctx, objID)
+	if _, err := q.UpsertAgentSession(ctx, db.UpsertAgentSessionParams{
+		DeployedObjectID: objID, CertFingerprint: fingerprint, BootAt: bootAt, AgentStartedAt: agentStartedAt,
+	}); err != nil {
+		log.Printf("gateway: heartbeat: recording session: %v", err)
+	}
+	if checkinErr == nil && firstCheckinSinceDeploy(checkin) {
+		s.logCheckinEvent(ctx, q, objID, checkin, bootAt, agentStartedAt)
+	}
+	// Keep the lease on the step the agent is still running. Without this a step
+	// longer than one lease expired mid-run, and the next get-task (after a
+	// reconnect) leased it again -- the same script running twice at once.
+	if metrics.InflightTaskID != "" {
+		if taskID, err := parseUUID(metrics.InflightTaskID); err == nil {
+			if _, err := q.RenewAgentTaskLease(ctx, db.RenewAgentTaskLeaseParams{
+				Lease: db.Interval(s.LeaseDuration), ID: taskID, DeployedObjectID: objID,
+			}); err != nil {
+				log.Printf("gateway: heartbeat: renewing lease on %s: %v", metrics.InflightTaskID, err)
+			}
+		}
 	}
 	next := s.BasePollMS + rand.Intn(max(s.JitterMS, 1))
 	// If a client is waiting for an interactive shell on this object, tell the
@@ -202,6 +222,7 @@ func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtyp
 		RemoteAddr: remoteAddrString(conn), NextPollMs: &nextI32,
 		CpuPct: metrics.CPUPct, MemPct: metrics.MemPct, DiskPct: metrics.DiskPct,
 		NetRxBps: metrics.NetRxBps, NetTxBps: metrics.NetTxBps,
+		BootAt: bootAt, AgentStartedAt: agentStartedAt,
 	}); err != nil {
 		log.Printf("gateway: heartbeat: logging history: %v", err)
 	}
@@ -212,6 +233,86 @@ func (s *Server) handleHeartbeat(ctx context.Context, conn net.Conn, objID pgtyp
 	if err := agentproto.WriteFrame(conn, agentproto.HeartbeatResponse, body); err != nil {
 		log.Printf("gateway: heartbeat: writing response: %v", err)
 	}
+}
+
+// unixTimestamptz turns an agent-reported Unix-seconds time into a nullable
+// timestamptz. Absent (an older agent) or non-positive stays NULL.
+func unixTimestamptz(sec *int64) pgtype.Timestamptz {
+	if sec == nil || *sec <= 0 {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: time.Unix(*sec, 0).UTC(), Valid: true}
+}
+
+// firstCheckinSinceDeploy: the agent has not heartbeated since the object was
+// last deployed. A rebuilt host keeps its old session row, so a heartbeat from
+// before deployed_at doesn't count.
+func firstCheckinSinceDeploy(c db.GetAgentCheckinContextRow) bool {
+	if !c.LastHeartbeatAt.Valid {
+		return true
+	}
+	return c.DeployedAt.Valid && c.LastHeartbeatAt.Time.Before(c.DeployedAt.Time)
+}
+
+// logCheckinEvent records an agent's first check-in after a deploy, split into
+// the phases the agent's boot report makes visible: deploy -> OS boot -> agent
+// start -> first heartbeat. Windows took 6-24 minutes to check in with no way
+// to tell where the time went; this puts each phase on the host's timeline.
+// Best-effort, like every other journal write here.
+func (s *Server) logCheckinEvent(ctx context.Context, q *db.Queries, objID pgtype.UUID, c db.GetAgentCheckinContextRow, bootAt, agentStartedAt pgtype.Timestamptz) {
+	buildID, err := q.GetBuildIDByDeployedObject(ctx, objID)
+	if err != nil {
+		log.Printf("gateway: check-in event: resolving build for %s: %v", objID, err)
+		return
+	}
+	message, payload := checkinSummary(time.Now(), c, bootAt, agentStartedAt)
+	body, _ := json.Marshal(payload)
+	if err := q.CreateAgentStepEvent(ctx, db.CreateAgentStepEventParams{
+		BuildID: buildID, DeployedObjectID: objID, Kind: "agent_checked_in", Message: message, Payload: body,
+	}); err != nil {
+		log.Printf("gateway: check-in event for %s: %v", objID, err)
+	}
+}
+
+// checkinSummary builds the agent_checked_in message and payload. Offsets are
+// measured from the deploy (when known); a phase the agent didn't report is
+// left out rather than guessed.
+func checkinSummary(now time.Time, c db.GetAgentCheckinContextRow, bootAt, agentStartedAt pgtype.Timestamptz) (string, map[string]any) {
+	payload := map[string]any{"checked_in_at": now.UTC()}
+	if c.DeployedAt.Valid {
+		payload["deployed_at"] = c.DeployedAt.Time.UTC()
+	}
+	if bootAt.Valid {
+		payload["boot_at"] = bootAt.Time.UTC()
+	}
+	if agentStartedAt.Valid {
+		payload["agent_started_at"] = agentStartedAt.Time.UTC()
+	}
+	if c.AgentCheckinOverdueAt.Valid {
+		payload["overdue_flagged_at"] = c.AgentCheckinOverdueAt.Time.UTC()
+	}
+	if !c.DeployedAt.Valid {
+		return "agent checked in", payload
+	}
+	since := func(t time.Time) string { return t.Sub(c.DeployedAt.Time).Round(time.Second).String() }
+	payload["deploy_to_checkin_sec"] = int64(now.Sub(c.DeployedAt.Time).Seconds())
+	msg := "agent checked in " + since(now) + " after deploy"
+	var phases []string
+	if bootAt.Valid {
+		phases = append(phases, "OS booted +"+since(bootAt.Time))
+		payload["deploy_to_boot_sec"] = int64(bootAt.Time.Sub(c.DeployedAt.Time).Seconds())
+	}
+	if agentStartedAt.Valid {
+		phases = append(phases, "agent started +"+since(agentStartedAt.Time))
+		payload["deploy_to_agent_start_sec"] = int64(agentStartedAt.Time.Sub(c.DeployedAt.Time).Seconds())
+	}
+	if len(phases) > 0 {
+		msg += " (" + strings.Join(phases, ", ") + ")"
+	}
+	if c.AgentCheckinOverdueAt.Valid {
+		msg += "; it had been flagged as never checked in"
+	}
+	return msg, payload
 }
 
 // remoteAddrString is nil-safe: conn.RemoteAddr() can itself return nil
@@ -287,19 +388,19 @@ func (s *Server) handleReportStatus(ctx context.Context, conn net.Conn, payload 
 			s.recordValidatorResults(ctx, q, taskID, req.ValidatorResults)
 		}
 	} else {
-		current, ignoreErrors, err := currentAttempts(ctx, q, taskID)
+		current, err := q.GetAgentTask(ctx, taskID)
 		if err != nil {
 			log.Printf("gateway: report-status: loading task %s: %v", req.TaskID, err)
 			ok = false
 		} else {
-			// A retryable transient stays 'pending' until MaxAttempts. Once
+			// A retryable transient stays 'pending' until its attempt cap. Once
 			// terminal, a task the author marked ignore_errors becomes 'ignored'
 			// (does not block later steps or fail the build -- see the query and
 			// AdvanceObjectLifecycle) rather than 'failed'.
 			status := "pending"
-			if current >= MaxAttempts {
+			if failureIsTerminal(current, req) {
 				status = "failed"
-				if ignoreErrors {
+				if current.IgnoreErrors {
 					status = "ignored"
 				}
 			}
@@ -465,15 +566,20 @@ func baseName(p string) string {
 	return p
 }
 
-// currentAttempts returns how many times a task has been attempted and whether
-// its failure should be tolerated (ignore_errors) -- both read from the one row
-// report-status needs to decide retry vs. terminal-failed vs. terminal-ignored.
-func currentAttempts(ctx context.Context, q *db.Queries, taskID pgtype.UUID) (attempts int32, ignoreErrors bool, err error) {
-	task, err := q.GetAgentTask(ctx, taskID)
-	if err != nil {
-		return 0, false, err
+// failureIsTerminal decides retry vs. give up for a failed report. A step the
+// agent killed at its own timeout_sec is terminal on the first attempt: a step
+// that ran out its whole deadline (a 60-minute wait loop whose peer never came
+// up) would just spend that deadline again. Otherwise the step's own cap -- a
+// script's `retries:` (agent_task.max_attempts) or MaxAttempts -- applies.
+func failureIsTerminal(task db.AgentTask, req agentproto.ReportStatusRequestPayload) bool {
+	if req.IsTimeout() {
+		return true
 	}
-	return task.Attempts, task.IgnoreErrors, nil
+	limit := int32(MaxAttempts)
+	if task.MaxAttempts != nil {
+		limit = *task.MaxAttempts
+	}
+	return task.Attempts >= limit
 }
 
 // logContext is one object's enrichment identity, cached in Server.logCtx.

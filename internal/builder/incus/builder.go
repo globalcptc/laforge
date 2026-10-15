@@ -665,6 +665,16 @@ func (b *Builder) startInstance(ctx context.Context, name string) error {
 	return fmt.Errorf("starting instance %s (after %d attempts): %w", name, maxAttempts, lastErr)
 }
 
+// ConsoleLog reads the instance's console log through Incus's
+// GET /1.0/instances/<name>/console (a raw body, not the JSON envelope).
+func (b *Builder) ConsoleLog(ctx context.Context, team, externalRef string, maxBytes int) (string, error) {
+	data, err := b.Client.getRaw(ctx, "/1.0/instances/"+externalRef+"/console")
+	if err != nil {
+		return "", fmt.Errorf("reading console log of %s: %w", externalRef, err)
+	}
+	return builder.TailBytes(data, maxBytes), nil
+}
+
 // PowerAction maps LaForge's start/stop/reboot onto Incus's own instance
 // state actions (start / stop / restart). force=true is a hard power
 // operation (Incus's own `force`, an immediate kill/reset); force=false is

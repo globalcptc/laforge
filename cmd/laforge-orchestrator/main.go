@@ -56,6 +56,9 @@ func main() {
 	scheduleInterval := flag.Duration("schedule-interval", 5*time.Second, "how often to check for due scheduled_task rows (schedule: entries and ad-hoc scheduled tasks)")
 	accessInterval := flag.Duration("access-interval", 15*time.Second, "how often to enforce each live build's authored access: windows (open/close teams on schedule)")
 	builderMetricsInterval := flag.Duration("builder-metrics-interval", 120*time.Second, "how often to sample each builder's backend health (CPU/mem/disk/net/API-latency/quotas) for the builder page; 0 disables it. 120s keeps hoster/cluster load low -- see docs/plans/builder-monitoring.md")
+	checkinLinux := flag.Duration("agent-checkin-deadline-linux", envDurationDefault("AGENT_CHECKIN_DEADLINE_LINUX", orchestrator.DefaultCheckinWatchdog.Linux), "how long after deploy a Linux host's agent may take to send its first heartbeat before the watchdog flags it (event + needs-attention, console log captured); 0 disables")
+	checkinWindows := flag.Duration("agent-checkin-deadline-windows", envDurationDefault("AGENT_CHECKIN_DEADLINE_WINDOWS", orchestrator.DefaultCheckinWatchdog.Windows), "the same deadline for a Windows host, whose first boot (sysprep, cloudbase-init) is far slower; 0 disables")
+	checkinReboot := flag.Bool("agent-checkin-reboot", envBoolDefault("AGENT_CHECKIN_REBOOT", false), "force-reboot a host once when its agent misses the check-in deadline")
 	once := flag.Bool("once", false, "reconcile every non-terminal build exactly once, then exit (for scripting/tests)")
 	flag.Parse()
 
@@ -386,6 +389,8 @@ func main() {
 	// -- like teardown/AdvanceDeployStatus, it's a pure hoster query -- so a
 	// build whose revision no longer resolves still gets its liveness
 	// tracked. Only builds that can have live instances are polled.
+	checkinWatchdog := orchestrator.DefaultCheckinWatchdog
+	checkinWatchdog.Linux, checkinWatchdog.Windows, checkinWatchdog.Reboot = *checkinLinux, *checkinWindows, *checkinReboot
 	pollInstanceStates := func() {
 		builds, err := q.ListBuildsByStatus(ctx, []string{"deploying", "building", "finished", "failed"})
 		if err != nil {
@@ -412,6 +417,11 @@ func main() {
 			}
 			if _, err := orchestrator.AdvanceBuildStatus(ctx, pool, b.ID); err != nil {
 				log.Printf("advancing build status for build %s: %v", b.ID, err)
+			}
+			// Flag hosts whose agent never checked in. On this ~30s cadence, not
+			// every reconcile: deadlines are measured in minutes.
+			if err := orchestrator.CheckAgentCheckins(ctx, pool, b.ID, checkinWatchdog); err != nil {
+				log.Printf("check-in watchdog for build %s: %v", b.ID, err)
 			}
 		}
 	}
@@ -565,6 +575,17 @@ func envIntDefault(name string, def int) int {
 	if v := os.Getenv(name); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			return n
+		}
+	}
+	return def
+}
+
+// envBoolDefault reads a boolean environment variable (strconv.ParseBool
+// syntax), falling back to def when it is unset or unparseable.
+func envBoolDefault(name string, def bool) bool {
+	if v := os.Getenv(name); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			return b
 		}
 	}
 	return def

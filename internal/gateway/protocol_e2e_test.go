@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -221,7 +222,7 @@ func TestGatewayEndToEnd(t *testing.T) {
 	// this same real restricted laforge_gateway connection, readable
 	// back through the same per-object query the API's own
 	// ListEventsByDeployedObject uses.
-	events, err := adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID)
+	events, err := stepEvents(adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID))
 	if err != nil {
 		t.Fatalf("ListEventsByDeployedObject: %v", err)
 	}
@@ -263,7 +264,7 @@ func TestGatewayEndToEnd(t *testing.T) {
 		t.Fatal("report-status(done) for step 1 returned OK=false")
 	}
 
-	events, err = adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID)
+	events, err = stepEvents(adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID))
 	if err != nil {
 		t.Fatalf("ListEventsByDeployedObject (after step 1): %v", err)
 	}
@@ -323,7 +324,7 @@ func TestGatewayRetryThenFailCap(t *testing.T) {
 		if err != nil {
 			t.Fatalf("attempt %d: GetAgentTask: %v", attempt, err)
 		}
-		events, err := adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID)
+		events, err := stepEvents(adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID))
 		if err != nil {
 			t.Fatalf("attempt %d: ListEventsByDeployedObject: %v", attempt, err)
 		}
@@ -409,4 +410,16 @@ func TestGatewayReclaimsExpiredLease(t *testing.T) {
 	if dbTask.Attempts != 2 {
 		t.Fatalf("attempts = %d, want 2 (leased once by the dead agent, once more on reclaim)", dbTask.Attempts)
 	}
+}
+
+// stepEvents keeps only step_* events, so these step-journal assertions aren't
+// thrown off by the host's other timeline entries (agent_checked_in).
+func stepEvents(events []db.Event, err error) ([]db.Event, error) {
+	var out []db.Event
+	for _, e := range events {
+		if strings.HasPrefix(e.Kind, "step_") {
+			out = append(out, e)
+		}
+	}
+	return out, err
 }

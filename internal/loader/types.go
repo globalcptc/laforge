@@ -156,6 +156,11 @@ type Script struct {
 	Timeout      int                      `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 	Args         []string                 `yaml:"args,omitempty" json:"args,omitempty"`
 	IgnoreErrors bool                     `yaml:"ignore_errors,omitempty" json:"ignore_errors,omitempty"`
+	// Retries overrides how many times a failed run of this script is retried
+	// (nil = the gateway default). `retries: 0` makes the first failure final,
+	// which suits a long deterministic script (a wait loop) that would only
+	// fail the same way again. A timeout is never retried either way.
+	Retries      *int                     `yaml:"retries,omitempty" json:"retries,omitempty"`
 	// Reboots marks a script that reboots the host itself (dcpromo, a driver
 	// install, a Windows feature that requires a restart). Such a script never
 	// reports a result -- the reboot kills the agent mid-command -- so LaForge

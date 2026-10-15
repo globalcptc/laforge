@@ -379,3 +379,31 @@ func TestExpandStepsUsesRuntimePublicAddress(t *testing.T) {
 		t.Fatalf("runtime public IP missing: %+v", cmds[1])
 	}
 }
+
+// TestExpandStepsCarriesScriptRetries: a script's `retries:` becomes the
+// attempt cap (retries + 1) on its execute command; a script without one leaves
+// the gateway default (nil).
+func TestExpandStepsCarriesScriptRetries(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatalf("loader.Load: %v", err)
+	}
+	zero := 0
+	for i := range c.Scripts {
+		if c.Scripts[i].Name == "base" {
+			c.Scripts[i].Retries = &zero
+		}
+	}
+	cmds, _, err := ExpandSteps("../../examples/lm-test", c, "lm-test", "web01", 1)
+	if err != nil {
+		t.Fatalf("ExpandSteps: %v", err)
+	}
+	// Same layout as TestExpandStepsCarriesScriptRebootsOntoExecute: base's
+	// execute is cmds[2], vuln-sqli's is cmds[6].
+	if cmds[2].Command != agentproto.CmdExecute || cmds[2].MaxAttempts == nil || *cmds[2].MaxAttempts != 1 {
+		t.Fatalf("base execute = %+v, want MaxAttempts 1 from retries: 0", cmds[2])
+	}
+	if cmds[6].MaxAttempts != nil {
+		t.Errorf("vuln-sqli sets no retries:, but its execute carried MaxAttempts %d", *cmds[6].MaxAttempts)
+	}
+}

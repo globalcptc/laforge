@@ -41,6 +41,8 @@ type AgentHeartbeat struct {
 	DiskPct          *float64           `json:"disk_pct"`
 	NetRxBps         *float64           `json:"net_rx_bps"`
 	NetTxBps         *float64           `json:"net_tx_bps"`
+	BootAt           pgtype.Timestamptz `json:"boot_at"`
+	AgentStartedAt   pgtype.Timestamptz `json:"agent_started_at"`
 }
 
 type AgentSession struct {
@@ -49,6 +51,8 @@ type AgentSession struct {
 	CertFingerprint  string             `json:"cert_fingerprint"`
 	FirstSeenAt      pgtype.Timestamptz `json:"first_seen_at"`
 	LastHeartbeatAt  pgtype.Timestamptz `json:"last_heartbeat_at"`
+	BootAt           pgtype.Timestamptz `json:"boot_at"`
+	AgentStartedAt   pgtype.Timestamptz `json:"agent_started_at"`
 }
 
 type AgentTask struct {
@@ -69,6 +73,7 @@ type AgentTask struct {
 	Reboots          bool               `json:"reboots"`
 	StartedAt        pgtype.Timestamptz `json:"started_at"`
 	FinishedAt       pgtype.Timestamptz `json:"finished_at"`
+	MaxAttempts      *int32             `json:"max_attempts"`
 }
 
 type AttentionDismissal struct {
@@ -220,23 +225,26 @@ type ContentRevision struct {
 }
 
 type DeployedObject struct {
-	ID                  pgtype.UUID        `json:"id"`
-	TeamID              pgtype.UUID        `json:"team_id"`
-	Kind                string             `json:"kind"`
-	ObjectName          string             `json:"object_name"`
-	AsName              *string            `json:"as_name"`
-	NetworkName         *string            `json:"network_name"`
-	Fingerprint         string             `json:"fingerprint"`
-	Status              string             `json:"status"`
-	ExternalRef         *string            `json:"external_ref"`
-	LastError           *string            `json:"last_error"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	PowerState          string             `json:"power_state"`
-	PowerStateCheckedAt pgtype.Timestamptz `json:"power_state_checked_at"`
-	Tags                json.RawMessage    `json:"tags"`
-	StepsMaterializedAt pgtype.Timestamptz `json:"steps_materialized_at"`
-	BlockedOn           json.RawMessage    `json:"blocked_on"`
-	PublicAddress       string             `json:"public_address"`
+	ID                    pgtype.UUID        `json:"id"`
+	TeamID                pgtype.UUID        `json:"team_id"`
+	Kind                  string             `json:"kind"`
+	ObjectName            string             `json:"object_name"`
+	AsName                *string            `json:"as_name"`
+	NetworkName           *string            `json:"network_name"`
+	Fingerprint           string             `json:"fingerprint"`
+	Status                string             `json:"status"`
+	ExternalRef           *string            `json:"external_ref"`
+	LastError             *string            `json:"last_error"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	PowerState            string             `json:"power_state"`
+	PowerStateCheckedAt   pgtype.Timestamptz `json:"power_state_checked_at"`
+	Tags                  json.RawMessage    `json:"tags"`
+	StepsMaterializedAt   pgtype.Timestamptz `json:"steps_materialized_at"`
+	BlockedOn             json.RawMessage    `json:"blocked_on"`
+	PublicAddress         string             `json:"public_address"`
+	DeployedAt            pgtype.Timestamptz `json:"deployed_at"`
+	AgentPlatform         string             `json:"agent_platform"`
+	AgentCheckinOverdueAt pgtype.Timestamptz `json:"agent_checkin_overdue_at"`
 }
 
 type Environment struct {

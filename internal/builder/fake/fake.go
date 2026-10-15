@@ -127,6 +127,12 @@ func (b *Builder) PowerAction(ctx context.Context, team, externalRef, action str
 	return b.wait(ctx)
 }
 
+// ConsoleLog returns a fixed, recognizable console log -- the fake has no
+// guest, but the never-checked-in watchdog's capture path still runs end to end.
+func (b *Builder) ConsoleLog(ctx context.Context, team, externalRef string, maxBytes int) (string, error) {
+	return builder.TailBytes([]byte("fake console log for "+externalRef+"\n"), maxBytes), nil
+}
+
 func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 	q := db.New(b.Pool)
 	rows, err := q.ListFakeHosterResources(ctx)

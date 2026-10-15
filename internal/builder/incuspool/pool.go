@@ -171,6 +171,15 @@ func (p *Pool) PowerAction(ctx context.Context, team, externalRef, action string
 	return h.PowerAction(ctx, team, externalRef, action, force)
 }
 
+// ConsoleLog routes to the host that holds this team's instances.
+func (p *Pool) ConsoleLog(ctx context.Context, team, externalRef string, maxBytes int) (string, error) {
+	h, err := p.hostForTeam(team)
+	if err != nil {
+		return "", err
+	}
+	return h.ConsoleLog(ctx, team, externalRef, maxBytes)
+}
+
 // Inspect aggregates every host's own Inspect -- not team-scoped (Inspect
 // lists everything that exists, for adoption/drift detection), and every
 // ExternalRef is already globally unique (internal/runner's

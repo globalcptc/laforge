@@ -206,8 +206,39 @@ UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $
 -- has not checked in yet and no authored step has run. The object-lifecycle
 -- poll (internal/orchestrator/lifecycle.go) advances this to building ->
 -- finished/build_failed/invalid from the real agent_task/validator rows.
-UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, last_error = NULL, updated_at = now()
+-- deployed_at restarts the never-checked-in watchdog's clock, and a redeploy
+-- clears any earlier overdue flag.
+UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, last_error = NULL, updated_at = now(),
+    deployed_at = now(), agent_checkin_overdue_at = NULL
 WHERE id = $1 RETURNING *;
+
+-- name: SetDeployedObjectAgentPlatform :exec
+-- Which agent binary the runner delivered to this host. Marks the object as one
+-- whose agent is expected to check in, and picks its watchdog deadline.
+UPDATE deployed_object SET agent_platform = $2 WHERE id = $1;
+
+-- name: ListAgentCheckinWatchdogCandidates :many
+-- Hosts in this build whose agent has not checked in since they were deployed
+-- and which the watchdog hasn't flagged yet. The caller applies the per-OS
+-- deadline. "Checked in since deployed" compares the session's last heartbeat
+-- with deployed_at, because a rebuilt host keeps its old agent_session row.
+SELECT o.id, o.object_name, o.as_name, o.external_ref, o.agent_platform, o.deployed_at, t.team_number
+FROM deployed_object o
+JOIN team t ON t.id = o.team_id
+LEFT JOIN agent_session s ON s.deployed_object_id = o.id
+WHERE t.build_id = $1
+  AND o.status IN ('running', 'building')
+  AND o.agent_platform <> ''
+  AND o.deployed_at IS NOT NULL
+  AND o.agent_checkin_overdue_at IS NULL
+  AND (s.last_heartbeat_at IS NULL OR s.last_heartbeat_at < o.deployed_at)
+ORDER BY o.deployed_at;
+
+-- name: MarkAgentCheckinOverdue :execrows
+-- Flag one host as never-checked-in. Guarded so concurrent orchestrator
+-- replicas flag (and emit the event for) a host only once per deploy.
+UPDATE deployed_object SET agent_checkin_overdue_at = now()
+WHERE id = $1 AND agent_checkin_overdue_at IS NULL;
 
 -- name: MarkDeployedObjectDeployFailed :one
 -- The hoster couldn't create the instance -- an infrastructure failure,

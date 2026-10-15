@@ -548,6 +548,14 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		if derr != nil {
 			return derr
 		}
+		// Record which agent this host runs, so the orchestrator's
+		// never-checked-in watchdog knows to expect a check-in and how long a
+		// first boot of this OS may take. Empty when delivery is disabled.
+		if del.Platform != "" {
+			if err := q.SetDeployedObjectAgentPlatform(ctx, db.SetDeployedObjectAgentPlatformParams{ID: obj.ID, AgentPlatform: string(del.Platform)}); err != nil {
+				return fmt.Errorf("recording agent platform: %w", err)
+			}
+		}
 		hspec := builder.HostSpec{
 			ExternalName: externalName, DisplayName: displayName, Team: team,
 			Network: networkExternalName(task.BuildID, teamNumber, obj), NetworkDisplayName: networkDisplayName(teamNumber, db.StrOrEmpty(obj.NetworkName)), Address: addr,
