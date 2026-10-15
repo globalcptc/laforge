@@ -136,19 +136,14 @@ function CapacityCell({ sig }: { sig: HomeCapacity }) {
   const label = sig.node ? `${sig.label} · ${sig.node}` : sig.label
   const quota = sig.max != null
   return (
-    <div className="min-w-0">
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <span className="truncate text-fg-muted" title={label}>
-          {label}
-        </span>
-        <span className="shrink-0 font-mono tabular-nums text-fg">
-          {quota ? `${fmtNum(sig.value)} / ${fmtNum(sig.max!)}` : `${sig.pct.toFixed(0)}%`}
-          {quota && <span className="ml-1 text-fg-subtle">{sig.pct.toFixed(0)}%</span>}
-        </span>
-      </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-sunken" title={`${sig.pct.toFixed(0)}%`}>
+    <div className="flex min-w-0 items-center gap-2 text-xs" title={label}>
+      <span className="max-w-[11rem] truncate text-fg-muted">{label}</span>
+      <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-surface-sunken">
         <div className={cn('h-full rounded-full', tone)} style={{ width: `${pct}%` }} />
       </div>
+      <span className="shrink-0 font-mono tabular-nums text-fg">
+        {quota ? `${fmtNum(sig.value)}/${fmtNum(sig.max!)}` : `${sig.pct.toFixed(0)}%`}
+      </span>
     </div>
   )
 }

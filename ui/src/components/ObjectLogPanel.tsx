@@ -477,6 +477,20 @@ function InfoTab({
         {object?.last_error && <InfoRow label="Last error" value={object.last_error} mono danger />}
       </dl>
 
+      {infra && (infra.placement.length > 0 || infra.password) && (
+        <div>
+          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+            <ServerCog size={12} /> Builder &amp; access
+          </div>
+          <dl className="flex flex-col divide-y divide-border text-sm">
+            {infra.placement.map((f) => (
+              <InfoRow key={f.label} label={f.label} value={f.value} mono />
+            ))}
+            {infra.password && <PasswordRow password={infra.password} />}
+          </dl>
+        </div>
+      )}
+
       {config && kind !== 'network' && (
         <div>
           <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
@@ -506,20 +520,6 @@ function InfoTab({
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {infra && (infra.placement.length > 0 || infra.password) && (
-        <div>
-          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-            <ServerCog size={12} /> Builder &amp; access
-          </div>
-          <dl className="flex flex-col divide-y divide-border text-sm">
-            {infra.placement.map((f) => (
-              <InfoRow key={f.label} label={f.label} value={f.value} mono />
-            ))}
-            {infra.password && <PasswordRow password={infra.password} />}
-          </dl>
         </div>
       )}
     </div>
