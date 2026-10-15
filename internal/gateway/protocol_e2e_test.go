@@ -225,23 +225,29 @@ func TestGatewayEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListEventsByDeployedObject: %v", err)
 	}
-	if len(events) != 1 {
-		t.Fatalf("events after step 0 done = %d, want 1", len(events))
+	// Each step logs its START (when leased/handed to the agent) and its
+	// OUTCOME, so a host's event timeline shows the whole bring-up.
+	if len(events) != 2 {
+		t.Fatalf("events after step 0 done = %d, want 2 (step_started + step_done)", len(events))
 	}
-	if events[0].Kind != "step_done" {
-		t.Fatalf("event kind = %q, want step_done", events[0].Kind)
+	if events[0].Kind != "step_started" || events[0].Message != "step 0 (write_file) started" {
+		t.Fatalf("event[0] = %q/%q, want step_started/%q", events[0].Kind, events[0].Message, "step 0 (write_file) started")
 	}
-	if events[0].Message != "step 0 (write_file) done" {
-		t.Fatalf("event message = %q, want %q", events[0].Message, "step 0 (write_file) done")
+	done := events[1]
+	if done.Kind != "step_done" {
+		t.Fatalf("event kind = %q, want step_done", done.Kind)
 	}
-	if events[0].BuildID != host.buildID {
-		t.Fatalf("event build_id = %v, want %v", events[0].BuildID, host.buildID)
+	if done.Message != "step 0 (write_file) done" {
+		t.Fatalf("event message = %q, want %q", done.Message, "step 0 (write_file) done")
 	}
-	if !events[0].DeployedObjectID.Valid || events[0].DeployedObjectID != host.deployedObjectID {
-		t.Fatalf("event deployed_object_id = %v, want %v", events[0].DeployedObjectID, host.deployedObjectID)
+	if done.BuildID != host.buildID {
+		t.Fatalf("event build_id = %v, want %v", done.BuildID, host.buildID)
 	}
-	if events[0].TaskID.Valid {
-		t.Fatalf("event task_id = %v, want NULL (no orchestrator task owns a step event -- see migrations/00009)", events[0].TaskID)
+	if !done.DeployedObjectID.Valid || done.DeployedObjectID != host.deployedObjectID {
+		t.Fatalf("event deployed_object_id = %v, want %v", done.DeployedObjectID, host.deployedObjectID)
+	}
+	if done.TaskID.Valid {
+		t.Fatalf("event task_id = %v, want NULL (no orchestrator task owns a step event -- see migrations/00009)", done.TaskID)
 	}
 
 	task3 := client.getTask(t)
@@ -261,11 +267,16 @@ func TestGatewayEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListEventsByDeployedObject (after step 1): %v", err)
 	}
-	if len(events) != 2 {
-		t.Fatalf("events after both steps done = %d, want 2", len(events))
+	// Two steps, each with a start + done event: [s0 started, s0 done, s1
+	// started, s1 done].
+	if len(events) != 4 {
+		t.Fatalf("events after both steps done = %d, want 4 (start+done per step)", len(events))
 	}
-	if events[1].Message != "step 1 (execute) done" {
-		t.Fatalf("second event message = %q, want %q", events[1].Message, "step 1 (execute) done")
+	if events[2].Message != "step 1 (execute) started" {
+		t.Fatalf("event[2] message = %q, want %q", events[2].Message, "step 1 (execute) started")
+	}
+	if events[3].Message != "step 1 (execute) done" {
+		t.Fatalf("event[3] message = %q, want %q", events[3].Message, "step 1 (execute) done")
 	}
 
 	task4 := client.getTask(t)
@@ -316,26 +327,27 @@ func TestGatewayRetryThenFailCap(t *testing.T) {
 		if err != nil {
 			t.Fatalf("attempt %d: ListEventsByDeployedObject: %v", attempt, err)
 		}
+		// Every get-task that hands out the step logs a step_started, so the
+		// host's timeline shows each attempt -- retries are visible, by design.
+		// A transient failure under the cap logs no OUTCOME event (step_failed
+		// fires only on the terminal failure), so after attempt N there are N
+		// step_started events, plus one step_failed once it's terminal.
 		if attempt < MaxAttempts {
 			if dbTask.Status != "pending" {
 				t.Fatalf("attempt %d: status = %q, want pending (still under MaxAttempts=%d)", attempt, dbTask.Status, MaxAttempts)
 			}
-			// A transient retry under the cap is exactly the "internal
-			// retry noise" logStepEvent's own doc comment says not to
-			// log -- matching deploy/destroy lifecycle events, which
-			// only fire on a real state transition.
-			if len(events) != 0 {
-				t.Fatalf("attempt %d: %d event(s) logged for a retry under MaxAttempts, want 0", attempt, len(events))
+			if len(events) != attempt {
+				t.Fatalf("attempt %d: %d event(s), want %d (one step_started per attempt, no outcome event yet)", attempt, len(events), attempt)
 			}
 		} else {
 			if dbTask.Status != "failed" {
 				t.Fatalf("attempt %d: status = %q, want failed (reached MaxAttempts=%d)", attempt, dbTask.Status, MaxAttempts)
 			}
-			if len(events) != 1 {
-				t.Fatalf("attempt %d: %d event(s) logged after the terminal failure, want exactly 1", attempt, len(events))
+			if len(events) != attempt+1 {
+				t.Fatalf("attempt %d: %d event(s) after terminal failure, want %d (%d step_started + 1 step_failed)", attempt, len(events), attempt+1, attempt)
 			}
-			if events[0].Kind != "step_failed" {
-				t.Fatalf("terminal event kind = %q, want step_failed", events[0].Kind)
+			if last := events[len(events)-1]; last.Kind != "step_failed" {
+				t.Fatalf("terminal event kind = %q, want step_failed", last.Kind)
 			}
 		}
 	}

@@ -141,6 +141,17 @@ export function ObjectLogPanel({
                     <Badge tone="accent">{ev.kind}</Badge>
                   </div>
                   <div className="mt-1 text-fg">{ev.message}</div>
+                  {isDetailObject(ev.payload) && (
+                    <div className="mt-1 flex flex-col gap-0.5 border-l-2 border-border pl-2 text-[11px] text-fg-muted">
+                      {Object.entries(ev.payload)
+                        .filter(([, v]) => v !== '' && v != null)
+                        .map(([k, v]) => (
+                          <div key={k} className="break-all">
+                            <span className="text-fg-subtle">{k}:</span> <span className="text-fg">{fmtDetailValue(v)}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -286,6 +297,21 @@ function groupDurationMs(steps: StepStatus[]): number | null {
   }
   if (min === Infinity) return null
   return Math.max(0, (running ? Date.now() : max) - min)
+}
+
+// An event's payload (what we sent the builder, a step's output, etc.) is a
+// non-empty object worth showing as detail under the message.
+function isDetailObject(p: unknown): p is Record<string, unknown> {
+  return !!p && typeof p === 'object' && !Array.isArray(p) && Object.keys(p as object).length > 0
+}
+
+// Render one payload value compactly: arrays comma-joined, objects as JSON,
+// long strings truncated so a step's full output doesn't flood the row.
+function fmtDetailValue(v: unknown): string {
+  if (Array.isArray(v)) return v.length ? v.join(', ') : '—'
+  if (v && typeof v === 'object') return JSON.stringify(v)
+  const s = String(v)
+  return s.length > 160 ? s.slice(0, 160) + '…' : s
 }
 
 // Compact duration: 15s, 1m 12s, 2h 5m.

@@ -246,6 +246,11 @@ func (s *Server) handleGetTask(ctx context.Context, conn net.Conn, objID pgtype.
 	switch {
 	case err == nil:
 		resp.Task = &agentproto.Task{ID: task.ID.String(), Command: task.Command, Payload: task.Payload}
+		// Log the START of the step, so the host's event timeline shows each step
+		// beginning, not just its step_done/step_failed outcome. Fires on first
+		// lease and on any re-lease after a lease expiry (a retry/reconnect), not
+		// on idle polls (those return no task).
+		s.logStepEvent(ctx, q, task, "step_started", "")
 	case errors.Is(err, pgx.ErrNoRows):
 		// resp.Task stays nil -- "nothing to do right now," not an error.
 	default:
@@ -372,6 +377,8 @@ func (s *Server) logStepEvent(ctx context.Context, q *db.Queries, task db.AgentT
 	}
 	outcome := "failed"
 	switch kind {
+	case "step_started":
+		outcome = "started"
 	case "step_done":
 		outcome = "done"
 	case "step_ignored":

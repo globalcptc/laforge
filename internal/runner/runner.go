@@ -207,6 +207,11 @@ func (r *Runner) LeaseAndExecuteOne(ctx context.Context) (bool, error) {
 // reason LeaseOne is.
 func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	q := db.New(r.Pool)
+	// Log the START of every task, not just its outcome, so a host's event
+	// timeline shows the whole bring-up (deploy_network started -> completed,
+	// deploy_host started -> completed, access configured, ...) rather than only
+	// terminal lines. Fires per attempt, so retries are visible too.
+	r.logEvent(ctx, q, task.BuildID, task.ID, "task.started", fmt.Sprintf("%s (attempt %d)", task.Kind, task.Attempts))
 	stopHeartbeat := make(chan struct{})
 	go r.heartbeatLoop(ctx, task.ID, stopHeartbeat)
 	resolved, execErr := r.execute(ctx, q, task)
@@ -300,6 +305,20 @@ func (r *Runner) logEvent(ctx context.Context, q *db.Queries, buildID pgtype.UUI
 	q.CreateEvent(ctx, db.CreateEventParams{
 		BuildID: buildID, TaskID: taskID, Kind: kind, Message: message, Payload: []byte("{}"),
 	})
+}
+
+// logBuilderCall records one event per request the runner makes to a builder's
+// API, with a human summary (message) AND the full request detail (payload), so
+// a host's event timeline shows not just "deploy_host" but exactly what was
+// sent -- os, size, address, network, ports. detail is any JSON-able value
+// (usually the builder spec); never put a secret in it (the agent download URL's
+// token, for example, is deliberately left out of the specs logged here).
+func (r *Runner) logBuilderCall(ctx context.Context, q *db.Queries, buildID, taskID pgtype.UUID, kind, message string, detail any) {
+	payload, err := json.Marshal(detail)
+	if err != nil || len(payload) == 0 {
+		payload = []byte("{}")
+	}
+	q.CreateEvent(ctx, db.CreateEventParams{BuildID: buildID, TaskID: taskID, Kind: kind, Message: message, Payload: payload})
 }
 
 // execute dispatches by task kind. The bool return is "the task row is
@@ -507,9 +526,12 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 				vpcCIDR = env.CIDR
 			}
 		}
-		externalRef, err = b.DeployNetwork(ctx, builder.NetworkSpec{
+		nspec := builder.NetworkSpec{
 			ExternalName: externalName, DisplayName: networkDisplayName(teamNumber, obj.ObjectName), Team: team, CIDR: net.CIDR, VPCCIDR: vpcCIDR,
-		})
+		}
+		r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.deploy_network",
+			fmt.Sprintf("deploy network %s: cidr %s, team %s", obj.ObjectName, net.CIDR, team), nspec)
+		externalRef, err = b.DeployNetwork(ctx, nspec)
 	case "host":
 		h := findHost(c, obj.ObjectName)
 		if h == nil {
@@ -529,6 +551,15 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			OS: h.OS, Size: h.Size, DiskGB: h.Disk, TCPPorts: h.Ports.TCP, UDPPorts: h.Ports.UDP,
 			AgentDownloadURL: del.DownloadURL,
 		}
+		// Log the host request with its full spec MINUS the agent download URL
+		// (it carries a one-time token -- see logBuilderCall).
+		r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.deploy_host",
+			fmt.Sprintf("deploy host %s: os %s, size %s, address %s, network %s", obj.ObjectName, h.OS, h.Size, addr, db.StrOrEmpty(obj.NetworkName)),
+			map[string]any{
+				"external_name": externalName, "os": h.OS, "size": h.Size, "disk_gb": h.Disk,
+				"address": addr, "network": db.StrOrEmpty(obj.NetworkName), "team": team,
+				"tcp_ports": h.Ports.TCP, "udp_ports": h.Ports.UDP,
+			})
 		// MicroCloud alone implements this: the second NIC and its guest
 		// configuration must exist before the first Linux/Windows boot.
 		if publicBuilder, ok := b.(interface {
@@ -601,6 +632,15 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		} else if cred := r.registryCredFor(ctx, q, ct.Image); cred != nil {
 			cspec.RegistryHost, cspec.RegistryUser, cspec.RegistrySecret = cred.RegistryHost, cred.Username, cred.Secret
 		}
+		// Curated detail only -- NOT the raw spec, which carries secrets
+		// (registry password, env vars, the agent token).
+		r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.deploy_container",
+			fmt.Sprintf("deploy container %s: image %s, network %s, address %s", obj.ObjectName, ct.Image, db.StrOrEmpty(obj.NetworkName), addr),
+			map[string]any{
+				"external_name": externalName, "image": ct.Image, "size": ct.Size, "address": addr,
+				"network": db.StrOrEmpty(obj.NetworkName), "team": team, "compose": cspec.ComposeHost,
+				"tcp_ports": ct.Ports.TCP, "udp_ports": ct.Ports.UDP, "command": ct.Command,
+			})
 		externalRef, err = b.DeployContainer(ctx, cspec)
 	default:
 		return fmt.Errorf("unknown deployed_object kind %q", obj.Kind)
@@ -755,6 +795,9 @@ func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task
 		return false, fmt.Errorf("recording destroying state: %w", err)
 	}
 
+	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.destroy_"+obj.Kind,
+		fmt.Sprintf("destroy %s %s: team %s, ref %s", obj.Kind, obj.ObjectName, team, ref),
+		map[string]any{"object": obj.ObjectName, "kind": obj.Kind, "team": team, "external_ref": ref, "remove": payload.Remove, "terminal": payload.Terminal})
 	switch obj.Kind {
 	case "network":
 		err = b.DestroyNetwork(ctx, team, ref)
@@ -829,6 +872,8 @@ func (r *Runner) executeAccess(ctx context.Context, q *db.Queries, task db.Task)
 	}
 	json.Unmarshal(task.Payload, &payload)
 
+	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder."+task.Kind,
+		fmt.Sprintf("%s for team %s", task.Kind, payload.Team), map[string]any{"team": payload.Team})
 	if task.Kind == "open_access" {
 		if err := b.OpenAccess(ctx, payload.Team); err != nil {
 			return err
@@ -969,6 +1014,9 @@ func (r *Runner) executeConfigureNetworkAccess(ctx context.Context, q *db.Querie
 			Hosts:        hostsByNet[o.ObjectName],
 		})
 	}
+	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.configure_network_access",
+		fmt.Sprintf("configure network access for team %s: %d network(s)", payload.Team, len(access)),
+		map[string]any{"team": payload.Team, "networks": access})
 	if err := b.ConfigureNetworkAccess(ctx, payload.Team, access); err != nil {
 		return fmt.Errorf("configuring network access for team %s: %w", payload.Team, err)
 	}
@@ -1062,6 +1110,9 @@ func (r *Runner) executeConfigureExternalAccess(ctx context.Context, q *db.Queri
 		return nil // nothing public in this team
 	}
 
+	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.configure_external_access",
+		fmt.Sprintf("configure external access for team %s: %d host(s)", payload.Team, len(hosts)),
+		map[string]any{"team": payload.Team, "hosts": hosts})
 	endpoints, err := b.ConfigureExternalAccess(ctx, payload.Team, hosts)
 	if err != nil {
 		return fmt.Errorf("configuring external access for team %s: %w", payload.Team, err)
