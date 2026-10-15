@@ -19,18 +19,18 @@
 
 use serde_json::Value;
 use std::fs;
-use std::io::Write as _;
-use std::process::Command;
-#[cfg(unix)]
-use std::process::Stdio;
-use std::sync::OnceLock;
+use std::io::{Read, Write as _};
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 /// Outcome is (status, output, error) exactly matching
 /// agentproto.ReportStatusRequestPayload's three fields -- run() always
 /// returns one of these, never panics, for any payload shape including a
 /// deliberately malformed one (see the malformed-payload tests below).
 pub struct Outcome {
-    pub status: &'static str, // "done" | "failed"
+    pub status: &'static str, // "done" | "failed" | "timeout" (execute only)
     pub output: String,
     pub error: String,
     /// Only ever non-empty for a `validate` task (see validators::run) --
@@ -96,9 +96,22 @@ pub fn run(command: &str, payload: &Value) -> Outcome {
     };
     match result {
         Ok(output) => Outcome { status: "done", output, error: String::new(), validator_results: Vec::new() },
-        Err(error) => Outcome { status: "failed", output: String::new(), error, validator_results: Vec::new() },
+        Err(error) => {
+            // A timed-out execute reports "timeout" so the gateway can treat it as
+            // terminal (no retry); older gateways see any non-"done" as failed.
+            let status = if command == "execute" && error.starts_with(&format!("{} {TIMED_OUT}", opt_str(payload, "command"))) {
+                "timeout"
+            } else {
+                "failed"
+            };
+            Outcome { status, output: String::new(), error, validator_results: Vec::new() }
+        }
     }
 }
+
+/// Follows the command name in a timed-out execute's error; run() keys the
+/// "timeout" status off it, and the gateway falls back to matching it.
+const TIMED_OUT: &str = "timed out after ";
 
 fn req_str<'a>(payload: &'a Value, field: &str) -> Result<&'a str, String> {
     payload.get(field).and_then(Value::as_str).ok_or_else(|| format!("missing or non-string field {field:?}"))
@@ -122,11 +135,289 @@ fn cmd_execute(payload: &Value) -> Result<String, String> {
             cmd.current_dir(dir);
         }
     }
-    let out = cmd.output().map_err(|e| format!("spawning {command}: {e}"))?;
-    if out.status.success() {
-        Ok(String::from_utf8_lossy(&out.stdout).to_string())
-    } else {
-        Err(format!("{command} exited {}: {}", out.status, failure_detail(&out.stdout, &out.stderr)))
+    // The gateway sends the step's timeout_sec; absent or 0 means no deadline.
+    let timeout_sec = payload.get("timeout_sec").and_then(Value::as_u64).unwrap_or(0);
+    let timeout = (timeout_sec > 0).then(|| Duration::from_secs(timeout_sec));
+    let out = run_captured(cmd, timeout, PIPE_DRAIN_GRACE).map_err(|e| format!("spawning {command}: {e}"))?;
+    match out.status {
+        Some(status) if status.success() => Ok(String::from_utf8_lossy(&out.stdout).to_string()),
+        Some(status) => Err(format!("{command} exited {status}: {}", failure_detail(&out.stdout, &out.stderr))),
+        None => Err(format!(
+            "{command} {TIMED_OUT}{timeout_sec}s and was killed along with its child processes; output before the kill: {}",
+            failure_detail(&out.stdout, &out.stderr)
+        )),
+    }
+}
+
+// --- run_captured: execute with a deadline and a whole-tree kill ----------
+//
+// Command::output() waits forever, so a hung script used to hold its host's
+// task lane indefinitely regardless of the step's timeout. run_captured spawns
+// the child into its own killable unit -- a process group on Unix, a Job Object
+// on Windows -- drains stdout/stderr on threads, and polls for exit against the
+// deadline. On expiry the WHOLE tree is killed, not just the direct child: a
+// shell wrapper killed alone leaves its grandchildren running and holding the
+// output pipes open.
+//
+// Escape hatches remain: a Unix grandchild that calls setsid() leaves the
+// group, and on Windows a grandchild started in the instant between spawn and
+// job assignment isn't in the job. Both are far outside what a step script does
+// in practice.
+
+/// How long to keep reading a command's output after it exits (or is killed).
+/// A script that backgrounds a daemon without redirecting it leaves that daemon
+/// holding the pipe -- Command::output() would wait on it forever. After the
+/// grace the capture keeps draining (so the daemon never blocks on a full pipe)
+/// but discards, and the step reports what it had.
+const PIPE_DRAIN_GRACE: Duration = Duration::from_secs(5);
+
+const WAIT_POLL: Duration = Duration::from_millis(50);
+
+struct Captured {
+    /// None when the deadline expired and the tree was killed.
+    status: Option<ExitStatus>,
+    stdout: Vec<u8>,
+    stderr: Vec<u8>,
+}
+
+fn run_captured(mut cmd: Command, timeout: Option<Duration>, drain_grace: Duration) -> std::io::Result<Captured> {
+    cmd.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut tree = ProcessTree::spawn(cmd)?;
+    let stdout = Capture::start(tree.child.stdout.take());
+    let stderr = Capture::start(tree.child.stderr.take());
+    let deadline = timeout.map(|t| Instant::now() + t);
+    let status = loop {
+        match tree.child.try_wait() {
+            Ok(Some(status)) => break Some(status),
+            Ok(None) => {}
+            Err(e) => {
+                tree.kill();
+                return Err(e);
+            }
+        }
+        let mut nap = WAIT_POLL;
+        if let Some(d) = deadline {
+            let left = d.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                tree.kill();
+                break None;
+            }
+            nap = nap.min(left);
+        }
+        std::thread::sleep(nap);
+    };
+    let drain_until = Instant::now() + drain_grace;
+    Ok(Captured { status, stdout: stdout.finish(drain_until), stderr: stderr.finish(drain_until) })
+}
+
+/// Capture drains one output pipe on its own thread into a shared buffer, so
+/// the result can be taken at a deadline even if the pipe never reaches EOF.
+struct Capture {
+    buf: Arc<Mutex<Vec<u8>>>,
+    detached: Arc<AtomicBool>,
+    done: mpsc::Receiver<()>,
+}
+
+impl Capture {
+    fn start<R: Read + Send + 'static>(src: Option<R>) -> Capture {
+        let buf = Arc::new(Mutex::new(Vec::new()));
+        let detached = Arc::new(AtomicBool::new(false));
+        let (tx, done) = mpsc::channel();
+        if let Some(mut src) = src {
+            let (buf, detached) = (buf.clone(), detached.clone());
+            std::thread::spawn(move || {
+                let mut chunk = [0u8; 8192];
+                loop {
+                    match src.read(&mut chunk) {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) if !detached.load(Ordering::Relaxed) => {
+                            buf.lock().unwrap_or_else(|e| e.into_inner()).extend_from_slice(&chunk[..n])
+                        }
+                        Ok(_) => {}
+                    }
+                }
+                let _ = tx.send(());
+            });
+        }
+        Capture { buf, detached, done }
+    }
+
+    /// Waits for EOF until `until`, then takes whatever was read. The channel
+    /// also disconnects (returning at once) when there was no pipe to read.
+    fn finish(self, until: Instant) -> Vec<u8> {
+        let _ = self.done.recv_timeout(until.saturating_duration_since(Instant::now()));
+        self.detached.store(true, Ordering::Relaxed);
+        std::mem::take(&mut *self.buf.lock().unwrap_or_else(|e| e.into_inner()))
+    }
+}
+
+/// ProcessTree is a spawned child plus the handle that kills everything it
+/// started: its process group on Unix, its Job Object on Windows.
+struct ProcessTree {
+    child: Child,
+    #[cfg(windows)]
+    job: Option<job::Job>,
+}
+
+#[cfg(unix)]
+impl ProcessTree {
+    fn spawn(mut cmd: Command) -> std::io::Result<ProcessTree> {
+        use std::os::unix::process::CommandExt;
+        cmd.process_group(0); // the child leads a new group whose id is its pid
+        Ok(ProcessTree { child: cmd.spawn()? })
+    }
+
+    fn kill(&mut self) {
+        extern "C" {
+            fn kill(pid: i32, sig: i32) -> i32;
+        }
+        const SIGKILL: i32 = 9;
+        // A negative pid signals the whole process group.
+        unsafe {
+            kill(-(self.child.id() as i32), SIGKILL);
+        }
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+#[cfg(windows)]
+impl ProcessTree {
+    fn spawn(mut cmd: Command) -> std::io::Result<ProcessTree> {
+        use std::os::windows::io::AsRawHandle;
+        let child = cmd.spawn()?;
+        // Without a job, a timeout still kills the direct child; only the tree
+        // kill degrades. Nested jobs need Windows 8 / Server 2012 or later.
+        let job = job::Job::new().and_then(|j| j.assign(child.as_raw_handle()).map(|_| j));
+        let job = match job {
+            Ok(j) => Some(j),
+            Err(e) => {
+                crate::diag::write_line(&format!("laforge-agent: execute: no job object for pid {} ({e}); timeout will kill only the direct child", child.id()));
+                None
+            }
+        };
+        Ok(ProcessTree { child, job })
+    }
+
+    fn kill(&mut self) {
+        if let Some(job) = &self.job {
+            job.terminate();
+        }
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+/// Minimal Job Object FFI, declared directly (like antitamper.rs and shell.rs)
+/// rather than pulling in a Windows API crate. The job is created with
+/// KILL_ON_JOB_CLOSE so the tree also dies if the agent itself does; on a
+/// normal exit Drop clears that flag before closing, so a daemon a script
+/// legitimately started outlives the step.
+#[cfg(windows)]
+mod job {
+    use std::os::raw::c_void;
+
+    type Handle = *mut c_void;
+
+    #[repr(C)]
+    #[derive(Default)]
+    struct BasicLimitInformation {
+        per_process_user_time_limit: i64,
+        per_job_user_time_limit: i64,
+        limit_flags: u32,
+        minimum_working_set_size: usize,
+        maximum_working_set_size: usize,
+        active_process_limit: u32,
+        affinity: usize,
+        priority_class: u32,
+        scheduling_class: u32,
+    }
+
+    #[repr(C)]
+    #[derive(Default)]
+    struct IoCounters {
+        read_operation_count: u64,
+        write_operation_count: u64,
+        other_operation_count: u64,
+        read_transfer_count: u64,
+        write_transfer_count: u64,
+        other_transfer_count: u64,
+    }
+
+    #[repr(C)]
+    #[derive(Default)]
+    struct ExtendedLimitInformation {
+        basic: BasicLimitInformation,
+        io: IoCounters,
+        process_memory_limit: usize,
+        job_memory_limit: usize,
+        peak_process_memory_used: usize,
+        peak_job_memory_used: usize,
+    }
+
+    const JOB_OBJECT_EXTENDED_LIMIT_INFORMATION: i32 = 9;
+    const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE: u32 = 0x2000;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn CreateJobObjectW(attributes: *mut c_void, name: *const u16) -> Handle;
+        fn SetInformationJobObject(job: Handle, class: i32, info: *mut c_void, len: u32) -> i32;
+        fn AssignProcessToJobObject(job: Handle, process: Handle) -> i32;
+        fn TerminateJobObject(job: Handle, exit_code: u32) -> i32;
+        fn CloseHandle(handle: Handle) -> i32;
+    }
+
+    pub struct Job(Handle);
+
+    impl Job {
+        pub fn new() -> std::io::Result<Job> {
+            let h = unsafe { CreateJobObjectW(std::ptr::null_mut(), std::ptr::null()) };
+            if h.is_null() {
+                return Err(std::io::Error::last_os_error());
+            }
+            let job = Job(h);
+            job.set_limit_flags(JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE)?;
+            Ok(job)
+        }
+
+        pub fn assign(&self, process: std::os::windows::io::RawHandle) -> std::io::Result<()> {
+            if unsafe { AssignProcessToJobObject(self.0, process as Handle) } == 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            Ok(())
+        }
+
+        pub fn terminate(&self) {
+            unsafe {
+                TerminateJobObject(self.0, 1);
+            }
+        }
+
+        fn set_limit_flags(&self, flags: u32) -> std::io::Result<()> {
+            let mut info = ExtendedLimitInformation::default();
+            info.basic.limit_flags = flags;
+            let ok = unsafe {
+                SetInformationJobObject(
+                    self.0,
+                    JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+                    &mut info as *mut _ as *mut c_void,
+                    std::mem::size_of::<ExtendedLimitInformation>() as u32,
+                )
+            };
+            if ok == 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            Ok(())
+        }
+    }
+
+    impl Drop for Job {
+        fn drop(&mut self) {
+            let _ = self.set_limit_flags(0);
+            unsafe {
+                CloseHandle(self.0);
+            }
+        }
     }
 }
 
@@ -540,6 +831,114 @@ mod tests {
         let outcome = run("execute", &json!({"command": "/no/such/binary/at/all"}));
         assert_eq!(outcome.status, "failed");
         assert!(!outcome.error.is_empty());
+    }
+
+    #[cfg(unix)]
+    fn pid_alive(pid: i32) -> bool {
+        extern "C" {
+            fn kill(pid: i32, sig: i32) -> i32;
+        }
+        unsafe { kill(pid, 0) == 0 }
+    }
+
+    // Polls briefly: a SIGKILLed orphan stays a zombie until init reaps it.
+    #[cfg(unix)]
+    fn wait_dead(pid: i32) -> bool {
+        let until = Instant::now() + Duration::from_secs(3);
+        while Instant::now() < until {
+            if !pid_alive(pid) {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        false
+    }
+
+    #[cfg(unix)]
+    fn grandchild_pid(output: &str) -> i32 {
+        let rest = output.split("grandchild=").nth(1).unwrap_or_else(|| panic!("no grandchild pid in output: {output}"));
+        rest.chars().take_while(char::is_ascii_digit).collect::<String>().parse().unwrap()
+    }
+
+    #[test]
+    fn execute_timeout_kills_and_reports_tail() {
+        let start = Instant::now();
+        let outcome = run(
+            "execute",
+            &json!({"command": "/bin/sh", "args": ["-c", "echo before-the-hang; sleep 30"], "timeout_sec": 1}),
+        );
+        assert_eq!(outcome.status, "timeout");
+        assert!(outcome.error.contains("timed out after 1s"), "error should say it timed out: {}", outcome.error);
+        assert!(outcome.error.contains("before-the-hang"), "error should carry the output tail: {}", outcome.error);
+        assert!(start.elapsed() < Duration::from_secs(4), "took {:?}", start.elapsed());
+    }
+
+    // The case that hung prod: the wrapper shell is killed, but a grandchild
+    // it started still holds stdout/stderr open. Killing only the direct child
+    // would leave the step waiting on the pipes (and the grandchild running).
+    #[cfg(unix)]
+    #[test]
+    fn execute_timeout_kills_grandchild_holding_pipes() {
+        let start = Instant::now();
+        let outcome = run(
+            "execute",
+            &json!({"command": "/bin/sh", "args": ["-c", "sleep 30 & echo grandchild=$!; wait"], "timeout_sec": 1}),
+        );
+        assert_eq!(outcome.status, "timeout");
+        assert!(outcome.error.contains("timed out"), "{}", outcome.error);
+        // Well under PIPE_DRAIN_GRACE: the pipes closed because the grandchild died.
+        assert!(start.elapsed() < Duration::from_secs(3), "took {:?}", start.elapsed());
+        let pid = grandchild_pid(&outcome.error);
+        assert!(wait_dead(pid), "grandchild {pid} survived the timeout");
+    }
+
+    // Only a real deadline expiry is "timeout"; a script that merely prints the
+    // phrase and fails is an ordinary failure.
+    #[test]
+    fn execute_output_mentioning_timeout_is_still_failed() {
+        let outcome = run("execute", &json!({"command": "/bin/sh", "args": ["-c", "echo 'curl timed out after 5s' >&2; exit 1"]}));
+        assert_eq!(outcome.status, "failed", "{}", outcome.error);
+    }
+
+    #[test]
+    fn execute_zero_or_missing_timeout_means_no_deadline() {
+        for payload in [
+            json!({"command": "/bin/sh", "args": ["-c", "sleep 1; echo ok"], "timeout_sec": 0}),
+            json!({"command": "/bin/sh", "args": ["-c", "sleep 1; echo ok"]}),
+        ] {
+            let outcome = run("execute", &payload);
+            assert_eq!(outcome.status, "done", "error was: {}", outcome.error);
+            assert_eq!(outcome.output.trim(), "ok");
+        }
+    }
+
+    #[test]
+    fn execute_finishing_inside_timeout_succeeds() {
+        let outcome = run("execute", &json!({"command": "/bin/echo", "args": ["fast"], "timeout_sec": 30}));
+        assert_eq!(outcome.status, "done", "error was: {}", outcome.error);
+        assert_eq!(outcome.output.trim(), "fast");
+    }
+
+    // A script that exits normally but leaves a background process holding the
+    // pipes must still return (after the drain grace) and must NOT kill that
+    // process -- steps legitimately start daemons.
+    #[cfg(unix)]
+    #[test]
+    fn exited_command_with_lingering_grandchild_returns_after_grace() {
+        let mut cmd = Command::new("/bin/sh");
+        cmd.args(["-c", "sleep 30 & echo grandchild=$!"]);
+        let start = Instant::now();
+        let out = run_captured(cmd, None, Duration::from_millis(300)).unwrap();
+        assert!(start.elapsed() < Duration::from_secs(3), "took {:?}", start.elapsed());
+        assert!(out.status.unwrap().success());
+        let pid = grandchild_pid(&String::from_utf8_lossy(&out.stdout));
+        assert!(pid_alive(pid), "a normal exit must not kill the script's background processes");
+        unsafe {
+            extern "C" {
+                fn kill(pid: i32, sig: i32) -> i32;
+            }
+            kill(pid, 9);
+        }
     }
 
     #[test]
