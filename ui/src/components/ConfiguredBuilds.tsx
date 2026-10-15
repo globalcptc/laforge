@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { ChevronDown, GitCommitHorizontal, Hammer, IterationCw, MousePointerClick, Plus, Rocket, Lock, Unlock, Trash2, RefreshCw } from 'lucide-react'
+import { ChevronDown, GitCommitHorizontal, Hammer, IterationCw, MousePointerClick, Plus, Rocket, Lock, Unlock, Star, Trash2, RefreshCw } from 'lucide-react'
 import {
   useBuilderConfigs,
   useBuilds,
@@ -10,6 +10,7 @@ import {
   useSyncConfiguredBuild,
   useDeleteConfiguredBuild,
   useSetConfiguredBuildAutoDeploy,
+  useSetConfiguredBuildFavorite,
   useSetLock,
 } from '../api/hooks'
 import { ApiError } from '../api/client'
@@ -167,6 +168,7 @@ function ConfiguredBuildRow({
   const remove = useDeleteConfiguredBuild(repoId)
   const setAutoDeploy = useSetConfiguredBuildAutoDeploy(repoId)
   const setLock = useSetLock(repoId)
+  const favorite = useSetConfiguredBuildFavorite(repoId)
 
   // A configured build can't be removed while any of its builds owns or is
   // acting on real infrastructure -- the same "live" set the server enforces.
@@ -238,6 +240,16 @@ function ConfiguredBuildRow({
   return (
     <div className="overflow-hidden rounded-token border border-border">
       <div className="flex items-center gap-3 px-3 py-2.5">
+        <button
+          onClick={() => favorite.mutate({ configuredBuildId: cb.id, favorited: !cb.favorited })}
+          disabled={favorite.isPending}
+          title={cb.favorited ? 'Unfavorite — remove from the top of your list' : 'Favorite — pin to the top of your list'}
+          aria-label={cb.favorited ? 'Unfavorite this build' : 'Favorite this build'}
+          aria-pressed={cb.favorited ?? false}
+          className="shrink-0 text-fg-subtle hover:text-warning disabled:opacity-40"
+        >
+          <Star size={15} className={cn(cb.favorited && 'fill-warning text-warning')} />
+        </button>
         <button
           onClick={toggleExpanded}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"

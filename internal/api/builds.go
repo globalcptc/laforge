@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/ingest"
@@ -223,12 +224,50 @@ func (s *Server) handleListConfiguredBuilds(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusNotFound, err)
 		return
 	}
-	builds, err := s.Queries.ListConfiguredBuildsByRepository(r.Context(), repo.ID)
+	// Per-viewer favorites: flag each configured build the current user starred,
+	// so their list can float them to the top. A missing session just means no
+	// favorites (nil account id matches nothing).
+	var accountID pgtype.UUID
+	if sess, err := s.sessionFromRequest(r); err == nil {
+		accountID = sess.AccountID
+	}
+	builds, err := s.Queries.ListConfiguredBuildsByRepositoryForAccount(r.Context(), db.ListConfiguredBuildsByRepositoryForAccountParams{
+		RepositoryID: repo.ID, AccountID: accountID,
+	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, builds)
+}
+
+// handleSetConfiguredBuildFavorite stars (POST) or unstars (DELETE) a configured
+// build for the current user -- a per-viewer preference that floats their
+// starred branches to the top of the builds page. Requires only a session; the
+// favorite is scoped to the account, so it touches nothing another user sees.
+func (s *Server) handleSetConfiguredBuildFavorite(w http.ResponseWriter, r *http.Request) {
+	sess, err := s.sessionFromRequest(r)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	var cbID pgtype.UUID
+	if err := cbID.Scan(r.PathValue("id")); err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid configured build id"))
+		return
+	}
+	if r.Method == http.MethodDelete {
+		if err := s.Queries.RemoveConfiguredBuildFavorite(r.Context(), db.RemoveConfiguredBuildFavoriteParams{AccountID: sess.AccountID, ConfiguredBuildID: cbID}); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+	} else {
+		if err := s.Queries.AddConfiguredBuildFavorite(r.Context(), db.AddConfiguredBuildFavoriteParams{AccountID: sess.AccountID, ConfiguredBuildID: cbID}); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // buildAndOwningRepo resolves a configured_build id to the row plus its

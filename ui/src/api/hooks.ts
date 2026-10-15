@@ -182,6 +182,20 @@ export function useSetConfiguredBuildAutoDeploy(repoId: string) {
   })
 }
 
+// Per-user favorite toggle for a configured build. favorited=true stars it
+// (POST), false unstars it (DELETE); the list refetches so favorites float to
+// the top (the server sorts favorited-first).
+export function useSetConfiguredBuildFavorite(repoId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ configuredBuildId, favorited }: { configuredBuildId: string; favorited: boolean }) =>
+      favorited
+        ? api.post<void>(`/configured-builds/${configuredBuildId}/favorite`)
+        : api.delete<void>(`/configured-builds/${configuredBuildId}/favorite`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['configured-builds', repoId] }),
+  })
+}
+
 // useSetLock toggles "marking the competition started" (competition_started
 // -- internal/api/builds.go's handleSetLock), which locks automatic
 // deploys while leaving manual deploys, single-host rebuilds, and ad-hoc

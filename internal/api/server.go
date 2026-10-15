@@ -174,6 +174,8 @@ func (s *Server) routes() {
 	mux.HandleFunc("POST /configured-builds/{id}/lock", s.handleSetLock)
 	mux.HandleFunc("POST /configured-builds/{id}/sync", s.handleSyncConfiguredBuild)
 	mux.HandleFunc("POST /configured-builds/{id}/builds", s.handleTriggerBuild)
+	mux.HandleFunc("POST /configured-builds/{id}/favorite", s.handleSetConfiguredBuildFavorite)
+	mux.HandleFunc("DELETE /configured-builds/{id}/favorite", s.handleSetConfiguredBuildFavorite)
 
 	mux.HandleFunc("GET /content-revisions/{id}/environments", s.handleListRevisionEnvironments)
 

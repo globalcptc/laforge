@@ -124,33 +124,29 @@ function AttentionRow({ item }: { item: AttentionItem }) {
   )
 }
 
-// How many capacity signals to show per builder before collapsing the rest into
-// a "+N more" link -- enough to see the real constraints without the home page
-// turning into a full metrics dashboard (that's what the builder page is for).
-const CAPACITY_SHOWN = 5
-
 const fmtNum = (n: number) => (Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1))
 
-// CapacityBar is one build-gating signal, named concretely: a storage pool or a
-// node's memory as percent-full, or an AWS quota as used/limit. Layout is
-// label | number | bar in fixed columns, so every row's numbers right-align in
-// one column and every row's bar shares the same start and end -- "Disk (local)
-// · node3  92%" or "Elastic IPs  5 / 5  100%" lines up down the pane.
-function CapacityBar({ sig }: { sig: HomeCapacity }) {
+// CapacityCell is one build-gating signal as a compact column: label on top,
+// value/percent, and a mini bar under it -- so a builder's two heaviest signals
+// sit side by side on one row ("Disk (local) · node3" and "Elastic IPs 5/5")
+// rather than a stack. The builder page has the full set.
+function CapacityCell({ sig }: { sig: HomeCapacity }) {
   const pct = Math.min(100, Math.max(0, sig.pct))
   const tone = sig.pct >= 90 ? 'bg-danger' : sig.pct >= 75 ? 'bg-warning' : 'bg-accent'
   const label = sig.node ? `${sig.label} · ${sig.node}` : sig.label
   const quota = sig.max != null
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_7rem_8rem] items-center gap-3 text-xs">
-      <span className="truncate text-fg-muted" title={label}>
-        {label}
-      </span>
-      <span className="text-right font-mono tabular-nums text-fg">
-        {quota ? `${fmtNum(sig.value)} / ${fmtNum(sig.max!)}` : `${sig.pct.toFixed(0)}%`}
-        {quota && <span className="ml-1.5 text-fg-subtle">{sig.pct.toFixed(0)}%</span>}
-      </span>
-      <div className="h-1.5 overflow-hidden rounded-full bg-surface-sunken" title={`${sig.pct.toFixed(0)}%`}>
+    <div className="min-w-0">
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="truncate text-fg-muted" title={label}>
+          {label}
+        </span>
+        <span className="shrink-0 font-mono tabular-nums text-fg">
+          {quota ? `${fmtNum(sig.value)} / ${fmtNum(sig.max!)}` : `${sig.pct.toFixed(0)}%`}
+          {quota && <span className="ml-1 text-fg-subtle">{sig.pct.toFixed(0)}%</span>}
+        </span>
+      </div>
+      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-sunken" title={`${sig.pct.toFixed(0)}%`}>
         <div className={cn('h-full rounded-full', tone)} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -172,8 +168,9 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
       <div className="divide-y divide-border">
         {builders.map((b) => {
           const capacity = b.capacity ?? []
-          const shown = capacity.slice(0, CAPACITY_SHOWN)
-          const hidden = capacity.length - shown.length
+          // The two heaviest-used signals lead, side by side; the rest live on
+          // the builder page behind "See more".
+          const topTwo = [...capacity].sort((a, z) => z.pct - a.pct).slice(0, 2)
           const name = me?.is_instance_admin ? (
             <Link to="/admin/infrastructure/$name" params={{ name: b.name }} className="hover:opacity-80">
               <BuilderPill name={b.name} color={b.color} kind={b.kind} />
@@ -207,22 +204,23 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
                 </div>
               </div>
               {capacity.length > 0 ? (
-                <div className="mt-2.5 space-y-1.5">
-                  {shown.map((sig) => (
-                    <CapacityBar key={`${sig.key}|${sig.node}`} sig={sig} />
-                  ))}
-                  {hidden > 0 &&
-                    (me?.is_instance_admin ? (
-                      <Link
-                        to="/admin/infrastructure/$name"
-                        params={{ name: b.name }}
-                        className="inline-block text-xs text-accent hover:underline"
-                      >
-                        +{hidden} more →
-                      </Link>
-                    ) : (
-                      <span className="text-xs text-fg-subtle">+{hidden} more</span>
+                <div className="mt-2.5 flex items-center gap-4">
+                  <div className="grid flex-1 grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
+                    {topTwo.map((sig) => (
+                      <CapacityCell key={`${sig.key}|${sig.node}`} sig={sig} />
                     ))}
+                  </div>
+                  {me?.is_instance_admin ? (
+                    <Link
+                      to="/admin/infrastructure/$name"
+                      params={{ name: b.name }}
+                      className="shrink-0 text-xs font-medium text-accent hover:underline"
+                    >
+                      See more →
+                    </Link>
+                  ) : capacity.length > 2 ? (
+                    <span className="shrink-0 text-xs text-fg-subtle">+{capacity.length - 2} more</span>
+                  ) : null}
                 </div>
               ) : (
                 <div className="mt-2 text-xs text-fg-subtle">No capacity metrics reported yet.</div>

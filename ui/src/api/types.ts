@@ -65,6 +65,8 @@ export interface ConfiguredBuild {
   competition_started: boolean
   current_content_revision_id: string | null
   created_at: string
+  /** Whether the current user has starred this configured build (favorites sort to the top). */
+  favorited?: boolean
 }
 
 export interface Build {
