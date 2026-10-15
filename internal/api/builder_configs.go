@@ -89,6 +89,11 @@ type builderConfigRequest struct {
 	// capacity-limited hoster (e.g. a MicroCloud cluster). 0 = unlimited.
 	// Enforced as a soft cap in the task-lease query, so it applies to any kind.
 	MaxConcurrency int32 `json:"max_concurrency,omitempty"`
+	// IncusHostMaxConcurrency caps how many instance deploys run at once on EACH
+	// host of a kind "incus" pool (where the contention is: one team's VMs all
+	// created on one host). Over the cap, deploys queue in the runner and are
+	// admitted critical-path first. 0 = unbounded. Incus pools only.
+	IncusHostMaxConcurrency int32 `json:"incus_host_max_concurrency,omitempty"`
 }
 
 // validate turns req into the columns CreateBuilderConfig/UpdateBuilderConfig
@@ -181,6 +186,13 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 	if maxConcurrency < 0 {
 		maxConcurrency = 0
 	}
+	incusHostMaxConcurrency := req.IncusHostMaxConcurrency
+	if incusHostMaxConcurrency < 0 {
+		incusHostMaxConcurrency = 0
+	}
+	if incusHostMaxConcurrency > 0 && req.Kind != "incus" {
+		return db.CreateBuilderConfigParams{}, errors.New("incus_host_max_concurrency is only supported by the Incus builder")
+	}
 	params := db.CreateBuilderConfigParams{
 		Kind:                   req.Kind,
 		IncusOneTeamPerHost:    req.IncusOneTeamPerHost,
@@ -199,6 +211,7 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		Color:                  req.Color,
 		MicrocloudClusterGroup: clusterGroup,
 		MaxConcurrency:          maxConcurrency,
+		IncusHostMaxConcurrency: incusHostMaxConcurrency,
 	}
 	if req.Kind == "microcloud" && req.IncusProject != "default" {
 		params.IncusProject = db.StrPtr(req.IncusProject)
@@ -442,6 +455,7 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		Color:                   params.Color,
 		MicrocloudClusterGroup: params.MicrocloudClusterGroup,
 		MaxConcurrency:          params.MaxConcurrency,
+		IncusHostMaxConcurrency: params.IncusHostMaxConcurrency,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

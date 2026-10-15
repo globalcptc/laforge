@@ -97,6 +97,9 @@ export interface Draft {
   // Cap on how many of this builder's tasks deploy at once, below the global
   // runner pool -- a knob to turn down a capacity-limited hoster. 0 = unlimited.
   maxConcurrency?: number
+  // Incus pools: cap on concurrent instance deploys on EACH host, admitted
+  // critical-path (depends_on roots) first. 0 = unlimited.
+  incusHostMaxConcurrency?: number
 }
 
 let seq = 0
@@ -282,6 +285,7 @@ export function draftFromConfig(bc: BuilderConfig): Draft {
     color: bc.color ?? '',
     clusterGroup: bc.microcloud_cluster_group ?? 'default',
     maxConcurrency: bc.max_concurrency ?? 0,
+    incusHostMaxConcurrency: bc.incus_host_max_concurrency ?? 0,
   }
 }
 
@@ -370,7 +374,15 @@ function requestBody(d: Draft): BuilderConfigRequest {
       return { credential_id: h.credentialId, api_url: '', client_cert_path: '', client_key_path: '', server_cert_pem: '', ...placement }
     return { ...(h.legacy as IncusHostConfig), ...placement }
   })
-  return { kind: 'incus', incus_hosts, incus_one_team_per_host: d.oneTeamPerHost ?? false, ...externalAccess, incus_images, incus_sizes }
+  return {
+    kind: 'incus',
+    incus_hosts,
+    incus_one_team_per_host: d.oneTeamPerHost ?? false,
+    incus_host_max_concurrency: d.incusHostMaxConcurrency || undefined,
+    ...externalAccess,
+    incus_images,
+    incus_sizes,
+  }
 }
 
 // cleanAwsConfig drops empty-string fields so they fall back to the runner's

@@ -100,7 +100,13 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 	// longer gated on depends_on (the box deploys ahead of time); ordering
 	// their creation is what makes the tree-priority real, since LeaseTask
 	// draws pending tasks oldest-first.
-	placements := orderedPlacements(env, containerNames, c.DependencyDepth())
+	//
+	// Creation order alone can't hold that priority once every task is leased at
+	// once (an unbounded pool), so each deploy task also carries its critical-path
+	// priority (DependentCounts: how many objects wait on it) in its payload. The
+	// lease queries serve higher priorities first, across every team, and the
+	// Incus builder's per-host admission queue does the same.
+	placements := orderedPlacements(env, containerNames, c.DependencyDepth(), c.DependentCounts())
 
 	for teamNum := 1; teamNum <= env.Teams; teamNum++ {
 		team, err := q.EnsureTeam(ctx, db.EnsureTeamParams{BuildID: buildID, TeamNumber: int32(teamNum)})
@@ -129,7 +135,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 
 		for _, pl := range placements {
 			desired[pl.kind+"/"+pl.as] = true
-			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps, networkUp, networkFailed); err != nil {
+			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, pl.priority, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps, networkUp, networkFailed); err != nil {
 				return fmt.Errorf("team %d, %s %q: %w", teamNum, pl.kind, pl.as, err)
 			}
 		}
@@ -314,11 +320,11 @@ func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, tea
 	if obj.Status == "deploy_failed" {
 		return nil
 	}
-	_, err = reconcileObject(ctx, q, buildID, obj, fp, deployTasks)
+	_, err = reconcileObject(ctx, q, buildID, obj, fp, networkDeployPriority, deployTasks)
 	return err
 }
 
-func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps, networkUp, networkFailed map[string]bool) error {
+func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, priority int, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps, networkUp, networkFailed map[string]bool) error {
 	rctx, err := render.Resolve(c, envName, asName, teamNum)
 	if err != nil {
 		return fmt.Errorf("resolving: %w", err)
@@ -389,7 +395,7 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	// handled instead by deploying roots-first (see orderedPlacements), and
 	// correctness by holding this object's STEP execution below until every
 	// dependency has actually finished.
-	created, err := reconcileObject(ctx, q, buildID, obj, fp, deployTasks)
+	created, err := reconcileObject(ctx, q, buildID, obj, fp, priority, deployTasks)
 	if err != nil {
 		return err
 	}
@@ -429,7 +435,10 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 // turn comes (ordered roots-first by the caller), ahead of its dependencies
 // finishing. depends_on now holds only step EXECUTION (materializeStepsIfReady),
 // not the infrastructure deploy.
-func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, desiredFP string, deployTasks bool) (created bool, err error) {
+//
+// priority is recorded on the deploy task's payload (see deployTaskPayload) so
+// the runner leases, and the builder admits, critical-path objects first.
+func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, desiredFP string, priority int, deployTasks bool) (created bool, err error) {
 	if infraUp(obj.Status) {
 		if obj.Fingerprint == desiredFP {
 			return false, nil // already correct
@@ -451,7 +460,7 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 	// already leased/pending for this object, this is a no-op (and
 	// ErrNoRows, its own signal for "nothing inserted" -- ends up back
 	// here as created=false).
-	payload, err := json.Marshal(map[string]string{"fingerprint": desiredFP})
+	payload, err := deployTaskPayload(desiredFP, priority)
 	if err != nil {
 		return false, err
 	}
@@ -465,6 +474,23 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 		return false, err
 	}
 	return true, nil
+}
+
+// networkDeployPriority ranks a network's deploy above every host and container:
+// each of a team's instances waits for its network to exist, so a network
+// queued behind another team's hosts would stall its whole team.
+const networkDeployPriority = 1 << 20
+
+// deployTaskPayload is a deploy task's payload: the fingerprint it deploys and
+// its critical-path priority. The lease queries order by payload->'priority'
+// (internal/db/queries/runtime.sql) and the runner hands it to the builder as
+// HostSpec/ContainerSpec.Priority. Omitted when 0, as on a destroy task.
+func deployTaskPayload(fingerprint string, priority int) ([]byte, error) {
+	p := map[string]any{"fingerprint": fingerprint}
+	if priority > 0 {
+		p["priority"] = priority
+	}
+	return json.Marshal(p)
 }
 
 func requestDestroy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, remove bool, deployTasks bool) error {
@@ -505,6 +531,7 @@ type placement struct {
 	as          string
 	kind        string
 	depth       int
+	priority    int // how many objects transitively depends_on this one (loader.DependentCounts)
 }
 
 // orderedPlacements flattens an environment's topology into every copy it
@@ -513,7 +540,7 @@ type placement struct {
 // provisioned before its dependents' -- the tree-priority the box-deploy
 // decoupling asks for. The order is identical for every team (the topology is
 // too), so callers compute it once.
-func orderedPlacements(env *loader.Environment, containerNames map[string]bool, depth map[string]int) []placement {
+func orderedPlacements(env *loader.Environment, containerNames map[string]bool, depth, priority map[string]int) []placement {
 	var out []placement
 	for networkName, objs := range env.Networks {
 		for objectName, copies := range objs {
@@ -522,13 +549,16 @@ func orderedPlacements(env *loader.Environment, containerNames map[string]bool, 
 				kind = "container"
 			}
 			for _, cp := range copies {
-				out = append(out, placement{networkName, objectName, cp.As, kind, depth[objectName]})
+				out = append(out, placement{networkName, objectName, cp.As, kind, depth[objectName], priority[objectName]})
 			}
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].depth != out[j].depth {
 			return out[i].depth < out[j].depth
+		}
+		if out[i].priority != out[j].priority {
+			return out[i].priority > out[j].priority
 		}
 		if out[i].objectName != out[j].objectName {
 			return out[i].objectName < out[j].objectName

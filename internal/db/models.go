@@ -126,6 +126,7 @@ type BuilderConfig struct {
 	Color                        string             `json:"color"`
 	MaxConcurrency               int32              `json:"max_concurrency"`
 	MicrocloudClusterGroup       string             `json:"microcloud_cluster_group"`
+	IncusHostMaxConcurrency      int32              `json:"incus_host_max_concurrency"`
 }
 
 type BuilderCredential struct {

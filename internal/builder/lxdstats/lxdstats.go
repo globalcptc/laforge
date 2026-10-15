@@ -1,9 +1,10 @@
 // Package lxdstats samples an LXD/Incus host's own backend health from its REST
 // API -- shared by the incus and microcloud builders (both speak the same API)
 // so the gathering lives in one place without coupling the two builders to each
-// other. It reports memory and storage-pool utilization, CPU load (clustered
-// hosts only), network throughput (from the daemon's own /1.0/metrics), and the
-// API response time as builder.Metrics. See docs/plans/builder-monitoring.md.
+// other. It reports memory and storage-pool utilization, host CPU load, host
+// NIC throughput, guest CPU/IO-wait/disk/network throughput (from the daemon's
+// own /1.0/metrics), in-flight instance operations, and the API response time
+// as builder.Metrics. See docs/plans/builder-monitoring.md.
 package lxdstats
 
 import (
@@ -66,13 +67,115 @@ func Host(ctx context.Context, get Getter, getRaw RawGetter, pool string) (build
 	// so this is how a standalone-looking Incus host still yields the same charts
 	// MicroCloud does. Only when that endpoint genuinely isn't there do we fall
 	// back to /1.0/resources (host memory alone).
-	if !memberStateMetrics(ctx, get, pool, node, &stats) {
+	members, ok := memberStateMetrics(ctx, get, pool, node, &stats)
+	if !ok {
 		singleHostMetrics(ctx, get, pool, node, &stats)
 	}
+	// A host's own NICs are read through the connected daemon, so they are only
+	// attributable when it is the only member (a standalone host or a cluster of
+	// one) -- a multi-member cluster would report one member's NICs as its own.
+	if members <= 1 {
+		addHostNIC(ctx, get, node, &stats)
+	}
 	addMetricsStats(ctx, getRaw, node, &stats)
+	addOperations(ctx, get, node, &stats)
 	addWarnings(ctx, get, node, &stats)
-	addStoragePoolHealth(ctx, get, &stats)
+	addStoragePoolHealth(ctx, get, pool, &stats)
 	return stats, nil
+}
+
+// metricNames is name under both daemons' OpenMetrics prefixes: LXD exports
+// lxd_*, Incus exports the same series as incus_*. Matching only lxd_* is why an
+// Incus pool published no CPU, network or disk-I/O charts at all.
+func metricNames(names ...string) []string {
+	out := make([]string, 0, 2*len(names))
+	for _, n := range names {
+		out = append(out, "lxd_"+n, "incus_"+n)
+	}
+	return out
+}
+
+// addHostNIC reports the host's own uplink traffic -- every unmanaged physical
+// NIC or bond, from /1.0/networks/<nic>/state counters -- as receive and
+// transmit counters (the API rates them). Unlike the per-instance "net" series
+// this includes the host's own traffic: image downloads, agent binaries, and
+// every guest's internet traffic leaving the box, so a saturated uplink during
+// a build shows up here. Best-effort.
+func addHostNIC(ctx context.Context, get Getter, node string, stats *builder.Stats) {
+	raw, err := get(ctx, "/1.0/networks?recursion=1")
+	if err != nil {
+		stats.Warnings = append(stats.Warnings, "host networks: "+err.Error())
+		return
+	}
+	var nets []struct {
+		Name    string `json:"name"`
+		Type    string `json:"type"`
+		Managed bool   `json:"managed"`
+	}
+	if json.Unmarshal(raw, &nets) != nil {
+		return
+	}
+	var rx, tx float64
+	found := false
+	for _, n := range nets {
+		if n.Managed || (n.Type != "physical" && n.Type != "bond") {
+			continue
+		}
+		stateRaw, err := get(ctx, "/1.0/networks/"+url.PathEscape(n.Name)+"/state")
+		if err != nil {
+			continue
+		}
+		var st struct {
+			Counters struct {
+				BytesReceived int64 `json:"bytes_received"`
+				BytesSent     int64 `json:"bytes_sent"`
+			} `json:"counters"`
+		}
+		if json.Unmarshal(stateRaw, &st) != nil {
+			continue
+		}
+		rx += float64(st.Counters.BytesReceived)
+		tx += float64(st.Counters.BytesSent)
+		found = true
+	}
+	if !found {
+		return
+	}
+	stats.Metrics = append(stats.Metrics,
+		builder.Metric{Key: "host_net_rx", Label: "Host NIC receive", Node: node, Kind: builder.MetricCounter, Unit: "bytes/s", Value: rx},
+		builder.Metric{Key: "host_net_tx", Label: "Host NIC transmit", Node: node, Kind: builder.MetricCounter, Unit: "bytes/s", Value: tx},
+	)
+}
+
+// addOperations reports how many instance operations (create, copy, start,
+// ...) the daemon is running right now -- the deploy contention itself, read
+// straight from the daemon: twenty creates queued on one host read as twenty
+// here, and a per-host deploy cap shows as a flat line at the cap. Best-effort.
+func addOperations(ctx context.Context, get Getter, node string, stats *builder.Stats) {
+	raw, err := get(ctx, "/1.0/operations?recursion=1")
+	if err != nil {
+		return
+	}
+	var groups map[string][]struct {
+		Class      string              `json:"class"`
+		StatusCode int                 `json:"status_code"`
+		Resources  map[string][]string `json:"resources"`
+	}
+	if json.Unmarshal(raw, &groups) != nil {
+		return
+	}
+	running := 0
+	for _, ops := range groups {
+		for _, op := range ops {
+			// 103 Running / 105 Pending; only operations on instances count.
+			if (op.StatusCode == 103 || op.StatusCode == 105) && op.Class == "task" && len(op.Resources["instances"]) > 0 {
+				running++
+			}
+		}
+	}
+	stats.Metrics = append(stats.Metrics, builder.Metric{
+		Key: "instance_ops", Label: "Instance operations running", Node: node, Kind: builder.MetricTimeseries, Unit: "count", Value: float64(running),
+	})
 }
 
 // addWarnings reports the count of unresolved LXD warnings as a trend line and
@@ -116,15 +219,22 @@ func addWarnings(ctx context.Context, get Getter, node string, stats *builder.St
 // addStoragePoolHealth surfaces any storage pool not in the "Created" state as a
 // warning -- a pool stuck Pending/Errored means deploys to it will fail. Config
 // status only (it doesn't probe Ceph/OVN dataplane health). Best-effort.
-func addStoragePoolHealth(ctx context.Context, get Getter, stats *builder.Stats) {
+//
+// It also flags the deploy pool when its driver makes every instance a FULL copy
+// of its image or snapshot rather than a copy-on-write clone: "dir" always, and
+// "lvm" without a thin pool. That is the difference between a create taking
+// seconds and every concurrent create competing to write a whole disk image.
+func addStoragePoolHealth(ctx context.Context, get Getter, pool string, stats *builder.Stats) {
 	raw, err := get(ctx, "/1.0/storage-pools?recursion=1")
 	if err != nil {
 		stats.Warnings = append(stats.Warnings, "storage pools: "+err.Error())
 		return
 	}
 	var pools []struct {
-		Name   string `json:"name"`
-		Status string `json:"status"`
+		Name   string            `json:"name"`
+		Status string            `json:"status"`
+		Driver string            `json:"driver"`
+		Config map[string]string `json:"config"`
 	}
 	if json.Unmarshal(raw, &pools) != nil {
 		return
@@ -133,7 +243,22 @@ func addStoragePoolHealth(ctx context.Context, get Getter, stats *builder.Stats)
 		if p.Status != "" && p.Status != "Created" {
 			stats.Warnings = append(stats.Warnings, fmt.Sprintf("storage pool %s is %s, not Created", p.Name, p.Status))
 		}
+		if p.Name == pool && fullCopyDriver(p.Driver, p.Config) {
+			stats.Warnings = append(stats.Warnings, fmt.Sprintf("storage pool %s uses the %s driver without copy-on-write: every instance is a full copy of its image, so concurrent deploys contend for disk -- prefer zfs, btrfs or lvm with a thin pool", p.Name, p.Driver))
+		}
 	}
+}
+
+// fullCopyDriver reports whether a storage pool driver creates instances by
+// fully copying their source rather than cloning it.
+func fullCopyDriver(driver string, config map[string]string) bool {
+	switch driver {
+	case "dir":
+		return true
+	case "lvm":
+		return config["lvm.use_thinpool"] == "false"
+	}
+	return false
 }
 
 // addMetricsStats reads the daemon's OWN OpenMetrics endpoint (/1.0/metrics) once
@@ -155,7 +280,7 @@ func addMetricsStats(ctx context.Context, getRaw RawGetter, node string, stats *
 		return
 	}
 	text := string(raw)
-	if v, ok := sumOpenMetric(text, []string{"lxd_network_receive_bytes_total", "lxd_network_transmit_bytes_total"}, []string{`device="lo"`}); ok {
+	if v, ok := sumOpenMetric(text, metricNames("network_receive_bytes_total", "network_transmit_bytes_total"), []string{`device="lo"`}); ok {
 		stats.Metrics = append(stats.Metrics, builder.Metric{
 			Key: "net", Label: "Network", Node: node, Kind: builder.MetricCounter, Unit: "bytes/s", Value: v,
 		})
@@ -163,19 +288,38 @@ func addMetricsStats(ctx context.Context, getRaw RawGetter, node string, stats *
 	// Busy CPU-seconds across every instance (all modes except idle/iowait); rated
 	// by the API this reads as cores-in-use -- a CPU chart even where there's no
 	// host load average (a standalone host).
-	if v, ok := sumOpenMetric(text, []string{"lxd_cpu_seconds_total"}, []string{`mode="idle"`, `mode="iowait"`}); ok {
+	if v, ok := sumOpenMetric(text, metricNames("cpu_seconds_total"), []string{`mode="idle"`, `mode="iowait"`}); ok {
 		stats.Metrics = append(stats.Metrics, builder.Metric{
 			Key: "cpu", Label: "CPU (guest cores)", Node: node, Kind: builder.MetricCounter, Unit: "cores", Value: v,
 		})
 	}
+	// Guests' CPU time stalled on I/O, as cores: storage contention seen from
+	// inside the instances that report it (VMs with the guest agent). The host's
+	// own iowait isn't exposed by the API.
+	if v, ok := sumOpenMetricWith(text, metricNames("cpu_seconds_total"), `mode="iowait"`); ok {
+		stats.Metrics = append(stats.Metrics, builder.Metric{
+			Key: "cpu_iowait", Label: "CPU I/O wait (guest cores)", Node: node, Kind: builder.MetricCounter, Unit: "cores", Value: v,
+		})
+	}
 	// Disk throughput: read + written bytes across every instance's disks.
-	if v, ok := sumOpenMetric(text, []string{"lxd_disk_read_bytes_total", "lxd_disk_written_bytes_total"}, nil); ok {
+	if v, ok := sumOpenMetric(text, metricNames("disk_read_bytes_total", "disk_written_bytes_total"), nil); ok {
 		stats.Metrics = append(stats.Metrics, builder.Metric{
 			Key: "disk_io", Label: "Disk I/O", Node: node, Kind: builder.MetricCounter, Unit: "bytes/s", Value: v,
 		})
 	}
 	// NB: process count comes from the member-state sysinfo (host processes), not
 	// from /1.0/metrics, so it isn't duplicated here.
+}
+
+// sumOpenMetricWith totals the lines matching prefixes that DO carry label.
+func sumOpenMetricWith(text string, prefixes []string, label string) (total float64, ok bool) {
+	var kept []string
+	for _, line := range strings.Split(text, "\n") {
+		if strings.Contains(line, label) {
+			kept = append(kept, line)
+		}
+	}
+	return sumOpenMetric(strings.Join(kept, "\n"), prefixes, nil)
 }
 
 // sumOpenMetric totals the value of every OpenMetrics sample line whose name
@@ -229,8 +373,11 @@ func sumOpenMetric(text string, prefixes, skip []string) (total float64, ok bool
 }
 
 // singleHostMetrics reports the one connected host's memory (/1.0/resources, the
-// most accurate figure) and configured storage pool. A standalone host has no
-// cluster-member state, so there's no CPU load to report.
+// most accurate figure), its CPU load average and process count (the same
+// resources response's "load" section, which Incus serves with the
+// resources_load API extension -- a standalone host has no cluster-member
+// sysinfo, so this is its only load figure; LXD omits it and the chart is
+// simply absent), and its configured storage pool.
 func singleHostMetrics(ctx context.Context, get Getter, pool, node string, stats *builder.Stats) {
 	if raw, err := get(ctx, "/1.0/resources"); err != nil {
 		stats.Warnings = append(stats.Warnings, "memory: "+err.Error())
@@ -240,9 +387,27 @@ func singleHostMetrics(ctx context.Context, get Getter, pool, node string, stats
 				Used  uint64 `json:"used"`
 				Total uint64 `json:"total"`
 			} `json:"memory"`
+			// Incus 7.5 serves these keys untagged ("Average1Min", "Processes"),
+			// verified live against r1-scaleway.
+			Load *struct {
+				Processes   int64   `json:"Processes"`
+				Average1Min float64 `json:"Average1Min"`
+			} `json:"load"`
 		}
-		if json.Unmarshal(raw, &r) == nil && r.Memory.Total > 0 {
-			stats.Metrics = append(stats.Metrics, memMetric(node, r.Memory.Used, r.Memory.Total))
+		if json.Unmarshal(raw, &r) == nil {
+			if r.Memory.Total > 0 {
+				stats.Metrics = append(stats.Metrics, memMetric(node, r.Memory.Used, r.Memory.Total))
+			}
+			if r.Load != nil {
+				stats.Metrics = append(stats.Metrics, builder.Metric{
+					Key: "cpu_load", Label: "CPU load (1m)", Node: node, Kind: builder.MetricTimeseries, Unit: "load", Value: r.Load.Average1Min,
+				})
+				if r.Load.Processes > 0 {
+					stats.Metrics = append(stats.Metrics, builder.Metric{
+						Key: "processes", Label: "Processes", Node: node, Kind: builder.MetricTimeseries, Unit: "count", Value: float64(r.Load.Processes),
+					})
+				}
+			}
 		}
 	}
 	addDisk(ctx, get, pool, node, "", stats)
@@ -255,21 +420,23 @@ func singleHostMetrics(ctx context.Context, get Getter, pool, node string, stats
 // back to /1.0/resources; an Incus host run as a single-node cluster DOES serve
 // it, which is how the Incus pool gets the same sysinfo charts MicroCloud does.
 // Best-effort per member: a member that can't be read warns and is skipped.
-func memberStateMetrics(ctx context.Context, get Getter, pool, connectedNode string, stats *builder.Stats) bool {
+//
+// members is how many cluster members were listed (0 when not clustered).
+func memberStateMetrics(ctx context.Context, get Getter, pool, connectedNode string, stats *builder.Stats) (members int, ok bool) {
 	raw, err := get(ctx, "/1.0/cluster/members?recursion=1")
 	if err != nil {
-		return false // not clustered at all -> caller uses /1.0/resources
+		return 0, false // not clustered at all -> caller uses /1.0/resources
 	}
-	var members []struct {
+	var list []struct {
 		ServerName string `json:"server_name"`
 		Status     string `json:"status"`
 	}
-	if json.Unmarshal(raw, &members) != nil || len(members) == 0 {
-		return false
+	if json.Unmarshal(raw, &list) != nil || len(list) == 0 {
+		return 0, false
 	}
 	gotAny := false
 	online := 0
-	for _, m := range members {
+	for _, m := range list {
 		node := m.ServerName
 		if strings.EqualFold(m.Status, "online") {
 			online++
@@ -319,12 +486,12 @@ func memberStateMetrics(ctx context.Context, get Getter, pool, connectedNode str
 		addDisk(ctx, get, pool, node, node, stats)
 	}
 	if !gotAny {
-		return false // members listed but none served state -> fall back
+		return len(list), false // members listed but none served state -> fall back
 	}
 	stats.Metrics = append(stats.Metrics, builder.Metric{
 		Key: "members_online", Label: "Cluster members online", Node: connectedNode, Kind: builder.MetricTimeseries, Unit: "count", Value: float64(online),
 	})
-	return true
+	return len(list), true
 }
 
 func memMetric(node string, used, total uint64) builder.Metric {

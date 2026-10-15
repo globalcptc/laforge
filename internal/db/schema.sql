@@ -148,6 +148,7 @@ CREATE TABLE public.builder_config (
     color text DEFAULT ''::text NOT NULL,
     max_concurrency integer DEFAULT 0 NOT NULL,
     microcloud_cluster_group text DEFAULT 'default'::text NOT NULL,
+    incus_host_max_concurrency integer DEFAULT 0 NOT NULL,
     CONSTRAINT builder_config_kind_check CHECK ((kind = ANY (ARRAY['fake'::text, 'incus'::text, 'microcloud'::text, 'aws'::text, 'openstack'::text])))
 );
 --

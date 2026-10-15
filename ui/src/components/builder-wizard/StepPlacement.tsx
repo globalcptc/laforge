@@ -24,6 +24,8 @@ export function StepPlacement({
   onClusterGroupChange,
   maxConcurrency,
   onMaxConcurrencyChange,
+  incusHostMaxConcurrency,
+  onIncusHostMaxConcurrencyChange,
 }: {
   kind: Kind
   oneTeamPerHost: boolean
@@ -34,6 +36,8 @@ export function StepPlacement({
   onClusterGroupChange: (value: string) => void
   maxConcurrency: number
   onMaxConcurrencyChange: (value: number) => void
+  incusHostMaxConcurrency: number
+  onIncusHostMaxConcurrencyChange: (value: number) => void
   hosts: HostDraft[]
   onChange: (hosts: HostDraft[]) => void
   externalAccessIp: string
@@ -188,6 +192,29 @@ export function StepPlacement({
             value={maxConcurrency}
             onChange={onMaxConcurrencyChange}
             valueLabel={(v) => (v === 0 ? 'Unlimited' : `${v} thread${v === 1 ? '' : 's'}`)}
+          />
+        </div>
+      )}
+
+      {/* Incus per-host deploy concurrency: cap how many instances each host
+          creates and boots at once; the rest queue, depends_on roots first. */}
+      {kind === 'incus' && (
+        <div className="card p-4">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-fg">
+            <Gauge size={14} className="text-fg-muted" /> Per-Host Deploy Concurrency
+          </div>
+          <p className="mb-3 text-xs text-fg-muted">
+            The most instances LaForge creates and starts on each host at once. The rest wait their turn, and hosts that others{' '}
+            <span className="font-mono">depends_on</span> (a domain controller) go first, so a team&apos;s critical path isn&apos;t stuck behind its
+            workstations. 4–6 suits most hosts. <span className="font-medium text-fg">Unlimited</span> starts everything at once.
+          </p>
+          <Slider
+            min={0}
+            max={32}
+            step={1}
+            value={incusHostMaxConcurrency}
+            onChange={onIncusHostMaxConcurrencyChange}
+            valueLabel={(v) => (v === 0 ? 'Unlimited' : `${v} per host`)}
           />
         </div>
       )}

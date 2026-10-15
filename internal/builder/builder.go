@@ -120,6 +120,13 @@ type HostSpec struct {
 	// WindowsEC2LaunchUserData), choosing by agentdelivery.PlatformFor(OS) -- the
 	// format is a property of the image/hoster, so the builder owns it.
 	AgentDownloadURL string
+	// Priority is this object's place on the build's critical path: how many
+	// objects (transitively) depends_on it, so a domain controller the rest of a
+	// team waits on outranks a leaf workstation. 0 = nothing waits on it. Set by
+	// the orchestrator, carried on the deploy task. A builder that admits
+	// creates through a bounded queue (Incus's per-host cap) serves higher
+	// priorities first; the rest ignore it.
+	Priority int
 }
 
 // DockerBaseAlias is the image alias a builder's "docker base image" job
@@ -163,6 +170,7 @@ func (s ContainerSpec) ComposeHostSpec() HostSpec {
 		OS: ComposeHostImage, Size: s.Size, DiskGB: s.DiskGB,
 		TCPPorts: s.TCPPorts, UDPPorts: s.UDPPorts,
 		AgentDownloadURL: s.AgentDownloadURL,
+		Priority:         s.Priority,
 	}
 }
 
@@ -238,6 +246,8 @@ type ContainerSpec struct {
 	// every service inherits it.
 	LogDriver  string
 	LogOptions map[string]string
+	// Priority is the same critical-path rank as HostSpec.Priority.
+	Priority int
 }
 
 // Resource is one thing Inspect finds already existing at the hoster,

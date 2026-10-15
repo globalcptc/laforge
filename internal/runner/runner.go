@@ -214,8 +214,14 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	r.logEvent(ctx, q, task.BuildID, task.ID, "task.started", fmt.Sprintf("%s (attempt %d)", task.Kind, task.Attempts))
 	stopHeartbeat := make(chan struct{})
 	go r.heartbeatLoop(ctx, task.ID, stopHeartbeat)
-	resolved, execErr := r.execute(ctx, q, task)
+	// A builder that times its phases (image copy, config drive, start, time
+	// queued for a host slot) records them here; they ride on this task's
+	// terminal event so the host's event timeline shows where a slow deploy's
+	// time went, on success and failure alike.
+	execCtx, phases := builder.WithPhaseTimer(ctx)
+	resolved, execErr := r.execute(execCtx, q, task)
 	close(stopHeartbeat)
+	phaseDetail := phasePayload(phases.Phases())
 
 	if resolved {
 		// The task row itself is already gone (a "remove" destroy deletes
@@ -262,11 +268,11 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 			if permanent {
 				reason = "permanent configuration error, not retrying"
 			}
-			r.logEvent(ctx, q, task.BuildID, task.ID, "task.failed", fmt.Sprintf("%s: %v (%s)", task.Kind, execErr, reason))
+			r.logBuilderCall(ctx, q, task.BuildID, task.ID, "task.failed", fmt.Sprintf("%s: %v (%s)", task.Kind, execErr, reason), phaseDetail)
 		} else {
 			backoff := r.RetryBackoff(task.Attempts)
 			q.RetryTask(ctx, db.RetryTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Column4: db.Interval(backoff)})
-			r.logEvent(ctx, q, task.BuildID, task.ID, "task.retry", fmt.Sprintf("%s: %v (attempt %d, retrying in %s)", task.Kind, execErr, task.Attempts, backoff))
+			r.logBuilderCall(ctx, q, task.BuildID, task.ID, "task.retry", fmt.Sprintf("%s: %v (attempt %d, retrying in %s)", task.Kind, execErr, task.Attempts, backoff), phaseDetail)
 		}
 		return execErr
 	}
@@ -274,8 +280,38 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	if _, err := q.CompleteTask(ctx, db.CompleteTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID)}); err != nil {
 		return fmt.Errorf("marking task complete: %w", err)
 	}
-	r.logEvent(ctx, q, task.BuildID, task.ID, "task.completed", task.Kind)
+	message := task.Kind
+	if phaseDetail != nil {
+		message = fmt.Sprintf("%s in %s", task.Kind, phaseDetail["total"])
+	}
+	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "task.completed", message, phaseDetail)
 	return nil
+}
+
+// phasePayload turns a builder's recorded phases into a task event's payload:
+// one human-readable duration per phase (the event timeline renders each key as
+// a detail row), the order they ran in, their total, and the same in
+// milliseconds under phases_ms for analysis queries. nil when the builder
+// recorded nothing, which logs as an empty payload exactly as before.
+func phasePayload(phases []builder.Phase) map[string]any {
+	if len(phases) == 0 {
+		return nil
+	}
+	out := make(map[string]any, len(phases)+3)
+	ms := make(map[string]int64, len(phases))
+	order := make([]string, 0, len(phases))
+	var total time.Duration
+	for _, p := range phases {
+		out[p.Name] = p.Duration.Round(100 * time.Millisecond).String()
+		ms[p.Name] = p.Duration.Milliseconds()
+		order = append(order, p.Name)
+		total += p.Duration
+	}
+	// jsonb doesn't keep key order, so the run order is spelled out.
+	out["phase_order"] = order
+	out["total"] = total.Round(100 * time.Millisecond).String()
+	out["phases_ms"] = ms
+	return out
 }
 
 func (r *Runner) heartbeatLoop(ctx context.Context, taskID pgtype.UUID, stop <-chan struct{}) {
@@ -318,7 +354,7 @@ func (r *Runner) logEvent(ctx context.Context, q *db.Queries, buildID pgtype.UUI
 // token, for example, is deliberately left out of the specs logged here).
 func (r *Runner) logBuilderCall(ctx context.Context, q *db.Queries, buildID, taskID pgtype.UUID, kind, message string, detail any) {
 	payload, err := json.Marshal(detail)
-	if err != nil || len(payload) == 0 {
+	if err != nil || len(payload) == 0 || string(payload) == "null" {
 		payload = []byte("{}")
 	}
 	q.CreateEvent(ctx, db.CreateEventParams{BuildID: buildID, TaskID: taskID, Kind: kind, Message: message, Payload: payload})
@@ -496,6 +532,15 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		return fmt.Errorf("loading content: %w", err)
 	}
 	team := strconv.FormatInt(int64(teamNumber), 10)
+	// The deploy task's payload carries the fingerprint it deploys and its
+	// critical-path priority (set by the orchestrator -- see its
+	// deployTaskPayload); the priority rides on the spec so a builder that
+	// queues creates (Incus's per-host cap) admits the critical path first.
+	var payload struct {
+		Fingerprint string `json:"fingerprint"`
+		Priority    int    `json:"priority"`
+	}
+	json.Unmarshal(task.Payload, &payload)
 
 	// Real status transition, found missing by direct audit:
 	// MarkDeployedObjectDeploying existed since
@@ -560,7 +605,7 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			ExternalName: externalName, DisplayName: displayName, Team: team,
 			Network: networkExternalName(task.BuildID, teamNumber, obj), NetworkDisplayName: networkDisplayName(teamNumber, db.StrOrEmpty(obj.NetworkName)), Address: addr,
 			OS: h.OS, Size: h.Size, DiskGB: h.Disk, TCPPorts: h.Ports.TCP, UDPPorts: h.Ports.UDP,
-			AgentDownloadURL: del.DownloadURL,
+			AgentDownloadURL: del.DownloadURL, Priority: payload.Priority,
 		}
 		// Log the host request with its full spec MINUS the agent download URL
 		// (it carries a one-time token -- see logBuilderCall).
@@ -569,7 +614,7 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			map[string]any{
 				"external_name": externalName, "os": h.OS, "size": h.Size, "disk_gb": h.Disk,
 				"address": addr, "network": db.StrOrEmpty(obj.NetworkName), "team": team,
-				"tcp_ports": h.Ports.TCP, "udp_ports": h.Ports.UDP,
+				"tcp_ports": h.Ports.TCP, "udp_ports": h.Ports.UDP, "priority": payload.Priority,
 			})
 		// MicroCloud alone implements this: the second NIC and its guest
 		// configuration must exist before the first Linux/Windows boot.
@@ -612,6 +657,7 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			// --entrypoint). Cloud (Fargate/Zun): downloaded at start from its
 			// URL. Each builder takes what it needs; the others are ignored.
 			AgentBinary: del.Binary, AgentDownloadURL: del.DownloadURL,
+			Priority: payload.Priority,
 		}
 		// Native container-log forwarding (environment container_logs): the
 		// builder applies this as its platform's log driver on the container. A
@@ -651,6 +697,7 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 				"external_name": externalName, "image": ct.Image, "size": ct.Size, "address": addr,
 				"network": db.StrOrEmpty(obj.NetworkName), "team": team, "compose": cspec.ComposeHost,
 				"tcp_ports": ct.Ports.TCP, "udp_ports": ct.Ports.UDP, "command": ct.Command,
+				"priority": payload.Priority,
 			})
 		externalRef, err = b.DeployContainer(ctx, cspec)
 	default:
@@ -685,11 +732,6 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 	if r.AfterBuilderCall != nil {
 		r.AfterBuilderCall()
 	}
-
-	var payload struct {
-		Fingerprint string `json:"fingerprint"`
-	}
-	json.Unmarshal(task.Payload, &payload)
 
 	if _, err := q.MarkDeployedObjectRunning(ctx, db.MarkDeployedObjectRunningParams{
 		ID: obj.ID, ExternalRef: db.StrPtr(externalRef), Fingerprint: payload.Fingerprint,

@@ -270,3 +270,106 @@ lxd_network_receive_bytes_total{device="lo",name="a"} 77`
 		t.Error("want ok=false when no matching lines present")
 	}
 }
+
+// TestHostIncusStandalone is a standalone Incus host as r1-scaleway's members
+// are: no cluster member-state, metrics under the incus_* prefix, load in
+// /1.0/resources. It must publish host load, host NIC, guest CPU / I/O wait /
+// disk / network, and in-flight instance operations -- before this, such a
+// host published only disk, memory, API latency and warnings.
+func TestHostIncusStandalone(t *testing.T) {
+	get := fakeGet(map[string]string{
+		"/1.0":           `{"environment":{"server_name":"team03"}}`,
+		"/1.0/resources": `{"memory":{"used":50,"total":200},"load":{"Average1Min":17.25,"Average5Min":12,"Average10Min":9,"Processes":812}}`,
+		"/1.0/storage-pools/default/resources": `{"space":{"used":10,"total":100}}`,
+		"/1.0/networks?recursion=1": `[{"name":"enp1s0","type":"physical","managed":false},{"name":"bond0","type":"bond","managed":false},
+			{"name":"t3corp","type":"bridge","managed":true},{"name":"lo","type":"loopback","managed":false},{"name":"veth12","type":"unknown","managed":false}]`,
+		"/1.0/networks/enp1s0/state": `{"counters":{"bytes_received":1000,"bytes_sent":300}}`,
+		"/1.0/networks/bond0/state":  `{"counters":{"bytes_received":5,"bytes_sent":7}}`,
+		"/1.0/networks/t3corp/state": `{"counters":{"bytes_received":99999,"bytes_sent":99999}}`,
+		"/1.0/operations?recursion=1": `{"running":[
+			{"class":"task","status_code":103,"resources":{"instances":["/1.0/instances/a"]}},
+			{"class":"task","status_code":103,"resources":{"instances":["/1.0/instances/b"]}},
+			{"class":"websocket","status_code":103,"resources":{"instances":["/1.0/instances/c"]}},
+			{"class":"task","status_code":103,"resources":{"images":["/1.0/images/x"]}}],
+			"success":[{"class":"task","status_code":200,"resources":{"instances":["/1.0/instances/d"]}}]}`,
+		"/1.0/storage-pools?recursion=1": `[{"name":"default","status":"Created","driver":"dir","config":{"source":"/var/lib/incus/storage-pools/default"}}]`,
+	})
+	metrics := `incus_cpu_seconds_total{cpu="0",mode="user",name="dc",project="default",type="virtual-machine"} 30
+incus_cpu_seconds_total{cpu="0",mode="system",name="dc",project="default",type="virtual-machine"} 10
+incus_cpu_seconds_total{cpu="0",mode="iowait",name="dc",project="default",type="virtual-machine"} 4
+incus_cpu_seconds_total{cpu="0",mode="idle",name="dc",project="default",type="virtual-machine"} 900
+incus_disk_read_bytes_total{device="sda",name="dc",project="default",type="virtual-machine"} 2000
+incus_disk_written_bytes_total{device="sda",name="dc",project="default",type="virtual-machine"} 500
+incus_network_receive_bytes_total{device="eth0",name="dc",project="default",type="virtual-machine"} 70
+incus_network_transmit_bytes_total{device="eth0",name="dc",project="default",type="virtual-machine"} 30
+`
+	stats, err := Host(context.Background(), get, fakeGetRaw(metrics), "default")
+	if err != nil {
+		t.Fatalf("Host: %v", err)
+	}
+	checks := []struct {
+		key  string
+		kind string
+		want float64
+	}{
+		{"cpu_load", builder.MetricTimeseries, 17.25},
+		{"processes", builder.MetricTimeseries, 812},
+		{"mem", builder.MetricTimeseries, 25},
+		{"host_net_rx", builder.MetricCounter, 1005}, // physical + bond; managed bridge and veth excluded
+		{"host_net_tx", builder.MetricCounter, 307},
+		{"cpu", builder.MetricCounter, 40},
+		{"cpu_iowait", builder.MetricCounter, 4},
+		{"disk_io", builder.MetricCounter, 2500},
+		{"net", builder.MetricCounter, 100},
+		{"instance_ops", builder.MetricTimeseries, 2}, // running instance tasks only
+	}
+	for _, c := range checks {
+		m, ok := metricFor(stats, c.key, "team03")
+		if !ok || m.Value != c.want || m.Kind != c.kind {
+			t.Errorf("%s = %+v (found %v), want %s %v", c.key, m, ok, c.kind, c.want)
+		}
+	}
+	if !hasWarningContaining(stats, "storage pool default uses the dir driver") {
+		t.Errorf("want a full-copy storage driver warning, got %v", stats.Warnings)
+	}
+}
+
+// TestHostNICSkippedOnMultiMemberCluster: a cluster's /1.0/networks answers for
+// the connected member only, so host NIC counters would be misattributed.
+func TestHostNICSkippedOnMultiMemberCluster(t *testing.T) {
+	get := fakeGet(map[string]string{
+		"/1.0":                             `{"environment":{"server_name":"node1"}}`,
+		"/1.0/cluster/members?recursion=1": `[{"server_name":"node1","status":"Online"},{"server_name":"node2","status":"Online"}]`,
+		"/1.0/cluster/members/node1/state": `{"sysinfo":{"total_ram":100,"free_ram":40}}`,
+		"/1.0/cluster/members/node2/state": `{"sysinfo":{"total_ram":100,"free_ram":40}}`,
+		"/1.0/networks?recursion=1":        `[{"name":"eth0","type":"physical","managed":false}]`,
+		"/1.0/networks/eth0/state":         `{"counters":{"bytes_received":1,"bytes_sent":1}}`,
+	})
+	stats, err := Host(context.Background(), get, nil, "remote")
+	if err != nil {
+		t.Fatalf("Host: %v", err)
+	}
+	if _, ok := metricByKey(stats, "host_net_rx"); ok {
+		t.Error("a multi-member cluster must not report host NIC counters")
+	}
+}
+
+func TestFullCopyDriver(t *testing.T) {
+	cases := []struct {
+		driver string
+		config map[string]string
+		want   bool
+	}{
+		{"dir", nil, true},
+		{"lvm", map[string]string{"lvm.use_thinpool": "false"}, true},
+		{"lvm", map[string]string{"lvm.thinpool_name": "IncusThinPool"}, false},
+		{"zfs", nil, false},
+		{"btrfs", nil, false},
+		{"ceph", nil, false},
+	}
+	for _, c := range cases {
+		if got := fullCopyDriver(c.driver, c.config); got != c.want {
+			t.Errorf("fullCopyDriver(%s, %v) = %v, want %v", c.driver, c.config, got, c.want)
+		}
+	}
+}

@@ -53,6 +53,11 @@ type Config struct {
 	// https://docker.io. A container's `image` is the alias within it
 	// (e.g. "nginx:alpine", "library/alpine:latest").
 	OCIRegistry string
+	// MaxConcurrentDeploys caps how many instance deploys (create/copy, config
+	// drive, first start) run on this Incus host at once; the rest queue and are
+	// admitted highest-priority first. 0 = unbounded. From builder_config
+	// incus_host_max_concurrency -- see admission.go.
+	MaxConcurrentDeploys int
 }
 
 // ociRegistryOrDefault is deployOCIContainer's resolution of Config.OCIRegistry

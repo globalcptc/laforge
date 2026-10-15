@@ -305,7 +305,7 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	// VMs and ordinary host images do not need container nesting enabled.
 	nesting := !img.VM && spec.OS == builder.ComposeHostImage
 	cloudInit, viaISO := agentUserData(spec.AgentDownloadURL, spec.OS)
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, nesting, cloudInit, viaISO)
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, nesting, cloudInit, viaISO, spec.Priority)
 }
 
 // deployComposeHost deploys the machine a compose container's project runs on:
@@ -329,7 +329,7 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 	// A compose host is always this Linux docker-base container, so its agent is
 	// delivered by cloud-init (never the Windows ISO path).
 	cloudInit, _ := agentUserData(spec.AgentDownloadURL, "linux")
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Alias: builder.DockerBaseAlias}, size, spec.DiskGB, true, cloudInit, false)
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Alias: builder.DockerBaseAlias}, size, spec.DiskGB, true, cloudInit, false, spec.Priority)
 }
 
 // laforgeAgentPath is where the LaForge agent is planted inside a native OCI
@@ -402,21 +402,34 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 		"type": "image", "protocol": "oci",
 		"server": b.Config.ociRegistryOrDefault(), "alias": spec.Image,
 	}
+	release, err := b.admit(ctx, spec.Priority)
+	if err != nil {
+		return "", err
+	}
+	defer release()
 	// Create (stopped) -- the agent has to be planted before first start.
-	err := b.Client.createInstance(ctx, name, map[string]interface{}{
+	done := builder.StartPhase(ctx, "create")
+	err = b.Client.createInstance(ctx, name, map[string]interface{}{
 		"name": name, "type": "container", "source": source, "config": config, "devices": devices,
 	})
+	done()
 	if err != nil {
 		return name, fmt.Errorf("creating OCI container %s (image %q from %s): %w", name, spec.Image, b.Config.ociRegistryOrDefault(), err)
 	}
 
 	if len(spec.AgentBinary) > 0 {
-		if err := b.installAgentSupervisor(ctx, name, spec); err != nil {
+		done := builder.StartPhase(ctx, "agent_install")
+		err := b.installAgentSupervisor(ctx, name, spec)
+		done()
+		if err != nil {
 			return name, err
 		}
 	}
 
-	if err := b.startInstance(ctx, name); err != nil {
+	done = builder.StartPhase(ctx, "start")
+	err = b.startInstance(ctx, name)
+	done()
+	if err != nil {
 		return name, err
 	}
 	return name, nil
@@ -479,11 +492,21 @@ func (b *Builder) instanceConfig(ctx context.Context, name string) (map[string]s
 // see shortName's own doc comment).
 const teamConfigKey = "user.laforge_team"
 
-func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool) (string, error) {
+// deployInstance records each of its phases (builder.StartPhase) -- queued for
+// a slot on this host, config drive, create/copy, device replacement, start --
+// so the runner can show where a slow deploy's time went. priority orders the
+// admission queue (see admission.go).
+func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool, priority int) (string, error) {
 	if err := validateInstanceNameBudget(b.Client.Project); err != nil {
 		return "", err
 	}
 	name := instanceName(displayName, externalName, b.Client.Project)
+
+	release, err := b.admit(ctx, priority)
+	if err != nil {
+		return "", err
+	}
+	defer release()
 
 	config := map[string]string{teamConfigKey: team}
 	if nesting {
@@ -557,12 +580,16 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		// Windows: cloudbase-init can't read the socket, so the user-data
 		// is delivered as a NoCloud config-drive ISO attached to the
 		// instance (imported as a custom volume first -- see configdrive.go).
+		done := builder.StartPhase(ctx, "config_drive")
 		iso, err := buildCidataISO(name, cloudInit)
 		if err != nil {
+			done()
 			return name, fmt.Errorf("building config drive for %s: %w", name, err)
 		}
 		volName := cidataVolName(name)
-		if err := b.importConfigDrive(ctx, name, iso); err != nil {
+		err = b.importConfigDrive(ctx, name, iso)
+		done()
+		if err != nil {
 			return name, err
 		}
 		devices["cidata"] = map[string]string{"type": "disk", "pool": b.Config.storagePoolOrDefault(), "source": volName}
@@ -590,13 +617,21 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	default:
 		source = map[string]interface{}{"type": "image", "alias": img.Alias, "server": img.Server, "protocol": img.Protocol}
 	}
-	err := b.Client.createInstance(ctx, name, map[string]interface{}{
+	// "copy" for a snapshot clone, "create" for an image unpack -- named apart
+	// because they cost very differently on a non-CoW storage pool.
+	createPhase := "create"
+	if img.IsSnapshot() {
+		createPhase = "copy"
+	}
+	done := builder.StartPhase(ctx, createPhase)
+	err = b.Client.createInstance(ctx, name, map[string]interface{}{
 		"name":    name,
 		"type":    instanceType,
 		"source":  source,
 		"config":  config,
 		"devices": devices,
 	})
+	done()
 	if err != nil {
 		// A copy whose requested root disk is smaller than the source snapshot's
 		// block volume fails here with "Block volumes cannot be shrunk" -- a
@@ -612,12 +647,18 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	}
 
 	if img.IsSnapshot() {
-		if err := b.replaceCopiedDevices(ctx, name, devices); err != nil {
+		done := builder.StartPhase(ctx, "configure_devices")
+		err := b.replaceCopiedDevices(ctx, name, devices)
+		done()
+		if err != nil {
 			return name, err
 		}
 	}
 
-	if err := b.startInstance(ctx, name); err != nil {
+	done = builder.StartPhase(ctx, "start")
+	err = b.startInstance(ctx, name)
+	done()
+	if err != nil {
 		return name, err
 	}
 	return name, nil

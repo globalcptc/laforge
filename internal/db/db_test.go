@@ -399,7 +399,10 @@ func TestRuntimeTablesRoundTrip(t *testing.T) {
 		t.Fatalf("CreateTaskIfNoneOpen second call: got %v, want a \"no rows\" error", err)
 	}
 
-	leased, err := q.LeaseTask(ctx, LeaseTaskParams{LeaseOwner: strPtr("runner-test"), Column2: Interval(30 * time.Second)})
+	// Scoped to this build: other packages' tests share this database and run
+	// in parallel, and the unscoped LeaseTask serves the highest-priority
+	// pending task from ANY build first.
+	leased, err := q.LeaseTaskForBuild(ctx, LeaseTaskForBuildParams{LeaseOwner: strPtr("runner-test"), Column2: Interval(30 * time.Second), BuildID: build.ID})
 	if err != nil {
 		t.Fatalf("LeaseTask: %v", err)
 	}

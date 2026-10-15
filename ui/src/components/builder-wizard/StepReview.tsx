@@ -60,6 +60,11 @@ export function StepReview({ draft }: { draft: Draft }) {
         <>
           <Section title={draft.kind === 'incus' ? `Hosts (${draft.hosts.length})` : 'Cluster'}>
             {draft.kind === 'incus' && <Row label="Team placement">{draft.oneTeamPerHost ? 'One team per host; reject builds exceeding host count' : 'Round-robin (bridge hosts cannot share team subnets)'}</Row>}
+            {draft.kind === 'incus' && (
+              <Row label="Deploys per host">
+                {draft.incusHostMaxConcurrency ? `${draft.incusHostMaxConcurrency} at once, depends_on roots first` : 'Unlimited'}
+              </Row>
+            )}
             {draft.hosts.map((h, i) => (
               <Row key={h.key} label={draft.kind === 'incus' ? `Host ${i + 1}` : 'Server'}>
                 <div>

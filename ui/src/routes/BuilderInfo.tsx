@@ -276,6 +276,16 @@ function placeholderCharts(kind: string | undefined): { key: string; label: stri
   ]
   switch (kind) {
     case 'incus':
+      // Standalone Incus hosts also publish their own uplink and the deploy
+      // contention itself (instance operations in flight).
+      return [
+        ...lxd,
+        { key: 'cpu', label: 'CPU (guest cores)', unit: 'cores' },
+        { key: 'cpu_iowait', label: 'CPU I/O wait (guest cores)', unit: 'cores' },
+        { key: 'host_net_rx', label: 'Host NIC receive', unit: 'bytes/s' },
+        { key: 'host_net_tx', label: 'Host NIC transmit', unit: 'bytes/s' },
+        { key: 'instance_ops', label: 'Instance operations running', unit: 'count' },
+      ]
     case 'microcloud':
       return lxd
     case 'aws':

@@ -119,3 +119,19 @@ func (c *Content) DependencyDepth() map[string]int {
 	}
 	return depth
 }
+
+// DependentCounts maps each host/container object name to how many OTHER
+// objects transitively depend on it -- its weight on the critical path. A
+// domain controller every Windows host depends_on scores high; a leaf
+// workstation scores 0. Deploys are prioritized by it (see
+// internal/orchestrator's deploy task payload): DependencyDepth alone ranks
+// every object with no dependencies of its own as an equal "root", so a
+// standalone workstation tied with the DC everything else waits on.
+func (c *Content) DependentCounts() map[string]int {
+	objects := c.objectNames()
+	out := make(map[string]int, len(objects))
+	for name := range objects {
+		out[name] = len(c.Dependents([]string{name})) - 1 // Dependents includes the root itself
+	}
+	return out
+}

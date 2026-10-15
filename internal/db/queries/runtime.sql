@@ -418,7 +418,14 @@ WHERE id = (
               AND it.status = 'leased' AND it.lease_expires_at >= now()
         ) < bc.max_concurrency
       )
-    ORDER BY t.created_at
+    -- Critical path first: a deploy task's payload carries its priority (how
+    -- many objects depends_on it; networks highest -- see the orchestrator's
+    -- deployTaskPayload), so every team's domain controller is leased ahead of
+    -- the workstations waiting on it, then oldest first. Guarded so a
+    -- non-numeric value can never break leasing.
+    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
     FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
@@ -454,7 +461,14 @@ WHERE id = (
               AND it.status = 'leased' AND it.lease_expires_at >= now()
         ) < bc.max_concurrency
       )
-    ORDER BY t.created_at
+    -- Critical path first: a deploy task's payload carries its priority (how
+    -- many objects depends_on it; networks highest -- see the orchestrator's
+    -- deployTaskPayload), so every team's domain controller is leased ahead of
+    -- the workstations waiting on it, then oldest first. Guarded so a
+    -- non-numeric value can never break leasing.
+    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
     FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
@@ -479,7 +493,14 @@ WHERE id = (
     LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
     WHERE coalesce(cb.builder_config_name, '') = $3
       AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
-    ORDER BY t.created_at
+    -- Critical path first: a deploy task's payload carries its priority (how
+    -- many objects depends_on it; networks highest -- see the orchestrator's
+    -- deployTaskPayload), so every team's domain controller is leased ahead of
+    -- the workstations waiting on it, then oldest first. Guarded so a
+    -- non-numeric value can never break leasing.
+    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
     FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )

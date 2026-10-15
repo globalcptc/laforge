@@ -683,6 +683,8 @@ export interface BuilderConfig {
   color?: string
   /** Cap on how many of this builder's tasks deploy at once (below the global runner pool); 0 = unlimited. */
   max_concurrency?: number
+  /** Incus pools: cap on concurrent instance deploys on each host, critical-path first; 0 = unlimited. */
+  incus_host_max_concurrency?: number
   created_at: string
   updated_at: string
 }
@@ -713,6 +715,7 @@ export interface BuilderConfigRequest {
   external_port_max?: number
   color?: string
   max_concurrency?: number
+  incus_host_max_concurrency?: number
 }
 
 // StoragePoolInfo/NetworkInfo/ImageInfo mirror internal/builder/incus's

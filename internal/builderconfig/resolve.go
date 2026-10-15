@@ -483,9 +483,10 @@ func resolveIncusPool(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder
 		hosts = append(hosts, incus.New(client, incus.Config{
 			Images: images, Sizes: sizes,
 			NetworkType: hc.NetworkType, OVNUplinkNetwork: hc.OVNUplinkNetwork, StoragePool: hc.StoragePool, DockerBaseFingerprint: row.DockerBaseFingerprint,
-			ExternalAccessIP: db.StrOrEmpty(row.ExternalAccessIp),
-			ExternalPortMin:  int(db.Int32OrZero(row.ExternalPortMin)),
-			ExternalPortMax:  int(db.Int32OrZero(row.ExternalPortMax)),
+			ExternalAccessIP:     db.StrOrEmpty(row.ExternalAccessIp),
+			ExternalPortMin:      int(db.Int32OrZero(row.ExternalPortMin)),
+			ExternalPortMax:      int(db.Int32OrZero(row.ExternalPortMax)),
+			MaxConcurrentDeploys: int(row.IncusHostMaxConcurrency),
 		}))
 	}
 

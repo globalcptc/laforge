@@ -327,6 +327,8 @@ export function BuilderWizard() {
             onClusterGroupChange={(clusterGroup) => setDraft((d) => ({ ...d, clusterGroup }))}
             maxConcurrency={draft.maxConcurrency ?? 0}
             onMaxConcurrencyChange={(maxConcurrency) => setDraft((d) => ({ ...d, maxConcurrency }))}
+            incusHostMaxConcurrency={draft.incusHostMaxConcurrency ?? 0}
+            onIncusHostMaxConcurrencyChange={(incusHostMaxConcurrency) => setDraft((d) => ({ ...d, incusHostMaxConcurrency }))}
             externalAccessIp={draft.externalAccessIp}
             externalPortMin={draft.externalPortMin}
             externalPortMax={draft.externalPortMax}

@@ -64,7 +64,10 @@ func TestLeaseTaskRespectsBuilderConcurrencyCap(t *testing.T) {
 		cbID := scanID(`INSERT INTO configured_build (repository_id, branch, environment_path, builder_config_name) VALUES ($1,'main',$2,$3) RETURNING id`, repo.ID, "env-"+bc, bc)
 		bID := scanID(`INSERT INTO build (configured_build_id, content_revision_id, environment_name) VALUES ($1,$2,'e') RETURNING id`, cbID, rev.ID)
 		buildFor[bc] = bID
-		exec(`INSERT INTO task (build_id, kind, status) SELECT $1,'deploy_host','pending' FROM generate_series(1,$2)`, bID, taskCount)
+		// Top priority, so this test's tasks are leased ahead of any pending task
+		// another package's test (sharing this database, in parallel) creates --
+		// LeaseTask is unscoped and serves priority first.
+		exec(`INSERT INTO task (build_id, kind, status, payload) SELECT $1,'deploy_host','pending','{"priority":1073741824}' FROM generate_series(1,$2)`, bID, taskCount)
 	}
 
 	t.Cleanup(func() {
@@ -98,7 +101,10 @@ func TestLeaseTaskRespectsBuilderConcurrencyCap(t *testing.T) {
 		case buildFor[unlimited]:
 			leasedBy[unlimited]++
 		default:
-			t.Fatalf("leased a task for an unexpected build %v", task.BuildID)
+			// Every task of ours outranks it, so ours are all leased (or capped):
+			// hand the other test's task straight back and stop.
+			exec(`UPDATE task SET status='pending', lease_owner=NULL, lease_expires_at=NULL, attempts=attempts-1 WHERE id=$1`, task.ID)
+			i = taskCount*2 + 2
 		}
 	}
 
