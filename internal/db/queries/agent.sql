@@ -170,7 +170,8 @@ SELECT COALESCE(MAX(step_index), -1) + 1 FROM agent_task WHERE deployed_object_i
 -- so plain UPDATE's own row-level locking serializes two concurrent callers.
 UPDATE agent_task
 SET status = 'leased', lease_expires_at = now() + $2::interval,
-    attempts = attempts + 1, updated_at = now()
+    attempts = attempts + 1, updated_at = now(),
+    started_at = coalesce(started_at, now())
 WHERE id = (
     SELECT t.id FROM agent_task t
     WHERE t.deployed_object_id = $1
@@ -191,12 +192,20 @@ AND (status = 'pending' OR (status = 'leased' AND lease_expires_at < now()))
 RETURNING *;
 
 -- name: CompleteAgentTask :one
-UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now()
+UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now(),
+    finished_at = now()
 WHERE id = $1
 RETURNING *;
 
 -- name: FailAgentTask :one
-UPDATE agent_task SET status = $2, last_error = $3, updated_at = now()
+-- $2 is 'pending' for a retryable transient (still under MaxAttempts), or the
+-- terminal 'failed'/'ignored'. Stamp finished_at ONLY on a terminal status, so a
+-- step that's still retrying keeps showing as running (started_at set, no
+-- finished_at) rather than frozen at an intermediate attempt. started_at is
+-- preserved across retries (set once, on the first lease), so the step's total
+-- duration spans all its attempts.
+UPDATE agent_task SET status = $2, last_error = $3, updated_at = now(),
+    finished_at = CASE WHEN $2 IN ('failed', 'ignored') THEN now() ELSE finished_at END
 WHERE id = $1
 RETURNING *;
 

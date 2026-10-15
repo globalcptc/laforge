@@ -13,9 +13,10 @@ import (
 )
 
 const completeAgentTask = `-- name: CompleteAgentTask :one
-UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now()
+UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now(),
+    finished_at = now()
 WHERE id = $1
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
 `
 
 type CompleteAgentTaskParams struct {
@@ -42,6 +43,8 @@ func (q *Queries) CompleteAgentTask(ctx context.Context, arg CompleteAgentTaskPa
 		&i.IgnoreErrors,
 		&i.AdHoc,
 		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
 	)
 	return i, err
 }
@@ -49,7 +52,7 @@ func (q *Queries) CompleteAgentTask(ctx context.Context, arg CompleteAgentTaskPa
 const completeLeasedRebootsTaskForHost = `-- name: CompleteLeasedRebootsTaskForHost :one
 UPDATE agent_task SET status = 'done', last_error = NULL, updated_at = now()
 WHERE deployed_object_id = $1 AND reboots = true AND status = 'leased'
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
 `
 
 // The reboot-aware completion: a `reboots: true` step reboots the host, which
@@ -79,6 +82,8 @@ func (q *Queries) CompleteLeasedRebootsTaskForHost(ctx context.Context, deployed
 		&i.IgnoreErrors,
 		&i.AdHoc,
 		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
 	)
 	return i, err
 }
@@ -87,7 +92,7 @@ const createAdHocAgentTask = `-- name: CreateAdHocAgentTask :one
 INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, ad_hoc)
 VALUES ($1, $2, $3, $4, $5, true)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
 `
 
 type CreateAdHocAgentTaskParams struct {
@@ -127,6 +132,8 @@ func (q *Queries) CreateAdHocAgentTask(ctx context.Context, arg CreateAdHocAgent
 		&i.IgnoreErrors,
 		&i.AdHoc,
 		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
 	)
 	return i, err
 }
@@ -212,7 +219,7 @@ VALUES (
   COALESCE(NULLIF($7::text, ''), 'pending')
 )
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
 `
 
 type CreateAgentTaskParams struct {
@@ -258,6 +265,8 @@ func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams
 		&i.IgnoreErrors,
 		&i.AdHoc,
 		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
 	)
 	return i, err
 }
@@ -335,9 +344,10 @@ func (q *Queries) DeleteAgentTasksForObject(ctx context.Context, deployedObjectI
 }
 
 const failAgentTask = `-- name: FailAgentTask :one
-UPDATE agent_task SET status = $2, last_error = $3, updated_at = now()
+UPDATE agent_task SET status = $2, last_error = $3, updated_at = now(),
+    finished_at = CASE WHEN $2 IN ('failed', 'ignored') THEN now() ELSE finished_at END
 WHERE id = $1
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
 `
 
 type FailAgentTaskParams struct {
@@ -346,6 +356,12 @@ type FailAgentTaskParams struct {
 	LastError *string     `json:"last_error"`
 }
 
+// $2 is 'pending' for a retryable transient (still under MaxAttempts), or the
+// terminal 'failed'/'ignored'. Stamp finished_at ONLY on a terminal status, so a
+// step that's still retrying keeps showing as running (started_at set, no
+// finished_at) rather than frozen at an intermediate attempt. started_at is
+// preserved across retries (set once, on the first lease), so the step's total
+// duration spans all its attempts.
 func (q *Queries) FailAgentTask(ctx context.Context, arg FailAgentTaskParams) (AgentTask, error) {
 	row := q.db.QueryRow(ctx, failAgentTask, arg.ID, arg.Status, arg.LastError)
 	var i AgentTask
@@ -365,6 +381,8 @@ func (q *Queries) FailAgentTask(ctx context.Context, arg FailAgentTaskParams) (A
 		&i.IgnoreErrors,
 		&i.AdHoc,
 		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
 	)
 	return i, err
 }
@@ -421,7 +439,7 @@ func (q *Queries) GetAgentSessionByDeployedObject(ctx context.Context, deployedO
 }
 
 const getAgentTask = `-- name: GetAgentTask :one
-SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots FROM agent_task WHERE id = $1
+SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at FROM agent_task WHERE id = $1
 `
 
 func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, error) {
@@ -443,6 +461,8 @@ func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, 
 		&i.IgnoreErrors,
 		&i.AdHoc,
 		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
 	)
 	return i, err
 }
@@ -606,7 +626,7 @@ func (q *Queries) ListAgentSessionsByBuild(ctx context.Context, buildID pgtype.U
 }
 
 const listAgentTasksByHost = `-- name: ListAgentTasksByHost :many
-SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots FROM agent_task WHERE deployed_object_id = $1 ORDER BY step_index
+SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at FROM agent_task WHERE deployed_object_id = $1 ORDER BY step_index
 `
 
 func (q *Queries) ListAgentTasksByHost(ctx context.Context, deployedObjectID pgtype.UUID) ([]AgentTask, error) {
@@ -634,6 +654,8 @@ func (q *Queries) ListAgentTasksByHost(ctx context.Context, deployedObjectID pgt
 			&i.IgnoreErrors,
 			&i.AdHoc,
 			&i.Reboots,
+			&i.StartedAt,
+			&i.FinishedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -748,7 +770,8 @@ func (q *Queries) ListValidatorResultsByTask(ctx context.Context, agentTaskID pg
 const nextAgentTaskForHost = `-- name: NextAgentTaskForHost :one
 UPDATE agent_task
 SET status = 'leased', lease_expires_at = now() + $2::interval,
-    attempts = attempts + 1, updated_at = now()
+    attempts = attempts + 1, updated_at = now(),
+    started_at = coalesce(started_at, now())
 WHERE id = (
     SELECT t.id FROM agent_task t
     WHERE t.deployed_object_id = $1
@@ -766,7 +789,7 @@ WHERE id = (
     LIMIT 1
 )
 AND (status = 'pending' OR (status = 'leased' AND lease_expires_at < now()))
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at
 `
 
 type NextAgentTaskForHostParams struct {
@@ -821,6 +844,8 @@ func (q *Queries) NextAgentTaskForHost(ctx context.Context, arg NextAgentTaskFor
 		&i.IgnoreErrors,
 		&i.AdHoc,
 		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
 	)
 	return i, err
 }

@@ -266,6 +266,40 @@ function StepBadge({ status }: { status: string }) {
   )
 }
 
+// How long an authored step took, wall-clock: from the first sub-command that
+// started to the last that finished (or now, if any is still running). null when
+// the step hasn't started yet.
+function groupDurationMs(steps: StepStatus[]): number | null {
+  let min = Infinity
+  let max = 0
+  let running = false
+  for (const s of steps) {
+    if (s.started_at) {
+      const t = Date.parse(s.started_at)
+      if (!Number.isNaN(t)) min = Math.min(min, t)
+      if (!s.finished_at) running = true
+    }
+    if (s.finished_at) {
+      const t = Date.parse(s.finished_at)
+      if (!Number.isNaN(t)) max = Math.max(max, t)
+    }
+  }
+  if (min === Infinity) return null
+  return Math.max(0, (running ? Date.now() : max) - min)
+}
+
+// Compact duration: 15s, 1m 12s, 2h 5m.
+function formatStepDuration(ms: number): string {
+  const secs = Math.round(ms / 1000)
+  if (secs < 60) return `${secs}s`
+  const m = Math.floor(secs / 60)
+  const s = secs % 60
+  if (m < 60) return s ? `${m}m ${s}s` : `${m}m`
+  const h = Math.floor(m / 60)
+  const mm = m % 60
+  return mm ? `${h}h ${mm}m` : `${h}h`
+}
+
 function StepStatusList({ steps }: { steps: StepStatus[] }) {
   const [open, setOpen] = useState<Set<number>>(new Set())
   function toggle(i: number) {
@@ -292,6 +326,10 @@ function StepStatusList({ steps }: { steps: StepStatus[] }) {
             <div className="flex items-center gap-2 px-0.5">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">{g.label}</span>
               <span className="h-px flex-1 bg-border" />
+              {(() => {
+                const ms = groupDurationMs(g.steps)
+                return ms != null ? <span className="shrink-0 font-mono text-[11px] tabular-nums text-fg-subtle">{formatStepDuration(ms)}</span> : null
+              })()}
             </div>
           )}
           {g.steps.map((s) => (

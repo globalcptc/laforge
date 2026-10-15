@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -360,6 +361,10 @@ type stepView struct {
 	GroupIndex int             `json:"group_index"`
 	GroupLabel string          `json:"group_label,omitempty"`
 	Validators []validatorView `json:"validators"`
+	// When the agent first started this step and when it finished (nil until it
+	// does), so the UI can show how long each authored step took.
+	StartedAt  *time.Time `json:"started_at,omitempty"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
 }
 
 type validatorView struct {
@@ -407,6 +412,12 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 			StepIndex: t.StepIndex, Command: t.Command, Status: t.Status, Attempts: t.Attempts,
 			LastError: db.StrOrEmpty(t.LastError), Output: db.StrOrEmpty(t.Output), Validators: vs,
 			GroupIndex: int(t.StepIndex),
+		}
+		if t.StartedAt.Valid {
+			v.StartedAt = &t.StartedAt.Time
+		}
+		if t.FinishedAt.Valid {
+			v.FinishedAt = &t.FinishedAt.Time
 		}
 		if idx := int(t.StepIndex); idx >= 0 && idx < len(groups) {
 			v.GroupIndex = groups[idx].group

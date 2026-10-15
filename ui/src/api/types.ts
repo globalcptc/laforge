@@ -376,6 +376,9 @@ export interface StepStatus {
   group_index: number
   group_label?: string
   validators: StepValidator[]
+  /** When the agent started/finished this step (null until it does) -- for showing how long a step took. */
+  started_at?: string | null
+  finished_at?: string | null
 }
 
 // Builder-specific placement facts (label/value, varies by builder) plus the
