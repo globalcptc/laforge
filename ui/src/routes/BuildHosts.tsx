@@ -393,8 +393,8 @@ export function BuildHosts() {
       )}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setBoardOpen(true)} title="Open the full-screen status board for this build">
-            <LayoutGrid size={14} /> Board
+          <Button variant="secondary" size="sm" onClick={() => setBoardOpen(true)} title="Open the full-screen status matrix for this build">
+            <LayoutGrid size={14} /> Status Matrix
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setLegendOpen(true)}>
             <Info size={14} /> State Legend
