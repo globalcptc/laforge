@@ -172,14 +172,19 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
     for (const net of netNodes) {
       rows.push({ node: net, indent: 0 })
       placed.add(net.id)
+      // Cascade each member one step further right than the last, so siblings
+      // don't stack in one column with edges running straight down through them
+      // -- each dependency line becomes a clear diagonal.
+      let step = 0
       for (const m of all.filter((n) => n.kind !== 'network' && n.net === net.objName).sort(byDepthName)) {
-        rows.push({ node: m, indent: Math.max(1, m.depth) })
+        rows.push({ node: m, indent: ++step })
         placed.add(m.id)
       }
     }
-    // Objects with no (recognized) network -- a trailing section.
+    // Objects with no (recognized) network -- a trailing cascade.
+    let rest = 0
     for (const r of all.filter((n) => !placed.has(n.id)).sort(byDepthName)) {
-      rows.push({ node: r, indent: r.kind === 'network' ? 0 : Math.max(1, r.depth) })
+      rows.push({ node: r, indent: r.kind === 'network' ? 0 : ++rest })
     }
     return { rows, edges, nodes, dependents }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -342,7 +347,7 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
               </svg>
               <div className="relative flex w-max flex-col gap-2.5 px-8 pb-6 pt-6">
                 {model.rows.map(({ node: n, indent }) => (
-                  <div key={n.id} style={{ marginLeft: indent * 30 }}>
+                  <div key={n.id} style={{ marginLeft: indent * 28 }}>
                     <GraphNode
                       node={n}
                       dim={!!hoverId && !related?.has(n.id)}
