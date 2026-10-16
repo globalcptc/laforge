@@ -70,7 +70,9 @@ export function EnvironmentBoard({ repoId, buildId, onClose }: { repoId: string;
           const net = o.network_name ?? ''
           netNames.add(net)
           const set = hostsByNet.get(net) ?? new Set<string>()
-          set.add(o.object_name)
+          // One cell PER INSTANCE: per-person copies share an object_name, so key
+          // columns by as_name (the matrix shows every host, the graph combines).
+          set.add(o.as_name ?? o.object_name)
           hostsByNet.set(net, set)
         }
       }
@@ -90,7 +92,7 @@ export function EnvironmentBoard({ repoId, buildId, onClose }: { repoId: string;
     const m = new Map<string, Map<string, DeployedObject>>()
     for (const team of teams) {
       const inner = new Map<string, DeployedObject>()
-      for (const o of team.objects) inner.set(o.object_name, o)
+      for (const o of team.objects) inner.set(o.as_name ?? o.object_name, o)
       m.set(team.id, inner)
     }
     return m
