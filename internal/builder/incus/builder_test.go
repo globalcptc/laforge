@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -406,57 +407,58 @@ func TestDeployRealWindowsHostAgainstLocallyCachedImage(t *testing.T) {
 }
 
 // TestOpenCloseAccessFirewallsNICWithoutDetaching is the real proof behind
-// access.go's doc comment: closing a team must NOT detach eth0 (that cut agent
-// telemetry and tore the host off its NATs), it must firewall the NIC that stays
-// attached. It deploys two real containers on two different (fake) teams, closes
-// team A, and confirms -- by reading the instance back from the live daemon --
-// that team A's eth0 is still a working NIC whose defaults are now deny-both and
-// whose closed-egress ACL is attached, while team B is untouched. Then it reopens
-// and confirms the NIC's pre-close ACL state is restored.
-func TestOpenCloseAccessFirewallsNICWithoutDetaching(t *testing.T) {
+// access.go's doc comment: closing a team must NOT touch any instance NIC (that
+// is what forced Incus to stop/restart the host-side device). The close is a
+// NETWORK-level egress lockdown. This deploys a container on its own team
+// network, closes the team, and confirms -- reading back from the live daemon --
+// that eth0 is byte-for-byte UNCHANGED while the team's NETWORK gained the access
+// ACL with a catch-all egress drop. Then it reopens and confirms the ACL's rules
+// are cleared, eth0 still untouched throughout.
+func TestCloseAccessLocksNetworkWithoutTouchingNIC(t *testing.T) {
 	client := liveClient(t)
 	cfg := testConfig()
 	cfg.GatewayAddr = "10.254.254.254:8443" // a pinned IP so close needs no DNS
-	b := New(client, cfg)                   // native OCI container, no docker-base
+	b := New(client, cfg)
 	ctx := context.Background()
 
-	specA := builder.ContainerSpec{ExternalName: uniqueExternalName(t, "teamA"), Team: "team-a", Image: "alpine", Size: "small"}
-	specB := builder.ContainerSpec{ExternalName: uniqueExternalName(t, "teamB"), Team: "team-b", Image: "alpine", Size: "small"}
-
-	refA, err := b.DeployContainer(ctx, specA)
+	netExt := uniqueExternalName(t, "net")
+	netRef, err := b.DeployNetwork(ctx, builder.NetworkSpec{ExternalName: netExt, DisplayName: "acc", Team: "team-a", CIDR: "10.88.9.0/24"})
 	if err != nil {
-		t.Fatalf("DeployContainer (team A): %v", err)
+		if strings.Contains(err.Error(), "OVN") {
+			t.Skipf("OVN not available: %v", err)
+		}
+		t.Fatalf("DeployNetwork: %v", err)
 	}
-	t.Cleanup(func() { b.DestroyContainer(context.Background(), "", refA) })
-	refB, err := b.DeployContainer(ctx, specB)
-	if err != nil {
-		t.Fatalf("DeployContainer (team B): %v", err)
-	}
-	t.Cleanup(func() { b.DestroyContainer(context.Background(), "", refB) })
+	t.Cleanup(func() { b.DestroyNetwork(context.Background(), "team-a", netRef) })
 
-	if !hasEth0(t, client, refA) {
-		t.Fatalf("team A container %s has no eth0 before CloseAccess -- test setup is wrong", refA)
+	refA, err := b.deployInstance(ctx, uniqueExternalName(t, "hostA"), "hosta", "team-a", netExt, "acc", "10.88.9.10",
+		"container", testConfig().Images["alpine"], testConfig().Sizes["small"], 0, false, "", false, 0)
+	if err != nil {
+		t.Fatalf("deployInstance: %v", err)
 	}
+	t.Cleanup(func() { b.destroyInstance(context.Background(), refA) })
+
+	before := eth0NIC(t, client, refA)
+	aclName := networkAccessACLName(netRef)
 
 	if err := b.CloseAccess(ctx, "team-a"); err != nil {
 		t.Fatalf("CloseAccess: %v", err)
 	}
-	// eth0 STAYS -- the whole point: telemetry and NAT survive a close.
-	if !hasEth0(t, client, refA) {
-		t.Fatal("team A container lost its eth0 after CloseAccess -- close must firewall the NIC, never detach it")
+	// The NIC must be completely untouched -- no stop/restart, no ACL change.
+	if after := eth0NIC(t, client, refA); !reflect.DeepEqual(before, after) {
+		t.Fatalf("eth0 changed by CloseAccess\n before=%v\n after =%v -- close must not touch a NIC", before, after)
 	}
-	nic := eth0NIC(t, client, refA)
-	if nic["security.acls.default.ingress.action"] != "drop" || nic["security.acls.default.egress.action"] != "drop" {
-		t.Fatalf("team A eth0 defaults = ingress %q egress %q after close, want both drop", nic["security.acls.default.ingress.action"], nic["security.acls.default.egress.action"])
+	// Closed: the network defaults egress to drop, and the broad allow-all egress
+	// rule in the access ACL is DISABLED (the fail-closed switch), while a gateway
+	// allow remains enabled.
+	if act := networkDefaultEgress(t, client, netRef); act != "drop" {
+		t.Fatalf("network default egress = %q after close, want drop", act)
 	}
-	if !strings.Contains(nic["security.acls"], closedACLName(refA)) {
-		t.Fatalf("team A eth0 security.acls = %q after close, want the closed ACL %q attached", nic["security.acls"], closedACLName(refA))
-	}
-	if nicB := eth0NIC(t, client, refB); nicB["security.acls.default.egress.action"] == "drop" {
-		t.Fatal("team B eth0 egress went to drop after CloseAccess(\"team-a\") -- close affected the wrong team")
+	if st := broadEgressState(t, client, aclName); st != "disabled" {
+		t.Fatalf("broad allow-0.0.0.0/0 egress state = %q after close, want disabled", st)
 	}
 
-	// Idempotent: closing an already-closed team must not error.
+	// Idempotent close.
 	if err := b.CloseAccess(ctx, "team-a"); err != nil {
 		t.Fatalf("CloseAccess (already closed): %v", err)
 	}
@@ -464,16 +466,50 @@ func TestOpenCloseAccessFirewallsNICWithoutDetaching(t *testing.T) {
 	if err := b.OpenAccess(ctx, "team-a"); err != nil {
 		t.Fatalf("OpenAccess: %v", err)
 	}
-	if !hasEth0(t, client, refA) {
-		t.Fatal("team A container has no eth0 after OpenAccess -- the NIC should still be attached")
+	if st := broadEgressState(t, client, aclName); st != "enabled" {
+		t.Fatalf("broad allow-0.0.0.0/0 egress state = %q after open, want enabled", st)
 	}
-	if nic := eth0NIC(t, client, refA); nic["security.acls.default.egress.action"] == "drop" {
-		t.Fatal("team A eth0 egress still drop after OpenAccess -- the pre-close NIC state was not restored")
+	if after := eth0NIC(t, client, refA); !reflect.DeepEqual(before, after) {
+		t.Fatalf("eth0 changed across close/open -- it must never be touched")
 	}
-	// Idempotent: opening an already-open team must not error.
-	if err := b.OpenAccess(ctx, "team-a"); err != nil {
-		t.Fatalf("OpenAccess (already open): %v", err)
+}
+
+// networkDefaultEgress reads a network's default egress action from the daemon.
+func networkDefaultEgress(t *testing.T, client *Client, netName string) string {
+	t.Helper()
+	raw, err := client.get(context.Background(), "/1.0/networks/"+netName)
+	if err != nil {
+		t.Fatalf("reading network %s: %v", netName, err)
 	}
+	var n struct {
+		Config map[string]string `json:"config"`
+	}
+	if err := json.Unmarshal(raw, &n); err != nil {
+		t.Fatalf("decoding network %s: %v", netName, err)
+	}
+	return n.Config["security.acls.default.egress.action"]
+}
+
+// broadEgressState returns the state of the ACL's allow-0.0.0.0/0 egress rule.
+func broadEgressState(t *testing.T, client *Client, name string) string {
+	t.Helper()
+	raw, err := client.get(context.Background(), "/1.0/network-acls/"+name)
+	if err != nil {
+		t.Fatalf("reading ACL %s: %v", name, err)
+	}
+	var acl struct {
+		Egress []map[string]interface{} `json:"egress"`
+	}
+	if err := json.Unmarshal(raw, &acl); err != nil {
+		t.Fatalf("decoding ACL %s: %v", name, err)
+	}
+	for _, r := range acl.Egress {
+		if r["destination"] == "0.0.0.0/0" {
+			s, _ := r["state"].(string)
+			return s
+		}
+	}
+	return ""
 }
 
 // eth0NIC reads an instance's effective eth0 device from the live daemon.

@@ -45,33 +45,20 @@ func TestGatewayEgressRulesMissingErrors(t *testing.T) {
 	}
 }
 
-// TestClosedACLNameDistinct: the closed-egress ACL name is deterministic and
-// distinct from the host/public ACL names for the same ref, so all three can
-// coexist on a NIC and be told apart on the hoster.
-func TestClosedACLNameDistinct(t *testing.T) {
-	const ref = "lf-team1-web-01"
-	closed, host, public := closedACLName(ref), hostACLName(ref), publicACLName(ref)
-	if closed == host || closed == public || host == public {
-		t.Fatalf("ACL names collide: closed=%q host=%q public=%q", closed, host, public)
+// TestNetworkAccessACLNameDistinct: the network access ACL name is
+// deterministic and distinct from the per-host port/public ACL names, so all
+// three can coexist and be told apart on the hoster (lfnacl = network access).
+func TestNetworkAccessACLNameDistinct(t *testing.T) {
+	const net = "lf-t1corp7487"
+	na := networkAccessACLName(net)
+	if na == hostACLName(net) || na == publicACLName(net) {
+		t.Fatalf("network ACL name collides: %q", na)
 	}
-	if closedACLName(ref) != closed {
-		t.Fatal("closedACLName is not deterministic")
+	if networkAccessACLName(net) != na {
+		t.Fatal("networkAccessACLName is not deterministic")
 	}
-	if got := closedACLName(ref); got[:6] != "lfcacl" {
-		t.Fatalf("closedACLName prefix = %q, want lfcacl*", got)
+	if na[:6] != "lfnacl" {
+		t.Fatalf("networkAccessACLName prefix = %q, want lfnacl*", na)
 	}
 }
 
-// TestSetOrDelete: restoring an empty field removes the key (back to unset),
-// a non-empty field sets it.
-func TestSetOrDelete(t *testing.T) {
-	m := map[string]interface{}{"a": "1", "b": "2"}
-	setOrDelete(m, "a", "")
-	if _, ok := m["a"]; ok {
-		t.Error("setOrDelete with empty value should delete the key")
-	}
-	setOrDelete(m, "b", "9")
-	if m["b"] != "9" {
-		t.Errorf("setOrDelete should set b=9, got %v", m["b"])
-	}
-}

@@ -901,59 +901,10 @@ func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 // longer detaches eth0 (which cut agent telemetry and tore the host off its
 // NATs) -- it firewalls the NICs that stay attached. See access.go.
 
-// removedNICKey stashes what the LEGACY device-masking close needed to undo, as
-// JSON, in a
-// user.* config key on the instance itself -- so OpenAccess can restore
-// exactly what was there, without this builder needing any durable state
-// of its own beyond what's already on the instance. Incus config values
-// are opaque strings from its own point of view, so this is a legitimate,
-// real place to keep it.
-//
-// What gets saved had to change after testing against a live daemon: a
-// deployInstance-created instance never sets eth0 at the instance level
-// at all (see deployInstance -- devices only carries "root", and only
-// when DiskGB > 0). eth0 comes entirely from Incus's "default" profile,
-// confirmed live -- GET .../instances/<name> returns an empty top-level
-// "devices" and eth0 only inside "expanded_devices". Checking the
-// top-level "devices" field for eth0 (an earlier version of this code)
-// silently found nothing and treated every real instance as "already
-// closed," which is exactly the kind of bug the plan's "close really
-// closes... every builder passes this before it is considered done"
-// verification rule exists to catch. The fix: read expanded_devices for
-// the real, in-effect NIC config, and disable it with an instance-level
-// override of type "none" -- Incus's own documented mechanism for
-// switching off a profile-provided device per instance, since an
-// instance can't delete a device that belongs to its profile, only mask
-// it. Restoring removes that override so the profile's device resumes,
-// which also correctly handles the (untested-live, but symmetric) case
-// of an instance that had its own instance-level eth0 to begin with --
-// same save/restore shape either way, the JSON payload just says which.
-const removedNICKey = "user.laforge_closed_eth0"
-
-type savedNIC struct {
-	// Instance is true when eth0 was defined directly on the instance
-	// (not via a profile) -- restoreNIC puts Device back verbatim.
-	// False means eth0 only ever existed via a profile, and restoring
-	// means removing the "none" override so the profile's device takes
-	// effect again, not writing anything back.
-	Instance bool                   `json:"instance"`
-	Device   map[string]interface{} `json:"device,omitempty"`
-}
-
-// instancePut is the full body Incus's PUT .../instances/<name> requires --
-// verified live: PUT replaces the whole resource, so omitting a field
-// (this code's first attempt sent only config+devices) resets it, and an
-// empty Profiles wipes every profile-provided device, not just eth0 --
-// surfaced live as "Invalid expanded devices: Failed detecting root disk
-// device: No root device could be found" on an instance that never had
-// its own root device, only the default profile's. PATCH, by contrast,
-// merges config and devices key by key (also verified live) and needs no
-// other field -- so this builder uses PATCH wherever a merge is enough
-// (removeNIC only ever adds keys) and full PUT only where a key must be
-// deleted outright (restoreNIC clearing removedNICKey, or removing an
-// eth0 override so a profile's own device takes back over -- PATCHing a
-// device to null was tried live and rejected: "Missing device type in
-// config").
+// instancePut is the full body Incus/LXD's PUT .../instances/<name> requires --
+// PUT replaces the whole resource, PATCH merges key by key. getInstancePut reads
+// it (plus the in-effect expanded_devices) for callers that need a host's real
+// NIC/network config, e.g. teamNetworks and ensureHostPortACL.
 type instancePut struct {
 	etag         string
 	Architecture string                     `json:"architecture"`

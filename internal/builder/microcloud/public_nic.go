@@ -20,7 +20,6 @@ import (
 const publicNICName = "lf-public"
 const publicNICKey = "user.laforge_public_nic"
 const publicReadyKey = "user.laforge_public_ready"
-const publicClosedKey = "user.laforge_closed_public"
 
 type publicNICPlan struct {
 	ready         bool

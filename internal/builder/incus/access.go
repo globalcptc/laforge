@@ -2,11 +2,12 @@ package incus
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -14,66 +15,64 @@ import (
 
 // Team access open/close.
 //
-// The old mechanism detached eth0 entirely to close a team. That was wrong: on
-// this hoster eth0 is also how a guest's agent reaches the gateway (and how the
-// host sits behind its NATs), so detaching it cut all telemetry the moment a
-// team closed and tore the host off its network -- exactly through the
-// pre-competition window when we most need the agents checking in. Removing a
-// NIC is also irreversible from the guest's point of view (DHCP leases, routes).
+// Closing a team is a NETWORK-BOUNDARY policy -- what may cross in/out of the
+// team's environment -- so it is applied with ACLs on the team's NETWORKS and on
+// each host's existing public-port ACL, never by touching an instance's eth0
+// device. (Rewriting devices.eth0 forces Incus to stop/restart the host-side
+// veth/tap, which is disruptive on bridge networks and failed outright on VMs
+// with a null host-side device name. Network-ACL and ACL-object edits re-apply
+// the firewall in place -- no device is ever reconfigured or stopped.)
 //
-// Closing is now done with network ACLs on the NIC that STAYS attached:
+// The rule set is PROVISIONED once and then only toggled by flipping rule state,
+// never added/removed/deleted:
 //
-//   - Egress default-deny, allowing ONLY the pinned gateway (host:port the
-//     agents dial) and the team's own environment CIDRs. That keeps agent
-//     telemetry and intra-environment traffic (internal DNS resolves the gateway
-//     name, internal services still talk) alive, while denying a team any other
-//     outbound path -- so a planted implant cannot phone home or pivot out. The
-//     gateway is the ONLY off-environment egress a closed team keeps.
-//   - Ingress default-deny with the public-port ACLs detached, so no new inbound
-//     from the public NAT or another team is accepted. The ACLs are stateful, so
-//     replies to the agent's own gateway/intra connections still return; flipping
-//     the matching allow away also drops packets on already-established external
-//     flows, satisfying "terminate established connections, not merely stop new
-//     ones" without ripping out the interface.
+//   - Each team network's default egress action is set to drop (a fail-closed
+//     baseline), and an access ACL (lfnacl) is attached carrying egress ALLOWs
+//     for the pinned gateway and each team CIDR (always enabled) plus one broad
+//     "allow 0.0.0.0/0" egress rule that is the open/close switch.
+//   - Each public host's existing public-port ACL (lfpacl) carries the inbound
+//     allows; its rules are the inbound switch.
 //
-// Opening restores the exact NIC state saved at close (the original ACL list and
-// default actions), so the team's `ports:`/`visible_from`/`public:` policy comes
-// back as it was.
+// Close disables the broad egress allow and the inbound allows: unmatched egress
+// then hits the network's default drop (only the gateway + intra stay reachable,
+// so an implant cannot phone home or pivot) and inbound published ports are no
+// longer allowed, so the network's default-deny ingress drops them. Open
+// re-enables both. No allow-vs-drop precedence is relied on (every enabled rule
+// is an allow; the default action does the denying), which matters because this
+// Incus (7.5.1) has no per-rule priority.
 
-// closedAccessKey holds, as JSON, the NIC state CloseAccess must restore on open
-// -- the original security.acls list and default ingress/egress actions -- in a
-// user.* config key on the instance itself, so OpenAccess needs no durable state
-// of its own. Distinct from the legacy removedNICKey (device masking), which
-// OpenAccess still understands so a team closed by an older build still reopens.
-const closedAccessKey = "user.laforge_closed_access"
+// closedProxiesKey holds, as JSON, the public-forward proxy devices removed on
+// close, so open re-adds them exactly. Kept on the instance itself (an opaque
+// user.* config value) so this builder needs no durable state of its own.
+const closedProxiesKey = "user.laforge_closed_proxies"
 
-// closedAccess is what gets saved under closedAccessKey.
-type closedAccess struct {
-	// ACLs is the NIC's security.acls value (comma-separated ACL names) as it
-	// was before close -- restored verbatim on open.
-	ACLs string `json:"acls"`
-	// IngressAction/EgressAction are the NIC's default action overrides before
-	// close ("" when unset) -- restored (or removed when "") on open.
-	IngressAction string `json:"ingress_action"`
-	EgressAction  string `json:"egress_action"`
-	// FromProfile is true when eth0 had no instance-level device before close
-	// (it came from a profile); close created an instance-level override, so
-	// open deletes that override to fall back to the profile rather than
-	// writing a half-remembered device back.
-	FromProfile bool `json:"from_profile"`
+// networkInfo is a team network's real Incus name and IPv4 CIDR.
+type networkInfo struct {
+	name string
+	cidr string
 }
 
-// closedACLName is the deterministic name of an instance's closed-egress ACL --
-// a sibling of hostACLName/publicACLName so all three are easy to tell apart on
-// the hoster (lfhacl = host ports, lfpacl = public ports, lfcacl = closed).
-func closedACLName(name string) string {
-	return "lfcacl" + strings.TrimPrefix(hostACLName(name), "lfhacl")
+// networkAccessACLName is the deterministic egress access ACL for one network --
+// "lfnacl" so it's distinct from the per-host port (lfhacl) and public (lfpacl)
+// ACLs.
+func networkAccessACLName(netName string) string {
+	sum := sha256.Sum256([]byte(netName))
+	return "lfnacl" + hex.EncodeToString(sum[:])[:12]
 }
 
-// CloseAccess blocks every one of a team's instances from all external ingress
-// and all egress except the pinned gateway and the team's own environment, best
-// effort across the whole team (see forEachTeamInstance). eth0 stays attached.
+// CloseAccess locks a team to gateway + intra egress and disables its inbound
+// published ports, best effort across the team's networks and hosts.
 func (b *Builder) CloseAccess(ctx context.Context, team string) error {
+	return b.setAccess(ctx, team, true)
+}
+
+// OpenAccess restores a team's full egress and re-enables its inbound published
+// ports.
+func (b *Builder) OpenAccess(ctx context.Context, team string) error {
+	return b.setAccess(ctx, team, false)
+}
+
+func (b *Builder) setAccess(ctx context.Context, team string, closed bool) error {
 	instances, err := b.teamInstances(ctx, team)
 	if err != nil {
 		return err
@@ -81,25 +80,160 @@ func (b *Builder) CloseAccess(ctx context.Context, team string) error {
 	if len(instances) == 0 {
 		return nil
 	}
-	egress, err := b.closedEgressRules(ctx, instances)
+	// The gateway allow is mandatory to close (losing it would cut telemetry).
+	// Opening doesn't need it -- the broad allow is re-enabled anyway -- so a
+	// missing gateway address must never wedge a team shut: tolerate it on open.
+	gw, err := b.gatewayEgressRules(ctx)
 	if err != nil {
-		return err
+		if closed {
+			return err
+		}
+		gw = nil
+	}
+	nets := b.teamNetworks(ctx, instances)
+	cidrs := make([]string, 0, len(nets))
+	for _, n := range nets {
+		if n.cidr != "" {
+			cidrs = append(cidrs, n.cidr)
+		}
 	}
 	var errs []error
+	for _, n := range nets {
+		if err := b.applyNetworkEgress(ctx, n.name, gw, cidrs, closed); err != nil {
+			errs = append(errs, fmt.Errorf("network %s: %w", n.name, err))
+		}
+	}
 	for _, inst := range instances {
-		if err := b.closeNIC(ctx, inst.Name, egress); err != nil {
-			errs = append(errs, fmt.Errorf("instance %s: %w", inst.Name, err))
+		if err := b.setInstanceInbound(ctx, inst.Name, !closed); err != nil {
+			errs = append(errs, fmt.Errorf("instance %s inbound: %w", inst.Name, err))
 		}
 	}
 	return errors.Join(errs...)
 }
 
-// OpenAccess restores every one of a team's instances to its pre-close NIC
-// state, best effort across the whole team.
-func (b *Builder) OpenAccess(ctx context.Context, team string) error {
-	return b.forEachTeamInstance(ctx, team, func(name string, _ incusInstance) error {
-		return b.openNIC(ctx, name)
+// applyNetworkEgress (re)writes the network's access ACL and asserts the
+// fail-closed default-drop egress baseline. The gateway + intra allows are
+// always enabled; the broad 0.0.0.0/0 allow is enabled when open, disabled when
+// closed -- that single rule is the egress switch.
+func (b *Builder) applyNetworkEgress(ctx context.Context, netName string, gatewayAllows []map[string]interface{}, teamCIDRs []string, closed bool) error {
+	egress := make([]map[string]interface{}, 0, len(gatewayAllows)+len(teamCIDRs)+1)
+	egress = append(egress, gatewayAllows...)
+	for _, c := range teamCIDRs {
+		egress = append(egress, map[string]interface{}{"action": "allow", "state": "enabled", "destination": c})
+	}
+	broad := "enabled"
+	if closed {
+		broad = "disabled"
+	}
+	egress = append(egress, map[string]interface{}{"action": "allow", "state": broad, "destination": "0.0.0.0/0"})
+
+	name := networkAccessACLName(netName)
+	if err := b.ensureACLObjectFull(ctx, name, "LaForge access control for "+netName, nil, egress); err != nil {
+		return err
+	}
+	if err := b.attachNetworkACL(ctx, netName, name); err != nil {
+		return err
+	}
+	// Fail-closed baseline: unmatched egress is dropped, so a broken toggle locks
+	// a team down (gateway-only) rather than leaving it wide open. Idempotent.
+	_, err := b.Client.patch(ctx, "/1.0/networks/"+url.PathEscape(netName), map[string]interface{}{
+		"config": map[string]string{"security.acls.default.egress.action": "drop"},
 	})
+	return err
+}
+
+// setInstanceInbound blocks (open=false) or restores (open=true) a host's public
+// inbound by removing or re-adding its NAT proxy forward devices (lfx-*). On
+// this hoster the nat-proxy forward is NOT filtered by NIC or network ACLs
+// (verified live), so removing the forward device is the only thing that
+// actually stops inbound to a published port. The removed devices are saved on
+// the instance (closedProxiesKey) so open re-adds them exactly. eth0 is never
+// touched, and a VM is not restarted (verified live: status stayed Running).
+func (b *Builder) setInstanceInbound(ctx context.Context, name string, open bool) error {
+	return retryOnBusy(ctx, func() error {
+		full, _, err := b.getInstancePut(ctx, name)
+		if err != nil {
+			return err
+		}
+		if full.Devices == nil {
+			full.Devices = map[string]json.RawMessage{}
+		}
+		if open {
+			raw, ok := full.Config[closedProxiesKey]
+			if !ok {
+				return nil // not closed -- idempotent
+			}
+			var saved map[string]json.RawMessage
+			if err := json.Unmarshal([]byte(raw), &saved); err != nil {
+				return fmt.Errorf("decoding saved proxy forwards: %w", err)
+			}
+			for dn, dv := range saved {
+				full.Devices[dn] = dv
+			}
+			delete(full.Config, closedProxiesKey)
+		} else {
+			if _, already := full.Config[closedProxiesKey]; already {
+				return nil // already closed -- don't overwrite the saved set
+			}
+			removed := map[string]json.RawMessage{}
+			for dn, dv := range full.Devices {
+				if !strings.HasPrefix(dn, "lfx-") {
+					continue
+				}
+				var d map[string]interface{}
+				if err := json.Unmarshal(dv, &d); err != nil || d["type"] != "proxy" {
+					continue
+				}
+				removed[dn] = dv
+			}
+			if len(removed) == 0 {
+				return nil // no public forwards on this host -- nothing to block
+			}
+			for dn := range removed {
+				delete(full.Devices, dn)
+			}
+			savedJSON, err := json.Marshal(removed)
+			if err != nil {
+				return err
+			}
+			if full.Config == nil {
+				full.Config = map[string]string{}
+			}
+			full.Config[closedProxiesKey] = string(savedJSON)
+		}
+		_, err = b.Client.put(ctx, "/1.0/instances/"+name, full)
+		return err
+	})
+}
+
+// attachNetworkACL adds name to the network's security.acls (idempotent merge),
+// leaving the network's default actions untouched beyond applyNetworkEgress's own
+// drop baseline. A network config PATCH does not restart instance NICs.
+func (b *Builder) attachNetworkACL(ctx context.Context, netName, name string) error {
+	raw, err := b.Client.get(ctx, "/1.0/networks/"+url.PathEscape(netName))
+	if err != nil {
+		return err
+	}
+	var net struct {
+		Config map[string]string `json:"config"`
+	}
+	if err := json.Unmarshal(raw, &net); err != nil {
+		return err
+	}
+	have := net.Config["security.acls"]
+	for _, a := range strings.Split(have, ",") {
+		if strings.TrimSpace(a) == name {
+			return nil // already attached
+		}
+	}
+	names := name
+	if strings.TrimSpace(have) != "" {
+		names = have + "," + name
+	}
+	_, err = b.Client.patch(ctx, "/1.0/networks/"+url.PathEscape(netName), map[string]interface{}{
+		"config": map[string]string{"security.acls": names},
+	})
+	return err
 }
 
 // teamInstances is every instance tagged with this team.
@@ -117,50 +251,58 @@ func (b *Builder) teamInstances(ctx context.Context, team string) ([]incusInstan
 	return out, nil
 }
 
-// forEachTeamInstance applies fn to every instance of a team, BEST EFFORT: it
-// does not stop at the first failure, so one wedged instance can't leave the
-// rest of a team open (on close) or stranded (on open). Every instance is
-// attempted and the errors are joined into one.
-func (b *Builder) forEachTeamInstance(ctx context.Context, team string, fn func(name string, inst incusInstance) error) error {
-	instances, err := b.teamInstances(ctx, team)
-	if err != nil {
-		return err
-	}
-	var errs []error
+// teamNetworks is the set of networks the given instances' eth0 NICs sit on,
+// with each network's IPv4 CIDR. Best-effort: an instance or network we can't
+// read is skipped.
+func (b *Builder) teamNetworks(ctx context.Context, instances []incusInstance) []networkInfo {
+	seen := map[string]bool{}
+	var out []networkInfo
 	for _, inst := range instances {
-		if err := fn(inst.Name, inst); err != nil {
-			errs = append(errs, fmt.Errorf("instance %s: %w", inst.Name, err))
+		_, expanded, err := b.getInstancePut(ctx, inst.Name)
+		if err != nil {
+			continue
 		}
+		eth0, ok := expanded["eth0"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		n, _ := eth0["network"].(string)
+		if n == "" || seen[n] {
+			continue
+		}
+		seen[n] = true
+		out = append(out, networkInfo{name: n, cidr: b.networkCIDR(ctx, n)})
 	}
-	return errors.Join(errs...)
+	sort.Slice(out, func(i, j int) bool { return out[i].name < out[j].name })
+	return out
 }
 
-// closedEgressRules is the egress allow-list a closed team keeps: the pinned
-// gateway (so agents still check in) plus every environment CIDR the team's
-// instances sit on (so internal DNS and internal services survive). Everything
-// else is denied by the NIC's default-deny egress.
-func (b *Builder) closedEgressRules(ctx context.Context, instances []incusInstance) ([]map[string]interface{}, error) {
-	gw, err := b.gatewayEgressRules(ctx)
+// networkCIDR is a managed network's IPv4 subnet in canonical form
+// ("10.0.1.0/24"), "" when it has no IPv4 subnet or can't be read.
+func (b *Builder) networkCIDR(ctx context.Context, name string) string {
+	raw, err := b.Client.get(ctx, "/1.0/networks/"+url.PathEscape(name))
 	if err != nil {
-		return nil, err
+		return ""
 	}
-	// Intra-environment egress is best-effort: a network we can't read just
-	// isn't added (the gateway allow, the one that must not be lost, already
-	// errored above if it couldn't be pinned).
-	cidrs := b.teamNetworkCIDRs(ctx, instances)
-	rules := make([]map[string]interface{}, 0, len(gw)+len(cidrs))
-	rules = append(rules, gw...)
-	for _, c := range cidrs {
-		rules = append(rules, map[string]interface{}{
-			"action": "allow", "state": "enabled", "destination": c,
-		})
+	var n struct {
+		Config map[string]string `json:"config"`
 	}
-	return rules, nil
+	if err := json.Unmarshal(raw, &n); err != nil {
+		return ""
+	}
+	addr := n.Config["ipv4.address"]
+	if addr == "" || addr == "none" {
+		return ""
+	}
+	_, ipnet, err := net.ParseCIDR(addr)
+	if err != nil {
+		return ""
+	}
+	return ipnet.String()
 }
 
-// gatewayEgressRules resolves the pinned gateway host:port to one allow rule per
-// resolved IPv4 address, on that TCP port. Re-resolved on every close so a
-// gateway DNS change is picked up. Errors rather than returning nothing: a close
+// gatewayEgressRules resolves the pinned gateway host:port to one TCP egress
+// allow per resolved IPv4 address. Errors rather than returning nothing: a close
 // that silently dropped the gateway allow would cut all telemetry.
 func (b *Builder) gatewayEgressRules(ctx context.Context) ([]map[string]interface{}, error) {
 	addr := strings.TrimSpace(b.Config.GatewayAddr)
@@ -199,225 +341,4 @@ func (b *Builder) gatewayEgressRules(ctx context.Context) ([]map[string]interfac
 		})
 	}
 	return rules, nil
-}
-
-// teamNetworkCIDRs is the set of environment CIDRs the given instances' eth0
-// NICs sit on. Best-effort: an instance or network we can't read is skipped,
-// since the gateway allow is what close must not lose, not intra reachability.
-func (b *Builder) teamNetworkCIDRs(ctx context.Context, instances []incusInstance) []string {
-	nets := map[string]bool{}
-	for _, inst := range instances {
-		_, expanded, err := b.getInstancePut(ctx, inst.Name)
-		if err != nil {
-			continue
-		}
-		if eth0, ok := expanded["eth0"].(map[string]interface{}); ok {
-			if n, _ := eth0["network"].(string); n != "" {
-				nets[n] = true
-			}
-		}
-	}
-	var cidrs []string
-	for n := range nets {
-		if c := b.networkCIDR(ctx, n); c != "" {
-			cidrs = append(cidrs, c)
-		}
-	}
-	sort.Strings(cidrs)
-	return cidrs
-}
-
-// networkCIDR is a managed network's IPv4 subnet in canonical form
-// ("10.0.1.0/24"), derived from its ipv4.address ("10.0.1.1/24"). "" when the
-// network has no IPv4 subnet or can't be read.
-func (b *Builder) networkCIDR(ctx context.Context, name string) string {
-	raw, err := b.Client.get(ctx, "/1.0/networks/"+url.PathEscape(name))
-	if err != nil {
-		return ""
-	}
-	var n struct {
-		Config map[string]string `json:"config"`
-	}
-	if err := json.Unmarshal(raw, &n); err != nil {
-		return ""
-	}
-	addr := n.Config["ipv4.address"]
-	if addr == "" || addr == "none" {
-		return ""
-	}
-	_, ipnet, err := net.ParseCIDR(addr)
-	if err != nil {
-		return ""
-	}
-	return ipnet.String()
-}
-
-// closeNIC closes one instance: it ensures the instance's closed-egress ACL
-// exists, then (ETag-guarded, like attachNICACL, so a concurrent access pass
-// can't clobber it) rewrites eth0 to deny new ingress and all egress except that
-// ACL's allow-list. The original NIC state is saved on the FIRST close only, so
-// a re-close after an external-access pass transiently re-opened the NIC still
-// restores the true open state on open.
-func (b *Builder) closeNIC(ctx context.Context, name string, egress []map[string]interface{}) error {
-	aclName := closedACLName(name)
-	if err := b.ensureACLObjectFull(ctx, aclName, "LaForge closed access for "+name, nil, egress); err != nil {
-		return err
-	}
-	path := "/1.0/instances/" + url.PathEscape(name)
-	return retryOnBusy(ctx, func() error {
-		for attempt := 0; attempt < 5; attempt++ {
-			var headers http.Header
-			raw, err := b.Client.doWithHeaders(ctx, http.MethodGet, path, nil, nil, &headers)
-			if err != nil {
-				return err
-			}
-			var instance struct {
-				Config          map[string]string            `json:"config"`
-				Devices         map[string]map[string]string `json:"devices"`
-				ExpandedDevices map[string]map[string]string `json:"expanded_devices"`
-			}
-			if err := json.Unmarshal(raw, &instance); err != nil {
-				return err
-			}
-			nic := instance.Devices["eth0"]
-			fromProfile := false
-			if nic == nil {
-				if e := instance.ExpandedDevices["eth0"]; e != nil {
-					nic = cloneStringMap(e)
-					fromProfile = true
-				}
-			}
-			if nic == nil || nic["type"] != "nic" {
-				return nil // no active NIC to firewall -- nothing to close
-			}
-
-			body := map[string]interface{}{}
-			if _, already := instance.Config[closedAccessKey]; !already {
-				saved := closedAccess{
-					ACLs:          nic["security.acls"],
-					IngressAction: nic["security.acls.default.ingress.action"],
-					EgressAction:  nic["security.acls.default.egress.action"],
-					FromProfile:   fromProfile,
-				}
-				savedJSON, err := json.Marshal(saved)
-				if err != nil {
-					return err
-				}
-				body["config"] = map[string]string{closedAccessKey: string(savedJSON)}
-			}
-
-			// Keep the intra host ACL (lfhacl*, same-environment port firewall),
-			// drop the public-port ACLs (lfpacl*, external ingress), add the
-			// closed-egress ACL; default-deny both directions.
-			kept := []string{}
-			for _, a := range strings.Split(nic["security.acls"], ",") {
-				a = strings.TrimSpace(a)
-				if a == "" || a == aclName || strings.HasPrefix(a, "lfpacl") {
-					continue
-				}
-				kept = append(kept, a)
-			}
-			nic["security.acls"] = strings.Join(append(kept, aclName), ",")
-			nic["security.acls.default.ingress.action"] = "drop"
-			nic["security.acls.default.egress.action"] = "drop"
-
-			etag := headers.Get("ETag")
-			if etag == "" {
-				return fmt.Errorf("instance %s response has no ETag; cannot safely close NIC", name)
-			}
-			body["devices"] = map[string]interface{}{"eth0": nic}
-			_, err = b.Client.doWithHeaders(ctx, http.MethodPatch, path, body, http.Header{"If-Match": []string{etag}}, nil)
-			var apiErr *APIError
-			if errors.As(err, &apiErr) && apiErr.HTTPStatus == http.StatusPreconditionFailed {
-				continue
-			}
-			return err
-		}
-		return fmt.Errorf("instance %s kept changing while closing; retry the task", name)
-	})
-}
-
-// openNIC restores one instance's pre-close NIC state. It understands both the
-// current ACL-based close (closedAccessKey) and the legacy device-masking close
-// (removedNICKey), so a team closed by an older build still reopens. A full PUT
-// is used because a config key must be deleted outright (PATCH only merges).
-func (b *Builder) openNIC(ctx context.Context, name string) error {
-	return retryOnBusy(ctx, func() error {
-		full, _, err := b.getInstancePut(ctx, name)
-		if err != nil {
-			return err
-		}
-		changed := false
-
-		if rawSaved, ok := full.Config[closedAccessKey]; ok {
-			var saved closedAccess
-			if err := json.Unmarshal([]byte(rawSaved), &saved); err != nil {
-				return fmt.Errorf("decoding closed access state: %w", err)
-			}
-			if saved.FromProfile {
-				// Close created the instance-level override; drop it so the
-				// profile's own eth0 takes back over.
-				delete(full.Devices, "eth0")
-			} else if dev, ok := full.Devices["eth0"]; ok {
-				var m map[string]interface{}
-				if err := json.Unmarshal(dev, &m); err != nil {
-					return fmt.Errorf("decoding eth0 for restore: %w", err)
-				}
-				setOrDelete(m, "security.acls", saved.ACLs)
-				setOrDelete(m, "security.acls.default.ingress.action", saved.IngressAction)
-				setOrDelete(m, "security.acls.default.egress.action", saved.EgressAction)
-				restored, err := json.Marshal(m)
-				if err != nil {
-					return err
-				}
-				full.Devices["eth0"] = restored
-			}
-			delete(full.Config, closedAccessKey)
-			changed = true
-		}
-
-		if rawSaved, ok := full.Config[removedNICKey]; ok {
-			var saved savedNIC
-			if err := json.Unmarshal([]byte(rawSaved), &saved); err != nil {
-				return fmt.Errorf("decoding legacy saved nic state: %w", err)
-			}
-			if saved.Instance {
-				deviceJSON, err := json.Marshal(saved.Device)
-				if err != nil {
-					return err
-				}
-				full.Devices["eth0"] = deviceJSON
-			} else {
-				delete(full.Devices, "eth0")
-			}
-			delete(full.Config, removedNICKey)
-			changed = true
-		}
-
-		if !changed {
-			return nil // already open -- idempotent
-		}
-		_, err = b.Client.put(ctx, "/1.0/instances/"+name, full)
-		return err
-	})
-}
-
-// setOrDelete sets key to val, or removes it when val is "" -- so a NIC field
-// that was unset before close is restored to unset, not to an empty string.
-func setOrDelete(m map[string]interface{}, key, val string) {
-	if val == "" {
-		delete(m, key)
-		return
-	}
-	m[key] = val
-}
-
-// cloneStringMap copies a NIC's string map so edits don't mutate the decoded
-// expanded-devices view we're reading from.
-func cloneStringMap(in map[string]string) map[string]string {
-	out := make(map[string]string, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
-	return out
 }

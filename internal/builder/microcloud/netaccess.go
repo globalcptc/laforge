@@ -204,23 +204,9 @@ func (b *Builder) ensureHostPortACL(ctx context.Context, ownCIDR string, visible
 		if err != nil {
 			return fmt.Errorf("reading instance %s: %w", h.ExternalRef, err)
 		}
-		// A concurrent access-window task may have closed the NIC. Don't touch
-		// the live (firewalled) NIC -- just record this host ACL as the eth0
-		// state to restore on open, so the team's `ports:` policy comes back
-		// correctly without re-opening egress mid-window.
-		if raw, closed := full.Config[closedAccessKey]; closed {
-			var saved closedAccess
-			if err := json.Unmarshal([]byte(raw), &saved); err != nil {
-				return err
-			}
-			saved.ACLs = name
-			encoded, err := json.Marshal(saved)
-			if err != nil {
-				return err
-			}
-			_, err = b.Client.do(ctx, "PATCH", "/1.0/instances/"+h.ExternalRef, map[string]interface{}{"config": map[string]string{closedAccessKey: string(encoded)}}, requestOptions{ifMatch: full.etag})
-			return err
-		}
+		// Access open/close no longer touches eth0 (it works at the network level
+		// and on the public NIC's ACL -- see access.go), so this only has to
+		// attach the host port ACL to eth0.
 		eth0 := map[string]interface{}{}
 		if raw, ok := full.Devices["eth0"]; ok {
 			if err := json.Unmarshal(raw, &eth0); err != nil {
