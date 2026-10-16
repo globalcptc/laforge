@@ -1,6 +1,6 @@
 import { useParams } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useRef, useState } from 'react'
-import { Box, CalendarClock, Check, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, Power, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
+import { Box, CalendarClock, Check, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
 import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
@@ -633,7 +633,6 @@ export function BuildHosts() {
              independent of the guest agent. Distinct from the LaForge agent
              tasks on the right. */}
           <span className="flex items-center gap-1" title="Infrastructure power — acts on the VM/container at the hoster, even if its agent is down">
-            <Power size={13} className="text-fg-subtle" />
             <Button variant="secondary" size="icon" onClick={() => setPowering('start')} title="Start" aria-label="Start">
               <Play size={14} />
             </Button>
