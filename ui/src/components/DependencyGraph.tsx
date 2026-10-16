@@ -249,7 +249,7 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex flex-col" style={{ background: BOARD.bg, color: BOARD.fg }}>
+      <div className="fixed inset-0 z-20 flex flex-col" style={{ background: BOARD.bg, color: BOARD.fg }}>
         <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5" style={{ borderBottom: `1px solid ${BOARD.line}` }}>
           <div className="flex items-center gap-2.5">
             <span className={cn('h-2.5 w-2.5 rounded-full', connected && 'animate-pulse')} style={{ background: connected ? STATUS_COLOR.finished : BOARD.faint }} title={connected ? 'Live' : 'Reconnecting…'} />
@@ -326,9 +326,7 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
       <div ref={tipRef} className="pointer-events-none fixed z-[70] max-w-[270px] rounded-token px-2.5 py-2 text-xs opacity-0 transition-opacity" style={{ background: '#060410', border: `1px solid ${BOARD.line2}`, color: BOARD.fg, boxShadow: '0 8px 24px rgba(0,0,0,.5)' }} />
 
       {selected && (
-        <div className="relative z-[60]">
-          <ObjectLogPanel repoId={repoId} buildId={buildId} objectId={selected.object.id} label={selected.object.as_name ?? selected.object.object_name} kind={selected.object.kind} object={selected.object} teamNumber={selected.teamNumber} initialTab={selected.initialTab} focusGroup={selected.focusGroup} onClose={() => setSelected(null)} />
-        </div>
+        <ObjectLogPanel repoId={repoId} buildId={buildId} objectId={selected.object.id} label={selected.object.as_name ?? selected.object.object_name} kind={selected.object.kind} object={selected.object} teamNumber={selected.teamNumber} initialTab={selected.initialTab} focusGroup={selected.focusGroup} onClose={() => setSelected(null)} />
       )}
     </>
   )
