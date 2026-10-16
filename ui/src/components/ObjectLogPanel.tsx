@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag } from 'lucide-react'
 import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
@@ -46,6 +46,8 @@ export function ObjectLogPanel({
   kind = 'host',
   object,
   teamNumber,
+  initialTab,
+  focusGroup,
   onClose,
 }: {
   repoId: string
@@ -59,9 +61,14 @@ export function ObjectLogPanel({
   // the id (it just shows less on Info).
   object?: DeployedObject
   teamNumber?: number
+  // Open straight to a tab (e.g. the dependency graph deep-links to 'steps')
+  // and, for the Steps tab, scroll to and briefly highlight one authored step
+  // group by its group_index.
+  initialTab?: Tab
+  focusGroup?: number
   onClose: () => void
 }) {
-  const [tab, setTab] = useState<Tab>('info')
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'info')
   const [wide, setWide] = useState(false)
   const fmt = useTimeFormat()
   // A network is provisioned by the builder, not by an in-guest agent, so
@@ -215,7 +222,7 @@ export function ObjectLogPanel({
               hint="Steps appear here once the agent has checked in and they're queued to run."
             />
           )}
-          {buildSteps && buildSteps.length > 0 && <StepStatusList steps={buildSteps} />}
+          {buildSteps && buildSteps.length > 0 && <StepStatusList steps={buildSteps} focusGroup={focusGroup} />}
         </>
       )}
       {tab === 'render' && (
@@ -329,8 +336,21 @@ function formatStepDuration(ms: number): string {
   return mm ? `${h}h ${mm}m` : `${h}h`
 }
 
-function StepStatusList({ steps }: { steps: StepStatus[] }) {
+function StepStatusList({ steps, focusGroup }: { steps: StepStatus[]; focusGroup?: number }) {
   const [open, setOpen] = useState<Set<number>>(new Set())
+  const groupRefs = useRef<Record<number, HTMLDivElement | null>>({})
+  const [flash, setFlash] = useState<number | null>(null)
+  // Deep-link from the dependency graph: scroll the targeted step group into
+  // view and flash it, once its steps have loaded.
+  useEffect(() => {
+    if (focusGroup == null) return
+    const el = groupRefs.current[focusGroup]
+    if (!el) return
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setFlash(focusGroup)
+    const t = setTimeout(() => setFlash(null), 1800)
+    return () => clearTimeout(t)
+  }, [focusGroup, steps])
   function toggle(i: number) {
     setOpen((prev) => {
       const next = new Set(prev)
@@ -350,7 +370,11 @@ function StepStatusList({ steps }: { steps: StepStatus[] }) {
   return (
     <div className="flex flex-col gap-3">
       {groups.map((g) => (
-        <div key={g.key} className="flex flex-col gap-1.5">
+        <div
+          key={g.key}
+          ref={(el) => { groupRefs.current[g.key] = el }}
+          className={cn('flex flex-col gap-1.5 rounded-token', flash === g.key && 'bg-accent-soft/60 ring-2 ring-accent/50 -mx-1 px-1 py-1 transition-colors')}
+        >
           {g.label && (
             <div className="flex items-center gap-2 px-0.5">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">{g.label}</span>

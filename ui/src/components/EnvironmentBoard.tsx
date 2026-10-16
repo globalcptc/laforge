@@ -5,6 +5,7 @@ import type { DeployedObject, ObjectKind } from '../api/types'
 import { statusIcon, statusLabel, statusAnimClass, blockedStatusKey } from './StatusBadge'
 import { ObjectLogPanel } from './ObjectLogPanel'
 import { EmptyState } from './EmptyState'
+import { STATUS_COLOR, isGhostStatus as isGhost, BOARD_STATUS_ORDER as LEGEND_ORDER } from './statusPalette'
 import { cn } from '../ui'
 
 // The Status Matrix: the whole build as one wall-display board -- a row per team,
@@ -19,43 +20,6 @@ import { cn } from '../ui'
 
 type Col = { kind: 'network' | 'host'; net: string; name: string }
 type Group = { net: string; cidr?: string; cols: Col[] }
-
-// The board's own status palette -- fixed hex (not the app's theme tokens) so the
-// board reads the same on any screen and in any theme.
-const STATUS_COLOR: Record<string, string> = {
-  finished: '#5f941c',
-  building: '#7f77dd',
-  running: '#3b8ddc',
-  deploying: '#2558a8',
-  deploy_failed: '#e04a49',
-  build_failed: '#d8622f',
-  invalid: '#e0a021',
-  dependency_blocked: '#e0a021',
-  destroying: '#d4537e',
-  destroy_failed: '#e04a49',
-  torn_down: '#5f5e5a',
-}
-
-const LEGEND_ORDER = [
-  'pending',
-  'deploying',
-  'running',
-  'building',
-  'dependency_blocked',
-  'finished',
-  'deploy_failed',
-  'build_failed',
-  'invalid',
-  'destroying',
-  'destroy_failed',
-  'torn_down',
-]
-
-// A queued/not-yet-created state has no colour worth a solid fill, so it draws as
-// a dashed outline ("nothing here yet") rather than a tile.
-function isGhost(key: string): boolean {
-  return key === 'pending' || key === 'planned'
-}
 
 function bucketOf(key: string): 'done' | 'prog' | 'fail' | 'wait' | 'gone' {
   if (key === 'finished' || key === 'open' || key === 'deployed') return 'done'

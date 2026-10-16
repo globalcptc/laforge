@@ -1,11 +1,12 @@
 import { useParams } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useState } from 'react'
-import { Box, CalendarClock, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, Power, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, type LucideIcon } from 'lucide-react'
+import { Box, CalendarClock, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, Power, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
 import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
 import { ObjectLogPanel } from '../components/ObjectLogPanel'
 import { EnvironmentBoard } from '../components/EnvironmentBoard'
+import { DependencyGraph } from '../components/DependencyGraph'
 import { TaskActionFields, buildTaskPayload, taskFormValid } from '../components/TaskActionForm'
 import { WhenField } from '../components/WhenField'
 import { Boxes } from 'lucide-react'
@@ -190,6 +191,7 @@ export function BuildHosts() {
   const [rebuilding, setRebuilding] = useState<{ ids: string[]; names: string[] } | null>(null)
   const [logPanelFor, setLogPanelFor] = useState<{ id: string; label: string; kind: ObjectKind; object?: DeployedObject; teamNumber?: number } | null>(null)
   const [boardOpen, setBoardOpen] = useState(false)
+  const [graphOpen, setGraphOpen] = useState(false)
   const [filter, setFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [osFilter, setOsFilter] = useState('')
@@ -394,7 +396,10 @@ export function BuildHosts() {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={() => setBoardOpen(true)} title="Open the full-screen status matrix for this build">
-            <LayoutGrid size={14} /> Status Matrix
+            <LayoutGrid size={14} /> Matrix
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setGraphOpen(true)} title="Open the full-screen dependency graph for this build">
+            <Waypoints size={14} /> Graph
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setLegendOpen(true)}>
             <Info size={14} /> State Legend
@@ -682,6 +687,7 @@ export function BuildHosts() {
       <StatusLegendDialog open={legendOpen} onClose={() => setLegendOpen(false)} />
 
       {boardOpen && buildId && <EnvironmentBoard repoId={repoId} buildId={buildId} onClose={() => setBoardOpen(false)} />}
+      {graphOpen && buildId && <DependencyGraph repoId={repoId} buildId={buildId} onClose={() => setGraphOpen(false)} />}
     </div>
   )
 }
