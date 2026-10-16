@@ -126,104 +126,114 @@ function AttentionRow({ item }: { item: AttentionItem }) {
 
 const fmtNum = (n: number) => (Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1))
 
-// CapacityCell is one build-gating signal as a compact column: label on top,
-// value/percent, and a mini bar under it -- so a builder's two heaviest signals
-// sit side by side on one row ("Disk (local) · node3" and "Elastic IPs 5/5")
-// rather than a stack. The builder page has the full set.
-function CapacityCell({ sig }: { sig: HomeCapacity }) {
+// CapacityCell is one build-gating signal, kept small enough that a builder's
+// two heaviest signals sit in their own fixed columns: a short label, a thin
+// bar and the value. The node (and the full label) live in the tooltip; the
+// builder page has the full set.
+function CapacityCell({ sig, className }: { sig: HomeCapacity | undefined; className?: string }) {
+  if (!sig) return <span className={className} />
   const pct = Math.min(100, Math.max(0, sig.pct))
   const tone = sig.pct >= 90 ? 'bg-danger' : sig.pct >= 75 ? 'bg-warning' : 'bg-accent'
-  const label = sig.node ? `${sig.label} · ${sig.node}` : sig.label
-  const quota = sig.max != null
+  const title = sig.node ? `${sig.label} · ${sig.node}` : sig.label
+  const value = sig.max != null ? `${fmtNum(sig.value)}/${fmtNum(sig.max)}` : `${sig.pct.toFixed(0)}%`
   return (
-    <div className="flex min-w-0 items-center gap-2 text-xs" title={label}>
-      <span className="max-w-[11rem] truncate text-fg-muted">{label}</span>
-      <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-surface-sunken">
+    <div className={cn('flex items-center gap-1.5 whitespace-nowrap text-[11px]', className)} title={`${title}: ${value}`}>
+      <span className="hidden w-20 truncate text-fg-muted @2xl:block">{sig.label}</span>
+      <div className="h-1 w-10 shrink-0 overflow-hidden rounded-full bg-surface-sunken">
         <div className={cn('h-full rounded-full', tone)} style={{ width: `${pct}%` }} />
       </div>
-      <span className="shrink-0 font-mono tabular-nums text-fg">
-        {quota ? `${fmtNum(sig.value)}/${fmtNum(sig.max!)}` : `${sig.pct.toFixed(0)}%`}
-      </span>
+      <span className="w-12 text-right font-mono tabular-nums text-fg">{value}</span>
     </div>
   )
 }
 
+// The usage table's columns: builder, its two heaviest signals, the counts and
+// a chevron. Every row is a subgrid of this one grid, so each column lines up
+// across builders. Columns drop off as the CARD narrows -- container queries,
+// not viewport breakpoints, since the sidebar eats into the page -- so a row
+// never wraps: the second signal and labels, then the counts, then
+// containers/networks.
+const USAGE_COLS =
+  'grid-cols-[minmax(max-content,1fr)_auto_auto] @2xl:grid-cols-[minmax(max-content,1fr)_auto_auto_auto] @4xl:grid-cols-[minmax(max-content,1fr)_auto_auto_repeat(3,auto)_auto] @5xl:grid-cols-[minmax(max-content,1fr)_auto_auto_repeat(5,auto)_auto]'
+const COUNT_COLS: { label: string; className: string; value: (b: HomeData['builders'][number]) => number }[] = [
+  { label: 'Builds', className: 'hidden @4xl:block', value: (b) => b.active_builds },
+  { label: 'Teams', className: 'hidden @4xl:block', value: (b) => b.teams },
+  { label: 'Hosts', className: 'hidden @4xl:block', value: (b) => b.counts.hosts },
+  { label: 'Containers', className: 'hidden @5xl:block', value: (b) => b.counts.containers },
+  { label: 'Networks', className: 'hidden @5xl:block', value: (b) => b.counts.networks },
+]
+
 function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builders']; buildersInUse: number }) {
   const { data: me } = useMe()
+  const rowClass = 'col-span-full grid grid-cols-subgrid items-center gap-x-5 px-4 py-2'
   return (
     <Card>
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <div className="flex items-center gap-2 text-sm font-semibold text-fg">
-          <ServerCog size={14} className="text-fg-muted" /> Infrastructure usage
+          <ServerCog size={14} className="text-fg-muted" /> Infrastructure Usage
         </div>
         <span className="text-xs text-fg-muted">
           {buildersInUse} of {builders.length} in use
         </span>
       </div>
-      <div className="divide-y divide-border">
-        {builders.map((b) => {
-          const capacity = b.capacity ?? []
-          // The two heaviest-used signals lead, side by side; the rest live on
-          // the builder page behind "See more".
-          const topTwo = [...capacity].sort((a, z) => z.pct - a.pct).slice(0, 2)
-          const name = me?.is_instance_admin ? (
-            <Link to="/admin/infrastructure/$name" params={{ name: b.name }} className="hover:opacity-80">
-              <BuilderPill name={b.name} color={b.color} kind={b.kind} />
-            </Link>
-          ) : (
-            <BuilderPill name={b.name} color={b.color} kind={b.kind} />
-          )
-          return (
-            // One row per builder: identity on the left, its two heaviest signals
-            // centered, counts and the link on the right. Stacks on narrow cards.
-            <div
-              key={b.name}
-              className="grid grid-cols-1 items-center gap-x-6 gap-y-2 px-4 py-3 lg:grid-cols-[1fr_auto_1fr]"
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                {name}
-                <span className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</span>
-              </div>
-              {capacity.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-x-8 gap-y-2 lg:justify-center">
-                  {topTwo.map((sig) => (
-                    <CapacityCell key={`${sig.key}|${sig.node}`} sig={sig} />
-                  ))}
+      <div className="@container">
+        <div className={cn('grid', USAGE_COLS)}>
+          <div className={cn(rowClass, 'border-b border-border py-1.5 text-[11px] text-fg-subtle')}>
+            <span>Builder</span>
+            <span className="@2xl:col-span-2">Top Capacity</span>
+            {COUNT_COLS.map((c) => (
+              <span key={c.label} className={cn('text-right', c.className)}>
+                {c.label}
+              </span>
+            ))}
+            <span />
+          </div>
+          {builders.map((b, i) => {
+            // The two heaviest-used signals; the rest are on the builder page.
+            const topTwo = [...(b.capacity ?? [])].sort((a, z) => z.pct - a.pct).slice(0, 2)
+            const cells = (
+              <>
+                <div className="flex items-center" title={KIND_LABEL[b.kind as Kind] ?? b.kind}>
+                  <BuilderPill name={b.name} color={b.color} kind={b.kind} />
                 </div>
-              ) : (
-                <div className="text-xs text-fg-subtle lg:text-center">No capacity metrics reported yet.</div>
-              )}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-muted lg:justify-end">
-                <span>
-                  <span className="font-medium text-fg">{b.active_builds}</span> builds
-                </span>
-                <span>
-                  <span className="font-medium text-fg">{b.teams}</span> teams
-                </span>
-                <span>
-                  <span className="font-medium text-fg">{b.counts.hosts}</span> hosts
-                </span>
-                <span>
-                  <span className="font-medium text-fg">{b.counts.containers}</span> containers
-                </span>
-                <span>
-                  <span className="font-medium text-fg">{b.counts.networks}</span> networks
-                </span>
-                {me?.is_instance_admin ? (
-                  <Link
-                    to="/admin/infrastructure/$name"
-                    params={{ name: b.name }}
-                    className="ml-1 shrink-0 font-medium text-accent hover:underline"
+                {topTwo.length > 0 ? (
+                  <>
+                    <CapacityCell sig={topTwo[0]} />
+                    <CapacityCell sig={topTwo[1]} className="hidden @2xl:flex" />
+                  </>
+                ) : (
+                  <span className="whitespace-nowrap text-[11px] text-fg-subtle @2xl:col-span-2">No metrics yet</span>
+                )}
+                {COUNT_COLS.map((c) => (
+                  <span
+                    key={c.label}
+                    className={cn('text-right font-mono text-xs tabular-nums text-fg', c.className)}
                   >
-                    See more →
-                  </Link>
-                ) : capacity.length > 2 ? (
-                  <span className="ml-1 shrink-0 text-fg-subtle">+{capacity.length - 2} more</span>
-                ) : null}
+                    {c.value(b)}
+                  </span>
+                ))}
+                {me?.is_instance_admin ? <ChevronRight size={14} className="text-fg-subtle" /> : <span />}
+              </>
+            )
+            const border = i > 0 ? 'border-t border-border' : ''
+            // The whole row opens the builder page for admins (the only ones who
+            // can see it); for everyone else it's a plain row.
+            return me?.is_instance_admin ? (
+              <Link
+                key={b.name}
+                to="/admin/infrastructure/$name"
+                params={{ name: b.name }}
+                className={cn(rowClass, border, 'hover:bg-surface-hover')}
+              >
+                {cells}
+              </Link>
+            ) : (
+              <div key={b.name} className={cn(rowClass, border)}>
+                {cells}
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     </Card>
   )
