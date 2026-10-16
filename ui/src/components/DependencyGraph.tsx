@@ -362,17 +362,25 @@ function GraphNode({ node: n, dim, onEnter, onLeave, onNodeMove, onStepMove, onO
       </button>
       {n.groups.length > 0 && (
         <div className="flex gap-0.5 px-2 pb-2 pt-2" style={{ background: BOARD.panel2, borderRadius: '0 0 9px 9px' }}>
-          {n.groups.map((g) => (
-            <button
-              key={g.index}
-              onClick={(e) => { e.stopPropagation(); onOpenStep(g) }}
-              onMouseMove={(e) => onStepMove(e, g)}
-              className={cn('relative h-1.5 min-w-[3px] flex-1 rounded-sm', g.running && 'animate-pulse')}
-              style={{ background: stepColor(g.key), boxShadow: g.milestone ? `0 0 0 1.5px ${BOARD.panel2}, 0 0 0 2.5px ${BOARD.fg}` : undefined }}
-            >
-              {g.milestone && <span className="absolute left-1/2 top-[-8px] h-[7px] w-[7px] -translate-x-1/2 rounded-full" style={{ background: stepColor(g.key), border: `1.5px solid ${BOARD.fg}` }} />}
-            </button>
-          ))}
+          {n.groups.map((g) => {
+            const waits = g.waitFor.length > 0
+            // A milestone (others wait on this step) gets a solid white-ringed
+            // marker; a wait_for (this step is gated on another host) gets an
+            // amber-ringed hollow marker -- so both ends of the gate are visible.
+            const ring = g.milestone ? BOARD.fg : waits ? STATUS_COLOR.dependency_blocked : null
+            return (
+              <button
+                key={g.index}
+                onClick={(e) => { e.stopPropagation(); onOpenStep(g) }}
+                onMouseMove={(e) => onStepMove(e, g)}
+                className={cn('relative h-1.5 min-w-[3px] flex-1 rounded-sm', g.running && 'animate-pulse')}
+                style={{ background: stepColor(g.key), boxShadow: ring ? `0 0 0 1.5px ${BOARD.panel2}, 0 0 0 2.5px ${ring}` : undefined }}
+              >
+                {g.milestone && <span className="absolute left-1/2 top-[-8px] h-[7px] w-[7px] -translate-x-1/2 rounded-full" style={{ background: stepColor(g.key), border: `1.5px solid ${BOARD.fg}` }} />}
+                {waits && !g.milestone && <span className="absolute left-1/2 top-[-8px] h-[7px] w-[7px] -translate-x-1/2 rounded-full" style={{ background: BOARD.panel2, border: `1.5px solid ${STATUS_COLOR.dependency_blocked}` }} />}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
