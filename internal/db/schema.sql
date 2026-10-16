@@ -105,6 +105,12 @@ CREATE TABLE public.attention_dismissal (
 --
 -- Name: build; Type: TABLE; Schema: public; Owner: -
 --
+CREATE TABLE public.build_render_secret (
+    build_id uuid NOT NULL,
+    secret bytea NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE public.build (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     configured_build_id uuid,
@@ -720,6 +726,14 @@ ALTER TABLE ONLY public.attention_dismissal
 --
 ALTER TABLE ONLY public.build
     ADD CONSTRAINT build_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: build_render_secret build_render_secret_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.build_render_secret
+    ADD CONSTRAINT build_render_secret_pkey PRIMARY KEY (build_id);
 --
 -- Name: builder_config builder_config_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -1126,6 +1140,11 @@ ALTER TABLE ONLY public.attention_dismissal
 --
 ALTER TABLE ONLY public.attention_dismissal
     ADD CONSTRAINT attention_dismissal_build_id_fkey FOREIGN KEY (build_id) REFERENCES public.build(id) ON DELETE CASCADE;
+--
+-- Name: build_render_secret build_render_secret_build_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.build_render_secret
+    ADD CONSTRAINT build_render_secret_build_id_fkey FOREIGN KEY (build_id) REFERENCES public.build(id) ON DELETE CASCADE;
 --
 -- Name: build build_configured_build_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --

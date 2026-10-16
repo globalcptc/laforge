@@ -56,6 +56,16 @@ This note covers the whole 3.0 line.
   MicroCloud builders, which boot that machine from the builder's docker base image —
   now built for Incus builders too, and now installing Docker Engine and the compose
   plugin from Docker's own apt repository instead of Ubuntu's `docker.io` package.
+- **Generated passwords.** `set_password` and `create_user` take `generate: { type, size,
+  label }` in place of `password:`, and templates have the same generators as functions:
+  `passphrase` (`Patch-Session-Query-4484`), `wordchain` (`fork-Brick-Spoon-Snail-test`)
+  and `randompassword`. Values are stable for the build (derived from a per-build secret),
+  so a script can use `{{ passphrase 3 }}` to write out the password a step set; a `team:`
+  or `build:` label shares one value across a team or every team.
+- **Credentials are tracked per host.** Every password LaForge sets — the automatic admin
+  step, `set_password`, `create_user` — is recorded per account and shown on the host's
+  Info tab (with whether its step has run yet), listed by `laforge passwords`, and used
+  as the login in external-access exports.
 - **`.laforgeignore`.** A content repo can list paths that aren't LaForge content (a
   compose project, another tool's YAML) in a `.gitignore`-style file at its root;
   `laforge check`, the server, and the editor all skip them.
@@ -69,6 +79,9 @@ This note covers the whole 3.0 line.
   server give schema-aware completion, hover docs, a full **field-reference panel**, a
   **live render preview** of a script against an example host, and `laforge check`
   diagnostics as you type — the logic lives once in Go, so any LSP editor benefits.
+  Template functions (including the password generators) complete and hover inside
+  `{{ }}` in scripts and in templated YAML values, and nested step objects such as
+  `generate: { type: … }` complete their keys and values.
 
 ## Builders & Platforms
 
@@ -141,7 +154,11 @@ This note covers the whole 3.0 line.
 - **External access (NAT-in)** for specific ports (e.g. RDP): a host's `public:` ports are
   realized as reachable endpoints per builder — a shared uplink IP with per-team ports on
   Incus/MicroCloud, a public IP per host on cloud — surfaced in the UI and exportable from
-  the CLI (`laforge access`, with `--csv`/`--json` including rendered logins).
+  the CLI (`laforge access`, with `--csv`/`--json` including each host's current login).
+- **Export for Scoring.** The External Access page's wizard (and `laforge access
+  --scoring`) writes the scoring app's Team Connections import JSON: pick endpoints
+  (leaving your own hosts, like OutOfScope, out of every team), set the scoring season,
+  competition and team-number offset, and download.
 - **Scheduled in-guest work** (the `schedule:` array) dispatches real agent commands at
   natural-language times and recurrences, including once-per-window anchors.
 
@@ -190,8 +207,8 @@ This note covers the whole 3.0 line.
 
 - **Local, no server:** `context`, `render`, `check`, `convert`.
 - **Server-backed:** `login`, `repo`, `build` (configure/list/status/follow/lock),
-  `builders`, `images`, `registries`, `run`, `schedule`, `access` (+`--csv`/`--json`),
-  `cert-status`, and `shell`.
+  `builders`, `images`, `registries`, `run`, `schedule`, `access`
+  (+`--csv`/`--json`/`--scoring`), `passwords`, `cert-status`, and `shell`.
 
 ## Platform & Deployment
 

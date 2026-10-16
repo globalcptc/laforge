@@ -103,7 +103,12 @@ func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *lo
 		}
 		return gateway.RegistryAuth{Username: cred.Username, Secret: cred.Secret}, true
 	})
-	authored, notes, err := gateway.ExpandSteps(repoRoot, c, envName, asName, teamNum, registryAuth, gateway.WithPublicAddress(obj.PublicAddress))
+	secret, err := db.RenderSecretForBuild(ctx, q, buildID)
+	if err != nil {
+		return fmt.Errorf("loading the build's render secret: %w", err)
+	}
+	authored, notes, err := gateway.ExpandSteps(repoRoot, c, envName, asName, teamNum, registryAuth,
+		gateway.WithPublicAddress(obj.PublicAddress), gateway.WithRenderSecret(secret))
 	if err != nil {
 		return fmt.Errorf("expanding steps: %w", err)
 	}

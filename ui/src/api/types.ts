@@ -390,10 +390,23 @@ export interface StepStatus {
 }
 
 // Builder-specific placement facts (label/value, varies by builder) plus the
-// environment root password, for finding/logging into a host by hand.
+// host's current passwords, for finding/logging into a host by hand.
 export interface ObjectInfra {
   placement: { label: string; value: string }[]
   password?: string
+  credentials?: HostCredential[]
+}
+
+// HostCredential is one account LaForge set a password for on a host (a
+// set_password / create_user step, or the automatic admin step). applied is
+// false until the agent has run that step -- the password shown is then the
+// one the host is about to get.
+export interface HostCredential {
+  username: string
+  password: string
+  applied: boolean
+  source: 'step' | 'environment'
+  admin: boolean
 }
 
 export interface RenderedStep {

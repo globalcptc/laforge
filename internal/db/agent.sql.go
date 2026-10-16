@@ -556,60 +556,6 @@ func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, 
 	return i, err
 }
 
-const listAdminPasswordStepsByBuild = `-- name: ListAdminPasswordStepsByBuild :many
-SELECT a.deployed_object_id, a.step_index, a.status, a.ad_hoc, a.finished_at,
-       (a.payload->>'username')::text AS username,
-       (a.payload->>'password')::text AS password
-FROM agent_task a
-JOIN deployed_object o ON o.id = a.deployed_object_id
-JOIN team t ON t.id = o.team_id
-WHERE t.build_id = $1
-  AND a.command = 'set_password'
-  AND lower(a.payload->>'username') IN ('administrator', 'root')
-`
-
-type ListAdminPasswordStepsByBuildRow struct {
-	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
-	StepIndex        int32              `json:"step_index"`
-	Status           string             `json:"status"`
-	AdHoc            bool               `json:"ad_hoc"`
-	FinishedAt       pgtype.Timestamptz `json:"finished_at"`
-	Username         string             `json:"username"`
-	Password         string             `json:"password"`
-}
-
-// Every set_password step in a build aimed at a host's built-in admin account
-// (Administrator or root), authored, auto-inserted or ad-hoc. currentAdminPasswords
-// (internal/api) folds these into each host's CURRENT admin password: the last
-// one the agent actually applied, else the next one planned.
-func (q *Queries) ListAdminPasswordStepsByBuild(ctx context.Context, buildID pgtype.UUID) ([]ListAdminPasswordStepsByBuildRow, error) {
-	rows, err := q.db.Query(ctx, listAdminPasswordStepsByBuild, buildID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAdminPasswordStepsByBuildRow
-	for rows.Next() {
-		var i ListAdminPasswordStepsByBuildRow
-		if err := rows.Scan(
-			&i.DeployedObjectID,
-			&i.StepIndex,
-			&i.Status,
-			&i.AdHoc,
-			&i.FinishedAt,
-			&i.Username,
-			&i.Password,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listAgentHeartbeatsByBuild = `-- name: ListAgentHeartbeatsByBuild :many
 SELECT agent_heartbeat.id, agent_heartbeat.deployed_object_id, agent_heartbeat.cert_fingerprint, agent_heartbeat.remote_addr, agent_heartbeat.next_poll_ms, agent_heartbeat.created_at, agent_heartbeat.cpu_pct, agent_heartbeat.mem_pct, agent_heartbeat.disk_pct, agent_heartbeat.net_rx_bps, agent_heartbeat.net_tx_bps, agent_heartbeat.boot_at, agent_heartbeat.agent_started_at FROM agent_heartbeat
 JOIN deployed_object ON deployed_object.id = agent_heartbeat.deployed_object_id
@@ -845,6 +791,64 @@ func (q *Queries) ListBlockedStepGatesForObject(ctx context.Context, deployedObj
 	for rows.Next() {
 		var i ListBlockedStepGatesForObjectRow
 		if err := rows.Scan(&i.StepIndex, &i.WaitFor); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCredentialStepsByBuild = `-- name: ListCredentialStepsByBuild :many
+SELECT a.deployed_object_id, a.command, a.step_index, a.status, a.ad_hoc, a.finished_at,
+       (a.payload->>'username')::text AS username,
+       (a.payload->>'password')::text AS password
+FROM agent_task a
+JOIN deployed_object o ON o.id = a.deployed_object_id
+JOIN team t ON t.id = o.team_id
+WHERE t.build_id = $1
+  AND a.command IN ('set_password', 'create_user')
+  AND coalesce(a.payload->>'username', '') <> ''
+  AND coalesce(a.payload->>'password', '') <> ''
+`
+
+type ListCredentialStepsByBuildRow struct {
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	Command          string             `json:"command"`
+	StepIndex        int32              `json:"step_index"`
+	Status           string             `json:"status"`
+	AdHoc            bool               `json:"ad_hoc"`
+	FinishedAt       pgtype.Timestamptz `json:"finished_at"`
+	Username         string             `json:"username"`
+	Password         string             `json:"password"`
+}
+
+// Every step in a build that sets an account's password -- set_password and
+// create_user, authored, auto-inserted ("Set admin password") or ad-hoc.
+// currentCredentials (internal/api) folds these into each host's CURRENT
+// password per account: the last one the agent actually applied, else the next
+// one planned.
+func (q *Queries) ListCredentialStepsByBuild(ctx context.Context, buildID pgtype.UUID) ([]ListCredentialStepsByBuildRow, error) {
+	rows, err := q.db.Query(ctx, listCredentialStepsByBuild, buildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCredentialStepsByBuildRow
+	for rows.Next() {
+		var i ListCredentialStepsByBuildRow
+		if err := rows.Scan(
+			&i.DeployedObjectID,
+			&i.Command,
+			&i.StepIndex,
+			&i.Status,
+			&i.AdHoc,
+			&i.FinishedAt,
+			&i.Username,
+			&i.Password,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

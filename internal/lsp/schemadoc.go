@@ -249,6 +249,28 @@ func stepActionFields(action string) ([]schemaField, bool, error) {
 	return fieldsFromProperties(actionDef.Properties), true, nil
 }
 
+// nestedStepObjectFields resolves an object nested one level inside a step
+// action -- set_password's / create_user's `generate: { type, size, label }`
+// -- by its key. Found by name across every step action; the shapes that
+// share a name (generate) are identical, so the first match is the answer.
+func nestedStepObjectFields(key string) ([]schemaField, bool, error) {
+	def, err := commonDef("stepItem")
+	if err != nil {
+		return nil, false, err
+	}
+	actions := make([]string, 0, len(def.Properties))
+	for a := range def.Properties {
+		actions = append(actions, a)
+	}
+	sort.Strings(actions)
+	for _, a := range actions {
+		if nested, ok := def.Properties[a].Properties[key]; ok && len(nested.Properties) > 0 {
+			return fieldsFromProperties(nested.Properties), true, nil
+		}
+	}
+	return nil, false, nil
+}
+
 // scheduleActionFields is scheduleActionKeys' own per-action sub-fields,
 // the schedule-entry analog of stepActionFields.
 func scheduleActionFields(action string) ([]schemaField, bool, error) {

@@ -98,6 +98,12 @@ type Build struct {
 	CreatedByAccountID pgtype.UUID        `json:"created_by_account_id"`
 }
 
+type BuildRenderSecret struct {
+	BuildID   pgtype.UUID        `json:"build_id"`
+	Secret    []byte             `json:"secret"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type BuilderConfig struct {
 	ID                           pgtype.UUID        `json:"id"`
 	Name                         string             `json:"name"`

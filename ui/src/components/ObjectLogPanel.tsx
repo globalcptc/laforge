@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag } from 'lucide-react'
+import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound } from 'lucide-react'
 import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
-import type { RenderedStep, StepStatus, ObjectKind, DeployedObject } from '../api/types'
+import type { RenderedStep, StepStatus, ObjectKind, DeployedObject, HostCredential } from '../api/types'
 import { EmptyState } from './EmptyState'
 import { Badge, Button, buttonClass, cn, InspectorPanel, Spinner } from '../ui'
 import { StatusBadge, PowerBadge, GONE_STATES } from './StatusBadge'
@@ -524,16 +524,15 @@ function InfoTab({
         {object?.last_error && <InfoRow label="Last error" value={object.last_error} mono danger />}
       </dl>
 
-      {infra && (infra.placement.length > 0 || infra.password) && (
+      {infra && infra.placement.length > 0 && (
         <div>
           <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-            <ServerCog size={12} /> Builder &amp; access
+            <ServerCog size={12} /> Builder
           </div>
           <dl className="flex flex-col divide-y divide-border text-sm">
             {infra.placement.map((f) => (
               <InfoRow key={f.label} label={f.label} value={f.value} mono />
             ))}
-            {infra.password && <PasswordRow password={infra.password} />}
           </dl>
         </div>
       )}
@@ -556,33 +555,52 @@ function InfoTab({
             {varsLabel && <InfoRow label="Vars" value={varsLabel} mono />}
             {tagsLabel && <InfoRow label="Tags" value={tagsLabel} mono />}
           </dl>
-          {config.findings && config.findings.length > 0 && (
-            <div className="mt-2">
-              <div className="mb-1 text-xs font-medium text-fg-muted">Findings</div>
-              <div className="flex flex-col gap-1">
-                {config.findings.map((f, i) => (
-                  <div key={i} className="rounded-token border border-border bg-surface-sunken px-2 py-1 text-xs text-fg-muted">
-                    <span className="font-medium text-fg">sev {f.severity} · diff {f.difficulty}</span> — {f.description}
-                  </div>
-                ))}
+        </div>
+      )}
+
+      {/* Every account LaForge set a password for on this host, admin first;
+          a host without per-account steps still shows the environment password. */}
+      {infra && ((infra.credentials?.length ?? 0) > 0 || infra.password) && (
+        <div>
+          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+            <KeyRound size={12} /> Credentials
+          </div>
+          <dl className="flex flex-col divide-y divide-border text-sm">
+            {infra.credentials && infra.credentials.length > 0
+              ? infra.credentials.map((c) => <CredentialRow key={c.username} credential={c} />)
+              : infra.password && (
+                  <CredentialRow credential={{ username: 'Root password', password: infra.password, applied: true, source: 'environment', admin: true }} />
+                )}
+          </dl>
+        </div>
+      )}
+
+      {config?.findings && config.findings.length > 0 && (
+        <div>
+          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">Findings</div>
+          <div className="flex flex-col gap-1">
+            {config.findings.map((f, i) => (
+              <div key={i} className="rounded-token border border-border bg-surface-sunken px-2 py-1 text-xs text-fg-muted">
+                <span className="font-medium text-fg">sev {f.severity} · diff {f.difficulty}</span> — {f.description}
               </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       )}
     </div>
   )
 }
 
-// PasswordRow shows the host's root/admin password for hand login, hidden by
+// CredentialRow shows one account's current password for hand login, hidden by
 // default with a reveal toggle and a one-click copy -- it's a real secret, so
-// it isn't rendered in the clear until asked for.
-function PasswordRow({ password }: { password: string }) {
+// it isn't rendered in the clear until asked for. "Pending" marks a password
+// whose step hasn't run yet (what the host is about to get, not what it has).
+function CredentialRow({ credential: c }: { credential: HostCredential }) {
   const [shown, setShown] = useState(false)
   const [copied, setCopied] = useState(false)
   async function copy() {
     try {
-      await navigator.clipboard.writeText(password)
+      await navigator.clipboard.writeText(c.password)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -591,9 +609,17 @@ function PasswordRow({ password }: { password: string }) {
   }
   return (
     <div className="flex items-start justify-between gap-3 py-2">
-      <dt className="shrink-0 text-xs font-medium text-fg-muted">Root password</dt>
+      <dt className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-fg-muted">
+        <span className="font-mono text-fg">{c.username}</span>
+        {c.admin && c.source === 'step' && <Badge tone="neutral" className="py-0 text-[10px]">Admin</Badge>}
+        {!c.applied && (
+          <Badge tone="warning" className="py-0 text-[10px]" title="This password's step hasn't run on the host yet">
+            Pending
+          </Badge>
+        )}
+      </dt>
       <dd className="flex min-w-0 items-center gap-1.5">
-        <span className="min-w-0 break-all text-right font-mono text-xs">{shown ? password : '••••••••••'}</span>
+        <span className="min-w-0 break-all text-right font-mono text-xs">{shown ? c.password : '••••••••••'}</span>
         <Button variant="ghost" size="icon" onClick={() => setShown((v) => !v)} aria-label={shown ? 'Hide password' : 'Show password'} title={shown ? 'Hide' : 'Show'}>
           {shown ? <EyeOff size={13} /> : <Eye size={13} />}
         </Button>

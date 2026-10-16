@@ -435,17 +435,19 @@ DELETE FROM agent_artifact aa
 USING deployed_object o, team t
 WHERE aa.deployed_object_id = o.id AND o.team_id = t.id AND t.build_id = $1;
 
--- name: ListAdminPasswordStepsByBuild :many
--- Every set_password step in a build aimed at a host's built-in admin account
--- (Administrator or root), authored, auto-inserted or ad-hoc. currentAdminPasswords
--- (internal/api) folds these into each host's CURRENT admin password: the last
--- one the agent actually applied, else the next one planned.
-SELECT a.deployed_object_id, a.step_index, a.status, a.ad_hoc, a.finished_at,
+-- name: ListCredentialStepsByBuild :many
+-- Every step in a build that sets an account's password -- set_password and
+-- create_user, authored, auto-inserted ("Set admin password") or ad-hoc.
+-- currentCredentials (internal/api) folds these into each host's CURRENT
+-- password per account: the last one the agent actually applied, else the next
+-- one planned.
+SELECT a.deployed_object_id, a.command, a.step_index, a.status, a.ad_hoc, a.finished_at,
        (a.payload->>'username')::text AS username,
        (a.payload->>'password')::text AS password
 FROM agent_task a
 JOIN deployed_object o ON o.id = a.deployed_object_id
 JOIN team t ON t.id = o.team_id
 WHERE t.build_id = $1
-  AND a.command = 'set_password'
-  AND lower(a.payload->>'username') IN ('administrator', 'root');
+  AND a.command IN ('set_password', 'create_user')
+  AND coalesce(a.payload->>'username', '') <> ''
+  AND coalesce(a.payload->>'password', '') <> '';

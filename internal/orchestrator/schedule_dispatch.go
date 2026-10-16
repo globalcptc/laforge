@@ -295,6 +295,11 @@ func dispatchOneScheduledTask(ctx context.Context, q *db.Queries, st db.Schedule
 			return fmt.Errorf("resolving %s: %w", db.StrOrEmpty(obj.AsName), err)
 		}
 		rctx.PublicAddress = obj.PublicAddress
+		// The build's secret, so a scheduled entry's generated passwords match
+		// the ones its host's steps set.
+		if rctx.Secret, err = db.RenderSecretForBuild(ctx, q, bc.Build.ID); err != nil {
+			return fmt.Errorf("loading the build's render secret: %w", err)
+		}
 		idx := int(*st.ScheduleIndex)
 		if idx < 0 || idx >= len(rctx.Schedule) {
 			return fmt.Errorf("schedule index %d out of range -- content changed since this was materialized (%d entries now)", idx, len(rctx.Schedule))

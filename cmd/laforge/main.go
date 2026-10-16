@@ -78,6 +78,8 @@ func main() {
 		err = runCertStatus(os.Args[2:])
 	case "access":
 		err = runAccess(os.Args[2:])
+	case "passwords":
+		err = runPasswords(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -121,6 +123,8 @@ func usage() {
 
   laforge render <script-source-path> --host <as> --team <n> [--environment <name>] [--repo <path>]
       Render one script's real source file against a resolved context and print it.
+      Generated passwords ({{ passphrase 3 }}, wordchain, randompassword) render
+      as stand-in values here -- a real build derives its own.
 
   laforge check [--repo <path>]
       Validate and render everything: every file against its schema, every
@@ -206,6 +210,18 @@ http://localhost:8080).
       public address:port to connect to for its public: ports (e.g. RDP). With
       --csv or --json, export the full connection detail (team, host, IP, port,
       and the login username/password) for handing to teams.
+  laforge access --build <id> --scoring --season <s> --competition <c>
+                 [--team-offset <n>] [--exclude <host,...>] [--instructions-file <md>]
+      Export the scoring app's Team Connections import JSON (Admin -> Tools ->
+      Connections): per team, each public endpoint as ip:port with the host's
+      current admin login. --exclude leaves host names out of every team (e.g.
+      OutOfScope); --team-offset shifts team numbers. Same output as the
+      External Access page's Export for Scoring.
+
+  laforge passwords --build <id> [--team <n>] [--host <as>] [--csv | --json]
+      List every account LaForge set a password for on the build's hosts (the
+      admin account and every set_password / create_user, generated or
+      written), with whether its step has run on the box yet.
 
   laforge version
       Print the build version.

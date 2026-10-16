@@ -37,7 +37,7 @@ func (s *Server) handleListExternalAccess(w http.ResponseWriter, r *http.Request
 
 // externalAccessExportRow is one line of the full external-access export: where
 // to connect AND how to log in. The password is the host's CURRENT admin
-// password (see currentAdminPasswords -- the last admin set_password the agent
+// password (see currentCredentials -- the last admin set_password the agent
 // applied, else the environment root password); the username is that built-in
 // admin account, derived from the host's OS. Containers get no login (no admin
 // account over a public port), so username/password are blank for them.
@@ -93,7 +93,7 @@ func (s *Server) handleExportExternalAccess(w http.ResponseWriter, r *http.Reque
 	}); err == nil {
 		rootPassword = db.StrOrEmpty(env.RootPassword)
 	}
-	passwords, err := currentAdminPasswords(r.Context(), s.Queries, build.ID)
+	passwords, err := currentCredentials(r.Context(), s.Queries, build.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return

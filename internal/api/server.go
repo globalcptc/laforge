@@ -264,6 +264,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /builds/{id}/topology", s.handleGetTopology)
 	mux.HandleFunc("GET /builds/{id}/external-access", s.handleListExternalAccess)
 	mux.HandleFunc("GET /builds/{id}/external-access/export", s.handleExportExternalAccess)
+	mux.HandleFunc("GET /builds/{id}/credentials", s.handleListCredentials)
 	mux.HandleFunc("GET /builds/{id}/artifacts", s.handleGetArtifacts)
 	mux.HandleFunc("POST /builds/{id}/artifacts/purge", s.handlePurgeArtifacts)
 	mux.HandleFunc("GET /builds/{id}/upcoming", s.handleGetUpcoming)

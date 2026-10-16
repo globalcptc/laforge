@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
 	"testing"
 	"time"
 
@@ -11,12 +13,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// TestCurrentAdminPasswordsPicksWhatIsOnTheBox seeds real agent_task rows and
+// TestCurrentCredentialsPicksWhatIsOnTheBox seeds real agent_task rows and
 // checks each host resolves to the admin password actually on the box: the
 // last APPLIED admin set_password (by finish time), else the next planned one,
 // else (no admin set_password at all) the environment root password. Failed
 // steps and non-admin accounts never count.
-func TestCurrentAdminPasswordsPicksWhatIsOnTheBox(t *testing.T) {
+func TestCurrentCredentialsPicksWhatIsOnTheBox(t *testing.T) {
 	env := setupAPITest(t)
 	build := realBuildFixture(t, env)
 	ctx := context.Background()
@@ -81,9 +83,9 @@ func TestCurrentAdminPasswordsPicksWhatIsOnTheBox(t *testing.T) {
 	add(planned, 0, "root", "first-planned", "blocked", false, nil)
 	add(planned, 4, "root", "second-planned", "pending", false, nil)
 
-	got, err := currentAdminPasswords(ctx, env.q, build.ID)
+	got, err := currentCredentials(ctx, env.q, build.ID)
 	if err != nil {
-		t.Fatalf("currentAdminPasswords: %v", err)
+		t.Fatalf("currentCredentials: %v", err)
 	}
 	if hp := passwordFor(got, applied, "env-root"); hp != (hostPassword{Password: "operator", Applied: true, Source: "step"}) {
 		t.Errorf("applied host = %+v, want the operator's later ad-hoc change, applied", hp)
@@ -93,5 +95,46 @@ func TestCurrentAdminPasswordsPicksWhatIsOnTheBox(t *testing.T) {
 	}
 	if hp := passwordFor(got, none, "env-root"); hp != (hostPassword{Password: "env-root", Applied: false, Source: "environment"}) {
 		t.Errorf("host with no admin set_password = %+v, want the environment root password", hp)
+	}
+	// The full credential list keeps every account (admin first, the
+	// case-insensitive "administrator" rows folded into one) -- what the host
+	// Info tab shows.
+	want := []hostCredential{
+		{Username: "administrator", Password: "operator", Applied: true, Source: "step", Admin: true},
+		{Username: "pentester", Password: "not-admin", Applied: true, Source: "step"},
+	}
+	if c := got[applied]; len(c) != len(want) || c[0] != want[0] || c[1] != want[1] {
+		t.Errorf("applied host credentials = %+v, want %+v", c, want)
+	}
+
+	// The build-wide endpoint (`laforge passwords`) lists the same accounts,
+	// readable at read access.
+	client := signedInClient(t, env, "read-only-viewer")
+	resp, err := client.Get(env.httpURL + "/builds/" + build.ID.String() + "/credentials")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /credentials status = %d, want 200", resp.StatusCode)
+	}
+	var rows []struct {
+		Host     string `json:"host"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Applied  bool   `json:"applied"`
+		Admin    bool   `json:"admin"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&rows); err != nil {
+		t.Fatal(err)
+	}
+	found := map[string]bool{}
+	for _, r := range rows {
+		found[r.Username+"="+r.Password] = true
+	}
+	for _, k := range []string{"administrator=operator", "pentester=not-admin", "root=first-planned"} {
+		if !found[k] {
+			t.Errorf("GET /credentials missing %s; got %+v", k, rows)
+		}
 	}
 }

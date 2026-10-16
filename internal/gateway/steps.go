@@ -36,6 +36,7 @@ type expandOptions struct {
 	// project as the Docker daemon default log driver on its host so every
 	// service inherits it (see expandCompose). Nil disables forwarding.
 	containerLogs *loader.ContainerLogs
+	renderSecret  []byte
 }
 
 // WithRegistryAuth supplies stored registry credentials, looked up by host
@@ -44,6 +45,15 @@ type expandOptions struct {
 // materializer passes it, so credentials never reach a preview.
 func WithRegistryAuth(lookup func(host string) (RegistryAuth, bool)) Option {
 	return func(o *expandOptions) { o.registryAuth = lookup }
+}
+
+// WithRenderSecret supplies the build's password-generator secret
+// (db.RenderSecretForBuild), so passphrase/wordchain/randompassword and a
+// step's `generate:` give this build's real, stable values. Without it a
+// fixed preview secret is used -- fine for a preview or check, never for
+// commands an agent will run.
+func WithRenderSecret(secret []byte) Option {
+	return func(o *expandOptions) { o.renderSecret = secret }
 }
 
 // WithPublicAddress supplies the deployed box's public NIC address to templates.
@@ -155,6 +165,7 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		opt(&options)
 	}
 	ctx.PublicAddress = options.publicAddress
+	ctx.Secret = options.renderSecret
 
 	var out []PlannedCommand
 	var notes []string
@@ -420,7 +431,7 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 		}})
 
 	case "create_user":
-		pw, err := renderedField(ctx, c, step, "create_user", "password")
+		pw, err := passwordField(ctx, c, step, "create_user")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -430,7 +441,7 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 		}})
 
 	case "set_password":
-		pw, err := renderedField(ctx, c, step, "set_password", "password")
+		pw, err := passwordField(ctx, c, step, "set_password")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -553,6 +564,45 @@ func strSliceField(m map[string]interface{}, key string) []string {
 // `laforge check`, but returns the single rendered value ExpandSteps
 // actually needs to build a command payload rather than only collecting
 // errors.
+// passwordField is a create_user/set_password step's password: either its
+// `password:` (templated, so `{{ passphrase 3 }}` works there too) or its
+// `generate: {type, size, label}` -- sugar for the same generator, so
+// `generate: {type: passphrase, size: 3}` and `{{ passphrase 3 }}` on one host
+// are the same password (render.GeneratePassword).
+func passwordField(ctx *render.Context, c *loader.Content, step loader.Step, action string) (string, error) {
+	g := asMap(asMap(step[action])["generate"])
+	if g == nil {
+		return renderedField(ctx, c, step, action, "password")
+	}
+	size, ok := intValue(g["size"])
+	if !ok {
+		return "", fmt.Errorf("%s.generate.size must be a whole number", action)
+	}
+	pw, err := render.GeneratePassword(ctx, strField(g, "type"), size, strField(g, "label"))
+	if err != nil {
+		return "", fmt.Errorf("%s.generate: %w", action, err)
+	}
+	return pw, nil
+}
+
+// intValue reads a YAML/JSON number as an int (decoders hand back int or
+// float64 depending on the path), rejecting fractions.
+func intValue(v interface{}) (int, bool) {
+	switch n := v.(type) {
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	case uint64:
+		return int(n), true
+	case float64:
+		if n == float64(int(n)) {
+			return int(n), true
+		}
+	}
+	return 0, false
+}
+
 func renderedField(ctx *render.Context, c *loader.Content, step loader.Step, action, field string) (string, error) {
 	m := asMap(step[action])
 	raw, _ := m[field].(string)

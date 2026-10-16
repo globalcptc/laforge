@@ -552,8 +552,8 @@ recurring work, use [`schedule:`](#schedules) instead.)
 | `extract` | Extracts an archive (zip/tar/tgz) into a destination folder. `- extract: { src: /opt/tool.zip, dest: /opt/tool }` |
 | `delete` | Deletes a file or directory. |
 | `change_perms` | Changes a file/directory's permissions and/or owner. |
-| `create_user` | Creates a user. `- create_user: { name: bob, password: "…", groups: [sudo] }` |
-| `set_password` | Rotates an existing user's password (separate from `create_user` so a later step can change it). |
+| `create_user` | Creates a user. `- create_user: { name: bob, password: "…", groups: [sudo] }`, or `generate:` instead of `password:` (see [Generated passwords](#generated-passwords)). |
+| `set_password` | Rotates an existing user's password (separate from `create_user` so a later step can change it). Give `password:` or `generate:`; LaForge records the result and shows it on the host's Info tab under Credentials. |
 | `add_to_group` | Adds an existing user to a group. |
 | `service` | Starts, stops, or manages a systemd (Linux) or Windows service. |
 | `reboot` | Reboots the host. The agent reports success first, then re-registers once it's back. Takes an optional `delay:` (a duration string like `"30s"`) to wait before rebooting; `reboot: {}` reboots immediately. |
@@ -859,6 +859,7 @@ template values so it stays valid YAML, and note compose's own `${VAR}` syntax i
 | `{{ range .people }}` | This object's assigned people rows; each row's columns are fields (`.username`, `.email`, …). |
 | `{{ range people "employees" }}` | Every row of a named people file, regardless of assignment. |
 | `{{ .dns }}` | The full resolved DNS record set, for a script that configures DNS. |
+| `{{ passphrase 3 }}` | A [generated password](#generated-passwords). Also `wordchain`, `randompassword`. |
 
 Example — a PowerShell script that creates every assigned employee:
 
@@ -868,6 +869,39 @@ New-LocalUser -Name "{{ .username }}" -Password (ConvertTo-SecureString "{{ .pas
 {{ end }}
 Write-Host "Configured {{ .host.hostname }} for team {{ .build.team }}"
 ```
+
+### Generated passwords
+
+Three generators make passwords for you, available as template functions and as the
+`generate:` option on `set_password` and `create_user`:
+
+| Generator | Size means | Example |
+| --- | --- | --- |
+| `passphrase` | Words (1–12): capitalized 4–7 letter words, then a 4-digit number | `Patch-Session-Query-4484` |
+| `wordchain` | Words (1–12): 3–5 letter words, each randomly capitalized | `fork-Brick-Spoon-Snail-test` |
+| `random` (template: `randompassword`) | Characters (8–128), at least one upper, lower, digit and symbol | `p7K-x!Qe2+Wm_rTz` |
+
+```yaml
+steps:
+  - set_password: { name: Administrator, generate: { type: passphrase, size: 3 } }
+  - create_user: { name: svc_backup, generate: { type: random, size: 20, label: backup }, groups: [Administrators] }
+  - script: write-admin-note   # can use {{ passphrase 3 }} -- the same Administrator password
+```
+
+Generated passwords are **stable for the build**: they're derived from a secret LaForge
+keeps per build, so every render of the same host gives the same value, and a host
+rebuilt within the build gets its passwords back. A new build gets new ones. Each value
+is keyed by host, generator, size and label, so:
+
+- `generate: { type: passphrase, size: 3 }` and `{{ passphrase 3 }}` on the same host are
+  the **same password** — a script can write out the password a step set.
+- A `label` gives a host a different password of the same kind:
+  `{{ passphrase 3 "svc" }}`, `generate: { type: passphrase, size: 3, label: svc }`.
+- A label starting `team:` shares one password across the team's hosts (a domain account
+  every workstation uses); `build:` shares it across every team.
+
+`laforge check`, `laforge render` and the editor preview have no build, so they render
+stand-in values with the same shape.
 
 ---
 

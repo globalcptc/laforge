@@ -11,6 +11,10 @@ import (
 var varTokenRE = regexp.MustCompile(`vars\.([A-Za-z0-9_]+)`)
 var fieldTokenRE = regexp.MustCompile(`^([A-Za-z_][A-Za-z0-9_]*):`)
 
+// templateFuncTokenRE finds a password generator call inside a `{{ }}` (in a
+// script or a templated YAML value) -- see templateFuncDocs.
+var templateFuncTokenRE = regexp.MustCompile(`\{\{[^}]*?\b(passphrase|wordchain|randompassword)\b`)
+
 // Hover is "What a var holds and which file it came from in the
 // environment/network/host cascade" for a script file's `vars.<key>` reference, or the
 // schema's own field documentation for a config file's key -- the same
@@ -22,6 +26,16 @@ func Hover(w *Workspace, relPath, text string, pos protocol.Position) *protocol.
 		return nil
 	}
 	line := lineAt(text, pos.Line)
+
+	// A password generator call, in a script or a templated YAML value.
+	if name, ok := templateFuncAt(line, pos.Character); ok {
+		for _, f := range templateFuncDocs {
+			if f.name == name {
+				md := fmt.Sprintf("**%s** `{{ %s }}`\n\n%s\n\n%s", f.name, f.example, f.doc, templateFuncStability)
+				return &protocol.Hover{Contents: &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: md}}
+			}
+		}
+	}
 
 	if script := scriptForSourceFile(content, relPath); script != nil {
 		key, ok := tokenAt(line, pos.Character, varTokenRE)
@@ -100,6 +114,19 @@ func tokenAt(line string, character uint32, re *regexp.Regexp) (string, bool) {
 			groupStart, groupEnd = loc[2], loc[3]
 		}
 		return string(r[byteToRune(line, groupStart):byteToRune(line, groupEnd)]), true
+	}
+	return "", false
+}
+
+// templateFuncAt is the generator name under the cursor -- on the name itself,
+// not anywhere in the `{{ ... }}` before it.
+func templateFuncAt(line string, character uint32) (string, bool) {
+	pos := int(character)
+	for _, loc := range templateFuncTokenRE.FindAllStringSubmatchIndex(line, -1) {
+		start, end := byteToRune(line, loc[2]), byteToRune(line, loc[3])
+		if pos >= start && pos <= end {
+			return line[loc[2]:loc[3]], true
+		}
 	}
 	return "", false
 }
