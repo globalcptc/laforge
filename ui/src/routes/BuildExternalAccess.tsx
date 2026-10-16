@@ -50,7 +50,7 @@ export function BuildExternalAccess() {
           The address and port to connect to each host from outside the environment. Access follows each team's schedule — a closed team
           is unreachable even while these endpoints are listed.
         </p>
-        <Button variant="primary" onClick={() => setExporting(true)}>
+        <Button variant="brand" size="sm" onClick={() => setExporting(true)}>
           <FileJson size={14} /> Export for Scoring
         </Button>
       </div>

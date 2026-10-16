@@ -132,7 +132,7 @@ export function BuildAccess() {
                 {/* One button that toggles: an open team shows Close (danger),
                     a closed team shows Open (accent). */}
                 {team.access_state === 'open' ? (
-                  <Button variant="danger" size="sm" onClick={() => toggleAccess(team.team_number, team.access_state)} disabled={setAccess.isPending}>
+                  <Button variant="danger" size="sm" className="bg-orange hover:brightness-95" onClick={() => toggleAccess(team.team_number, team.access_state)} disabled={setAccess.isPending}>
                     <Lock size={14} /> Close
                   </Button>
                 ) : (
