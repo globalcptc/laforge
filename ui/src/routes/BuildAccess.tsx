@@ -6,7 +6,7 @@ import { useTimeFormat } from '../lib/time'
 import { StatusBadge } from '../components/StatusBadge'
 import { AccessCountdown } from '../components/AccessCountdown'
 import type { AccessWindow, Team } from '../api/types'
-import { Button, Card, cn, Spinner } from '../ui'
+import { Button, Card, cn, Spinner, useToast } from '../ui'
 import { buildIsReadOnly } from '../lib/build'
 
 // currentAccessEnd is when this team's access is scheduled to end, but ONLY
@@ -44,6 +44,23 @@ export function BuildAccess() {
   const { buildId } = useParams({ from: '/repos/$repoId/builds/$buildId/access' })
   const { data: build } = useBuild(buildId)
   const setAccess = useSetTeamAccess(buildId)
+  const toast = useToast()
+  // One button per team that toggles the team's access. The real state flips
+  // asynchronously (the runner applies it on the builder), so we fire an
+  // immediate "changing" toast on click and a result toast when the request is
+  // accepted or fails -- otherwise the click looks like it did nothing.
+  const toggleAccess = (teamNumber: number, state: string) => {
+    const action = state === 'open' ? 'close' : 'open'
+    toast({ title: `Team ${teamNumber}: ${action === 'close' ? 'closing' : 'opening'} access…`, tone: 'info' })
+    setAccess.mutate(
+      { team: teamNumber, action },
+      {
+        onSuccess: () =>
+          toast({ title: `Team ${teamNumber} ${action === 'close' ? 'closing' : 'opening'}`, description: 'Applying on the builder — the badge updates when it takes effect.', tone: 'success' }),
+        onError: (e) => toast({ title: `Team ${teamNumber}: ${action} failed`, description: e instanceof Error ? e.message : 'error', tone: 'danger' }),
+      },
+    )
+  }
   const [extendFor, setExtendFor] = useState<number | null>(null)
   const [reduceFor, setReduceFor] = useState<number | null>(null)
   // The expanded +Nm / -Nm choices collapse back to the button after 30s of no
@@ -112,12 +129,17 @@ export function BuildAccess() {
             </div>
             {!readOnly && (
               <div className="flex items-center gap-2">
-                <Button variant="primary" size="sm" onClick={() => setAccess.mutate({ team: team.team_number, action: 'open' })} disabled={setAccess.isPending}>
-                  <Unlock size={14} /> Open
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => setAccess.mutate({ team: team.team_number, action: 'close' })} disabled={setAccess.isPending}>
-                  <Lock size={14} /> Close
-                </Button>
+                {/* One button that toggles: an open team shows Close (danger),
+                    a closed team shows Open (accent). */}
+                {team.access_state === 'open' ? (
+                  <Button variant="danger" size="sm" onClick={() => toggleAccess(team.team_number, team.access_state)} disabled={setAccess.isPending}>
+                    <Lock size={14} /> Close
+                  </Button>
+                ) : (
+                  <Button variant="primary" size="sm" onClick={() => toggleAccess(team.team_number, team.access_state)} disabled={setAccess.isPending}>
+                    <Unlock size={14} /> Open
+                  </Button>
+                )}
                 {/* Extend collapses to its +Nm choices and back, animated both
                     ways: each side transitions its own max-width + opacity so
                     one slides open as the other slides shut. */}
