@@ -5,6 +5,7 @@ import type {
   AdHocResult,
   CertStatus,
   ExternalAccessEntry,
+  ExternalAccessExportRow,
   PowerActionResponse,
   RebuildResponse,
   AdHocTarget,
@@ -103,6 +104,17 @@ export function useDismissAttention() {
         category: v.category,
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['home'] }),
+  })
+}
+
+// useExternalAccessExport is the credentialed export (endpoints plus each host's
+// current admin login) -- only fetched while something needs it (the scoring
+// export wizard), since it carries passwords.
+export function useExternalAccessExport(buildId: string | undefined, enabled: boolean) {
+  return useQuery<ExternalAccessExportRow[]>({
+    queryKey: ['external-access-export', buildId],
+    queryFn: () => api.get(`/builds/${buildId}/external-access/export`),
+    enabled: !!buildId && enabled,
   })
 }
 

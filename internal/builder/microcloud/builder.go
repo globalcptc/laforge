@@ -897,58 +897,12 @@ func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 	return out, nil
 }
 
-// OpenAccess and CloseAccess are the required, behavioural operations:
-// "closing a team must block all external ingress and terminate
-// established connections, not merely stop new ones." This
-// implementation removes (CloseAccess) or re-adds (OpenAccess) every
-// team-tagged instance's `eth0` network device entirely, rather than
-// e.g. an iptables rule -- verified against a live daemon
-// (builder_test.go) to be the mechanism that actually satisfies the
-// "terminate established connections" requirement: removing the device
-// tears down the interface itself, which drops any connection using it,
-// not just future ones. The device's own config (which network, what
-// IP) is remembered so OpenAccess restores the exact same attachment,
-// matching "port reservations survive" for the equivalent network-level
-// case.
-func (b *Builder) CloseAccess(ctx context.Context, team string) error {
-	ctx, release, err := b.Client.lockNetworking(ctx)
-	if err != nil {
-		return err
-	}
-	defer release()
-	return b.forEachTeamInstance(ctx, team, func(name string, inst mcInstance) error {
-		return b.removeNIC(ctx, name)
-	})
-}
+// Team access open/close lives in access.go. Like the Incus builder it no
+// longer detaches eth0 (which cut agent telemetry and tore the host off its
+// NATs) -- it firewalls the NICs that stay attached. See access.go.
 
-func (b *Builder) OpenAccess(ctx context.Context, team string) error {
-	ctx, release, err := b.Client.lockNetworking(ctx)
-	if err != nil {
-		return err
-	}
-	defer release()
-	return b.forEachTeamInstance(ctx, team, func(name string, inst mcInstance) error {
-		return b.restoreNIC(ctx, name)
-	})
-}
-
-func (b *Builder) forEachTeamInstance(ctx context.Context, team string, fn func(name string, inst mcInstance) error) error {
-	instances, err := b.ourInstances(ctx)
-	if err != nil {
-		return err
-	}
-	for _, inst := range instances {
-		if inst.Config[teamConfigKey] != team {
-			continue
-		}
-		if err := fn(inst.Name, inst); err != nil {
-			return fmt.Errorf("instance %s: %w", inst.Name, err)
-		}
-	}
-	return nil
-}
-
-// removedNICKey stashes what CloseAccess needs to undo, as JSON, in a
+// removedNICKey stashes what the LEGACY device-masking close needed to undo, as
+// JSON, in a
 // user.* config key on the instance itself -- so OpenAccess can restore
 // exactly what was there, without this builder needing any durable state
 // of its own beyond what's already on the instance. Incus config values
@@ -1061,85 +1015,6 @@ func retryOnBusy(ctx context.Context, fn func() error) error {
 		}
 	}
 	return lastErr
-}
-
-func (b *Builder) removeNIC(ctx context.Context, name string) error {
-	return retryOnBusy(ctx, func() error {
-		full, expanded, err := b.getInstancePut(ctx, name)
-		if err != nil {
-			return err
-		}
-		config := map[string]string{}
-		devices := map[string]interface{}{}
-		for device, key := range map[string]string{"eth0": removedNICKey, publicNICName: publicClosedKey} {
-			if _, closed := full.Config[key]; closed {
-				continue
-			}
-			effective, exists := expanded[device]
-			if !exists {
-				continue
-			}
-			saved := savedNIC{}
-			if raw, ok := full.Devices[device]; ok {
-				saved.Instance = true
-				if err := json.Unmarshal(raw, &saved.Device); err != nil {
-					return err
-				}
-			} else if m, ok := effective.(map[string]interface{}); ok {
-				saved.Device = m
-			}
-			if saved.Device["type"] != "nic" {
-				continue
-			}
-			raw, err := json.Marshal(saved)
-			if err != nil {
-				return err
-			}
-			config[key] = string(raw)
-			devices[device] = map[string]string{"type": "none"}
-		}
-		if len(devices) == 0 {
-			return nil
-		}
-		_, err = b.Client.do(ctx, "PATCH", "/1.0/instances/"+name, map[string]interface{}{"config": config, "devices": devices}, requestOptions{ifMatch: full.etag})
-		return err
-	})
-}
-
-func (b *Builder) restoreNIC(ctx context.Context, name string) error {
-	return retryOnBusy(ctx, func() error {
-		full, _, err := b.getInstancePut(ctx, name)
-		if err != nil {
-			return err
-		}
-		changed := false
-		for device, key := range map[string]string{"eth0": removedNICKey, publicNICName: publicClosedKey} {
-			raw, closed := full.Config[key]
-			if !closed {
-				continue
-			}
-			var saved savedNIC
-			if err := json.Unmarshal([]byte(raw), &saved); err != nil {
-				return fmt.Errorf("decoding saved NIC state: %w", err)
-			}
-			if saved.Instance {
-				raw, err := json.Marshal(saved.Device)
-				if err != nil {
-					return err
-				}
-				full.Devices[device] = raw
-			} else {
-				delete(full.Devices, device)
-			}
-			delete(full.Config, key)
-			changed = true
-		}
-		if !changed {
-			return nil
-		}
-		_, err = b.Client.do(ctx, "PUT", "/1.0/instances/"+name, full, requestOptions{ifMatch: full.etag})
-		return err
-	})
 }
 
 // HasWorkingEth0 reports whether name's own eth0 (as Incus's

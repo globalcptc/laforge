@@ -69,6 +69,13 @@ func newPublicTestServer(t *testing.T) (*publicTestServer, *Builder, *memoryPubl
 				ip = f.networkIPv4
 			}
 			ok(map[string]interface{}{"type": "ovn", "status": "Created", "config": map[string]string{"ipv4.address": ip, "bridge.mtu": "1500"}})
+		case path == "/1.0/instances" && r.Method == "GET":
+			// recursion=1 list, as laforgeInstances uses for a named project.
+			list := make([]map[string]interface{}, 0, len(f.instances))
+			for _, inst := range f.instances {
+				list = append(list, inst)
+			}
+			ok(list)
 		case path == "/1.0/instances" && r.Method == "POST":
 			name := body["name"].(string)
 			if f.instances[name] != nil {
@@ -154,7 +161,7 @@ func newPublicTestServer(t *testing.T) (*publicTestServer, *Builder, *memoryPubl
 	}))
 	t.Cleanup(srv.Close)
 	a := &memoryPublicAllocator{}
-	b := New(&Client{BaseURL: srv.URL, Project: "competition", HTTPClient: srv.Client(), OperationTimeout: time.Second}, Config{PublicAccess: testPublicConfig(), Images: map[string]ImageRef{"linux": {VM: true, Fingerprint: "linux"}, "win2019": {VM: true, Fingerprint: "windows"}}, Sizes: map[string]SizeSpec{"small": {CPU: "2", Memory: "4GiB"}}, StoragePool: "Cluster_A_Pool"})
+	b := New(&Client{BaseURL: srv.URL, Project: "competition", HTTPClient: srv.Client(), OperationTimeout: time.Second}, Config{PublicAccess: testPublicConfig(), Images: map[string]ImageRef{"linux": {VM: true, Fingerprint: "linux"}, "win2019": {VM: true, Fingerprint: "windows"}}, Sizes: map[string]SizeSpec{"small": {CPU: "2", Memory: "4GiB"}}, StoragePool: "Cluster_A_Pool", GatewayAddr: "10.0.0.1:8443"})
 	b.PublicAddresses = a
 	return f, b, a
 }
@@ -211,20 +218,28 @@ func TestPublicNICLinuxWindowsAndLifecycle(t *testing.T) {
 		if _, err := b.DeployHostWithPublicPorts(ctx, spec, []string{"22"}, nil); err != nil {
 			t.Fatal(err)
 		}
-		if err := b.removeNIC(ctx, name); err != nil {
+		if err := b.CloseAccess(ctx, "1"); err != nil {
 			t.Fatal(err)
 		}
+		// Close firewalls the NICs; it must NOT detach them (that cut telemetry).
 		for _, d := range []string{"eth0", publicNICName} {
-			if f.instances[name]["devices"].(map[string]interface{})[d].(map[string]interface{})["type"] != "none" {
-				t.Fatalf("%s still open", d)
+			dev := f.instances[name]["devices"].(map[string]interface{})[d].(map[string]interface{})
+			if dev["type"] != "nic" {
+				t.Fatalf("%s was detached on close, want it kept and firewalled: %v", d, dev)
+			}
+			if dev["security.acls.default.egress.action"] != "drop" || dev["security.acls.default.ingress.action"] != "drop" {
+				t.Fatalf("%s not default-denied on close: %v", d, dev)
+			}
+			if !strings.Contains(dev["security.acls"].(string), closedACLName(name)) {
+				t.Fatalf("%s missing the closed egress ACL: %v", d, dev)
 			}
 		}
 		endpoints, err := b.ConfigureExternalAccess(ctx, "1", []builder.ExternalHost{{ExternalRef: name, TCPPorts: []string{"22"}}})
 		if err != nil || len(endpoints) != 1 || endpoints[0].PublicAddress != plan.Address+":22" || endpoints[0].ExternalPort != "22" {
 			t.Fatalf("endpoints: %v, %v", endpoints, err)
 		}
-		if f.instances[name]["devices"].(map[string]interface{})[publicNICName].(map[string]interface{})["type"] != "none" {
-			t.Fatal("ACL reconcile reopened closed NIC")
+		if f.instances[name]["devices"].(map[string]interface{})[publicNICName].(map[string]interface{})["security.acls.default.egress.action"] != "drop" {
+			t.Fatal("external-access reconcile reopened a closed NIC")
 		}
 		endpoints, err = b.ConfigureExternalAccess(ctx, "1", []builder.ExternalHost{{ExternalRef: name}})
 		if err != nil || len(endpoints) != 0 {
@@ -233,11 +248,15 @@ func TestPublicNICLinuxWindowsAndLifecycle(t *testing.T) {
 		if len(f.acls[publicACLName("competition", name)]["ingress"].([]interface{})) != 0 {
 			t.Fatal("removed public ports still allowed")
 		}
-		if err := b.restoreNIC(ctx, name); err != nil {
+		if err := b.OpenAccess(ctx, "1"); err != nil {
 			t.Fatal(err)
 		}
-		if f.instances[name]["devices"].(map[string]interface{})[publicNICName].(map[string]interface{})["hwaddr"] != plan.Device["hwaddr"] {
+		pubNIC := f.instances[name]["devices"].(map[string]interface{})[publicNICName].(map[string]interface{})
+		if pubNIC["hwaddr"] != plan.Device["hwaddr"] {
 			t.Fatal("MAC changed on reopen")
+		}
+		if pubNIC["security.acls.default.egress.action"] == "drop" {
+			t.Fatal("public NIC still egress-denied after open -- pre-close state not restored")
 		}
 		f.failDelete = true
 		if err := b.DestroyHost(ctx, "1", name); err == nil || a.released != 0 {
@@ -394,19 +413,19 @@ func TestPublicNICRebuildRetainsAddressAndClosedRetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := b.removeNIC(ctx, name); err != nil {
+	if err := b.CloseAccess(ctx, "1"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := b.DeployHostWithPublicPorts(ctx, spec, []string{"22"}, nil); err != nil {
 		t.Fatal(err)
 	}
-	if f.instances[name]["devices"].(map[string]interface{})[publicNICName].(map[string]interface{})["type"] != "none" {
+	if f.instances[name]["devices"].(map[string]interface{})[publicNICName].(map[string]interface{})["security.acls.default.egress.action"] != "drop" {
 		t.Fatal("retry reopened a closed NIC")
 	}
 	if err := b.ensureHostPortACL(ctx, "172.16.0.0/24", nil, builder.HostAccess{ExternalRef: name, TCPPorts: []string{"22"}}); err != nil {
 		t.Fatal(err)
 	}
-	if f.instances[name]["devices"].(map[string]interface{})["eth0"].(map[string]interface{})["type"] != "none" {
+	if f.instances[name]["devices"].(map[string]interface{})["eth0"].(map[string]interface{})["security.acls.default.egress.action"] != "drop" {
 		t.Fatal("network ACL update reopened primary NIC")
 	}
 	if err := b.DestroyHostForRebuild(ctx, "1", name); err != nil {

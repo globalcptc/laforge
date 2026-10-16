@@ -468,6 +468,27 @@ export interface ExternalAccessEntry {
   public_address: string
 }
 
+// ExternalAccessExportRow (GET /builds/{id}/external-access/export): one
+// endpoint plus how to log in -- the host's current admin account and password
+// (blank for containers). password_applied is false until the agent has run the
+// set_password step the password came from.
+export interface ExternalAccessExportRow {
+  team: number
+  host: string
+  ip: string
+  port: string
+  protocol: string
+  username: string
+  password: string
+  deployed_object_id: string
+  object_name: string
+  kind: string
+  internal_port: string
+  public_address: string
+  password_applied: boolean
+  password_source?: 'step' | 'environment'
+}
+
 // ObjectConfig (GET /builds/{id}/objects/{objectId}/config): one host/container's
 // full authored config from the build's content revision -- what the host info
 // panel shows beyond runtime state.

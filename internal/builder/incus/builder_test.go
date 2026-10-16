@@ -405,16 +405,19 @@ func TestDeployRealWindowsHostAgainstLocallyCachedImage(t *testing.T) {
 	t.Logf("real Windows VM %s reached status=Running against genuine hardware virtualization", ref)
 }
 
-// TestOpenCloseAccessRemovesAndRestoresNIC is the real proof behind
-// CloseAccess's doc comment: it deploys two real containers on two
-// different (fake) teams, closes team A's access, and confirms -- by
-// reading the instance back from the live daemon, not by trusting the
-// call succeeded -- that team A's container actually lost its eth0
-// device while team B's was untouched. Then reopens it and confirms eth0
-// came back with its original network attachment.
-func TestOpenCloseAccessRemovesAndRestoresNIC(t *testing.T) {
+// TestOpenCloseAccessFirewallsNICWithoutDetaching is the real proof behind
+// access.go's doc comment: closing a team must NOT detach eth0 (that cut agent
+// telemetry and tore the host off its NATs), it must firewall the NIC that stays
+// attached. It deploys two real containers on two different (fake) teams, closes
+// team A, and confirms -- by reading the instance back from the live daemon --
+// that team A's eth0 is still a working NIC whose defaults are now deny-both and
+// whose closed-egress ACL is attached, while team B is untouched. Then it reopens
+// and confirms the NIC's pre-close ACL state is restored.
+func TestOpenCloseAccessFirewallsNICWithoutDetaching(t *testing.T) {
 	client := liveClient(t)
-	b := New(client, testConfig()) // native OCI container, no docker-base
+	cfg := testConfig()
+	cfg.GatewayAddr = "10.254.254.254:8443" // a pinned IP so close needs no DNS
+	b := New(client, cfg)                   // native OCI container, no docker-base
 	ctx := context.Background()
 
 	specA := builder.ContainerSpec{ExternalName: uniqueExternalName(t, "teamA"), Team: "team-a", Image: "alpine", Size: "small"}
@@ -438,11 +441,19 @@ func TestOpenCloseAccessRemovesAndRestoresNIC(t *testing.T) {
 	if err := b.CloseAccess(ctx, "team-a"); err != nil {
 		t.Fatalf("CloseAccess: %v", err)
 	}
-	if hasEth0(t, client, refA) {
-		t.Fatal("team A container still has eth0 after CloseAccess(\"team-a\") -- access was not actually closed")
+	// eth0 STAYS -- the whole point: telemetry and NAT survive a close.
+	if !hasEth0(t, client, refA) {
+		t.Fatal("team A container lost its eth0 after CloseAccess -- close must firewall the NIC, never detach it")
 	}
-	if !hasEth0(t, client, refB) {
-		t.Fatal("team B container lost its eth0 after CloseAccess(\"team-a\") -- CloseAccess affected the wrong team")
+	nic := eth0NIC(t, client, refA)
+	if nic["security.acls.default.ingress.action"] != "drop" || nic["security.acls.default.egress.action"] != "drop" {
+		t.Fatalf("team A eth0 defaults = ingress %q egress %q after close, want both drop", nic["security.acls.default.ingress.action"], nic["security.acls.default.egress.action"])
+	}
+	if !strings.Contains(nic["security.acls"], closedACLName(refA)) {
+		t.Fatalf("team A eth0 security.acls = %q after close, want the closed ACL %q attached", nic["security.acls"], closedACLName(refA))
+	}
+	if nicB := eth0NIC(t, client, refB); nicB["security.acls.default.egress.action"] == "drop" {
+		t.Fatal("team B eth0 egress went to drop after CloseAccess(\"team-a\") -- close affected the wrong team")
 	}
 
 	// Idempotent: closing an already-closed team must not error.
@@ -454,12 +465,31 @@ func TestOpenCloseAccessRemovesAndRestoresNIC(t *testing.T) {
 		t.Fatalf("OpenAccess: %v", err)
 	}
 	if !hasEth0(t, client, refA) {
-		t.Fatal("team A container still has no eth0 after OpenAccess -- access was not restored")
+		t.Fatal("team A container has no eth0 after OpenAccess -- the NIC should still be attached")
+	}
+	if nic := eth0NIC(t, client, refA); nic["security.acls.default.egress.action"] == "drop" {
+		t.Fatal("team A eth0 egress still drop after OpenAccess -- the pre-close NIC state was not restored")
 	}
 	// Idempotent: opening an already-open team must not error.
 	if err := b.OpenAccess(ctx, "team-a"); err != nil {
 		t.Fatalf("OpenAccess (already open): %v", err)
 	}
+}
+
+// eth0NIC reads an instance's effective eth0 device from the live daemon.
+func eth0NIC(t *testing.T, client *Client, name string) map[string]string {
+	t.Helper()
+	raw, err := client.get(context.Background(), "/1.0/instances/"+name)
+	if err != nil {
+		t.Fatalf("reading instance %s: %v", name, err)
+	}
+	var full struct {
+		ExpandedDevices map[string]map[string]string `json:"expanded_devices"`
+	}
+	if err := json.Unmarshal(raw, &full); err != nil {
+		t.Fatalf("decoding instance %s: %v", name, err)
+	}
+	return full.ExpandedDevices["eth0"]
 }
 
 func instanceState(t *testing.T, client *Client, name string) string {

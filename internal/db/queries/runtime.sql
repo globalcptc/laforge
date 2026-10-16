@@ -137,6 +137,36 @@ SELECT EXISTS (
       AND payload->>'team' = @team::text
 ) AS present;
 
+-- name: HasCompletedTeamAccessTask :one
+-- Fix 1 (reconciler drives desired-vs-applied, not the stored label): a team's
+-- access_state defaults to 'closed' before any builder call has run, but a
+-- freshly deployed team's instances are actually OPEN (eth0 attached, public NAT
+-- configured) -- the label is an assumption, not an applied fact. This reports
+-- whether an open/close task has ever actually COMPLETED for the team, so the
+-- reconciler can tell "converged to the label" apart from "never applied; reality
+-- is open-by-deploy" and issue the real close once the team is up.
+SELECT EXISTS (
+    SELECT 1 FROM task
+    WHERE build_id = @build_id
+      AND kind IN ('open_access', 'close_access')
+      AND status = 'done'
+      AND payload->>'team' = @team::text
+) AS present;
+
+-- name: SupersedeTeamAccessTasks :execrows
+-- Fix 3 (serialize manual access changes): a fresh manual open/close for a team
+-- cancels any still-PENDING access task for that same team (either direction), so
+-- a flurry of operator clicks collapses to just the newest intent instead of
+-- queuing a tug-of-war the runner then executes one stale step at a time. A task
+-- already 'leased' is mid-execution against the builder and is left to finish;
+-- the newest task runs after it and wins, so the team lands in the last-requested
+-- state regardless of ordering.
+UPDATE task SET status = 'failed', last_error = 'superseded by a newer team access change', updated_at = now()
+WHERE build_id = @build_id
+  AND kind IN ('open_access', 'close_access')
+  AND status = 'pending'
+  AND payload->>'team' = @team::text;
+
 -- name: HasConfigureNetworkAccessTask :one
 -- Dedup for the network-access reconciler: one live configure_network_access task
 -- per (team, desired-config fingerprint). The fingerprint hashes the team's
@@ -166,6 +196,21 @@ SELECT EXISTS (
       AND kind = 'configure_external_access'
       AND payload->>'team' = @team::text
       AND payload->>'fingerprint' = @fingerprint::text
+) AS present;
+
+-- name: HasOpenConfigureAccessTask :one
+-- Fix 1 gate: is a team's network/external-access configuration still settling?
+-- A close must run AFTER external access attaches its public-port ACLs (so the
+-- close can capture and strip them); otherwise the close records a NIC with no
+-- public ACL and a later external-access pass silently re-opens ingress on a
+-- team the label calls closed. True while any configure_network_access or
+-- configure_external_access task for the team is still pending or leased.
+SELECT EXISTS (
+    SELECT 1 FROM task
+    WHERE build_id = @build_id
+      AND kind IN ('configure_network_access', 'configure_external_access')
+      AND status IN ('pending', 'leased')
+      AND payload->>'team' = @team::text
 ) AS present;
 
 -- name: EnsureDeployedObject :one

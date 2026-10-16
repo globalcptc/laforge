@@ -18,10 +18,11 @@ type infraFact struct {
 
 type objectInfra struct {
 	Placement []infraFact `json:"placement"`
-	// Password is the environment-wide root/administrator password, exposed so
-	// an operator can log in by hand. It is environment-level, not per-host
-	// (LaForge stores no per-host password), and only ever returned to a
-	// caller already authorized to read this build.
+	// Password is this host's current root/Administrator password (see
+	// currentAdminPasswords: the last admin set_password the agent applied,
+	// else the environment root password), exposed so an operator can log in
+	// by hand. Only ever returned to a caller already authorized to read this
+	// build.
 	Password string `json:"password,omitempty"`
 }
 
@@ -89,6 +90,11 @@ func (s *Server) handleObjectInfra(w http.ResponseWriter, r *http.Request) {
 		Name:              build.EnvironmentName,
 	}); err == nil {
 		infra.Password = db.StrOrEmpty(env.RootPassword)
+	}
+	if obj.Kind == "host" {
+		if passwords, err := currentAdminPasswords(r.Context(), s.Queries, build.ID); err == nil {
+			infra.Password = passwordFor(passwords, objectID, infra.Password).Password
+		}
 	}
 
 	writeJSON(w, http.StatusOK, infra)

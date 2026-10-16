@@ -224,7 +224,7 @@ func effectiveAccessEnd(windows []schedule.AccessWindow, team db.Team, now time.
 // handleSetTeamAccess is the operator front door onto the same
 // open_access/close_access task the runner already executes against the real
 // builder (internal/runner's executeAccess, proven live in
-// TestOpenCloseAccessRemovesAndRestoresNIC/TestRealTwoTeamIncusBuild). It sets a
+// TestOpenCloseAccessFirewallsNICWithoutDetaching/TestRealTwoTeamIncusBuild). It sets a
 // manual override so the change survives the schedule reconciler, and fires the
 // builder call immediately so it takes effect now, not on the next pass.
 func (s *Server) handleSetTeamAccess(w http.ResponseWriter, r *http.Request) {
@@ -273,6 +273,17 @@ func (s *Server) handleSetTeamAccess(w http.ResponseWriter, r *http.Request) {
 		}
 		if _, err := s.Queries.SetTeamAccessOverride(r.Context(), db.SetTeamAccessOverrideParams{
 			ID: team.ID, AccessOverrideState: dir, AccessOverrideUntil: until,
+		}); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		// Collapse a flurry of clicks to the newest intent: cancel any
+		// still-pending access task for this team (either direction) before
+		// queuing this one, so the runner doesn't execute a stale open/close
+		// after the operator's latest decision. A task already leased is
+		// mid-flight and left to finish; this newest one runs after and wins.
+		if _, err := s.Queries.SupersedeTeamAccessTasks(r.Context(), db.SupersedeTeamAccessTasksParams{
+			BuildID: build.ID, Team: teamStr,
 		}); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return

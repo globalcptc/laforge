@@ -58,6 +58,16 @@ type Config struct {
 	// admitted highest-priority first. 0 = unbounded. From builder_config
 	// incus_host_max_concurrency -- see admission.go.
 	MaxConcurrentDeploys int
+	// GatewayAddr is the host:port a deployed agent dials for heartbeats, tasks
+	// and the interactive shell relay -- the same value the runner bakes into
+	// every agent (GATEWAY_PUBLIC_ADDR). CloseAccess pins it as the ONLY
+	// external egress a closed team keeps: locking a closed instance's outbound
+	// to just the gateway preserves telemetry through the pre-competition window
+	// while denying a team any other outbound path (so a planted implant can't
+	// phone home). Resolved to an IP at close time and re-resolved each pass, so
+	// a gateway DNS change is picked up. Empty means close can't pin it and
+	// errors rather than silently cutting telemetry or leaving a team open.
+	GatewayAddr string
 }
 
 // ociRegistryOrDefault is deployOCIContainer's resolution of Config.OCIRegistry

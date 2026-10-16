@@ -929,10 +929,18 @@ func (r *Runner) executeAccess(ctx context.Context, q *db.Queries, task db.Task)
 		fmt.Sprintf("%s for team %s", task.Kind, payload.Team), map[string]any{"team": payload.Team})
 	if task.Kind == "open_access" {
 		if err := b.OpenAccess(ctx, payload.Team); err != nil {
+			// Best-effort builders aggregate every instance's failure (naming
+			// each one). Surface that in the event timeline, not just the task's
+			// last_error, so an operator can see which box needs a hand -- then
+			// fail the task so it's visibly red and retried.
+			r.logEvent(ctx, q, task.BuildID, task.ID, "access.open.failed",
+				fmt.Sprintf("team %s open did not fully apply: %v", payload.Team, err))
 			return err
 		}
 	} else {
 		if err := b.CloseAccess(ctx, payload.Team); err != nil {
+			r.logEvent(ctx, q, task.BuildID, task.ID, "access.close.failed",
+				fmt.Sprintf("team %s close did not fully apply: %v", payload.Team, err))
 			return err
 		}
 	}

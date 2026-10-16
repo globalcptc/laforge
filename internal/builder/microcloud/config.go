@@ -67,6 +67,12 @@ type Config struct {
 	// member or balance placement itself -- that's LXD's job. Empty means no
 	// explicit target at all (also LXD's default scheduling). Per-cluster config.
 	ClusterGroup string
+	// GatewayAddr is the host:port a deployed agent dials (GATEWAY_PUBLIC_ADDR),
+	// the only external egress a CLOSED team keeps so telemetry survives the
+	// pre-competition window. See the incus builder's identical field and
+	// access.go for the full rationale. Empty makes CloseAccess refuse rather
+	// than silently cut telemetry.
+	GatewayAddr string
 }
 
 // clusterTargetParam is the `target` query-param value for creating an instance

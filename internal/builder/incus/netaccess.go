@@ -159,11 +159,24 @@ func (b *Builder) ensurePeer(ctx context.Context, from, to string) error {
 // set where the ACL is attached). PUT is a full replace, so a changed policy
 // converges on re-run.
 func (b *Builder) ensureACLObject(ctx context.Context, name, description string, ingress []map[string]interface{}) error {
+	return b.ensureACLObjectFull(ctx, name, description, ingress, nil)
+}
+
+// ensureACLObjectFull is ensureACLObject with explicit egress rules too -- used
+// by CloseAccess, the one ACL that whitelists egress (gateway + intra-env) under
+// a NIC-level default-deny egress, where the other ACLs only ever allow ingress.
+func (b *Builder) ensureACLObjectFull(ctx context.Context, name, description string, ingress, egress []map[string]interface{}) error {
+	if ingress == nil {
+		ingress = []map[string]interface{}{}
+	}
+	if egress == nil {
+		egress = []map[string]interface{}{}
+	}
 	acl := map[string]interface{}{
 		"name":        name,
 		"description": description,
 		"ingress":     ingress,
-		"egress":      []map[string]interface{}{},
+		"egress":      egress,
 		"config":      map[string]string{},
 	}
 	if _, err := b.Client.post(ctx, "/1.0/network-acls", acl); err != nil {

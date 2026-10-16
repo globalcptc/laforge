@@ -92,6 +92,12 @@
   --color-cptc-pink: #d6456b;
   --color-cptc-pink-fg: #ffffff;
 
+  /* CPTC violet as a fixed fill -- section bands such as the External Access
+     team headers, with white ink. Unlike --color-brand (which flips to lavender
+     in dark mode), this stays the logo violet in either theme. */
+  --color-cptc-violet: #301956;
+  --color-cptc-violet-fg: #ffffff;
+
   --radius-token-sm: 0.375rem;
   --radius-token: 0.5rem;
   --radius-token-lg: 0.75rem;

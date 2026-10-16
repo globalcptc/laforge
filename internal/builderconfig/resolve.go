@@ -372,6 +372,7 @@ func resolveMicrocloud(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builde
 		ExternalPortMax:       int(db.Int32OrZero(row.ExternalPortMax)),
 		DockerBaseFingerprint: row.DockerBaseFingerprint,
 		ClusterGroup:          row.MicrocloudClusterGroup,
+		GatewayAddr:           gatewayAddr(),
 	})
 	if pool != nil && row.ID.Valid {
 		b.PublicAddresses = microcloud.SQLPublicAddressAllocator{Pool: pool, BuilderID: row.ID}
@@ -407,6 +408,17 @@ func decodeMicrocloudImagesAndSizes(row db.BuilderConfig) (map[string]microcloud
 // Incus pool).
 func (e endpoint) microcloudClient() (*microcloud.Client, error) {
 	return microcloud.NewClient(e.apiURL, e.certPEM, e.keyPEM, e.serverCertPEM, e.project)
+}
+
+// gatewayAddr is the host:port a deployed agent dials -- the same value the
+// runner bakes into every agent (GATEWAY_PUBLIC_ADDR). The Incus/MicroCloud
+// builders pin it as the only external egress a CLOSED team keeps, so telemetry
+// survives the pre-competition window. Read from the runner's own process
+// environment (the runner is Resolve's real caller and already reads this env to
+// deliver agents), so no new column is needed; "" when unset, which CloseAccess
+// treats as a misconfiguration rather than silently cutting telemetry.
+func gatewayAddr() string {
+	return strings.TrimSpace(os.Getenv("GATEWAY_PUBLIC_ADDR"))
 }
 
 // resolveIncusPool builds one internal/builder/incus.Builder per entry in
@@ -487,6 +499,7 @@ func resolveIncusPool(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder
 			ExternalPortMin:      int(db.Int32OrZero(row.ExternalPortMin)),
 			ExternalPortMax:      int(db.Int32OrZero(row.ExternalPortMax)),
 			MaxConcurrentDeploys: int(row.IncusHostMaxConcurrency),
+			GatewayAddr:          gatewayAddr(),
 		}))
 	}
 

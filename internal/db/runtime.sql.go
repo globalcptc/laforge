@@ -1073,6 +1073,35 @@ func (q *Queries) GetTeamByNumber(ctx context.Context, arg GetTeamByNumberParams
 	return i, err
 }
 
+const hasCompletedTeamAccessTask = `-- name: HasCompletedTeamAccessTask :one
+SELECT EXISTS (
+    SELECT 1 FROM task
+    WHERE build_id = $1
+      AND kind IN ('open_access', 'close_access')
+      AND status = 'done'
+      AND payload->>'team' = $2::text
+) AS present
+`
+
+type HasCompletedTeamAccessTaskParams struct {
+	BuildID pgtype.UUID `json:"build_id"`
+	Team    string      `json:"team"`
+}
+
+// Fix 1 (reconciler drives desired-vs-applied, not the stored label): a team's
+// access_state defaults to 'closed' before any builder call has run, but a
+// freshly deployed team's instances are actually OPEN (eth0 attached, public NAT
+// configured) -- the label is an assumption, not an applied fact. This reports
+// whether an open/close task has ever actually COMPLETED for the team, so the
+// reconciler can tell "converged to the label" apart from "never applied; reality
+// is open-by-deploy" and issue the real close once the team is up.
+func (q *Queries) HasCompletedTeamAccessTask(ctx context.Context, arg HasCompletedTeamAccessTaskParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasCompletedTeamAccessTask, arg.BuildID, arg.Team)
+	var present bool
+	err := row.Scan(&present)
+	return present, err
+}
+
 const hasConfigureExternalAccessTask = `-- name: HasConfigureExternalAccessTask :one
 SELECT EXISTS (
     SELECT 1 FROM task
@@ -1127,6 +1156,34 @@ type HasConfigureNetworkAccessTaskParams struct {
 // the policy permanently half-applied.
 func (q *Queries) HasConfigureNetworkAccessTask(ctx context.Context, arg HasConfigureNetworkAccessTaskParams) (bool, error) {
 	row := q.db.QueryRow(ctx, hasConfigureNetworkAccessTask, arg.BuildID, arg.Team, arg.Fingerprint)
+	var present bool
+	err := row.Scan(&present)
+	return present, err
+}
+
+const hasOpenConfigureAccessTask = `-- name: HasOpenConfigureAccessTask :one
+SELECT EXISTS (
+    SELECT 1 FROM task
+    WHERE build_id = $1
+      AND kind IN ('configure_network_access', 'configure_external_access')
+      AND status IN ('pending', 'leased')
+      AND payload->>'team' = $2::text
+) AS present
+`
+
+type HasOpenConfigureAccessTaskParams struct {
+	BuildID pgtype.UUID `json:"build_id"`
+	Team    string      `json:"team"`
+}
+
+// Fix 1 gate: is a team's network/external-access configuration still settling?
+// A close must run AFTER external access attaches its public-port ACLs (so the
+// close can capture and strip them); otherwise the close records a NIC with no
+// public ACL and a later external-access pass silently re-opens ingress on a
+// team the label calls closed. True while any configure_network_access or
+// configure_external_access task for the team is still pending or leased.
+func (q *Queries) HasOpenConfigureAccessTask(ctx context.Context, arg HasOpenConfigureAccessTaskParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasOpenConfigureAccessTask, arg.BuildID, arg.Team)
 	var present bool
 	err := row.Scan(&present)
 	return present, err
@@ -2873,4 +2930,32 @@ func (q *Queries) SetTeamAccessState(ctx context.Context, arg SetTeamAccessState
 		&i.AccessOverrideState,
 	)
 	return i, err
+}
+
+const supersedeTeamAccessTasks = `-- name: SupersedeTeamAccessTasks :execrows
+UPDATE task SET status = 'failed', last_error = 'superseded by a newer team access change', updated_at = now()
+WHERE build_id = $1
+  AND kind IN ('open_access', 'close_access')
+  AND status = 'pending'
+  AND payload->>'team' = $2::text
+`
+
+type SupersedeTeamAccessTasksParams struct {
+	BuildID pgtype.UUID `json:"build_id"`
+	Team    string      `json:"team"`
+}
+
+// Fix 3 (serialize manual access changes): a fresh manual open/close for a team
+// cancels any still-PENDING access task for that same team (either direction), so
+// a flurry of operator clicks collapses to just the newest intent instead of
+// queuing a tug-of-war the runner then executes one stale step at a time. A task
+// already 'leased' is mid-execution against the builder and is left to finish;
+// the newest task runs after it and wins, so the team lands in the last-requested
+// state regardless of ordering.
+func (q *Queries) SupersedeTeamAccessTasks(ctx context.Context, arg SupersedeTeamAccessTasksParams) (int64, error) {
+	result, err := q.db.Exec(ctx, supersedeTeamAccessTasks, arg.BuildID, arg.Team)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
