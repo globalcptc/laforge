@@ -111,31 +111,39 @@ func (b *Builder) setAccess(ctx context.Context, team string, closed bool) error
 	return errors.Join(errs...)
 }
 
-// applyNetworkEgress (re)writes the network's access ACL and asserts the
-// fail-closed default-drop egress baseline. The gateway + intra allows are
-// always enabled; the broad 0.0.0.0/0 allow is enabled when open, disabled when
-// closed -- that single rule is the egress switch.
+// applyNetworkEgress sets a team network's boundary policy. Attaching a network
+// ACL engages network-level ingress enforcement, so an egress-only ACL would
+// drop ALL inbound (verified live) -- hence open DETACHES the ACL entirely and
+// restores default-allow egress (the network's normal state: inbound flows via
+// the per-host NIC ACLs and the proxy forwards). Close attaches an ACL that
+// allows egress to the gateway + the team's own CIDRs and ingress from the
+// team's own CIDRs (intra host-to-host; the agent's gateway reply is stateful),
+// and flips the default egress to drop. External in/out then falls through to
+// the network defaults (ingress already drop, egress now drop).
 func (b *Builder) applyNetworkEgress(ctx context.Context, netName string, gatewayAllows []map[string]interface{}, teamCIDRs []string, closed bool) error {
-	egress := make([]map[string]interface{}, 0, len(gatewayAllows)+len(teamCIDRs)+1)
+	name := networkAccessACLName(netName)
+	if !closed {
+		if err := b.detachNetworkACL(ctx, netName, name); err != nil {
+			return err
+		}
+		_, err := b.Client.patch(ctx, "/1.0/networks/"+url.PathEscape(netName), map[string]interface{}{
+			"config": map[string]string{"security.acls.default.egress.action": "allow"},
+		})
+		return err
+	}
+	ingress := make([]map[string]interface{}, 0, len(teamCIDRs))
+	egress := make([]map[string]interface{}, 0, len(gatewayAllows)+len(teamCIDRs))
 	egress = append(egress, gatewayAllows...)
 	for _, c := range teamCIDRs {
+		ingress = append(ingress, map[string]interface{}{"action": "allow", "state": "enabled", "source": c})
 		egress = append(egress, map[string]interface{}{"action": "allow", "state": "enabled", "destination": c})
 	}
-	broad := "enabled"
-	if closed {
-		broad = "disabled"
-	}
-	egress = append(egress, map[string]interface{}{"action": "allow", "state": broad, "destination": "0.0.0.0/0"})
-
-	name := networkAccessACLName(netName)
-	if err := b.ensureACLObjectFull(ctx, name, "LaForge access control for "+netName, nil, egress); err != nil {
+	if err := b.ensureACLObjectFull(ctx, name, "LaForge access lockdown for "+netName, ingress, egress); err != nil {
 		return err
 	}
 	if err := b.attachNetworkACL(ctx, netName, name); err != nil {
 		return err
 	}
-	// Fail-closed baseline: unmatched egress is dropped, so a broken toggle locks
-	// a team down (gateway-only) rather than leaving it wide open. Idempotent.
 	_, err := b.Client.patch(ctx, "/1.0/networks/"+url.PathEscape(netName), map[string]interface{}{
 		"config": map[string]string{"security.acls.default.egress.action": "drop"},
 	})
@@ -232,6 +240,37 @@ func (b *Builder) attachNetworkACL(ctx context.Context, netName, name string) er
 	}
 	_, err = b.Client.patch(ctx, "/1.0/networks/"+url.PathEscape(netName), map[string]interface{}{
 		"config": map[string]string{"security.acls": names},
+	})
+	return err
+}
+
+// detachNetworkACL removes name from the network's security.acls (idempotent).
+// With the access ACL gone the network has no attached ACL, so network-level
+// ingress enforcement disengages and inbound flows normally again.
+func (b *Builder) detachNetworkACL(ctx context.Context, netName, name string) error {
+	raw, err := b.Client.get(ctx, "/1.0/networks/"+url.PathEscape(netName))
+	if err != nil {
+		return err
+	}
+	var net struct {
+		Config map[string]string `json:"config"`
+	}
+	if err := json.Unmarshal(raw, &net); err != nil {
+		return err
+	}
+	have := net.Config["security.acls"]
+	kept := []string{}
+	for _, a := range strings.Split(have, ",") {
+		if a = strings.TrimSpace(a); a != "" && a != name {
+			kept = append(kept, a)
+		}
+	}
+	newVal := strings.Join(kept, ",")
+	if newVal == strings.TrimSpace(have) {
+		return nil // not attached
+	}
+	_, err = b.Client.patch(ctx, "/1.0/networks/"+url.PathEscape(netName), map[string]interface{}{
+		"config": map[string]string{"security.acls": newVal},
 	})
 	return err
 }

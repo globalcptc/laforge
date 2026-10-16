@@ -104,15 +104,31 @@ func (b *Builder) setAccess(ctx context.Context, team string, closed bool) error
 	return errors.Join(errs...)
 }
 
-// applyNetworkEgress (re)writes a team network's egress access ACL and asserts
-// the fail-closed default-drop egress baseline -- identical to the Incus builder.
-// Gateway + intra allows are always enabled; the broad 0.0.0.0/0 allow is the
-// open/close switch. No allow-vs-drop precedence is relied on (every enabled
-// rule is an allow; the network default action does the denying).
+// applyNetworkEgress sets a team OVN network's boundary policy -- identical to
+// the Incus builder. Attaching a network ACL engages network-level ingress
+// enforcement, so an egress-only ACL would drop ALL inbound; hence open DETACHES
+// the ACL and restores default-allow egress (normal state), and close attaches
+// an ACL allowing egress to gateway + team CIDRs and ingress from team CIDRs
+// (intra; the agent reply is stateful), flipping the default egress to drop.
 func (b *Builder) applyNetworkEgress(ctx context.Context, netName string, gatewayAllows []map[string]interface{}, teamCIDRs []string, closed bool) error {
-	egress := egressRuleSet(gatewayAllows, teamCIDRs, closed, false)
 	name := networkAccessACLName(netName)
-	if err := b.ensureACLObjectFull(ctx, name, "LaForge access control for "+netName, nil, egress); err != nil {
+	if !closed {
+		if err := b.detachNetworkACL(ctx, netName, name); err != nil {
+			return err
+		}
+		_, err := b.Client.patch(ctx, "/1.0/networks/"+url.PathEscape(netName), map[string]interface{}{
+			"config": map[string]string{"security.acls.default.egress.action": "allow"},
+		})
+		return err
+	}
+	ingress := make([]map[string]interface{}, 0, len(teamCIDRs))
+	egress := make([]map[string]interface{}, 0, len(gatewayAllows)+len(teamCIDRs))
+	egress = append(egress, gatewayAllows...)
+	for _, c := range teamCIDRs {
+		ingress = append(ingress, map[string]interface{}{"action": "allow", "state": "enabled", "source": c})
+		egress = append(egress, map[string]interface{}{"action": "allow", "state": "enabled", "destination": c})
+	}
+	if err := b.ensureACLObjectFull(ctx, name, "LaForge access lockdown for "+netName, ingress, egress); err != nil {
 		return err
 	}
 	if err := b.attachNetworkACL(ctx, netName, name); err != nil {
@@ -120,6 +136,36 @@ func (b *Builder) applyNetworkEgress(ctx context.Context, netName string, gatewa
 	}
 	_, err := b.Client.patch(ctx, "/1.0/networks/"+url.PathEscape(netName), map[string]interface{}{
 		"config": map[string]string{"security.acls.default.egress.action": "drop"},
+	})
+	return err
+}
+
+// detachNetworkACL removes name from the network's security.acls (idempotent),
+// disengaging network-level ingress enforcement so inbound flows normally.
+func (b *Builder) detachNetworkACL(ctx context.Context, netName, name string) error {
+	raw, err := b.Client.get(ctx, "/1.0/networks/"+url.PathEscape(netName))
+	if err != nil {
+		return err
+	}
+	var net struct {
+		Config map[string]string `json:"config"`
+	}
+	if err := json.Unmarshal(raw, &net); err != nil {
+		return err
+	}
+	have := net.Config["security.acls"]
+	kept := []string{}
+	for _, a := range strings.Split(have, ",") {
+		if a = strings.TrimSpace(a); a != "" && a != name {
+			kept = append(kept, a)
+		}
+	}
+	newVal := strings.Join(kept, ",")
+	if newVal == strings.TrimSpace(have) {
+		return nil
+	}
+	_, err = b.Client.patch(ctx, "/1.0/networks/"+url.PathEscape(netName), map[string]interface{}{
+		"config": map[string]string{"security.acls": newVal},
 	})
 	return err
 }
@@ -157,7 +203,7 @@ func (b *Builder) setPublicAccess(ctx context.Context, name string, gatewayAllow
 		r["state"] = want
 	}
 	// Egress: gateway + intra always allowed, broad drop toggled on when closed.
-	acl.Egress = egressRuleSet(gatewayAllows, teamCIDRs, closed, true)
+	acl.Egress = publicEgressRules(gatewayAllows, teamCIDRs, closed)
 	_, err = b.Client.do(ctx, "PUT", "/1.0/network-acls/"+aclName, map[string]interface{}{
 		"name":        aclName,
 		"description": acl.Description,
@@ -168,31 +214,23 @@ func (b *Builder) setPublicAccess(ctx context.Context, name string, gatewayAllow
 	return err
 }
 
-// egressRuleSet builds the egress rules shared by both paths. gateway + intra
-// are always-enabled allows. For a NETWORK (dropRule=false) the open/close switch
-// is a broad allow-0.0.0.0/0 whose state flips (the network's default-drop denies
-// the rest). For the lf-public NIC on a shared network (dropRule=true) we can't
-// set a per-team default, so the switch is a broad drop-0.0.0.0/0 enabled only
-// when closed; the specific gateway/intra allows take precedence over it.
-func egressRuleSet(gatewayAllows []map[string]interface{}, teamCIDRs []string, closed, dropRule bool) []map[string]interface{} {
+// publicEgressRules is the egress rule set for the lf-public NIC's per-host ACL.
+// gateway + intra are always-enabled allows; the open/close switch is a broad
+// drop-0.0.0.0/0 enabled only when closed. The public network is shared across
+// teams, so we can't use a per-team network default here -- the specific
+// gateway/intra allows take precedence over the broad drop. (Unverified live --
+// MicroCloud has no active hosts.)
+func publicEgressRules(gatewayAllows []map[string]interface{}, teamCIDRs []string, closed bool) []map[string]interface{} {
 	rules := make([]map[string]interface{}, 0, len(gatewayAllows)+len(teamCIDRs)+1)
 	rules = append(rules, gatewayAllows...)
 	for _, c := range teamCIDRs {
 		rules = append(rules, map[string]interface{}{"action": "allow", "state": "enabled", "destination": c})
 	}
-	if dropRule {
-		st := "disabled"
-		if closed {
-			st = "enabled"
-		}
-		rules = append(rules, map[string]interface{}{"action": "drop", "state": st, "destination": "0.0.0.0/0"})
-	} else {
-		st := "enabled"
-		if closed {
-			st = "disabled"
-		}
-		rules = append(rules, map[string]interface{}{"action": "allow", "state": st, "destination": "0.0.0.0/0"})
+	st := "disabled"
+	if closed {
+		st = "enabled"
 	}
+	rules = append(rules, map[string]interface{}{"action": "drop", "state": st, "destination": "0.0.0.0/0"})
 	return rules
 }
 

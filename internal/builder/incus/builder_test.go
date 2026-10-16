@@ -448,14 +448,14 @@ func TestCloseAccessLocksNetworkWithoutTouchingNIC(t *testing.T) {
 	if after := eth0NIC(t, client, refA); !reflect.DeepEqual(before, after) {
 		t.Fatalf("eth0 changed by CloseAccess\n before=%v\n after =%v -- close must not touch a NIC", before, after)
 	}
-	// Closed: the network defaults egress to drop, and the broad allow-all egress
-	// rule in the access ACL is DISABLED (the fail-closed switch), while a gateway
-	// allow remains enabled.
+	// Closed: the access ACL is attached to the network and the network defaults
+	// egress to drop. Attaching an egress-only ACL would drop all inbound, so the
+	// ACL also carries ingress allows for the team's own CIDRs.
 	if act := networkDefaultEgress(t, client, netRef); act != "drop" {
 		t.Fatalf("network default egress = %q after close, want drop", act)
 	}
-	if st := broadEgressState(t, client, aclName); st != "disabled" {
-		t.Fatalf("broad allow-0.0.0.0/0 egress state = %q after close, want disabled", st)
+	if !networkHasACL(t, client, netRef, aclName) {
+		t.Fatalf("network %s missing access ACL %s after close", netRef, aclName)
 	}
 
 	// Idempotent close.
@@ -466,12 +466,38 @@ func TestCloseAccessLocksNetworkWithoutTouchingNIC(t *testing.T) {
 	if err := b.OpenAccess(ctx, "team-a"); err != nil {
 		t.Fatalf("OpenAccess: %v", err)
 	}
-	if st := broadEgressState(t, client, aclName); st != "enabled" {
-		t.Fatalf("broad allow-0.0.0.0/0 egress state = %q after open, want enabled", st)
+	// Open: the access ACL is DETACHED (so network-level ingress enforcement
+	// disengages and inbound flows), and default egress is back to allow.
+	if networkHasACL(t, client, netRef, aclName) {
+		t.Fatalf("network %s still has access ACL %s after open -- it must be detached", netRef, aclName)
+	}
+	if act := networkDefaultEgress(t, client, netRef); act != "allow" {
+		t.Fatalf("network default egress = %q after open, want allow", act)
 	}
 	if after := eth0NIC(t, client, refA); !reflect.DeepEqual(before, after) {
 		t.Fatalf("eth0 changed across close/open -- it must never be touched")
 	}
+}
+
+// networkHasACL reports whether the network's security.acls includes name.
+func networkHasACL(t *testing.T, client *Client, netName, name string) bool {
+	t.Helper()
+	raw, err := client.get(context.Background(), "/1.0/networks/"+netName)
+	if err != nil {
+		t.Fatalf("reading network %s: %v", netName, err)
+	}
+	var n struct {
+		Config map[string]string `json:"config"`
+	}
+	if err := json.Unmarshal(raw, &n); err != nil {
+		t.Fatalf("decoding network %s: %v", netName, err)
+	}
+	for _, a := range strings.Split(n.Config["security.acls"], ",") {
+		if strings.TrimSpace(a) == name {
+			return true
+		}
+	}
+	return false
 }
 
 // networkDefaultEgress reads a network's default egress action from the daemon.
@@ -490,27 +516,6 @@ func networkDefaultEgress(t *testing.T, client *Client, netName string) string {
 	return n.Config["security.acls.default.egress.action"]
 }
 
-// broadEgressState returns the state of the ACL's allow-0.0.0.0/0 egress rule.
-func broadEgressState(t *testing.T, client *Client, name string) string {
-	t.Helper()
-	raw, err := client.get(context.Background(), "/1.0/network-acls/"+name)
-	if err != nil {
-		t.Fatalf("reading ACL %s: %v", name, err)
-	}
-	var acl struct {
-		Egress []map[string]interface{} `json:"egress"`
-	}
-	if err := json.Unmarshal(raw, &acl); err != nil {
-		t.Fatalf("decoding ACL %s: %v", name, err)
-	}
-	for _, r := range acl.Egress {
-		if r["destination"] == "0.0.0.0/0" {
-			s, _ := r["state"].(string)
-			return s
-		}
-	}
-	return ""
-}
 
 // eth0NIC reads an instance's effective eth0 device from the live daemon.
 func eth0NIC(t *testing.T, client *Client, name string) map[string]string {
