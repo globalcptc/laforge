@@ -3,6 +3,7 @@ import {
   CircleHelp,
   Hourglass,
   Loader,
+  Check,
   CircleCheck,
   CircleX,
   MinusCircle,
@@ -11,9 +12,10 @@ import {
   Trash2,
   ClockAlert,
   PlugZap,
-  Radio,
+  SatelliteDish,
   Cog,
   ServerCrash,
+  ServerOff,
   Wrench,
   ShieldX,
   type LucideIcon,
@@ -54,6 +56,8 @@ type Kind =
   | 'invalid'
   // build.status also uses these two aggregates:
   | 'failed'
+  // a derived state (not stored): a 'building' object with unmet blocked_on:
+  | 'dependency_blocked'
   // teardown + access + agent + scheduled-task states:
   | 'tearing_down'
   | 'torn_down'
@@ -73,7 +77,7 @@ type Kind =
   // legacy aliases (pre-00023), kept so any stale value still renders:
   | 'deployed'
 
-type Anim = 'spin' | 'pulse'
+type Anim = 'spin' | 'pulse' | 'slow-spin'
 
 const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['tone']; label: string }> = {
   // Planned waits for the operator to click Deploy -- a gentle pulse, not a
@@ -85,13 +89,20 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   pending: { icon: CircleDashed, anim: 'spin', tone: 'ink', label: 'Pending' },
   // Infra being created -- dark blue, spinning.
   deploying: { icon: Loader, anim: 'spin', tone: 'indigo', label: 'Creating Hosts' },
-  // Infra up, agent not yet checked in -- light blue, animated.
-  running: { icon: Radio, anim: 'pulse', tone: 'sky', label: 'Awaiting Agent' },
+  // Infra up, agent not yet checked in -- light blue, animated. The satellite
+  // dish reads as "listening for the agent's first check-in."
+  running: { icon: SatelliteDish, anim: 'pulse', tone: 'sky', label: 'Awaiting Agent' },
   // Agent checked in, steps/validators executing -- purple, spinning (work in
   // progress reads better as a spin than a pulse).
   building: { icon: Cog, anim: 'spin', tone: 'purple', label: 'Running Steps' },
-  // The only green, and a terminal outcome: holds still.
-  finished: { icon: CircleCheck, tone: 'success', label: 'Build Complete' },
+  // Steps are queued but held until this object's dependencies finish -- a derived
+  // state (building + unmet blocked_on), amber, rotating slowly (patient "held,
+  // waiting," distinct from the active spinners). Reused by StatusBadge's blocked
+  // branch and by the environment board, so its look lives in one place.
+  dependency_blocked: { icon: Hourglass, anim: 'slow-spin', tone: 'warning', label: 'Dependency Blocked' },
+  // The only green, and a terminal outcome: holds still. A plain check (no ring)
+  // marks the single "done" state.
+  finished: { icon: Check, tone: 'success', label: 'Build Complete' },
   // Three distinct failure hues, one per cause -- all terminal, all still.
   deploy_failed: { icon: ServerCrash, tone: 'danger', label: 'Creation Failed' },
   build_failed: { icon: Wrench, tone: 'orange', label: 'Build Failed' },
@@ -109,8 +120,10 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   destroying: { icon: Loader, anim: 'spin', tone: 'pink', label: 'Destroying' },
   // The destroy-side twin of Creation Failed: the hoster refused to remove the
   // instance for a reason retrying cannot fix, so teardown stopped here. Terminal
-  // and still until an operator retries the teardown or forces the build down.
-  destroy_failed: { icon: ServerCrash, tone: 'danger', label: 'Destroy Failed' },
+  // and still until an operator retries the teardown or forces the build down. A
+  // distinct icon (ServerOff, not deploy_failed's ServerCrash) so the two don't
+  // read identically on the environment board, where color + icon carry it alone.
+  destroy_failed: { icon: ServerOff, tone: 'danger', label: 'Destroy Failed' },
   destroyed: { icon: MinusCircle, tone: 'neutral', label: 'Destroyed' },
   open: { icon: CircleCheck, tone: 'success', label: 'Open' },
   closed: { icon: MinusCircle, tone: 'warning', label: 'Closed' },
@@ -148,6 +161,7 @@ const STATUS_DESC: Partial<Record<Kind, string>> = {
   deploying: 'The hoster is creating the instance.',
   running: 'Instance is up; waiting for the agent’s first check-in.',
   building: 'The agent is running this host’s steps and validators.',
+  dependency_blocked: 'Steps are queued but held until this object’s dependencies finish.',
   finished: 'Up, every step done, every validator passed.',
   deploy_failed: 'The hoster could not create the instance.',
   build_failed: 'A build step could not be completed.',
@@ -206,16 +220,14 @@ export function StatusBadge({
   blockedOn?: string[] | null
 }) {
   const isBlocked = status === 'building' && !!blockedOn && blockedOn.length > 0
-  let style = STYLES[status as Kind] ?? { icon: CircleHelp, tone: 'neutral' as const, label: status }
-  let label = (kind && KIND_LABELS[kind]?.[status as Kind]) ?? style.label
-  let desc = statusDescription(status, kind)
-  if (isBlocked) {
-    style = { icon: Hourglass, tone: 'warning', label: 'Dependency Blocked' }
-    label = 'Dependency Blocked'
-    desc = `Waiting on ${blockedOn!.join(', ')} before this host’s next steps run.`
-  }
+  const key = isBlocked ? 'dependency_blocked' : status
+  const style = STYLES[key as Kind] ?? { icon: CircleHelp, tone: 'neutral' as const, label: status }
+  const label = (kind && KIND_LABELS[kind]?.[status as Kind]) ?? style.label
+  const desc = isBlocked
+    ? `Waiting on ${blockedOn!.join(', ')} before this host’s next steps run.`
+    : statusDescription(status, kind)
   const Icon = style.icon
-  const animClass = style.anim === 'spin' ? 'animate-spin' : style.anim === 'pulse' ? 'animate-pulse' : undefined
+  const animClass = animClassFor(style.anim)
   const badge = (
     <Badge tone={style.tone} className={cn('rounded-full py-0.5', className)}>
       <Icon size={12} className={animClass} />
@@ -267,6 +279,36 @@ export function statusLabel(status: string): string {
 export function statusFillClass(status: string): string {
   const tone = STYLES[status as Kind]?.tone
   return (tone && TONE_FILL[tone]) || 'bg-border-strong'
+}
+
+// animClassFor maps a status's animation to its Tailwind class. 'slow-spin' is a
+// ~7s rotation (vs animate-spin's 1s) for the patient, held "Dependency Blocked"
+// state -- deliberately much slower than the active spinners.
+function animClassFor(anim?: Anim): string | undefined {
+  return anim === 'spin'
+    ? 'animate-spin'
+    : anim === 'pulse'
+      ? 'animate-pulse'
+      : anim === 'slow-spin'
+        ? 'animate-[spin_7s_linear_infinite]'
+        : undefined
+}
+
+// blockedStatusKey resolves the derived 'dependency_blocked' state the same way
+// StatusBadge does, so the environment board and the badge never diverge: a
+// 'building' object with unmet blocked_on reads as dependency-blocked.
+export function blockedStatusKey(status: string, blockedOn?: string[] | null): string {
+  return status === 'building' && !!blockedOn && blockedOn.length > 0 ? 'dependency_blocked' : status
+}
+
+// statusIcon / statusAnimClass expose the badge's own icon and animation for a
+// status, for surfaces that render a bare glyph instead of a full badge (the
+// environment board's tiles and legend). One source of truth -- the STYLES map.
+export function statusIcon(status: string): LucideIcon {
+  return STYLES[status as Kind]?.icon ?? CircleHelp
+}
+export function statusAnimClass(status: string): string | undefined {
+  return animClassFor(STYLES[status as Kind]?.anim)
 }
 
 // The canonical host/container lifecycle order and the agent check-in states,

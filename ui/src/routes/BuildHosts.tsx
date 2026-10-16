@@ -1,15 +1,16 @@
 import { useParams } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Box, CalendarClock, CheckCircle2, ChevronDown, Container, Hammer, Info, Network, Play, Power, Radar, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, type LucideIcon } from 'lucide-react'
-import { useAdHocTask, useBuild, useCreateScheduledTask, useDetectDrift, usePowerAction, useRebuild, useTopology } from '../api/hooks'
+import { Box, CalendarClock, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, Power, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, type LucideIcon } from 'lucide-react'
+import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
 import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
 import { ObjectLogPanel } from '../components/ObjectLogPanel'
+import { EnvironmentBoard } from '../components/EnvironmentBoard'
 import { TaskActionFields, buildTaskPayload, taskFormValid } from '../components/TaskActionForm'
 import { WhenField } from '../components/WhenField'
 import { Boxes } from 'lucide-react'
 import { ApiError } from '../api/client'
-import type { DeployedObject, DriftReport, ObjectKind, RebuildAffected, TopologyMember } from '../api/types'
+import type { DeployedObject, ObjectKind, RebuildAffected, TopologyMember } from '../api/types'
 import { Badge, Button, cn, Label, Modal, Spinner, Table, TableScroller, Td, Th, useToast } from '../ui'
 import { buildIsReadOnly } from '../lib/build'
 
@@ -178,8 +179,6 @@ export function BuildHosts() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const adHoc = useAdHocTask(buildId)
   const scheduleTask = useCreateScheduledTask(buildId)
-  const detectDrift = useDetectDrift(buildId)
-  const toast = useToast()
   const [confirming, setConfirming] = useState<{ initialCommand: string; label: string } | null>(null)
   const [scheduling, setScheduling] = useState<{ initialCommand: string; label: string } | null>(null)
   const [powering, setPowering] = useState<'start' | 'stop' | 'reboot' | null>(null)
@@ -190,8 +189,7 @@ export function BuildHosts() {
   // dependents; confirmed in RebuildDialog, which previews the full blast radius.
   const [rebuilding, setRebuilding] = useState<{ ids: string[]; names: string[] } | null>(null)
   const [logPanelFor, setLogPanelFor] = useState<{ id: string; label: string; kind: ObjectKind; object?: DeployedObject; teamNumber?: number } | null>(null)
-  const [driftReport, setDriftReport] = useState<DriftReport | null>(null)
-  const [driftError, setDriftError] = useState<string | null>(null)
+  const [boardOpen, setBoardOpen] = useState(false)
   const [filter, setFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [osFilter, setOsFilter] = useState('')
@@ -200,31 +198,6 @@ export function BuildHosts() {
   const [collapsedTeams, setCollapsedTeams] = useState<Set<number>>(new Set())
   const [collapsedNets, setCollapsedNets] = useState<Set<string>>(new Set())
   const [legendOpen, setLegendOpen] = useState(false)
-
-  // Drift detection lives here, on the Hosts page, not in the build-wide
-  // header -- it's a question about *these hosts* ("does the hoster still
-  // have exactly what we deployed?"), so it belongs next to the host list
-  // it reports on rather than floating over Overview/Access/Logs too.
-  const driftable = build ? ['deploying', 'building', 'finished', 'failed'].includes(build.status) : false
-
-  async function onDetectDrift() {
-    setDriftError(null)
-    setDriftReport(null)
-    try {
-      const report = await detectDrift.mutateAsync()
-      setDriftReport(report)
-      const clean = report.orphaned.length === 0 && report.missing.length === 0
-      toast({
-        title: clean ? 'No drift detected' : 'Drift detected',
-        description: clean ? undefined : `${report.orphaned.length} orphaned, ${report.missing.length} missing`,
-        tone: clean ? 'success' : 'danger',
-      })
-    } catch (e) {
-      const message = e instanceof ApiError ? e.message : 'Detect drift failed'
-      setDriftError(message)
-      toast({ title: 'Detect drift failed', description: message, tone: 'danger', duration: 0 })
-    }
-  }
 
   const objects: DeployedObject[] = useMemo(() => build?.teams.flatMap((t) => t.objects) ?? [], [build])
 
@@ -420,12 +393,9 @@ export function BuildHosts() {
       )}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          {driftable && (
-            <Button variant="secondary" size="sm" onClick={onDetectDrift} disabled={detectDrift.isPending}>
-              <Radar size={14} /> {detectDrift.isPending ? 'Detecting…' : 'Detect Drift'}
-            </Button>
-          )}
-          {driftError && <span className="text-xs text-danger">{driftError}</span>}
+          <Button variant="secondary" size="sm" onClick={() => setBoardOpen(true)} title="Open the full-screen status board for this build">
+            <LayoutGrid size={14} /> Board
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setLegendOpen(true)}>
             <Info size={14} /> State Legend
           </Button>
@@ -711,89 +681,7 @@ export function BuildHosts() {
 
       <StatusLegendDialog open={legendOpen} onClose={() => setLegendOpen(false)} />
 
-      <Modal
-        open={!!driftReport}
-        onClose={() => setDriftReport(null)}
-        title="Drift Report"
-        description="Builder.Inspect's real, live answer for this build's own builder, compared against what LaForge believes is deployed."
-      >
-        {driftReport && <DriftReportBody report={driftReport} />}
-      </Modal>
-    </div>
-  )
-}
-
-// Live drift for this build's hosts: what the hoster actually has, versus
-// what LaForge's records say it deployed. Moved here from the build-wide
-// header (see onDetectDrift's comment) so it reports right beside the host
-// list it's about.
-function DriftReportBody({ report }: { report: DriftReport }) {
-  if (report.orphaned.length === 0 && report.missing.length === 0) {
-    return (
-      <div className="flex items-center gap-2 rounded-token border border-success/30 bg-success-soft px-3 py-2 text-sm text-success">
-        <CheckCircle2 size={16} /> No drift -- {report.tracked} resource{report.tracked === 1 ? '' : 's'} match exactly what the hoster has.
-      </div>
-    )
-  }
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="text-xs text-fg-muted">{report.tracked} resource{report.tracked === 1 ? '' : 's'} confirmed matching.</div>
-
-      {report.missing.length > 0 && (
-        <div>
-          <div className="mb-1 flex items-center gap-1.5 text-sm font-medium text-danger">
-            <AlertTriangle size={14} /> Missing at the hoster ({report.missing.length})
-          </div>
-          <div className="mb-2 text-xs text-fg-muted">LaForge believes these are deployed, but the hoster no longer has them.</div>
-          <TableScroller contain={false}>
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Kind</Th>
-                  <Th>Name</Th>
-                  <Th>External ref</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.missing.map((o) => (
-                  <tr key={o.id}>
-                    <Td><Badge tone="neutral">{o.kind}</Badge></Td>
-                    <Td>{o.as_name ?? o.object_name}</Td>
-                    <Td className="font-mono text-xs text-fg-muted">{o.external_ref}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </TableScroller>
-        </div>
-      )}
-
-      {report.orphaned.length > 0 && (
-        <div>
-          <div className="mb-1 flex items-center gap-1.5 text-sm font-medium text-warning">
-            <AlertTriangle size={14} /> Orphaned at the hoster ({report.orphaned.length})
-          </div>
-          <div className="mb-2 text-xs text-fg-muted">The hoster has these, but LaForge has no record of them for this build.</div>
-          <TableScroller contain={false}>
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Kind</Th>
-                  <Th>External ref</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.orphaned.map((r) => (
-                  <tr key={r.external_ref}>
-                    <Td><Badge tone="neutral">{r.kind}</Badge></Td>
-                    <Td className="font-mono text-xs text-fg-muted">{r.external_ref}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </TableScroller>
-        </div>
-      )}
+      {boardOpen && buildId && <EnvironmentBoard repoId={repoId} buildId={buildId} onClose={() => setBoardOpen(false)} />}
     </div>
   )
 }
