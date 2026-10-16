@@ -175,7 +175,7 @@ export function BuildLogs() {
       const qualified = e.host && e.team_number != null ? `t${e.team_number}/${e.host}` : ''
       return [e.message, e.kind, e.host ?? '', qualified, e.team_number != null ? `team ${e.team_number}` : '']
         .some((v) => v.toLowerCase().includes(q))
-    })
+    }).reverse() // newest first -- the journal reads latest -> oldest (filter() returns a fresh array, so reversing it never touches `all`)
   }, [all, query, kind])
 
   // Virtualize the list: only the rows in (and near) the viewport are in the DOM,
@@ -192,19 +192,19 @@ export function BuildLogs() {
     getItemKey: (index) => shown[index].id,
   })
 
-  // Tail-follow: keep the newest event in view as the build streams, but only
-  // while the user is already at the bottom -- if they've scrolled up to read
-  // history, leave them there. atBottomRef is updated on scroll (the last known
-  // position, so it reflects where they were BEFORE new rows pushed the content).
-  const atBottomRef = useRef(true)
+  // Tail-follow: the newest event is at the TOP now, so keep the top pinned as the
+  // build streams -- but only while the user is already at the top. If they've
+  // scrolled down to read older history, leave them there. atTopRef is updated on
+  // scroll (the last known position, before new rows pushed the content down).
+  const atTopRef = useRef(true)
   function onScroll() {
     const el = parentRef.current
     if (!el) return
-    atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60
+    atTopRef.current = el.scrollTop < 60
   }
   useEffect(() => {
-    if (atBottomRef.current && shown.length > 0) {
-      rowVirtualizer.scrollToIndex(shown.length - 1, { align: 'end' })
+    if (atTopRef.current && shown.length > 0) {
+      rowVirtualizer.scrollToIndex(0, { align: 'start' })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shown.length])

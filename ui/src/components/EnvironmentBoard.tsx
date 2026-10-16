@@ -109,7 +109,7 @@ export function EnvironmentBoard({ repoId, buildId, onClose }: { repoId: string;
 
   return (
     <>
-      <div className="fixed inset-0 z-20 flex flex-col bg-[#0b0714] text-[#e9e6f3]">
+      <div className="fixed inset-0 z-50 flex flex-col bg-[#0b0714] text-[#e9e6f3]">
         <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#241f33] px-4 py-2.5">
           <div className="flex items-center gap-2.5">
             <span className={cn('h-2.5 w-2.5 rounded-full', connected ? 'animate-pulse bg-[#5f941c]' : 'bg-[#6c6683]')} title={connected ? 'Live' : 'Reconnecting…'} />
@@ -230,24 +230,25 @@ export function EnvironmentBoard({ repoId, buildId, onClose }: { repoId: string;
             )
           })}
         </div>
-      </div>
 
-      {/* Host detail drawer. The board sits at z-20 so the InspectorPanel's own
-          z-30 scrim and z-40 drawer layer over it -- rendered as a plain sibling,
-          NOT inside a stacking-context wrapper, which Safari would clip the fixed
-          scrim/shadow against (showing a stray shadow rectangle over the board). */}
-      {selected && (
-        <ObjectLogPanel
-          repoId={repoId}
-          buildId={buildId}
-          objectId={selected.id}
-          label={selected.label}
-          kind={selected.kind}
-          object={selected.object}
-          teamNumber={selected.teamNumber}
-          onClose={() => setSelected(null)}
-        />
-      )}
+        {/* Host detail drawer, rendered INSIDE the board (z-50, above the app
+            navbar so the board's own header shows) so the InspectorPanel's z-30
+            scrim and z-40 drawer layer over the board content in the SAME stacking
+            context -- no separate positioned wrapper for Safari to clip the fixed
+            scrim/shadow against. */}
+        {selected && (
+          <ObjectLogPanel
+            repoId={repoId}
+            buildId={buildId}
+            objectId={selected.id}
+            label={selected.label}
+            kind={selected.kind}
+            object={selected.object}
+            teamNumber={selected.teamNumber}
+            onClose={() => setSelected(null)}
+          />
+        )}
+      </div>
     </>
   )
 }
