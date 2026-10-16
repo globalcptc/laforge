@@ -1,6 +1,6 @@
 import { useParams } from '@tanstack/react-router'
-import { Fragment as FragmentGroup, useEffect, useMemo, useState } from 'react'
-import { Box, CalendarClock, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, Power, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
+import { Fragment as FragmentGroup, useEffect, useMemo, useRef, useState } from 'react'
+import { Box, CalendarClock, Check, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, Power, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
 import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
@@ -12,7 +12,7 @@ import { WhenField } from '../components/WhenField'
 import { Boxes } from 'lucide-react'
 import { ApiError } from '../api/client'
 import type { DeployedObject, ObjectKind, RebuildAffected, TopologyMember } from '../api/types'
-import { Badge, Button, cn, Label, Modal, Spinner, Table, TableScroller, Td, Th, useToast } from '../ui'
+import { AnchoredPopover, Badge, Button, cn, Label, Modal, Spinner, Table, TableScroller, Td, Th, useToast } from '../ui'
 import { buildIsReadOnly } from '../lib/build'
 
 // Kind → icon + label, so a row states its type at a glance (feedback: "list
@@ -139,26 +139,70 @@ function InfraCell({ obj, onAction, onRebuild }: { obj: DeployedObject; onAction
   )
 }
 
-// FilterSelect is one "All X / <value>" dropdown for the Hosts toolbar
-// (Type / OS / State). Highlights its border when a value is active.
-function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
+// toggleSet returns a new Set with v added or removed -- how the multi-select
+// filters below flip a value on and off.
+function toggleSet(s: Set<string>, v: string): Set<string> {
+  const next = new Set(s)
+  next.has(v) ? next.delete(v) : next.add(v)
+  return next
+}
+
+// MultiFilter is one checkbox dropdown for the Hosts toolbar (Type / OS / State /
+// Tag). Each filter is multi-select: pick any number of values and a host matches
+// when its value is among those picked (OR within a filter, AND across filters).
+// The count badge and accent border show when a filter is narrowing the list.
+function MultiFilter({ label, selected, onToggle, onClear, options }: { label: string; selected: Set<string>; onToggle: (v: string) => void; onClear: () => void; options: [string, string][] }) {
+  const [open, setOpen] = useState(false)
+  const anchorRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      const t = e.target as Node
+      if (anchorRef.current?.contains(t) || panelRef.current?.contains(t)) return
+      setOpen(false)
+    }
+    window.addEventListener('mousedown', onDown)
+    return () => window.removeEventListener('mousedown', onDown)
+  }, [open])
+  const count = selected.size
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      aria-label={label}
-      className={cn(
-        'h-8 rounded-token border bg-surface-raised px-2 text-sm outline-none focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent-soft',
-        value ? 'border-accent text-fg' : 'border-border text-fg-muted',
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={label}
+        className={cn(
+          'flex h-8 items-center gap-1.5 rounded-token border bg-surface-raised px-2.5 text-sm outline-none focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent-soft',
+          count ? 'border-accent text-fg' : 'border-border text-fg-muted',
+        )}
+      >
+        {label}
+        {count > 0 && <span className="rounded-full bg-accent px-1.5 text-[11px] font-medium text-fg-inverted">{count}</span>}
+        <ChevronDown size={13} className={cn('text-fg-subtle transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <AnchoredPopover anchorRef={anchorRef} panelRef={panelRef} minWidth={180} maxHeight={300}>
+          <div className="py-1">
+            {count > 0 && (
+              <button type="button" onClick={onClear} className="flex w-full items-center px-2.5 py-1.5 text-left text-xs text-fg-muted hover:bg-surface-hover">
+                Clear {label.toLowerCase()}
+              </button>
+            )}
+            {options.map(([v, l]) => {
+              const on = selected.has(v)
+              return (
+                <button key={v} type="button" onClick={() => onToggle(v)} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm text-fg hover:bg-surface-hover">
+                  <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center rounded border', on ? 'border-accent bg-accent text-fg-inverted' : 'border-border')}>{on && <Check size={11} />}</span>
+                  <span className="truncate">{l}</span>
+                </button>
+              )
+            })}
+          </div>
+        </AnchoredPopover>
       )}
-    >
-      <option value="">All {label}</option>
-      {options.map(([v, l]) => (
-        <option key={v} value={v}>
-          {l}
-        </option>
-      ))}
-    </select>
+    </>
   )
 }
 
@@ -193,10 +237,10 @@ export function BuildHosts() {
   const [boardOpen, setBoardOpen] = useState(false)
   const [graphOpen, setGraphOpen] = useState(false)
   const [filter, setFilter] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [osFilter, setOsFilter] = useState('')
-  const [stateFilter, setStateFilter] = useState('')
-  const [tagFilter, setTagFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set())
+  const [osFilter, setOsFilter] = useState<Set<string>>(new Set())
+  const [stateFilter, setStateFilter] = useState<Set<string>>(new Set())
+  const [tagFilter, setTagFilter] = useState<Set<string>>(new Set())
   const [collapsedTeams, setCollapsedTeams] = useState<Set<number>>(new Set())
   const [collapsedNets, setCollapsedNets] = useState<Set<string>>(new Set())
   const [legendOpen, setLegendOpen] = useState(false)
@@ -252,10 +296,10 @@ export function BuildHosts() {
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase()
     return hosts.filter((h) => {
-      if (typeFilter && h.kind !== typeFilter) return false
-      if (stateFilter && h.status !== stateFilter) return false
-      if (osFilter && hostOs(h) !== osFilter) return false
-      if (tagFilter && !hostTagList(h).includes(tagFilter)) return false
+      if (typeFilter.size && !typeFilter.has(h.kind)) return false
+      if (stateFilter.size && !stateFilter.has(h.status)) return false
+      if (osFilter.size && !osFilter.has(hostOs(h))) return false
+      if (tagFilter.size && !hostTagList(h).some((t) => tagFilter.has(t))) return false
       if (!q) return true
       const mem = memberByObjId.get(h.id)
       return [h.as_name ?? h.object_name, h.kind, h.network_name ?? '', h.status, h.agent?.agent_status ?? '', h.external_ref ?? '', hostOs(h), mem?.size ?? '', ...(mem?.depends_on ?? []), ...hostTagList(h)]
@@ -415,10 +459,10 @@ export function BuildHosts() {
               className="h-8 w-48 rounded-token border border-border bg-surface-raised pl-7 pr-2 text-sm text-fg placeholder:text-fg-subtle outline-none focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent-soft"
             />
           </div>
-          <FilterSelect label="Type" value={typeFilter} onChange={setTypeFilter} options={[['host', 'Host'], ['container', 'Container']]} />
-          <FilterSelect label="OS" value={osFilter} onChange={setOsFilter} options={osOptions.map((o) => [o, o])} />
-          <FilterSelect label="State" value={stateFilter} onChange={setStateFilter} options={stateOptions.map((s) => [s, statusLabel(s)])} />
-          {tagOptions.length > 0 && <FilterSelect label="Tag" value={tagFilter} onChange={setTagFilter} options={tagOptions.map((t) => [t, t])} />}
+          <MultiFilter label="Type" selected={typeFilter} onToggle={(v) => setTypeFilter((p) => toggleSet(p, v))} onClear={() => setTypeFilter(new Set())} options={[['host', 'Host'], ['container', 'Container']]} />
+          <MultiFilter label="OS" selected={osFilter} onToggle={(v) => setOsFilter((p) => toggleSet(p, v))} onClear={() => setOsFilter(new Set())} options={osOptions.map((o) => [o, o])} />
+          <MultiFilter label="State" selected={stateFilter} onToggle={(v) => setStateFilter((p) => toggleSet(p, v))} onClear={() => setStateFilter(new Set())} options={stateOptions.map((s) => [s, statusLabel(s)])} />
+          {tagOptions.length > 0 && <MultiFilter label="Tag" selected={tagFilter} onToggle={(v) => setTagFilter((p) => toggleSet(p, v))} onClear={() => setTagFilter(new Set())} options={tagOptions.map((t) => [t, t])} />}
         </div>
       </div>
 
@@ -528,9 +572,12 @@ export function BuildHosts() {
                                             return (
                                               <button
                                                 key={k}
-                                                onClick={() => setTagFilter(tagFilter === tag ? '' : tag)}
+                                                onClick={() => setTagFilter((p) => toggleSet(p, tag))}
                                                 title={`Filter by ${tag}`}
-                                                className="rounded-token-sm bg-surface-sunken px-1.5 py-0.5 text-[10px] font-medium text-fg-muted hover:bg-surface-hover hover:text-fg"
+                                                className={cn(
+                                                  'rounded-token-sm px-1.5 py-0.5 text-[10px] font-medium',
+                                                  tagFilter.has(tag) ? 'bg-accent-soft text-accent-fg' : 'bg-surface-sunken text-fg-muted hover:bg-surface-hover hover:text-fg',
+                                                )}
                                               >
                                                 {k}={v}
                                               </button>
