@@ -174,37 +174,35 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
             <BuilderPill name={b.name} color={b.color} kind={b.kind} />
           )
           return (
-            <div key={b.name} className="px-4 py-3">
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  {name}
-                  <span className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</span>
-                </div>
-                <div className="flex gap-3 text-xs text-fg-muted">
-                  <span>
-                    <span className="font-medium text-fg">{b.active_builds}</span> builds
-                  </span>
-                  <span>
-                    <span className="font-medium text-fg">{b.teams}</span> teams
-                  </span>
-                  <span>
-                    <span className="font-medium text-fg">{b.counts.hosts}</span> hosts
-                  </span>
-                  <span>
-                    <span className="font-medium text-fg">{b.counts.containers}</span> containers
-                  </span>
-                  <span>
-                    <span className="font-medium text-fg">{b.counts.networks}</span> networks
-                  </span>
-                </div>
+            // One row per builder: identity, counts, its two heaviest signals and
+            // the link. Wraps only when the card is too narrow to hold it all.
+            <div key={b.name} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+              <div className="flex min-w-0 shrink-0 items-center gap-2">
+                {name}
+                <span className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</span>
+              </div>
+              <div className="flex shrink-0 gap-3 text-xs text-fg-muted">
+                <span>
+                  <span className="font-medium text-fg">{b.active_builds}</span> builds
+                </span>
+                <span>
+                  <span className="font-medium text-fg">{b.teams}</span> teams
+                </span>
+                <span>
+                  <span className="font-medium text-fg">{b.counts.hosts}</span> hosts
+                </span>
+                <span>
+                  <span className="font-medium text-fg">{b.counts.containers}</span> containers
+                </span>
+                <span>
+                  <span className="font-medium text-fg">{b.counts.networks}</span> networks
+                </span>
               </div>
               {capacity.length > 0 ? (
-                <div className="mt-2.5 flex items-center gap-4">
-                  <div className="grid flex-1 grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
-                    {topTwo.map((sig) => (
-                      <CapacityCell key={`${sig.key}|${sig.node}`} sig={sig} />
-                    ))}
-                  </div>
+                <div className="ml-auto flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
+                  {topTwo.map((sig) => (
+                    <CapacityCell key={`${sig.key}|${sig.node}`} sig={sig} />
+                  ))}
                   {me?.is_instance_admin ? (
                     <Link
                       to="/admin/infrastructure/$name"
@@ -218,7 +216,7 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
                   ) : null}
                 </div>
               ) : (
-                <div className="mt-2 text-xs text-fg-subtle">No capacity metrics reported yet.</div>
+                <div className="ml-auto text-xs text-fg-subtle">No capacity metrics reported yet.</div>
               )}
             </div>
           )
