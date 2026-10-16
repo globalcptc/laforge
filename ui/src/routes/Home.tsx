@@ -174,14 +174,26 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
             <BuilderPill name={b.name} color={b.color} kind={b.kind} />
           )
           return (
-            // One row per builder: identity, counts, its two heaviest signals and
-            // the link. Wraps only when the card is too narrow to hold it all.
-            <div key={b.name} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-              <div className="flex min-w-0 shrink-0 items-center gap-2">
+            // One row per builder: identity on the left, its two heaviest signals
+            // centered, counts and the link on the right. Stacks on narrow cards.
+            <div
+              key={b.name}
+              className="grid grid-cols-1 items-center gap-x-6 gap-y-2 px-4 py-3 lg:grid-cols-[1fr_auto_1fr]"
+            >
+              <div className="flex min-w-0 items-center gap-2">
                 {name}
                 <span className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</span>
               </div>
-              <div className="flex shrink-0 gap-3 text-xs text-fg-muted">
+              {capacity.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-x-8 gap-y-2 lg:justify-center">
+                  {topTwo.map((sig) => (
+                    <CapacityCell key={`${sig.key}|${sig.node}`} sig={sig} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-fg-subtle lg:text-center">No capacity metrics reported yet.</div>
+              )}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-muted lg:justify-end">
                 <span>
                   <span className="font-medium text-fg">{b.active_builds}</span> builds
                 </span>
@@ -197,27 +209,18 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
                 <span>
                   <span className="font-medium text-fg">{b.counts.networks}</span> networks
                 </span>
+                {me?.is_instance_admin ? (
+                  <Link
+                    to="/admin/infrastructure/$name"
+                    params={{ name: b.name }}
+                    className="ml-1 shrink-0 font-medium text-accent hover:underline"
+                  >
+                    See more →
+                  </Link>
+                ) : capacity.length > 2 ? (
+                  <span className="ml-1 shrink-0 text-fg-subtle">+{capacity.length - 2} more</span>
+                ) : null}
               </div>
-              {capacity.length > 0 ? (
-                <div className="ml-auto flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
-                  {topTwo.map((sig) => (
-                    <CapacityCell key={`${sig.key}|${sig.node}`} sig={sig} />
-                  ))}
-                  {me?.is_instance_admin ? (
-                    <Link
-                      to="/admin/infrastructure/$name"
-                      params={{ name: b.name }}
-                      className="shrink-0 text-xs font-medium text-accent hover:underline"
-                    >
-                      See more →
-                    </Link>
-                  ) : capacity.length > 2 ? (
-                    <span className="shrink-0 text-xs text-fg-subtle">+{capacity.length - 2} more</span>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="ml-auto text-xs text-fg-subtle">No capacity metrics reported yet.</div>
-              )}
             </div>
           )
         })}
