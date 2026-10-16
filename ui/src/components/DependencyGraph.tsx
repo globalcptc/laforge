@@ -28,7 +28,7 @@ type GNode = {
 }
 type GEdge = { from: string; to: string; gate: string; msIdx?: number }
 
-const CARD_W = 272, NET_H = 38, HOST_H = 58, ROW_GAP = 14, BAR = 17, LINE_OFF = 16, NODE_GAP = 12, BASE_X = 12, TOP_PAD = 16
+const CARD_W = 272, NET_H = 38, HOST_H = 58, BAR = 17, BASE_X = 12, TOP_PAD = 16, COL_W = CARD_W + 92, V_GAP = 16
 const stepCenterX = (k: number, i: number) => 9 + (i + 0.5) * ((CARD_W - 16) / Math.max(1, k))
 
 const PRI: Record<string, number> = { deploy_failed: 5, build_failed: 5, invalid: 5, destroy_failed: 5, failed: 5, dependency_blocked: 4, building: 3, running: 3, deploying: 3, destroying: 3, booting: 3, pending: 2, planned: 2, finished: 1, open: 1, deployed: 1 }
@@ -159,34 +159,37 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
     }
     for (const n of nodes) n.depth = depth(n.id, new Set())
 
-    // Order: grouped by network (network heads its section, members by depth),
-    // networks alphabetical so shared infra (corp/domain) comes before dependents.
+    // Layer assignment: networks on the far LEFT (the one hard rule); every other
+    // node in the column of its dependency depth (min 1). The graph flows left to
+    // right across columns and packs vertically, each node pulled toward the
+    // average Y of its parents -- so dependents land down-and-to-the-right of what
+    // they need, using the horizontal space instead of one tall column.
+    const layerOf = (n: GNode) => (n.kind === 'network' ? 0 : Math.max(1, n.depth))
+    const maxLayer = Math.max(0, ...nodes.map(layerOf))
+    const placedCy = new Map<string, number>()
     const rows: GNode[] = []
-    const placed = new Set<string>()
-    const nets = nodes.filter((n) => n.kind === 'network').sort((a, b) => a.objName.localeCompare(b.objName))
-    for (const net of nets) {
-      rows.push(net); placed.add(net.id)
-      for (const m of nodes.filter((n) => n.kind !== 'network' && n.net === net.objName).sort((a, b) => a.depth - b.depth || a.name.localeCompare(b.name))) { rows.push(m); placed.add(m.id) }
+    for (let L = 0; L <= maxLayer; L++) {
+      const col = nodes.filter((n) => layerOf(n) === L)
+      const bary = (n: GNode) => {
+        const ps = n.deps.map((d) => placedCy.get(d.on)).filter((v): v is number => v != null)
+        return ps.length ? ps.reduce((a, b) => a + b, 0) / ps.length : Number.POSITIVE_INFINITY
+      }
+      col.sort((a, b) => (L === 0 ? a.objName.localeCompare(b.objName) : bary(a) - bary(b) || a.name.localeCompare(b.name)))
+      let cursor = TOP_PAD
+      for (const n of col) {
+        n.h = n.kind === 'network' || !n.groups.length ? NET_H : HOST_H
+        const b = bary(n)
+        n.y = L === 0 || !isFinite(b) ? cursor : Math.max(cursor, Math.round(b) - BAR)
+        n.cy = n.y + BAR
+        n.x = BASE_X + L * COL_W
+        cursor = n.y + n.h + V_GAP
+        placedCy.set(n.id, n.cy)
+        rows.push(n)
+      }
     }
-    for (const r of nodes.filter((n) => !placed.has(n.id)).sort((a, b) => a.depth - b.depth || a.name.localeCompare(b.name))) rows.push(r)
     rows.forEach((n, i) => { n.i = i })
-
-    // Vertical positions (deterministic).
-    let y = TOP_PAD
-    for (const n of rows) { n.y = y; n.h = n.kind === 'network' || !n.groups.length ? NET_H : HOST_H; n.cy = y + BAR; y += n.h + ROW_GAP }
-    const h = y + 6
-
-    // Children + X pass: each node sits right of every line still passing its row.
-    const children = new Map<string, { node: GNode; dep: Dep }[]>()
-    for (const n of rows) for (const d of n.deps) { const a = children.get(d.on) ?? []; a.push({ node: n, dep: d }); children.set(d.on, a) }
-    const active: { x: number; lastRow: number }[] = []
-    for (const n of rows) {
-      const kids = children.get(n.id)
-      for (let j = active.length - 1; j >= 0; j--) if (active[j].lastRow < n.i) active.splice(j, 1)
-      n.x = active.length ? Math.max(...active.map((a) => a.x)) + NODE_GAP : BASE_X
-      if (kids && kids.length) { n.src = true; n.lineX = n.x + LINE_OFF; active.push({ x: n.lineX, lastRow: Math.max(...kids.map((c) => c.node.i)) }) }
-    }
-    const w = Math.max(...rows.map((n) => n.x + CARD_W), CARD_W) + 20
+    const h = Math.max(0, ...rows.map((n) => n.y + n.h)) + 16
+    const w = (maxLayer + 1) * COL_W + BASE_X + 20
 
     // Edges.
     const edges: GEdge[] = []
@@ -269,19 +272,21 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
               <svg className="pointer-events-none absolute inset-0 z-[1] overflow-visible" width={model.w} height={model.h}>
                 {model.edges.map((e, idx) => {
                   const s = model.byId.get(e.from)!, t = model.byId.get(e.to)!
-                  const lx = s.x + LINE_OFF, sy = s.y + s.h, col = statusColor(e.gate), on = !hoverId || e.from === hoverId || e.to === hoverId
-                  let top = sy
-                  const parts: React.ReactNode[] = []
-                  if (e.msIdx != null) {
-                    const mx = s.x + stepCenterX(s.groups.length, e.msIdx)
-                    parts.push(<path key="m" d={`M${mx} ${sy} C${mx} ${sy + 13} ${lx} ${sy + 1} ${lx} ${sy + 14}`} fill="none" stroke={col} strokeWidth={2} opacity={on ? 0.9 : 0.08} />)
-                    top = sy + 14
-                  }
-                  parts.push(
-                    <path key="e" d={`M${lx} ${top} C${lx} ${t.cy} ${lx} ${t.cy} ${t.x} ${t.cy}`} fill="none" stroke={col} strokeWidth={on && hoverId ? 2.6 : 2} strokeDasharray={e.gate === 'build_failed' ? '5 3' : undefined} opacity={on ? 0.95 : 0.08} />,
-                    <circle key="d" cx={t.x} cy={t.cy} r={2.7} fill={col} opacity={on ? 1 : 0.08} />,
+                  const col = statusColor(e.gate), on = !hoverId || e.from === hoverId || e.to === hoverId
+                  // Flow left -> right: a whole-host edge leaves the source's right
+                  // edge; a milestone edge leaves the exact milestone step marker.
+                  const ms = e.msIdx != null
+                  const ax = ms ? s.x + stepCenterX(s.groups.length, e.msIdx!) : s.x + CARD_W
+                  const ay = ms ? s.y + s.h : s.cy
+                  const tx = t.x, ty = t.cy
+                  const dx = Math.max(44, (tx - ax) * 0.5)
+                  const d = `M${ax} ${ay} C${ax + dx} ${ay} ${tx - dx} ${ty} ${tx} ${ty}`
+                  return (
+                    <g key={idx}>
+                      <path d={d} fill="none" stroke={col} strokeWidth={on && hoverId ? 2.6 : 2} strokeDasharray={e.gate === 'build_failed' ? '5 3' : undefined} opacity={on ? 0.95 : 0.08} />
+                      <circle cx={tx} cy={ty} r={2.7} fill={col} opacity={on ? 1 : 0.08} />
+                    </g>
                   )
-                  return <g key={idx}>{parts}</g>
                 })}
               </svg>
               {model.rows.map((n) => (
