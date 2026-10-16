@@ -19,7 +19,7 @@ import { cn } from '../ui'
 // step to deep-link to that step in the host's Steps tab.
 
 type StepGroup = { index: number; label?: string; status: string; color: string; running: boolean; milestone?: string; waitFor: string[] }
-type GNode = { id: string; name: string; kind: ObjectKind; net: string; key: string; obj: DeployedObject; deps: string[]; groups: StepGroup[]; depth: number }
+type GNode = { id: string; name: string; objName: string; kind: ObjectKind; net: string; key: string; obj: DeployedObject; deps: string[]; groups: StepGroup[]; depth: number }
 type GEdge = { fromId: string; fromMs?: number; toId: string; gate: string }
 
 // Aggregate an authored step group's command statuses into one state + colour.
@@ -48,8 +48,6 @@ function gateFromNodeStatus(key: string): string {
 function gateFromStepStatus(status: string): string {
   return status === 'finished' ? 'finished' : status === 'build_failed' ? 'build_failed' : status === 'running' ? 'building' : 'dependency_blocked'
 }
-
-const NET_ORDER: Record<string, number> = {}
 
 export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; buildId: string; onClose: () => void }) {
   const { data: build } = useBuild(buildId)
@@ -82,7 +80,7 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
   const stepsSig = stepResults.map((r) => r.dataUpdatedAt ?? 0).join('|')
 
   const model = useMemo(() => {
-    if (!team) return { levels: [] as GNode[][], edges: [] as GEdge[], nodes: new Map<string, GNode>(), dependents: new Map<string, string[]>() }
+    if (!team) return { rows: [] as { node: GNode; indent: number }[], edges: [] as GEdge[], nodes: new Map<string, GNode>(), dependents: new Map<string, string[]>() }
     const objects = team.objects
     const idByName = new Map<string, string>()
     for (const o of objects) idByName.set(o.object_name, o.id)
@@ -111,7 +109,7 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
       const byGroup = new Map<number, StepStatus[]>()
       for (const s of raw) { const a = byGroup.get(s.group_index) ?? []; a.push(s); byGroup.set(s.group_index, a) }
       for (const g of groups) { const agg = groupStatus(byGroup.get(g.index) ?? []); g.status = agg.status; g.color = agg.color; g.running = agg.running }
-      nodes.set(o.id, { id: o.id, name: o.object_name, kind: o.kind, net: o.network_name ?? '', key: blockedStatusKey(o.status, o.blocked_on), obj: o, deps: Array.from(new Set(deps)), groups, depth: 0 })
+      nodes.set(o.id, { id: o.id, name: o.as_name ?? o.object_name, objName: o.object_name, kind: o.kind, net: o.network_name ?? '', key: blockedStatusKey(o.status, o.blocked_on), obj: o, deps: Array.from(new Set(deps)), groups, depth: 0 })
     }
 
     // Depth = longest dependency path.
@@ -161,16 +159,29 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
     for (const n of nodes.values()) dependents.set(n.id, [])
     for (const n of nodes.values()) for (const dp of n.deps) dependents.get(dp)?.push(n.id)
 
-    const maxD = Math.max(0, ...Array.from(nodes.values()).map((n) => n.depth))
-    const levels: GNode[][] = []
-    for (let d = 0; d <= maxD; d++) {
-      levels.push(
-        Array.from(nodes.values())
-          .filter((n) => n.depth === d)
-          .sort((a, b) => (NET_ORDER[a.net] ?? 9) - (NET_ORDER[b.net] ?? 9) || a.name.localeCompare(b.name)),
-      )
+    // Compact VERTICAL layout: one column, grouped by network. Each network
+    // heads a section; its hosts/containers list below it, indented by their
+    // dependency depth (a domain-joined host sits one step further in than a
+    // host that only needs its network). Keeps width tiny and grows downward
+    // instead of spreading a single depth across one very wide row.
+    const all = Array.from(nodes.values())
+    const byDepthName = (a: GNode, b: GNode) => a.depth - b.depth || a.name.localeCompare(b.name)
+    const rows: { node: GNode; indent: number }[] = []
+    const placed = new Set<string>()
+    const netNodes = all.filter((n) => n.kind === 'network').sort((a, b) => a.objName.localeCompare(b.objName))
+    for (const net of netNodes) {
+      rows.push({ node: net, indent: 0 })
+      placed.add(net.id)
+      for (const m of all.filter((n) => n.kind !== 'network' && n.net === net.objName).sort(byDepthName)) {
+        rows.push({ node: m, indent: Math.max(1, m.depth) })
+        placed.add(m.id)
+      }
     }
-    return { levels, edges, nodes, dependents }
+    // Objects with no (recognized) network -- a trailing section.
+    for (const r of all.filter((n) => !placed.has(n.id)).sort(byDepthName)) {
+      rows.push({ node: r, indent: r.kind === 'network' ? 0 : Math.max(1, r.depth) })
+    }
+    return { rows, edges, nodes, dependents }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [team, memberDeps, stepsSig, hostObjs])
 
@@ -313,7 +324,7 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
         ) : (
           <div className="min-h-0 flex-1 overflow-auto" style={{ background: '#0d0a17' }}>
             <div ref={graphRef} className="relative" style={{ minWidth: 'min-content' }}>
-              <svg className="pointer-events-none absolute inset-0 overflow-visible" width={size.w} height={size.h} viewBox={`0 0 ${size.w} ${size.h}`}>
+              <svg className="pointer-events-none absolute inset-0 z-10 overflow-visible" width={size.w} height={size.h} viewBox={`0 0 ${size.w} ${size.h}`}>
                 {paths.map((p, i) => {
                   const on = !hoverId || p.fromId === hoverId || p.toId === hoverId
                   return (
@@ -329,24 +340,21 @@ export function DependencyGraph({ repoId, buildId, onClose }: { repoId: string; 
                   )
                 })}
               </svg>
-              <div className="relative flex flex-col gap-[62px] px-8 pb-4 pt-6">
-                {model.levels.map((row, li) => (
-                  <div key={li} className="flex justify-center gap-10">
-                    {row.map((n) => (
-                      <GraphNode
-                        key={n.id}
-                        node={n}
-                        dim={!!hoverId && !related?.has(n.id)}
-                        setNodeRef={(el) => { if (el) nodeRefs.current.set(n.id, el); else nodeRefs.current.delete(n.id) }}
-                        setMsRef={(idx, el) => { const k = n.id + '#' + idx; if (el) msRefs.current.set(k, el); else msRefs.current.delete(k) }}
-                        onEnter={() => setHoverId(n.id)}
-                        onLeave={() => { setHoverId(null); hideTip() }}
-                        onNodeMove={(e) => showTip(e, nodeTip(n))}
-                        onStepMove={(e, g) => showTip(e, stepTip(n, g))}
-                        onOpenNode={() => setSelected({ object: n.obj, teamNumber: team!.team_number })}
-                        onOpenStep={(g) => setSelected({ object: n.obj, initialTab: 'steps', focusGroup: g.index, teamNumber: team!.team_number })}
-                      />
-                    ))}
+              <div className="relative flex w-max flex-col gap-2.5 px-8 pb-6 pt-6">
+                {model.rows.map(({ node: n, indent }) => (
+                  <div key={n.id} style={{ marginLeft: indent * 30 }}>
+                    <GraphNode
+                      node={n}
+                      dim={!!hoverId && !related?.has(n.id)}
+                      setNodeRef={(el) => { if (el) nodeRefs.current.set(n.id, el); else nodeRefs.current.delete(n.id) }}
+                      setMsRef={(idx, el) => { const k = n.id + '#' + idx; if (el) msRefs.current.set(k, el); else msRefs.current.delete(k) }}
+                      onEnter={() => setHoverId(n.id)}
+                      onLeave={() => { setHoverId(null); hideTip() }}
+                      onNodeMove={(e) => showTip(e, nodeTip(n))}
+                      onStepMove={(e, g) => showTip(e, stepTip(n, g))}
+                      onOpenNode={() => setSelected({ object: n.obj, teamNumber: team!.team_number })}
+                      onOpenStep={(g) => setSelected({ object: n.obj, initialTab: 'steps', focusGroup: g.index, teamNumber: team!.team_number })}
+                    />
                   </div>
                 ))}
               </div>
