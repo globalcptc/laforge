@@ -112,21 +112,38 @@ func resolveRebuildSet(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 	if err != nil {
 		return nil, err
 	}
-	// Map (team_id, object_name) -> row, so a dependent object NAME resolves back
-	// to THIS team's deployed_object (names repeat across teams).
-	byTeamName := make(map[string]db.DeployedObject, len(all))
+	// Map (team_id, object_name) -> ALL this team's deployed_objects of that name.
+	// A name resolves back to THIS team's rows (names repeat across teams), and
+	// per-person instances (the `people:` field) share one object_name, so a name
+	// maps to SEVERAL rows -- keep them all rather than collapsing to one arbitrary
+	// sibling, which both dragged in the wrong instance and under-counted a
+	// duplicated dependent.
+	byTeamName := make(map[string][]db.DeployedObject, len(all))
 	for _, o := range all {
 		if o.Kind == "network" {
 			continue
 		}
-		byTeamName[o.TeamID.String()+"\x00"+o.ObjectName] = o
+		key := o.TeamID.String() + "\x00" + o.ObjectName
+		byTeamName[key] = append(byTeamName[key], o)
+	}
+	// The selected objects' own names. content.Dependents seeds its walk with the
+	// roots themselves, so those names come back in the result; excluding them
+	// here keeps a sibling instance that merely shares the target's object_name
+	// (another person's copy of the same host) from being treated as a dependent.
+	// The targets are already included by their exact ids below.
+	matchedNames := make(map[string]bool, len(matched))
+	for _, m := range matched {
+		matchedNames[m.ObjectName] = true
 	}
 
 	result := make(map[string]db.DeployedObject, len(matched))
 	for _, m := range matched {
 		result[m.ID.String()] = m // always rebuild the target itself
 		for _, name := range content.Dependents([]string{m.ObjectName}) {
-			if o, ok := byTeamName[m.TeamID.String()+"\x00"+name]; ok {
+			if matchedNames[name] {
+				continue
+			}
+			for _, o := range byTeamName[m.TeamID.String()+"\x00"+name] {
 				result[o.ID.String()] = o
 			}
 		}

@@ -6,7 +6,48 @@ import (
 	"testing"
 
 	"github.com/globalcptc/laforge/internal/db"
+	"github.com/globalcptc/laforge/internal/loader"
 )
+
+// TestRebuildDoesNotDragInSiblingInstances guards the per-person-instance bug:
+// the `people:` field deploys several copies of one host that share an
+// object_name (distinguished only by as_name). Rebuilding one copy must not pull
+// in a sibling copy. content.Dependents seeds its walk with the root names, and
+// the old resolver both collapsed the duplicate object_name to one arbitrary row
+// and failed to exclude the roots -- so rebuilding vdi-win-01 dragged in a random
+// sibling (vdi-win-06) as a phantom "dependent".
+func TestRebuildDoesNotDragInSiblingInstances(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	q := db.New(pool)
+	build := newTestBuildWithFakeBuilder(t, pool, "rebuild-siblings")
+	team, err := q.EnsureTeam(ctx, db.EnsureTeamParams{BuildID: build.ID, TeamNumber: 1})
+	if err != nil {
+		t.Fatalf("EnsureTeam: %v", err)
+	}
+	// Two copies of one host: same object_name, different as_name (one per person).
+	a, err := q.EnsureDeployedObject(ctx, db.EnsureDeployedObjectParams{TeamID: team.ID, Kind: "host", ObjectName: "vdi-windows", AsName: db.StrPtr("vdi-win-01"), Fingerprint: "f"})
+	if err != nil {
+		t.Fatalf("EnsureDeployedObject vdi-win-01: %v", err)
+	}
+	if _, err := q.EnsureDeployedObject(ctx, db.EnsureDeployedObjectParams{TeamID: team.ID, Kind: "host", ObjectName: "vdi-windows", AsName: db.StrPtr("vdi-win-02"), Fingerprint: "f"}); err != nil {
+		t.Fatalf("EnsureDeployedObject vdi-win-02: %v", err)
+	}
+
+	// Nothing actually depends on vdi-windows.
+	content := &loader.Content{Hosts: []loader.Host{{Name: "vdi-windows"}}}
+	affected, err := resolveRebuildSet(ctx, q, build.ID, content, AdHocTarget{IDs: []string{a.ID.String()}}, true)
+	if err != nil {
+		t.Fatalf("resolveRebuildSet: %v", err)
+	}
+	if len(affected) != 1 || affected[0].ID != a.ID {
+		names := make([]string, len(affected))
+		for i, o := range affected {
+			names[i] = db.StrOrEmpty(o.AsName)
+		}
+		t.Fatalf("rebuilding vdi-win-01 affected %d object(s) %v, want only vdi-win-01 -- a sibling that merely shares the object_name must not be dragged in", len(affected), names)
+	}
+}
 
 // firstHost returns a deployed host object for the build, failing if none.
 func firstHost(t *testing.T, q *db.Queries, buildID db.Build) db.DeployedObject {
