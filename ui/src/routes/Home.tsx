@@ -155,8 +155,10 @@ function CapacityCell({ sig, className }: { sig: HomeCapacity | undefined; class
 // containers/networks.
 const USAGE_COLS =
   'grid-cols-[minmax(max-content,1fr)_auto_auto] @2xl:grid-cols-[minmax(max-content,1fr)_auto_auto_auto] @4xl:grid-cols-[minmax(max-content,1fr)_auto_auto_repeat(3,auto)_auto] @5xl:grid-cols-[minmax(max-content,1fr)_auto_auto_repeat(5,auto)_auto]'
+// Builds carries extra left padding so the counts read as their own group,
+// apart from the capacity columns.
 const COUNT_COLS: { label: string; className: string; value: (b: HomeData['builders'][number]) => number }[] = [
-  { label: 'Builds', className: 'hidden @4xl:block', value: (b) => b.active_builds },
+  { label: 'Builds', className: 'hidden pl-8 @4xl:block', value: (b) => b.active_builds },
   { label: 'Teams', className: 'hidden @4xl:block', value: (b) => b.teams },
   { label: 'Hosts', className: 'hidden @4xl:block', value: (b) => b.counts.hosts },
   { label: 'Containers', className: 'hidden @5xl:block', value: (b) => b.counts.containers },
@@ -193,8 +195,9 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
             const topTwo = [...(b.capacity ?? [])].sort((a, z) => z.pct - a.pct).slice(0, 2)
             const cells = (
               <>
-                <div className="flex items-center" title={KIND_LABEL[b.kind as Kind] ?? b.kind}>
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <BuilderPill name={b.name} color={b.color} kind={b.kind} />
+                  <span className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</span>
                 </div>
                 {topTwo.length > 0 ? (
                   <>
