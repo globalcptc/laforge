@@ -10,19 +10,29 @@ function formatDuration(ms: number): string {
   return [h, m, s].map((n) => String(n).padStart(2, '0')).join(':')
 }
 
-// "Time until the next transition, per-team exceptions visible."
-// Computed purely from
-// the environment's own authored schedule (the
-// `access:` windows, now real and flowing through GET /builds/{id} --
-// see internal/api/builds_ui.go); a per-team override_until is passed in
-// separately by the caller since it can push an individual team's own
-// close later than the schedule's default.
-// `state` is the object's live access_state (open/closed), when the caller has
-// it. The live state is authoritative for whether access is open right now (the
-// badge shows it); this countdown only describes the *next scheduled window
-// transition* as an event, so it never contradicts the badge -- e.g. access can
-// be live-open for setup while the first competition window is still hours away.
-export function AccessCountdown({ windows, overrideUntil, state }: { windows: AccessWindow[] | undefined; overrideUntil?: string | null; state?: string }) {
+// The next scheduled access-window transition, as one line:
+//   "Next window opens at <datetime> in <hh:mm:ss>"  (before a window)
+//   "Next window closes at <datetime> in <hh:mm:ss>" (inside a window)
+// Computed from the environment's authored `access:` windows (now real via
+// GET /builds/{id}). This describes the upcoming WINDOW boundary, not the live
+// open/closed state -- that's the badge's job -- so it never contradicts it (a
+// team can be manually open for setup while the window still opens later).
+//
+// A live open-direction override that runs past the next close is a manual
+// EXTENSION: the close moves out to the override time and is flagged. (A
+// pre-window open override is NOT an extension -- it only holds access open
+// until the window takes over, so it doesn't change the window boundary shown.)
+export function AccessCountdown({
+  windows,
+  overrideUntil,
+  overrideState,
+  formatAt,
+}: {
+  windows: AccessWindow[] | undefined
+  overrideUntil?: string | null
+  overrideState?: string
+  formatAt?: (d: Date) => string
+}) {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -31,41 +41,38 @@ export function AccessCountdown({ windows, overrideUntil, state }: { windows: Ac
 
   if (!windows || windows.length === 0) return null
 
+  const at = formatAt ?? ((d: Date) => d.toLocaleString())
   const override = overrideUntil ? new Date(overrideUntil) : null
-  const parsed = windows.map((w) => ({ open: new Date(w.open), close: new Date(w.close) })).sort((a, b) => a.open.getTime() - b.open.getTime())
 
-  // In a scheduled window and not manually closed: count down to when access is
-  // scheduled to close (or the extended override, if later).
-  const active = parsed.find((w) => now >= w.open && now <= w.close)
-  if (active && state !== 'closed') {
-    const closesAt = override && override > active.close ? override : active.close
-    if (now < closesAt) {
-      return (
-        <span className="flex items-center gap-1.5 text-xs text-fg-muted">
-          <Clock size={12} className="text-success" />
-          Access closes in {formatDuration(closesAt.getTime() - now.getTime())}
-          {override && override > active.close && <span className="text-warning"> (extended)</span>}
-        </span>
-      )
-    }
+  // The soonest window boundary (open or close) strictly after now.
+  const events: { time: Date; verb: 'opens' | 'closes' }[] = []
+  for (const w of windows) {
+    events.push({ time: new Date(w.open), verb: 'opens' })
+    events.push({ time: new Date(w.close), verb: 'closes' })
   }
-
-  // Otherwise, the next scheduled window -- phrased as the upcoming event, not a
-  // current open/closed claim (that's the badge's job).
-  const next = parsed.find((w) => w.open > now)
-  if (next) {
+  const future = events.filter((e) => e.time > now).sort((a, b) => a.time.getTime() - b.time.getTime())
+  if (future.length === 0) {
     return (
       <span className="flex items-center gap-1.5 text-xs text-fg-muted">
-        <Clock size={12} className="text-fg-subtle" />
-        Next window opens in {formatDuration(next.open.getTime() - now.getTime())}
+        <Clock size={12} />
+        No more scheduled access windows
       </span>
     )
   }
 
+  let { time, verb } = future[0]
+  // An open override that reaches past the next close extends it.
+  let extended = false
+  if (verb === 'closes' && overrideState === 'open' && override && override > time) {
+    time = override
+    extended = true
+  }
+
   return (
     <span className="flex items-center gap-1.5 text-xs text-fg-muted">
-      <Clock size={12} />
-      No more scheduled access windows
+      <Clock size={12} className={verb === 'closes' ? 'text-success' : 'text-fg-subtle'} />
+      Next window {verb} at {at(time)} in {formatDuration(time.getTime() - now.getTime())}
+      {extended && <span className="text-warning"> (extended)</span>}
     </span>
   )
 }
