@@ -47,6 +47,7 @@ import type {
   ObjectInfra,
   Repository,
   ScheduledTask,
+  ScheduledTaskRun,
   SchedulePreview,
   Task,
   Team,
@@ -938,6 +939,18 @@ export function useScheduledTasks(buildId: string | undefined) {
     queryFn: () => api.get(`/builds/${buildId}/scheduled-tasks`),
     enabled: !!buildId,
     refetchInterval: 10_000,
+  })
+}
+
+// useScheduledTaskRuns fetches the agent_task runs a scheduled task spawned
+// (console output + status), for the per-team run modal. Enabled only while the
+// modal is open; polls while there's an in-flight run.
+export function useScheduledTaskRuns(buildId: string, taskId: string | null) {
+  return useQuery<ScheduledTaskRun[]>({
+    queryKey: ['scheduled-task-runs', buildId, taskId],
+    queryFn: () => api.get(`/builds/${buildId}/scheduled-tasks/${taskId}/runs`),
+    enabled: !!taskId,
+    refetchInterval: 5_000,
   })
 }
 

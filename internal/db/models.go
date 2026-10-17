@@ -77,6 +77,7 @@ type AgentTask struct {
 	Milestone        *string            `json:"milestone"`
 	StepScript       *string            `json:"step_script"`
 	WaitFor          json.RawMessage    `json:"wait_for"`
+	ScheduledTaskID  pgtype.UUID        `json:"scheduled_task_id"`
 }
 
 type AttentionDismissal struct {

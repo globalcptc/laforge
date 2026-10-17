@@ -91,6 +91,7 @@ CREATE TABLE public.agent_task (
     milestone text,
     step_script text,
     wait_for jsonb,
+    scheduled_task_id uuid,
     CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text, 'blocked'::text])))
 );
 --
@@ -1031,6 +1032,10 @@ CREATE INDEX agent_task_leasable_idx ON public.agent_task USING btree (deployed_
 --
 CREATE INDEX agent_task_milestone_idx ON public.agent_task USING btree (deployed_object_id) WHERE ((milestone IS NOT NULL) OR (step_script IS NOT NULL));
 --
+-- Name: agent_task_scheduled_task_idx; Type: INDEX; Schema: public; Owner: -
+--
+CREATE INDEX agent_task_scheduled_task_idx ON public.agent_task USING btree (scheduled_task_id) WHERE (scheduled_task_id IS NOT NULL);
+--
 -- Name: builder_image_build_by_builder_idx; Type: INDEX; Schema: public; Owner: -
 --
 CREATE INDEX builder_image_build_by_builder_idx ON public.builder_image_build USING btree (builder_config_id, created_at DESC);
@@ -1130,6 +1135,8 @@ ALTER TABLE ONLY public.agent_session
 --
 ALTER TABLE ONLY public.agent_task
     ADD CONSTRAINT agent_task_deployed_object_id_fkey FOREIGN KEY (deployed_object_id) REFERENCES public.deployed_object(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.agent_task
+    ADD CONSTRAINT agent_task_scheduled_task_id_fkey FOREIGN KEY (scheduled_task_id) REFERENCES public.scheduled_task(id) ON DELETE SET NULL;
 --
 -- Name: attention_dismissal attention_dismissal_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --

@@ -273,7 +273,7 @@ func dispatchOneScheduledTask(ctx context.Context, q *db.Queries, st db.Schedule
 			return fmt.Errorf("resolving target: %w", err)
 		}
 		for _, obj := range matched {
-			if dispatchCommand(ctx, q, obj.ID, st.Command, st.Payload) {
+			if dispatchCommand(ctx, q, st.ID, obj.ID, st.Command, st.Payload) {
 				created++
 			}
 		}
@@ -317,7 +317,7 @@ func dispatchOneScheduledTask(ctx context.Context, q *db.Queries, st db.Schedule
 				log.Printf("scheduled_task %s: encoding payload: %v", st.ID, err)
 				continue
 			}
-			if dispatchCommand(ctx, q, obj.ID, cmd.Command, payload) {
+			if dispatchCommand(ctx, q, st.ID, obj.ID, cmd.Command, payload) {
 				created++
 			}
 		}
@@ -370,14 +370,14 @@ func dispatchOneScheduledTask(ctx context.Context, q *db.Queries, st db.Schedule
 // command per matched target, or one of several commands a content
 // schedule entry expanded to), logging rather than failing the whole
 // dispatch pass over one target's error.
-func dispatchCommand(ctx context.Context, q *db.Queries, objID pgtype.UUID, command string, payload []byte) bool {
+func dispatchCommand(ctx context.Context, q *db.Queries, schedID, objID pgtype.UUID, command string, payload []byte) bool {
 	next, err := q.NextStepIndexForHost(ctx, objID)
 	if err != nil {
 		log.Printf("next step index for %s: %v", objID, err)
 		return false
 	}
 	if _, err := q.CreateAdHocAgentTask(ctx, db.CreateAdHocAgentTaskParams{
-		DeployedObjectID: objID, StepIndex: next, Command: command, Payload: payload,
+		DeployedObjectID: objID, StepIndex: next, Command: command, Payload: payload, ScheduledTaskID: schedID,
 	}); err != nil {
 		log.Printf("creating agent task for %s: %v", objID, err)
 		return false

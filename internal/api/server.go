@@ -257,6 +257,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("POST /builds/{id}/scheduled-tasks", s.handleCreateScheduledTask)
 	mux.HandleFunc("POST /builds/{id}/scheduled-tasks/preview", s.handlePreviewScheduledTask)
 	mux.HandleFunc("GET /builds/{id}/scheduled-tasks", s.handleListScheduledTasks)
+	mux.HandleFunc("GET /builds/{id}/scheduled-tasks/{taskId}/runs", s.handleListScheduledTaskRuns)
 	mux.HandleFunc("POST /builds/{id}/scheduled-tasks/{taskId}/cancel", s.handleCancelScheduledTask)
 	mux.HandleFunc("POST /builds/{id}/teams/{team}/access", s.handleSetTeamAccess)
 	mux.HandleFunc("GET /builds/{id}/findings", s.handleListFindings)

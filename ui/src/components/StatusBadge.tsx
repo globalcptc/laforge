@@ -74,6 +74,12 @@ type Kind =
   | 'missing'
   | 'fired'
   | 'canceled'
+  // agent_task run states (the Schedule page's per-team task runs + run modal):
+  // a task the agent has leased, finished, skipped, or is holding on a gate.
+  | 'leased'
+  | 'done'
+  | 'ignored'
+  | 'blocked'
   // legacy aliases (pre-00023), kept so any stale value still renders:
   | 'deployed'
 
@@ -134,6 +140,15 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   missing: { icon: PlugZap, anim: 'pulse', tone: 'danger', label: 'Agent Missing' },
   fired: { icon: CircleCheck, tone: 'success', label: 'Fired' },
   canceled: { icon: MinusCircle, tone: 'neutral', label: 'Canceled' },
+  // agent_task run states. 'leased' is in flight (the agent has it and is
+  // running it) -- sky, spinning, like the other active work. 'done' is a
+  // successful run (CircleCheck/success, matching 'fired'). 'ignored' was
+  // skipped (neutral, still). 'blocked' is held on a gate (wait_for / a
+  // dependency) -- the same patient amber Hourglass as dependency_blocked.
+  leased: { icon: Loader, anim: 'spin', tone: 'sky', label: 'Running' },
+  done: { icon: CircleCheck, tone: 'success', label: 'Done' },
+  ignored: { icon: MinusCircle, tone: 'neutral', label: 'Skipped' },
+  blocked: { icon: Hourglass, anim: 'slow-spin', tone: 'warning', label: 'Blocked' },
   deployed: { icon: CircleCheck, tone: 'success', label: 'Deployed' },
 }
 
@@ -182,6 +197,10 @@ const STATUS_DESC: Partial<Record<Kind, string>> = {
   missing: 'Agent is long overdue — the host is probably gone.',
   fired: 'The scheduled task fired.',
   canceled: 'The scheduled task was canceled.',
+  leased: 'The agent has picked up this task and is running it.',
+  done: 'The task ran and completed.',
+  ignored: 'The task was skipped on this host.',
+  blocked: 'Held until a gate (a dependency or wait_for) is satisfied.',
   deployed: 'Deployed.',
 }
 // Kind-aware description overrides, mirroring KIND_LABELS so a network's

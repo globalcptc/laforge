@@ -212,15 +212,49 @@ func (s *Server) handleListScheduledTasks(w http.ResponseWriter, r *http.Request
 		writeAuthError(w, err)
 		return
 	}
-	tasks, err := s.Queries.ListScheduledTasksByBuild(r.Context(), build.ID)
+	tasks, err := s.Queries.ListScheduledTasksWithContextByBuild(r.Context(), build.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 	if tasks == nil {
-		tasks = []db.ScheduledTask{}
+		tasks = []db.ListScheduledTasksWithContextByBuildRow{}
 	}
 	writeJSON(w, http.StatusOK, tasks)
+}
+
+// handleListScheduledTaskRuns returns the agent_task runs a scheduled task has
+// spawned (linked by scheduled_task_id) -- the per-team run status + console
+// output behind the Schedule page's run modal.
+func (s *Server) handleListScheduledTaskRuns(w http.ResponseWriter, r *http.Request) {
+	build, repo, err := s.buildAndOwningRepository(r)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	if _, err := s.requireLevel(r.Context(), r, repo, levelRead); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	var taskID pgtype.UUID
+	if err := taskID.Scan(r.PathValue("taskId")); err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid task id"))
+		return
+	}
+	st, err := s.Queries.GetScheduledTask(r.Context(), taskID)
+	if err != nil || st.BuildID != build.ID {
+		writeError(w, http.StatusNotFound, errors.New("no such scheduled task on this build"))
+		return
+	}
+	runs, err := s.Queries.ListRunsForScheduledTask(r.Context(), taskID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	if runs == nil {
+		runs = []db.ListRunsForScheduledTaskRow{}
+	}
+	writeJSON(w, http.StatusOK, runs)
 }
 
 func (s *Server) handleCancelScheduledTask(w http.ResponseWriter, r *http.Request) {

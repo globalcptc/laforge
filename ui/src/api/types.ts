@@ -558,6 +558,34 @@ export interface ScheduledTask {
   created_by: string | null
   created_at: string
   updated_at: string
+  // Enriched by ListScheduledTasksWithContextByBuild: the host this task targets
+  // and the team it belongs to, plus a rollup of the agent_task runs it spawned.
+  host_object_name: string | null
+  host_as_name: string | null
+  host_kind: string | null
+  team_number: number | null
+  run_total: number
+  run_failed: number
+  run_open: number
+  last_run_id: string | null
+  last_run_status: string
+  last_run_finished_at: string | null
+}
+
+// ScheduledTaskRun is one agent_task a scheduled task spawned (its console
+// output + status), from ListRunsForScheduledTask.
+export interface ScheduledTaskRun {
+  id: string
+  step_index: number
+  command: string
+  payload: unknown
+  status: string
+  output: string | null
+  last_error: string | null
+  started_at: string | null
+  finished_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface AgentHeartbeat {

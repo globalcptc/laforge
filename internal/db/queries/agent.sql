@@ -203,8 +203,8 @@ GROUP BY deployed_object.id, deployed_object.object_name, agent_task.milestone, 
 -- true puts them in the always-eligible lane so they run even past a failed
 -- authored step -- see NextAgentTaskForHost. Same shape as CreateAgentTask
 -- otherwise (step_index still from NextStepIndexForHost, so it's unique).
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, ad_hoc)
-VALUES ($1, $2, $3, $4, $5, true)
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, ad_hoc, scheduled_task_id)
+VALUES ($1, $2, $3, $4, $5, true, $6)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
 RETURNING *;
 

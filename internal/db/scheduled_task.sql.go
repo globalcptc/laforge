@@ -270,6 +270,62 @@ func (q *Queries) ListDueScheduledTasks(ctx context.Context, limit int32) ([]Sch
 	return items, nil
 }
 
+const listRunsForScheduledTask = `-- name: ListRunsForScheduledTask :many
+SELECT id, step_index, command, payload, status, output, last_error, started_at, finished_at, created_at, updated_at
+FROM agent_task
+WHERE scheduled_task_id = $1
+ORDER BY step_index DESC
+`
+
+type ListRunsForScheduledTaskRow struct {
+	ID         pgtype.UUID        `json:"id"`
+	StepIndex  int32              `json:"step_index"`
+	Command    string             `json:"command"`
+	Payload    json.RawMessage    `json:"payload"`
+	Status     string             `json:"status"`
+	Output     *string            `json:"output"`
+	LastError  *string            `json:"last_error"`
+	StartedAt  pgtype.Timestamptz `json:"started_at"`
+	FinishedAt pgtype.Timestamptz `json:"finished_at"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Every agent_task run a scheduled task has spawned, newest first -- the
+// console output (agent_task.output) + status + timing behind the per-team
+// run modal on the Schedule page.
+func (q *Queries) ListRunsForScheduledTask(ctx context.Context, scheduledTaskID pgtype.UUID) ([]ListRunsForScheduledTaskRow, error) {
+	rows, err := q.db.Query(ctx, listRunsForScheduledTask, scheduledTaskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRunsForScheduledTaskRow
+	for rows.Next() {
+		var i ListRunsForScheduledTaskRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StepIndex,
+			&i.Command,
+			&i.Payload,
+			&i.Status,
+			&i.Output,
+			&i.LastError,
+			&i.StartedAt,
+			&i.FinishedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listScheduledTasksByBuild = `-- name: ListScheduledTasksByBuild :many
 SELECT id, build_id, source, deployed_object_id, schedule_index, target, when_expr, command, payload, anchor, fires_once, next_fire_at, status, created_by, created_at, updated_at FROM scheduled_task WHERE build_id = $1 ORDER BY created_at DESC
 `
@@ -300,6 +356,117 @@ func (q *Queries) ListScheduledTasksByBuild(ctx context.Context, buildID pgtype.
 			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listScheduledTasksWithContextByBuild = `-- name: ListScheduledTasksWithContextByBuild :many
+SELECT st.id, st.build_id, st.source, st.deployed_object_id, st.schedule_index, st.target, st.when_expr, st.command, st.payload, st.anchor, st.fires_once, st.next_fire_at, st.status, st.created_by, st.created_at, st.updated_at,
+       o.object_name AS host_object_name,
+       o.as_name AS host_as_name,
+       o.kind AS host_kind,
+       tm.team_number AS team_number,
+       run.total::bigint AS run_total,
+       run.failed::bigint AS run_failed,
+       run.open::bigint AS run_open,
+       run.last_run_id AS last_run_id,
+       run.last_status AS last_run_status,
+       run.last_finished_at AS last_run_finished_at
+FROM scheduled_task st
+LEFT JOIN deployed_object o ON o.id = st.deployed_object_id
+LEFT JOIN team tm ON tm.id = o.team_id
+LEFT JOIN LATERAL (
+    SELECT count(*) AS total,
+           count(*) FILTER (WHERE at.status = 'failed') AS failed,
+           count(*) FILTER (WHERE at.status IN ('pending', 'leased', 'blocked')) AS open,
+           (SELECT a2.id FROM agent_task a2 WHERE a2.scheduled_task_id = st.id ORDER BY a2.step_index DESC LIMIT 1) AS last_run_id,
+           COALESCE((SELECT a2.status FROM agent_task a2 WHERE a2.scheduled_task_id = st.id ORDER BY a2.step_index DESC LIMIT 1), '')::text AS last_status,
+           (SELECT a2.finished_at FROM agent_task a2 WHERE a2.scheduled_task_id = st.id ORDER BY a2.step_index DESC LIMIT 1) AS last_finished_at
+    FROM agent_task at WHERE at.scheduled_task_id = st.id
+) run ON true
+WHERE st.build_id = $1
+ORDER BY st.created_at DESC
+`
+
+type ListScheduledTasksWithContextByBuildRow struct {
+	ID                pgtype.UUID        `json:"id"`
+	BuildID           pgtype.UUID        `json:"build_id"`
+	Source            string             `json:"source"`
+	DeployedObjectID  pgtype.UUID        `json:"deployed_object_id"`
+	ScheduleIndex     *int32             `json:"schedule_index"`
+	Target            json.RawMessage    `json:"target"`
+	WhenExpr          string             `json:"when_expr"`
+	Command           string             `json:"command"`
+	Payload           json.RawMessage    `json:"payload"`
+	Anchor            string             `json:"anchor"`
+	FiresOnce         bool               `json:"fires_once"`
+	NextFireAt        pgtype.Timestamptz `json:"next_fire_at"`
+	Status            string             `json:"status"`
+	CreatedBy         *string            `json:"created_by"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	HostObjectName    *string            `json:"host_object_name"`
+	HostAsName        *string            `json:"host_as_name"`
+	HostKind          *string            `json:"host_kind"`
+	TeamNumber        *int32             `json:"team_number"`
+	RunTotal          int64              `json:"run_total"`
+	RunFailed         int64              `json:"run_failed"`
+	RunOpen           int64              `json:"run_open"`
+	LastRunID         pgtype.UUID        `json:"last_run_id"`
+	LastRunStatus     string             `json:"last_run_status"`
+	LastRunFinishedAt pgtype.Timestamptz `json:"last_run_finished_at"`
+}
+
+// The Schedule page's enriched list: every scheduled task plus the host it
+// targets (object_name/as_name/kind) and team, and a rollup of the agent_task
+// runs it has actually spawned (linked by scheduled_task_id). A content task is
+// one row per team's host copy -- the UI groups them by (object_name,
+// schedule_index); the per-row run columns drive the per-team status and the
+// console/log modal. deployed_object is a LEFT JOIN so an ad-hoc task with no
+// single object (target-based) still lists.
+func (q *Queries) ListScheduledTasksWithContextByBuild(ctx context.Context, buildID pgtype.UUID) ([]ListScheduledTasksWithContextByBuildRow, error) {
+	rows, err := q.db.Query(ctx, listScheduledTasksWithContextByBuild, buildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListScheduledTasksWithContextByBuildRow
+	for rows.Next() {
+		var i ListScheduledTasksWithContextByBuildRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BuildID,
+			&i.Source,
+			&i.DeployedObjectID,
+			&i.ScheduleIndex,
+			&i.Target,
+			&i.WhenExpr,
+			&i.Command,
+			&i.Payload,
+			&i.Anchor,
+			&i.FiresOnce,
+			&i.NextFireAt,
+			&i.Status,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.HostObjectName,
+			&i.HostAsName,
+			&i.HostKind,
+			&i.TeamNumber,
+			&i.RunTotal,
+			&i.RunFailed,
+			&i.RunOpen,
+			&i.LastRunID,
+			&i.LastRunStatus,
+			&i.LastRunFinishedAt,
 		); err != nil {
 			return nil, err
 		}
