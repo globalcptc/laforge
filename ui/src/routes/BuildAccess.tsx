@@ -61,6 +61,15 @@ export function BuildAccess() {
       },
     )
   }
+  // Bulk open/close every team at once. One toast for the whole batch (N toasts
+  // would be noise); each team's badge updates on its own as it takes effect.
+  const toggleAll = (action: 'open' | 'close') => {
+    if (!build) return
+    toast({ title: `${action === 'close' ? 'Closing' : 'Opening'} all ${build.teams.length} teams…`, tone: 'info' })
+    for (const team of build.teams) {
+      setAccess.mutate({ team: team.team_number, action })
+    }
+  }
   const [extendFor, setExtendFor] = useState<number | null>(null)
   const [reduceFor, setReduceFor] = useState<number | null>(null)
   // The expanded +Nm / -Nm choices collapse back to the button after 30s of no
@@ -97,6 +106,19 @@ export function BuildAccess() {
         <Card className="px-4 py-2">
           <AccessCountdown windows={build.access} />
         </Card>
+      )}
+      {!readOnly && build.teams.length > 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-fg">All teams</span>
+          <div className="flex items-center gap-2">
+            <Button variant="primary" size="sm" onClick={() => toggleAll('open')} disabled={setAccess.isPending}>
+              <Unlock size={14} /> Open All
+            </Button>
+            <Button variant="danger" size="sm" className="bg-orange hover:brightness-95" onClick={() => toggleAll('close')} disabled={setAccess.isPending}>
+              <Lock size={14} /> Close All
+            </Button>
+          </div>
+        </div>
       )}
       {build.teams.map((team) => {
         const accessEnd = currentAccessEnd(build.access, team)
