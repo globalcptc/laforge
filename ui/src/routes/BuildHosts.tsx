@@ -229,7 +229,7 @@ export function BuildHosts() {
   const [powering, setPowering] = useState<'start' | 'stop' | 'reboot' | null>(null)
   // A single-instance power action from the Infra pill's hover controls,
   // confirmed in the same PowerDialog the bulk bar uses (one target here).
-  const [powerSingle, setPowerSingle] = useState<{ action: 'start' | 'stop' | 'reboot'; id: string; name: string } | null>(null)
+  const [powerSingle, setPowerSingle] = useState<{ action: 'start' | 'stop' | 'reboot'; id: string; name: string; team: number | null } | null>(null)
   // A forced rebuild (tear down + recreate) of one or more hosts plus their
   // dependents; confirmed in RebuildDialog, which previews the full blast radius.
   const [rebuilding, setRebuilding] = useState<{ ids: string[]; names: string[] } | null>(null)
@@ -246,6 +246,15 @@ export function BuildHosts() {
   const [legendOpen, setLegendOpen] = useState(false)
 
   const objects: DeployedObject[] = useMemo(() => build?.teams.flatMap((t) => t.objects) ?? [], [build])
+
+  // team_id -> team_number, so the power/rebuild confirmations can show which
+  // team each host belongs to (hostnames repeat across teams -- every team gets
+  // the same network -- so a bare name list is ambiguous about what's affected).
+  const teamNumberById = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const t of build?.teams ?? []) m.set(t.id, t.team_number)
+    return m
+  }, [build])
 
   // Router doesn't remount this component when navigating between two
   // builds that hit the same route (only buildId's param value changes),
@@ -605,7 +614,7 @@ export function BuildHosts() {
                                     <Td>
                                       <InfraCell
                                         obj={h}
-                                        onAction={(action, obj) => setPowerSingle({ action, id: obj.id, name: obj.as_name ?? obj.object_name })}
+                                        onAction={(action, obj) => setPowerSingle({ action, id: obj.id, name: obj.as_name ?? obj.object_name, team: teamNumberById.get(obj.team_id) ?? null })}
                                         onRebuild={readOnly ? undefined : (obj) => setRebuilding({ ids: [obj.id], names: [obj.as_name ?? obj.object_name] })}
                                       />
                                     </Td>
@@ -670,7 +679,7 @@ export function BuildHosts() {
           buildId={buildId}
           action={powering}
           targetIds={selectedHosts.map((h) => h.id)}
-          matched={selectedHosts.map((h) => h.as_name ?? h.object_name)}
+          matched={selectedHosts.map((h) => ({ name: h.as_name ?? h.object_name, team: teamNumberById.get(h.team_id) ?? null }))}
           onClose={() => setPowering(null)}
           onDone={() => {
             setPowering(null)
@@ -684,7 +693,7 @@ export function BuildHosts() {
           buildId={buildId}
           action={powerSingle.action}
           targetIds={[powerSingle.id]}
-          matched={[powerSingle.name]}
+          matched={[{ name: powerSingle.name, team: powerSingle.team }]}
           onClose={() => setPowerSingle(null)}
           onDone={() => setPowerSingle(null)}
         />
@@ -757,7 +766,7 @@ function PowerDialog({
   buildId: string
   action: 'start' | 'stop' | 'reboot'
   targetIds: string[]
-  matched: string[]
+  matched: { name: string; team: number | null }[]
   onClose: () => void
   onDone: () => void
 }) {
@@ -835,7 +844,14 @@ function PowerDialog({
       )}
 
       <Label>Affects</Label>
-      <div className="mt-1 max-h-32 overflow-auto rounded-token border border-border bg-surface-sunken p-2 text-xs text-fg-muted">{matched.join(', ')}</div>
+      <div className="mt-1 max-h-32 overflow-auto rounded-token border border-border bg-surface-sunken p-2 text-xs text-fg-muted">
+        {matched.map((h, i) => (
+          <div key={`${h.name}-${i}`} className="flex items-center justify-between gap-2 py-0.5">
+            <span className="truncate">{h.name}</span>
+            {h.team !== null && <span className="shrink-0 text-fg-subtle">team {h.team}</span>}
+          </div>
+        ))}
+      </div>
     </Modal>
   )
 }
