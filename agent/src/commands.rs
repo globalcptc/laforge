@@ -65,6 +65,7 @@ fn dispatch_table() -> &'static (u64, crate::obfuscate::JumpTable<Handler>) {
             ("add_to_group", cmd_add_to_group),
             ("service", cmd_service),
             ("reboot", cmd_reboot),
+            ("disconnect_sessions", cmd_disconnect_sessions),
             ("download", cmd_download),
             ("extract", cmd_extract),
         ];
@@ -761,6 +762,131 @@ fn cmd_reboot(payload: &Value) -> Result<String, String> {
     Ok(format!("reboot scheduled in {delay}s (forced)"))
 }
 
+/// parse_rdp_session_ids pulls the numeric session IDs of connected RDP
+/// sessions out of `query session` output. A connected RDP session's
+/// SESSIONNAME is "rdp-tcp#<n>"; the bare "rdp-tcp" listener, "console" and
+/// "services" rows are skipped, so only live remote sessions are returned.
+/// USERNAME can be blank, which shifts columns, so the ID is taken as the first
+/// purely-numeric token on the row rather than by position ("rdp-tcp#2" is not
+/// purely numeric, so the name is never mistaken for the ID). Kept pure and
+/// platform-independent so it can be unit-tested anywhere, not only on Windows.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn parse_rdp_session_ids(text: &str) -> Vec<u32> {
+    let mut ids: Vec<u32> = Vec::new();
+    for line in text.lines() {
+        // A leading '>' marks the current session; strip it before matching.
+        let line = line.trim_start_matches('>').trim_start();
+        let mut toks = line.split_whitespace();
+        let name = match toks.next() {
+            Some(n) => n,
+            None => continue,
+        };
+        if !name.starts_with("rdp-tcp#") {
+            continue;
+        }
+        if let Some(id) = toks.find_map(|t| t.parse::<u32>().ok()) {
+            ids.push(id);
+        }
+    }
+    ids
+}
+
+/// cmd_disconnect_sessions forcibly ends live interactive remote-access
+/// sessions WITHOUT disturbing the agent's own outbound connection to the
+/// gateway. The access reconciler fires this at a team on close, because the
+/// network firewall only blocks NEW connections: an already-established RDP/SSH
+/// session rides conntrack (on a bridge the published port is a nat-proxy whose
+/// DNAT conntrack survives the proxy's removal) and the firewall can't tear a
+/// live flow down. The agent, reached over the one egress path a closed team
+/// keeps, drops the sessions from inside the guest instead. It only ever acts
+/// on the inbound/listening side (log off RDP sessions; reset established
+/// sockets on service ports), never on its own outbound gateway socket.
+#[cfg(windows)]
+fn cmd_disconnect_sessions(_payload: &Value) -> Result<String, String> {
+    // `query session` lists one row per session. A connected RDP session's
+    // SESSIONNAME is "rdp-tcp#<n>"; the bare "rdp-tcp" row is the idle listener
+    // and "console"/"services" are local, so keying on the "rdp-tcp#" prefix
+    // hits exactly the live remote sessions. The agent runs as a LocalSystem
+    // service in session 0, which has no "rdp-tcp#" name, so it is never a
+    // candidate -- its gateway connection is untouched.
+    let out = Command::new("query")
+        .arg("session")
+        .output()
+        .map_err(|e| format!("spawning query session: {e}"))?;
+    if !out.status.success() {
+        return Err(format!("query session exited {}: {}", out.status, String::from_utf8_lossy(&out.stderr).trim()));
+    }
+    let text = String::from_utf8_lossy(&out.stdout);
+    let ids = parse_rdp_session_ids(&text);
+    if ids.is_empty() {
+        return Ok("no active RDP sessions to disconnect".to_string());
+    }
+    let mut done: Vec<u32> = Vec::new();
+    let mut errs: Vec<String> = Vec::new();
+    for id in &ids {
+        match Command::new("logoff").arg(id.to_string()).output() {
+            Ok(o) if o.status.success() => done.push(*id),
+            Ok(o) => errs.push(format!("session {id}: logoff exited {} {}", o.status, String::from_utf8_lossy(&o.stderr).trim())),
+            Err(e) => errs.push(format!("session {id}: spawning logoff: {e}")),
+        }
+    }
+    if done.is_empty() && !errs.is_empty() {
+        return Err(format!("failed to log off RDP session(s): {}", errs.join("; ")));
+    }
+    let mut msg = format!("logged off {} RDP session(s): {:?}", done.len(), done);
+    if !errs.is_empty() {
+        msg.push_str(&format!(" ({} failed: {})", errs.len(), errs.join("; ")));
+    }
+    Ok(msg)
+}
+
+#[cfg(unix)]
+fn cmd_disconnect_sessions(payload: &Value) -> Result<String, String> {
+    // `ss -K` resets matching sockets; it needs CONFIG_INET_DIAG_DESTROY and
+    // root (the agent has both). We match the LISTENING side (sport) of the
+    // usual remote-access ports plus any the server passed in `ports`, so only
+    // inbound sessions are reset -- the agent's own connection is OUTBOUND to
+    // the gateway on a different port and is never matched. Best-effort per
+    // port: a kernel without -K support is reported, not fatal.
+    let mut ports: Vec<u64> = vec![22, 3389, 5900];
+    if let Some(arr) = payload.get("ports").and_then(Value::as_array) {
+        for v in arr {
+            if let Some(p) = v.as_u64() {
+                if p > 0 && p < 65536 {
+                    ports.push(p);
+                }
+            }
+        }
+    }
+    ports.sort_unstable();
+    ports.dedup();
+    let mut done: Vec<u64> = Vec::new();
+    let mut errs: Vec<String> = Vec::new();
+    for p in &ports {
+        let out = Command::new("ss")
+            .arg("-K")
+            .arg("state")
+            .arg("established")
+            .arg(format!("sport = :{p}"))
+            .output();
+        match out {
+            // ss exits 0 whether or not it killed anything on that port, so a
+            // clean exit just means "nothing established there" or "reset them".
+            Ok(o) if o.status.success() => done.push(*p),
+            Ok(o) => errs.push(format!("port {p}: ss -K exited {} {}", o.status, String::from_utf8_lossy(&o.stderr).trim())),
+            Err(e) => errs.push(format!("port {p}: spawning ss: {e}")),
+        }
+    }
+    if done.is_empty() && !errs.is_empty() {
+        return Err(format!("could not reset sessions: {}", errs.join("; ")));
+    }
+    let mut msg = format!("reset established sessions on port(s): {done:?}");
+    if !errs.is_empty() {
+        msg.push_str(&format!(" ({} port(s) failed: {})", errs.len(), errs.join("; ")));
+    }
+    Ok(msg)
+}
+
 fn run_ok(cmd: &str, args: &[&str]) -> Result<(), String> {
     run_codes(cmd, args, &[])
 }
@@ -817,6 +943,34 @@ mod tests {
         let outcome = run("execute", &json!({"command": "/bin/echo", "args": ["hi", "there"]}));
         assert_eq!(outcome.status, "done", "error was: {}", outcome.error);
         assert_eq!(outcome.output.trim(), "hi there");
+    }
+
+    #[test]
+    fn parses_only_connected_rdp_session_ids() {
+        // Representative `query session` output: the services (0) and console
+        // (1) rows and the idle "rdp-tcp" listener (65536) must be ignored; only
+        // the two connected "rdp-tcp#N" rows -- one with a blank USERNAME,
+        // shifting the columns, and the current one marked with '>' -- yield IDs.
+        let text = "\
+ SESSIONNAME       USERNAME                 ID  STATE   TYPE        DEVICE
+ services                                    0  Disc
+ console                                     1  Conn
+>rdp-tcp#2         Administrator             2  Active  rdpwd
+ rdp-tcp#5                                   5  Active  rdpwd
+ rdp-tcp                                 65536  Listen
+";
+        assert_eq!(parse_rdp_session_ids(text), vec![2, 5]);
+    }
+
+    #[test]
+    fn parses_no_sessions_when_only_listener_present() {
+        let text = "\
+ SESSIONNAME       USERNAME                 ID  STATE   TYPE        DEVICE
+ services                                    0  Disc
+ console                                     1  Conn
+ rdp-tcp                                 65536  Listen
+";
+        assert!(parse_rdp_session_ids(text).is_empty());
     }
 
     #[test]

@@ -80,16 +80,17 @@ type createAdHocTaskRequest struct {
 // content-resolution ExpandSteps does, a separate piece of work (see this
 // file's package doc). This is a manage-level capability either way.
 var allowedAdHocCommands = map[string]bool{
-	agentproto.CmdExecute:     true,
-	agentproto.CmdReboot:      true,
-	agentproto.CmdService:     true,
-	agentproto.CmdWriteFile:   true,
-	agentproto.CmdAppendFile:  true,
-	agentproto.CmdDelete:      true,
-	agentproto.CmdChangePerms: true,
-	agentproto.CmdCreateUser:  true,
-	agentproto.CmdSetPassword: true,
-	agentproto.CmdAddToGroup:  true,
+	agentproto.CmdExecute:            true,
+	agentproto.CmdReboot:             true,
+	agentproto.CmdDisconnectSessions: true,
+	agentproto.CmdService:            true,
+	agentproto.CmdWriteFile:          true,
+	agentproto.CmdAppendFile:         true,
+	agentproto.CmdDelete:             true,
+	agentproto.CmdChangePerms:        true,
+	agentproto.CmdCreateUser:         true,
+	agentproto.CmdSetPassword:        true,
+	agentproto.CmdAddToGroup:         true,
 }
 
 type adHocResult struct {

@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/globalcptc/laforge/internal/agentdelivery"
+	"github.com/globalcptc/laforge/internal/agentproto"
 	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/checkout"
 	"github.com/globalcptc/laforge/internal/db"
@@ -961,7 +962,71 @@ func (r *Runner) executeAccess(ctx context.Context, q *db.Queries, task db.Task)
 		return fmt.Errorf("recording access state: %w", err)
 	}
 	r.logEvent(ctx, q, task.BuildID, task.ID, eventKind, "team "+payload.Team)
+
+	// Closing the firewall only blocks NEW connections. On a bridge the
+	// published port is a nat-proxy whose DNAT conntrack survives the forward's
+	// removal, and the guest's egress replies ride Incus's global stateful
+	// bypass -- so an established RDP/SSH session stays up. The ACL can't scope
+	// statefulness or tear down a live flow, so after the close lands we fire a
+	// one-shot agent task at every host in the team to drop those sessions from
+	// inside the guest. The agent is still reachable over the one egress a
+	// closed team keeps, and the kill only touches inbound/listening sessions,
+	// never its own gateway connection.
+	if task.Kind == "close_access" {
+		r.dispatchSessionKill(ctx, q, task, team.ID, payload.Team)
+	}
 	return nil
+}
+
+// dispatchSessionKill queues a disconnect_sessions agent task on every deployed
+// host/container in the team, so a close actively ends live remote-access
+// sessions instead of leaving established ones running. Best-effort by design:
+// the firewall close has already succeeded and been recorded, so a failure to
+// queue a kill is logged to the timeline rather than failing (and re-running)
+// the whole close. ignore_errors keeps a box whose agent can't honor the
+// command (e.g. a Linux kernel without `ss -K`) from wedging its task lane.
+func (r *Runner) dispatchSessionKill(ctx context.Context, q *db.Queries, task db.Task, teamID pgtype.UUID, teamStr string) {
+	objs, err := q.ListDeployedObjectsByTeam(ctx, teamID)
+	if err != nil {
+		r.logEvent(ctx, q, task.BuildID, task.ID, "access.sessions.kill_failed",
+			fmt.Sprintf("team %s: could not list hosts to disconnect sessions: %v", teamStr, err))
+		return
+	}
+	dispatched := 0
+	var errs []error
+	for _, o := range objs {
+		if o.Kind != "host" && o.Kind != "container" {
+			continue // only guests run an agent
+		}
+		if o.ExternalRef == nil || *o.ExternalRef == "" {
+			continue // never created at the hoster -- no guest to reach
+		}
+		next, err := q.NextStepIndexForHost(ctx, o.ID)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", o.ObjectName, err))
+			continue
+		}
+		_, err = q.CreateAdHocAgentTask(ctx, db.CreateAdHocAgentTaskParams{
+			DeployedObjectID: o.ID,
+			StepIndex:        next,
+			Command:          agentproto.CmdDisconnectSessions,
+			Payload:          []byte("{}"),
+			IgnoreErrors:     true,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				continue // a concurrent close already queued this step -- fine
+			}
+			errs = append(errs, fmt.Errorf("%s: %w", o.ObjectName, err))
+			continue
+		}
+		dispatched++
+	}
+	msg := fmt.Sprintf("team %s: queued session disconnect on %d host(s)", teamStr, dispatched)
+	if len(errs) > 0 {
+		msg += fmt.Sprintf(" (%d could not be queued: %v)", len(errs), errors.Join(errs...))
+	}
+	r.logEvent(ctx, q, task.BuildID, task.ID, "access.sessions.disconnect", msg)
 }
 
 // executeConfigureNetworkAccess builds the team's full set of NetworkAccess
