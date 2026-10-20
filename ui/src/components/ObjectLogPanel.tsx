@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound } from 'lucide-react'
-import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
+import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert } from 'lucide-react'
+import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
-import type { RenderedStep, StepStatus, ObjectKind, DeployedObject, HostCredential } from '../api/types'
+import type { RenderedStep, CloudInitView, StepStatus, ObjectKind, DeployedObject, HostCredential } from '../api/types'
 import { EmptyState } from './EmptyState'
 import { Badge, Button, buttonClass, cn, InspectorPanel, Spinner } from '../ui'
 import { StatusBadge, PowerBadge, GONE_STATES } from './StatusBadge'
@@ -83,6 +83,7 @@ export function ObjectLogPanel({
     isLoading: renderLoading,
     error: renderError,
   } = useObjectRender(buildId, objectId, tab === 'render')
+  const { data: cloudInit, error: cloudInitError } = useObjectCloudInit(buildId, objectId, !isNetwork && tab === 'render')
 
   return (
     <InspectorPanel
@@ -227,6 +228,7 @@ export function ObjectLogPanel({
       )}
       {tab === 'render' && (
         <>
+          {cloudInit && !cloudInitError && <CloudInitSection view={cloudInit} />}
           {renderLoading && <LoadingRow />}
           {renderError && <div className="text-sm text-danger">{renderError instanceof ApiError ? renderError.message : 'Failed to render'}</div>}
           {renderedSteps && renderedSteps.length === 0 && <EmptyState icon={FileCode} title="No steps on this object" hint="Nothing to render." />}
@@ -257,6 +259,43 @@ function RenderedSteps({ steps }: { steps: RenderedStep[] }) {
           )}
         </div>
       ))}
+    </div>
+  )
+}
+
+// CloudInitSection shows the first-boot configuration a host received before
+// any authored step ran -- the cloud-init / cloudbase-init / EC2Launch user-data
+// (and, on Incus/MicroCloud Windows, the config-drive meta-data) that installs
+// the agent. Shown above the rendered steps because it runs first, and because
+// when the agent HASN'T run this is the only config that did -- the view you
+// need to debug a box you can't log into yet.
+function CloudInitSection({ view }: { view: CloudInitView }) {
+  return (
+    <div className="mb-3 flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-semibold text-fg">First-Boot Configuration</span>
+        <Badge tone="info" className="rounded-full py-0.5">
+          {view.format}
+        </Badge>
+        {view.os && <span className="text-fg-muted">{view.os}</span>}
+      </div>
+      <div className="text-xs text-fg-subtle">{view.delivery}</div>
+      {view.note && (
+        <div className="flex items-start gap-1.5 rounded-token border border-warning bg-warning-soft p-2 text-xs text-fg">
+          <TriangleAlert size={13} className="mt-0.5 shrink-0 text-warning" />
+          <span>{view.note}</span>
+        </div>
+      )}
+      {view.meta_data && (
+        <div className="overflow-hidden rounded-token border border-border">
+          <div className="border-b border-border bg-surface-sunken px-2 py-1 text-xs font-medium text-fg">meta-data</div>
+          <pre className="overflow-x-auto whitespace-pre-wrap p-2 font-mono text-xs text-fg">{view.meta_data}</pre>
+        </div>
+      )}
+      <div className="overflow-hidden rounded-token border border-border">
+        <div className="border-b border-border bg-surface-sunken px-2 py-1 text-xs font-medium text-fg">user-data</div>
+        <pre className="overflow-x-auto whitespace-pre-wrap p-2 font-mono text-xs text-fg">{view.user_data}</pre>
+      </div>
     </div>
   )
 }

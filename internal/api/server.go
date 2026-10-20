@@ -245,6 +245,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/events", s.handleListObjectEvents)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/heartbeats", s.handleListObjectHeartbeats)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/render", s.handleRenderObject)
+	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/cloud-init", s.handleObjectCloudInit)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/steps", s.handleListObjectSteps)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/infra", s.handleObjectInfra)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/config", s.handleObjectConfig)

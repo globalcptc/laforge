@@ -42,6 +42,7 @@ import type {
   Person,
   PublicConfig,
   RenderedStep,
+  CloudInitView,
   StepStatus,
   ObjectConfig,
   ObjectInfra,
@@ -456,6 +457,19 @@ export function useObjectRender(buildId: string | undefined, objectId: string | 
   return useQuery<RenderedStep[]>({
     queryKey: ['object-render', buildId, objectId],
     queryFn: () => api.get(`/builds/${buildId}/objects/${objectId}/render`),
+    enabled: !!buildId && !!objectId && enabled,
+  })
+}
+
+// useObjectCloudInit is the companion to useObjectRender: the first-boot
+// cloud-init / cloudbase-init / EC2Launch user-data (and config-drive meta-data)
+// LaForge delivers before any step runs -- what you need when the agent hasn't
+// run and you're debugging why. Same server-side content resolve as render, so
+// it's gated behind the Render tab being open too.
+export function useObjectCloudInit(buildId: string | undefined, objectId: string | undefined, enabled: boolean) {
+  return useQuery<CloudInitView>({
+    queryKey: ['object-cloud-init', buildId, objectId],
+    queryFn: () => api.get(`/builds/${buildId}/objects/${objectId}/cloud-init`),
     enabled: !!buildId && !!objectId && enabled,
   })
 }

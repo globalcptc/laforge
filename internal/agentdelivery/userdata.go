@@ -54,6 +54,7 @@ runcmd:
 //     can't stop it starting (the failure mode a boot scheduled task has);
 //   - crash-restart (failure actions: restart after 5s, indefinitely), so a dead
 //     agent comes straight back instead of staying down until the next reboot.
+//
 // If the service doesn't come up, it falls back to a hardened boot-time
 // scheduled task running the same binary (which detects it wasn't launched by
 // the SCM and runs as a console program) -- a backup for an unusual image.
@@ -162,6 +163,38 @@ if (-not $svc -or $svc.Status -ne 'Running') {
   schtasks /run /tn LaForgeAgent
 }
 `, binaryURL)
+}
+
+// DeliveryFormat names how a host's agent-install user-data is framed for the
+// image that consumes it -- the read-only "what first-boot config did this host
+// get?" view the UI's Render tab shows uses it.
+type DeliveryFormat string
+
+const (
+	FormatCloudInit DeliveryFormat = "cloud-init"     // Linux: #cloud-config
+	FormatCloudbase DeliveryFormat = "cloudbase-init" // Windows on Incus/MicroCloud/OpenStack: #ps1_sysnative
+	FormatEC2Launch DeliveryFormat = "ec2launch"      // Windows on AWS: <powershell>
+)
+
+// DeliveredUserData renders the agent-install user-data LaForge delivers to a
+// host and reports how it's framed. It is the read side of delivery: it calls
+// the SAME LinuxUserData / WindowsCloudbaseUserData / WindowsEC2LaunchUserData
+// renderers the builders deliver and the SAME PlatformFor OS split, so it can't
+// drift from what a host actually received. The only builder-specific choice it
+// mirrors is Windows cloudbase-vs-EC2Launch, keyed on builderKind (the
+// builder_config.kind: incus/microcloud/openstack run cloudbase-init, aws runs
+// EC2Launch). url is the per-host agent download URL; a caller without the real
+// one-time URL (e.g. a read-only UI request after the deploy consumed the
+// token) passes a placeholder -- the URL isn't reproducible, and isn't what
+// this view exists to answer.
+func DeliveredUserData(os, builderKind, url string) (userData string, format DeliveryFormat) {
+	if PlatformFor(os) != Windows {
+		return LinuxUserData(url), FormatCloudInit
+	}
+	if builderKind == "aws" {
+		return WindowsEC2LaunchUserData(url), FormatEC2Launch
+	}
+	return WindowsCloudbaseUserData(url), FormatCloudbase
 }
 
 // WindowsCloudbaseUserData wraps the agent install for cloudbase-init (the

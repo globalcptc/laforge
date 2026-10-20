@@ -23,6 +23,39 @@ func TestPlatformFor(t *testing.T) {
 	}
 }
 
+// TestDeliveredUserData locks the read-side selector to the same choices the
+// builders make: Linux -> cloud-init, Windows -> cloudbase-init everywhere
+// except AWS (EC2Launch). It must not drift from each builder's own
+// agentUserData, since it's what the UI shows as "what this host received".
+func TestDeliveredUserData(t *testing.T) {
+	const url = "https://example/agent"
+	cases := []struct {
+		os, kind   string
+		wantFormat DeliveryFormat
+		wantMarker string // a substring unique to the chosen wrapper
+	}{
+		{"ubuntu22", "incus", FormatCloudInit, "#cloud-config"},
+		{"ubuntu22", "aws", FormatCloudInit, "#cloud-config"},
+		{"win2019", "incus", FormatCloudbase, "#ps1_sysnative"},
+		{"windows-server-2022", "microcloud", FormatCloudbase, "#ps1_sysnative"},
+		{"win2019", "openstack", FormatCloudbase, "#ps1_sysnative"},
+		{"win2019", "aws", FormatEC2Launch, "<powershell>"},
+		{"win2019", "", FormatCloudbase, "#ps1_sysnative"}, // unknown kind -> cloudbase default
+	}
+	for _, c := range cases {
+		data, format := DeliveredUserData(c.os, c.kind, url)
+		if format != c.wantFormat {
+			t.Errorf("DeliveredUserData(%q,%q) format = %q, want %q", c.os, c.kind, format, c.wantFormat)
+		}
+		if !strings.Contains(data, c.wantMarker) {
+			t.Errorf("DeliveredUserData(%q,%q) missing marker %q", c.os, c.kind, c.wantMarker)
+		}
+		if !strings.Contains(data, url) {
+			t.Errorf("DeliveredUserData(%q,%q) did not embed the download URL", c.os, c.kind)
+		}
+	}
+}
+
 // TestBuildIssuesAChainedCertAndRealUserData: the per-host cert an agent
 // carries must verify against the same CA the gateway trusts (or the
 // gateway rejects it), and the user-data must actually point the host at

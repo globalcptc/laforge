@@ -417,6 +417,19 @@ export interface RenderedStep {
   raw: Record<string, unknown>
 }
 
+// CloudInitView is the first-boot configuration a host received before any
+// authored step ran -- the cloud-init / cloudbase-init / EC2Launch user-data
+// (and, on Incus/MicroCloud Windows, the config-drive meta-data) that installs
+// the agent. Mirrors internal/api.cloudInitView.
+export interface CloudInitView {
+  os: string
+  format: string // 'cloud-init' | 'cloudbase-init' | 'ec2launch'
+  delivery: string
+  user_data: string
+  meta_data?: string
+  note?: string
+}
+
 // ScheduledTask mirrors db.ScheduledTask (internal/db/scheduled_task.sql.go)
 // -- a content-authored `schedule:` entry or a UI-created ad-hoc one,
 // both dispatched by internal/orchestrator.DispatchDueScheduledTasks
