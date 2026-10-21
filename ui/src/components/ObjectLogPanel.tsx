@@ -120,7 +120,7 @@ export function ObjectLogPanel({
         </div>
       }
     >
-      <div className="-mx-4 -mt-3 mb-3 flex flex-wrap gap-1 border-b border-border px-4 pb-2">
+      <div className="-mx-4 -mt-3 mb-3 flex flex-nowrap gap-1 overflow-x-auto border-b border-border px-4 pb-2">
         <TabButton active={tab === 'info'} onClick={() => setTab('info')} icon={Info} label="Info" />
         <TabButton active={tab === 'events'} onClick={() => setTab('events')} icon={ScrollText} label="Events" />
         {!isNetwork && <TabButton active={tab === 'steps'} onClick={() => setTab('steps')} icon={ListChecks} label="Steps" />}
@@ -695,7 +695,7 @@ function InfoRow({
 
 function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: typeof ScrollText; label: string }) {
   return (
-    <Button variant="ghost" size="sm" onClick={onClick} className={cn(active && 'bg-surface-hover text-fg')}>
+    <Button variant="ghost" size="sm" onClick={onClick} className={cn('shrink-0', active && 'bg-surface-hover text-fg')}>
       <Icon size={12} /> {label}
     </Button>
   )
