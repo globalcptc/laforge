@@ -34,6 +34,11 @@ type cloudInitView struct {
 	UserData string `json:"user_data"`
 	MetaData string `json:"meta_data,omitempty"` // config-drive meta-data (Incus/MicroCloud Windows)
 	Note     string `json:"note,omitempty"`
+	// TempPassword is this host's first-boot temporary admin password (set by the
+	// user-data below), so an operator can log in before the agent runs the real
+	// set_password step. Admin user is Administrator on Windows, root on Linux.
+	TempPassword string `json:"temp_password,omitempty"`
+	TempUsername string `json:"temp_username,omitempty"`
 }
 
 // handleObjectCloudInit resolves this host's OS (via the same content checkout
@@ -95,15 +100,35 @@ func (s *Server) handleObjectCloudInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	kind := s.builderKindForBuild(r.Context(), build)
-	userData, format := agentdelivery.DeliveredUserData(ctx.OS, kind, agentURLPlaceholder)
+	// The host's first-boot temporary admin password, derived from the build
+	// secret the same way delivery derives it, so what the UI shows matches what
+	// the box was given. Best-effort: if the secret can't be read, the view just
+	// omits it (and renders the user-data without a password block).
+	tempPass := ""
+	if secret, serr := db.RenderSecretForBuild(r.Context(), s.Queries, build.ID); serr == nil && len(secret) > 0 {
+		tempPass = agentdelivery.TempAdminPassword(string(secret), objectID.String())
+	}
+	userData, format := agentdelivery.DeliveredUserData(ctx.OS, kind, agentURLPlaceholder, tempPass)
 
-	view := cloudInitView{OS: ctx.OS, Format: string(format), UserData: userData}
+	view := cloudInitView{OS: ctx.OS, Format: string(format), UserData: userData, TempPassword: tempPass}
+	if tempPass != "" {
+		view.TempUsername = "root"
+		if agentdelivery.PlatformFor(ctx.OS) == agentdelivery.Windows {
+			view.TempUsername = "Administrator"
+		}
+	}
+	embeds := kind == "incus" || kind == "microcloud"
 	switch format {
 	case agentdelivery.FormatCloudInit:
-		view.Delivery = "cloud-init user-data (read from the LXD socket datasource on Incus/MicroCloud, or the hoster's native user-data channel)"
+		if embeds {
+			view.Delivery = "NoCloud config-drive ISO (volume label CIDATA) when the agent is embedded, carrying meta-data, user-data, and the agent binary; otherwise cloud-init's LXD socket datasource"
+			view.MetaData = fmt.Sprintf("instance-id: <unique-per-deploy>\nlocal-hostname: %s\n", *obj.AsName)
+		} else {
+			view.Delivery = "cloud-init user-data (the hoster's native user-data channel)"
+		}
 	case agentdelivery.FormatCloudbase:
-		if kind == "incus" || kind == "microcloud" {
-			view.Delivery = "NoCloud config-drive ISO (volume label CIDATA) -- cloudbase-init can't read the LXD socket, so meta-data + user-data ride an attached disk"
+		if embeds {
+			view.Delivery = "NoCloud config-drive ISO (volume label CIDATA) -- cloudbase-init can't read the LXD socket, so meta-data, user-data, and the embedded agent binary ride an attached disk"
 			view.MetaData = fmt.Sprintf("instance-id: <unique-per-deploy>\nlocal-hostname: %s\n", *obj.AsName)
 		} else {
 			view.Delivery = "cloudbase-init user-data (the hoster's native user-data channel)"
@@ -111,9 +136,14 @@ func (s *Server) handleObjectCloudInit(w http.ResponseWriter, r *http.Request) {
 	case agentdelivery.FormatEC2Launch:
 		view.Delivery = "EC2 user-data (base64), executed by EC2Launch"
 	}
-	if agentdelivery.PlatformFor(ctx.OS) == agentdelivery.Windows {
-		view.Note = "This is the first-boot user-data LaForge delivers. It installs the LaForge agent and clears the built-in Administrator's \"password must change at next logon\" flag -- it does NOT set the Windows password. The Administrator password is set by cloudbase-init's own password plugin, which is configured on the image (random by default) and runs before this user-data. So on a host where the agent hasn't run yet, the login password came from the image's cloudbase-init config, not from LaForge -- and the image's baked-in password no longer applies once cloudbase-init has reset it. A LaForge set_password step, run by the agent, is what sets a password you'd know."
+	note := "This is the first-boot configuration LaForge delivers. The agent is embed-first: on Incus/MicroCloud the patched binary is written onto the config drive and the user-data copies it locally, falling back to the one-time download URL if it isn't there (AWS and the MicroCloud public-NIC path are download-only)."
+	if tempPass != "" {
+		note += fmt.Sprintf(" It also sets a TEMPORARY %s password (shown above) at first boot so you can log in before the agent runs -- the agent's first set_password step then replaces it with the environment's real password over its secure channel, so the real password never rides user-data. The temporary password is only valid until that step runs.", view.TempUsername)
 	}
+	if agentdelivery.PlatformFor(ctx.OS) == agentdelivery.Windows {
+		note += " The user-data also clears the built-in Administrator's \"password must change at next logon\" flag that cloudbase-init's image config sets."
+	}
+	view.Note = note
 	writeJSON(w, http.StatusOK, view)
 }
 

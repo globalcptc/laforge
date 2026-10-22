@@ -201,9 +201,9 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 		// Nova user-data is consumed by the image's cloud-init (Linux) or
 		// cloudbase-init (Windows), the same forms LaForge's OpenStack images ship.
 		if agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows {
-			opts.UserData = []byte(agentdelivery.WindowsCloudbaseUserData(spec.AgentDownloadURL))
+			opts.UserData = []byte(agentdelivery.WindowsCloudbaseUserData(spec.AgentDownloadURL, spec.TempAdminPassword))
 		} else {
-			opts.UserData = []byte(agentdelivery.LinuxUserData(spec.AgentDownloadURL))
+			opts.UserData = []byte(agentdelivery.LinuxUserData(spec.AgentDownloadURL, spec.TempAdminPassword))
 		}
 	}
 	srv, err := servers.Create(ctx, b.compute, opts, nil).Extract()

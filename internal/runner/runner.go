@@ -602,11 +602,24 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 				return fmt.Errorf("recording agent platform: %w", err)
 			}
 		}
+		// A first-boot temporary admin password so the host is reachable before
+		// its agent runs the real set_password step -- only when an agent is
+		// actually being delivered (something will later replace it). Derived
+		// from the build secret, so the UI recomputes it rather than storing it.
+		tempPass := ""
+		if del.Platform != "" {
+			if secret, serr := db.RenderSecretForBuild(ctx, q, task.BuildID); serr == nil && len(secret) > 0 {
+				tempPass = agentdelivery.TempAdminPassword(string(secret), obj.ID.String())
+			}
+		}
 		hspec := builder.HostSpec{
 			ExternalName: externalName, DisplayName: displayName, Team: team,
 			Network: networkExternalName(task.BuildID, teamNumber, obj), NetworkDisplayName: networkDisplayName(teamNumber, db.StrOrEmpty(obj.NetworkName)), Address: addr,
 			OS: h.OS, Size: h.Size, DiskGB: h.Disk, TCPPorts: h.Ports.TCP, UDPPorts: h.Ports.UDP,
-			AgentDownloadURL: del.DownloadURL, Priority: payload.Priority,
+			// Embed-first agent delivery: hand the builder the patched binary so it
+			// can put it on the config drive; the download URL stays as fallback.
+			AgentBinary: del.Binary, AgentDownloadURL: del.DownloadURL,
+			TempAdminPassword: tempPass, Priority: payload.Priority,
 		}
 		// Log the host request with its full spec MINUS the agent download URL
 		// (it carries a one-time token -- see logBuilderCall).

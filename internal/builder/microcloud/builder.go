@@ -23,14 +23,14 @@ import (
 // Linux, cloudbase-init for Windows. viaISO is true for Windows, where
 // cloudbase-init can't read the lxd socket so the user-data is delivered as a
 // NoCloud config-drive ISO. An empty url (agent delivery off) yields nothing.
-func agentUserData(url, os string) (userData string, viaISO bool) {
+func agentUserData(url, os, tempPass string) (userData string, viaISO bool) {
 	if url == "" {
 		return "", false
 	}
 	if agentdelivery.PlatformFor(os) == agentdelivery.Windows {
-		return agentdelivery.WindowsCloudbaseUserData(url), true
+		return agentdelivery.WindowsCloudbaseUserData(url, tempPass), true
 	}
-	return agentdelivery.LinuxUserData(url), false
+	return agentdelivery.LinuxUserData(url, tempPass), false
 }
 
 // Builder implements internal/builder.Builder against one real Incus
@@ -389,8 +389,24 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	if img.VM {
 		instanceType = "virtual-machine"
 	}
-	cloudInit, viaISO := agentUserData(spec.AgentDownloadURL, spec.OS)
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, cloudInit, viaISO)
+	win := agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows
+	cloudInit, _ := agentUserData(spec.AgentDownloadURL, spec.OS, spec.TempAdminPassword)
+	// Embed-first: write the patched agent onto the custom config-drive ISO so
+	// the user-data copies it locally (download URL stays as fallback). Windows
+	// always takes the ISO path; Linux switches to it only when embedding. (The
+	// public-NIC path uses LXD's own config drive, which we don't own, so those
+	// hosts stay download-only -- see DeployHostWithPublicPorts.)
+	var agentBinary []byte
+	agentFile := ""
+	if len(spec.AgentBinary) > 0 {
+		agentBinary = spec.AgentBinary
+		agentFile = agentdelivery.LinuxAgentFile
+		if win {
+			agentFile = agentdelivery.WindowsAgentFile
+		}
+	}
+	viaISO := win || len(agentBinary) > 0
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, cloudInit, viaISO, agentBinary, agentFile)
 }
 
 // DeployContainer runs a LaForge `container:` as a nested Docker container. LXD
@@ -423,7 +439,7 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 	base := ImageRef{Fingerprint: b.Config.DockerBaseFingerprint}
 	// No cloud-init on the Docker host: it needs no agent of its own. The docker
 	// base image already brings dockerd up on boot.
-	name, err := b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", base, size, 0, true, "", false)
+	name, err := b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", base, size, 0, true, "", false, nil, "")
 	if err != nil {
 		return name, err
 	}
@@ -452,8 +468,8 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 	}
 	// A compose host is always this Linux docker-base container, so its agent is
 	// delivered by cloud-init (never the Windows ISO path).
-	cloudInit, _ := agentUserData(spec.AgentDownloadURL, "linux")
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Fingerprint: b.Config.DockerBaseFingerprint}, size, spec.DiskGB, true, cloudInit, false)
+	cloudInit, _ := agentUserData(spec.AgentDownloadURL, "linux", "")
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Fingerprint: b.Config.DockerBaseFingerprint}, size, spec.DiskGB, true, cloudInit, false, nil, "")
 }
 
 // teamConfigKey is the Incus instance config key OpenAccess/CloseAccess
@@ -464,7 +480,7 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 // see shortName's own doc comment).
 const teamConfigKey = "user.laforge_team"
 
-func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool, publicPlans ...*publicNICPlan) (string, error) {
+func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool, agentBinary []byte, agentFile string, publicPlans ...*publicNICPlan) (string, error) {
 	if err := validateInstanceNameBudget(b.Client.Project); err != nil {
 		return "", err
 	}
@@ -569,10 +585,10 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	}
 
 	if cloudInit != "" && cloudInitViaISO && public == nil {
-		// Windows: cloudbase-init can't read the socket, so the user-data
-		// is delivered as a NoCloud config-drive ISO attached to the
+		// Windows (and embedding Linux): the user-data, and the agent binary
+		// itself when embedded, ride a NoCloud config-drive ISO attached to the
 		// instance (imported as a custom volume first -- see configdrive.go).
-		iso, err := buildCidataISO(name, cloudInit)
+		iso, err := buildCidataISO(name, cloudInit, agentBinary, agentFile)
 		if err != nil {
 			return name, fmt.Errorf("building config drive for %s: %w", name, err)
 		}

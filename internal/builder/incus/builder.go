@@ -20,18 +20,19 @@ import (
 // Bridge networks route and NAT through the host and require non-overlapping subnets.
 // agentUserData renders the agent-install user-data for an instance from the
 // neutral download URL, choosing the format this image consumes: cloud-init for
-// Linux, cloudbase-init for Windows. viaISO is true for Windows, where
-// cloudbase-init can't read the lxd socket so the user-data is delivered as a
-// NoCloud config-drive ISO instead of the cloud-init.user-data key. An empty url
-// (agent delivery off) yields no user-data.
-func agentUserData(url, os string) (userData string, viaISO bool) {
+// Linux, cloudbase-init for Windows. tempPass, when set, is the first-boot
+// temporary admin password the user-data applies so the host is reachable before
+// its agent runs. An empty url (agent delivery off) yields no user-data. Whether
+// the result rides a config-drive ISO vs the lxd socket is decided by the caller
+// (DeployHost), since it also depends on whether the agent binary is embedded.
+func agentUserData(url, os, tempPass string) string {
 	if url == "" {
-		return "", false
+		return ""
 	}
 	if agentdelivery.PlatformFor(os) == agentdelivery.Windows {
-		return agentdelivery.WindowsCloudbaseUserData(url), true
+		return agentdelivery.WindowsCloudbaseUserData(url, tempPass)
 	}
-	return agentdelivery.LinuxUserData(url), false
+	return agentdelivery.LinuxUserData(url, tempPass)
 }
 
 // Builder implements internal/builder.Builder against one real Incus
@@ -124,7 +125,7 @@ func shortName(externalName string) string {
 const (
 	incusLogsDir      = "/var/lib/incus/logs/"
 	qemuMonitorSuffix = "/qemu.monitor"
-	unixSocketPathMax = 107 // 108-byte sun_path minus the trailing NUL
+	unixSocketPathMax = 107             // 108-byte sun_path minus the trailing NUL
 	minInstanceName   = len("lf-") + 12 // shortName is always "lf-"+12 hex = 15 bytes
 )
 
@@ -304,8 +305,23 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	// A custom compose-host system image still runs Docker inside Incus.
 	// VMs and ordinary host images do not need container nesting enabled.
 	nesting := !img.VM && spec.OS == builder.ComposeHostImage
-	cloudInit, viaISO := agentUserData(spec.AgentDownloadURL, spec.OS)
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, nesting, cloudInit, viaISO, spec.Priority)
+	win := agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows
+	cloudInit := agentUserData(spec.AgentDownloadURL, spec.OS, spec.TempAdminPassword)
+	// Embed-first: when we have the patched binary, write it onto the config
+	// drive so the user-data copies it locally (the download URL stays as the
+	// fallback). Windows always needs the config drive (cloudbase-init can't read
+	// the LXD socket); Linux switches to it only when embedding, else the socket.
+	var agentBinary []byte
+	agentFile := ""
+	if len(spec.AgentBinary) > 0 {
+		agentBinary = spec.AgentBinary
+		agentFile = agentdelivery.LinuxAgentFile
+		if win {
+			agentFile = agentdelivery.WindowsAgentFile
+		}
+	}
+	viaISO := win || len(agentBinary) > 0
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, nesting, cloudInit, viaISO, agentBinary, agentFile, spec.Priority)
 }
 
 // deployComposeHost deploys the machine a compose container's project runs on:
@@ -327,9 +343,9 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 		return "", fmt.Errorf("no size configured for %q", spec.Size)
 	}
 	// A compose host is always this Linux docker-base container, so its agent is
-	// delivered by cloud-init (never the Windows ISO path).
-	cloudInit, _ := agentUserData(spec.AgentDownloadURL, "linux")
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Alias: builder.DockerBaseAlias}, size, spec.DiskGB, true, cloudInit, false, spec.Priority)
+	// delivered by cloud-init over the lxd socket (never the ISO path; no embed).
+	cloudInit := agentUserData(spec.AgentDownloadURL, "linux", "")
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Alias: builder.DockerBaseAlias}, size, spec.DiskGB, true, cloudInit, false, nil, "", spec.Priority)
 }
 
 // laforgeAgentPath is where the LaForge agent is planted inside a native OCI
@@ -496,7 +512,7 @@ const teamConfigKey = "user.laforge_team"
 // a slot on this host, config drive, create/copy, device replacement, start --
 // so the runner can show where a slow deploy's time went. priority orders the
 // admission queue (see admission.go).
-func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool, priority int) (string, error) {
+func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool, agentBinary []byte, agentFile string, priority int) (string, error) {
 	if err := validateInstanceNameBudget(b.Client.Project); err != nil {
 		return "", err
 	}
@@ -577,11 +593,13 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	}
 
 	if cloudInit != "" && cloudInitViaISO {
-		// Windows: cloudbase-init can't read the socket, so the user-data
-		// is delivered as a NoCloud config-drive ISO attached to the
-		// instance (imported as a custom volume first -- see configdrive.go).
+		// The user-data (and, when embedding, the agent binary itself) is
+		// delivered as a NoCloud config-drive ISO attached to the instance
+		// (imported as a custom volume first -- see configdrive.go). Windows
+		// always takes this path (cloudbase-init can't read the LXD socket);
+		// Linux takes it when the agent binary is embedded.
 		done := builder.StartPhase(ctx, "config_drive")
-		iso, err := buildCidataISO(name, cloudInit)
+		iso, err := buildCidataISO(name, cloudInit, agentBinary, agentFile)
 		if err != nil {
 			done()
 			return name, fmt.Errorf("building config drive for %s: %w", name, err)

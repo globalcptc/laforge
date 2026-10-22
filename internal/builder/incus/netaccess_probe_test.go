@@ -62,7 +62,7 @@ func TestPortFirewallReachabilityLive(t *testing.T) {
 
 	for _, in := range insts {
 		name, err := b.deployInstance(ctx, in.ext, in.disp, "96", in.netExt, in.netDisp, in.wantAddr,
-			"container", alpine, small, 0, false, "", false, 0)
+			"container", alpine, small, 0, false, "", false, nil, "", 0)
 		if err != nil {
 			t.Fatalf("deployInstance %s: %v", in.ext, err)
 		}

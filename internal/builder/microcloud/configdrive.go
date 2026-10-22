@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/kdomanski/iso9660"
+
+	"github.com/globalcptc/laforge/internal/agentdelivery"
 )
 
 // buildCidataISO builds a NoCloud config-drive ISO (volume label CIDATA)
@@ -26,7 +28,10 @@ func cidataVolName(instanceName string) string {
 	return "cidata-" + instanceName
 }
 
-func buildCidataISO(instanceID, userData string) ([]byte, error) {
+// agentBinary (when non-empty) is written to the ISO under agentFile so the
+// first-boot user-data can copy the agent off the config drive instead of
+// downloading it (embed-first delivery); an empty agentBinary just omits it.
+func buildCidataISO(instanceID, userData string, agentBinary []byte, agentFile string) ([]byte, error) {
 	w, err := iso9660.NewWriter()
 	if err != nil {
 		return nil, fmt.Errorf("creating ISO writer: %w", err)
@@ -40,9 +45,14 @@ func buildCidataISO(instanceID, userData string) ([]byte, error) {
 	if err := w.AddFile(strings.NewReader(userData), "user-data"); err != nil {
 		return nil, fmt.Errorf("adding user-data: %w", err)
 	}
+	if len(agentBinary) > 0 && agentFile != "" {
+		if err := w.AddFile(bytes.NewReader(agentBinary), agentFile); err != nil {
+			return nil, fmt.Errorf("adding embedded agent %s: %w", agentFile, err)
+		}
+	}
 
 	var buf bytes.Buffer
-	if err := w.WriteTo(&buf, "CIDATA"); err != nil {
+	if err := w.WriteTo(&buf, agentdelivery.CidataVolumeLabel); err != nil {
 		return nil, fmt.Errorf("writing ISO: %w", err)
 	}
 	return buf.Bytes(), nil

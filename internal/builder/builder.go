@@ -120,6 +120,19 @@ type HostSpec struct {
 	// WindowsEC2LaunchUserData), choosing by agentdelivery.PlatformFor(OS) -- the
 	// format is a property of the image/hoster, so the builder owns it.
 	AgentDownloadURL string
+	// AgentBinary is the per-host patched agent binary (agentdelivery.Delivery.
+	// Binary). When set, a builder that can attach a NoCloud config drive writes
+	// it onto that drive so the first-boot user-data copies it locally instead of
+	// downloading (embed-first; AgentDownloadURL stays as the fallback). Empty
+	// means download-only. A builder with no config drive (AWS) ignores it and
+	// relies on AgentDownloadURL.
+	AgentBinary []byte
+	// TempAdminPassword is a throwaway admin password (agentdelivery.
+	// TempAdminPassword) the first-boot user-data sets so a host is reachable
+	// before its agent runs the real set_password step. Empty means don't set
+	// one. It is deliberately not the environment's real password -- see that
+	// function's doc.
+	TempAdminPassword string
 	// Priority is this object's place on the build's critical path: how many
 	// objects (transitively) depends_on it, so a domain controller the rest of a
 	// team waits on outranks a leaf workstation. 0 = nothing waits on it. Set by

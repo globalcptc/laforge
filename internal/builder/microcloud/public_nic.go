@@ -74,8 +74,13 @@ func (b *Builder) DeployHostWithPublicPorts(ctx context.Context, spec builder.Ho
 	if img.VM {
 		instanceType = "virtual-machine"
 	}
-	cloudInit, _ := agentUserData(spec.AgentDownloadURL, spec.OS)
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, cloudInit, windows, plan)
+	// Public hosts still get the first-boot temporary admin password, but not the
+	// embedded binary: the public-NIC path delivers config via LXD's own NoCloud
+	// drive (cloud-init:config), which LaForge doesn't own, so the agent binary
+	// can't be written onto it -- these hosts download it (the user-data's
+	// fallback path), same as before.
+	cloudInit, _ := agentUserData(spec.AgentDownloadURL, spec.OS, spec.TempAdminPassword)
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, cloudInit, windows, nil, "", plan)
 }
 
 func (b *Builder) publicProject() string {

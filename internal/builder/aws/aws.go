@@ -12,14 +12,14 @@
 //
 // Mapping from LaForge concepts to AWS:
 //   - team      -> one VPC (the isolation boundary) with an internet gateway, a
-//                  public route table (0.0.0.0/0 -> IGW), and a custom Network
-//                  ACL used as the access schedule's kill switch.
+//     public route table (0.0.0.0/0 -> IGW), and a custom Network
+//     ACL used as the access schedule's kill switch.
 //   - network   -> a subnet in that team VPC, carved from the network's CIDR
-//                  (added to the VPC as a secondary CIDR association). Networks
-//                  in the same VPC route to each other for free, which is what
-//                  makes cross-network `visible_from` actually enforceable.
+//     (added to the VPC as a secondary CIDR association). Networks
+//     in the same VPC route to each other for free, which is what
+//     makes cross-network `visible_from` actually enforceable.
 //   - host      -> an EC2 instance in that subnet, with a per-object security
-//                  group whose ingress rules ConfigureNetworkAccess converges.
+//     group whose ingress rules ConfigureNetworkAccess converges.
 //   - container -> an ECS/Fargate task (see fargate.go), same per-object SG.
 //
 // Every resource is tagged laforgeManagedTag=true, laforgeTeamTag=<team>, and
@@ -61,7 +61,7 @@ const (
 	laforgeExternalNameTag = "laforge:external-name"
 	laforgeExternalRefTag  = "laforge:external-ref"
 	laforgeTeamTag         = "laforge:team"
-	laforgeBuildTag        = "laforge:build" // the build uuid, so a team's VPC is scoped per-build, not shared by team number across builds
+	laforgeBuildTag        = "laforge:build"   // the build uuid, so a team's VPC is scoped per-build, not shared by team number across builds
 	laforgeManagedTag      = "laforge:managed" // "true" on everything we create, for Inspect's filter
 
 	// NACL rule numbers. A custom NACL is deny-by-default, so every team subnet
@@ -1134,10 +1134,13 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 		// but never install the agent if handed the cloudbase form. EC2 user-data
 		// must be base64.
 		var data string
+		// No config drive on EC2, so the agent is always downloaded (not embedded);
+		// the temporary admin password still rides user-data so a host is reachable
+		// before its agent runs.
 		if agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows {
-			data = agentdelivery.WindowsEC2LaunchUserData(spec.AgentDownloadURL)
+			data = agentdelivery.WindowsEC2LaunchUserData(spec.AgentDownloadURL, spec.TempAdminPassword)
 		} else {
-			data = agentdelivery.LinuxUserData(spec.AgentDownloadURL)
+			data = agentdelivery.LinuxUserData(spec.AgentDownloadURL, spec.TempAdminPassword)
 		}
 		in.UserData = awssdk.String(base64.StdEncoding.EncodeToString([]byte(data)))
 	}

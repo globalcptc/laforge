@@ -428,6 +428,9 @@ export interface CloudInitView {
   user_data: string
   meta_data?: string
   note?: string
+  /** First-boot temporary admin password set by the user-data, usable until the agent runs its real set_password step. */
+  temp_password?: string
+  temp_username?: string
 }
 
 // ScheduledTask mirrors db.ScheduledTask (internal/db/scheduled_task.sql.go)

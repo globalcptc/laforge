@@ -432,7 +432,7 @@ func TestCloseAccessLocksNetworkWithoutTouchingNIC(t *testing.T) {
 	t.Cleanup(func() { b.DestroyNetwork(context.Background(), "team-a", netRef) })
 
 	refA, err := b.deployInstance(ctx, uniqueExternalName(t, "hostA"), "hosta", "team-a", netExt, "acc", "10.88.9.10",
-		"container", testConfig().Images["alpine"], testConfig().Sizes["small"], 0, false, "", false, 0)
+		"container", testConfig().Images["alpine"], testConfig().Sizes["small"], 0, false, "", false, nil, "", 0)
 	if err != nil {
 		t.Fatalf("deployInstance: %v", err)
 	}

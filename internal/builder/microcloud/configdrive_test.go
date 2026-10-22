@@ -11,7 +11,7 @@ import (
 // CIDATA (what a NoCloud datasource looks for) and which contains the
 // meta-data and user-data a booting guest reads.
 func TestBuildCidataISO(t *testing.T) {
-	iso, err := buildCidataISO("obj-123", "#ps1_sysnative\nWrite-Output hi\n")
+	iso, err := buildCidataISO("obj-123", "#ps1_sysnative\nWrite-Output hi\n", nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

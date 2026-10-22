@@ -280,6 +280,19 @@ function CloudInitSection({ view }: { view: CloudInitView }) {
         {view.os && <span className="text-fg-muted">{view.os}</span>}
       </div>
       <div className="text-xs text-fg-subtle">{view.delivery}</div>
+      {view.temp_password && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-token border border-border bg-surface-sunken px-2 py-1.5 text-xs">
+          <span className="flex items-center gap-1.5 font-medium text-fg-muted">
+            <KeyRound size={12} /> Temporary login
+          </span>
+          <span className="text-fg">
+            {view.temp_username}
+            {' / '}
+            <span className="font-mono">{view.temp_password}</span>
+          </span>
+          <span className="text-fg-subtle">until the agent sets the real password</span>
+        </div>
+      )}
       {view.note && (
         <div className="flex items-start gap-1.5 rounded-token border border-warning bg-warning-soft p-2 text-xs text-fg">
           <TriangleAlert size={13} className="mt-0.5 shrink-0 text-warning" />
