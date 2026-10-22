@@ -144,7 +144,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 
 		for _, pl := range placements {
 			desired[pl.kind+"/"+pl.as] = true
-			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, pl.priority, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps, gates, networkUp, networkFailed); err != nil {
+			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, build.ContentRevisionID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, pl.priority, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps, gates, networkUp, networkFailed); err != nil {
 				return fmt.Errorf("team %d, %s %q: %w", teamNum, pl.kind, pl.as, err)
 			}
 		}
@@ -159,7 +159,66 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 		}
 	}
 
+	// Announce the resolve on the build's own timeline, once per content
+	// revision (the first resolve, and again on a rebuild to a new commit).
+	// This fills the otherwise-silent gap between build.triggered and the first
+	// deploy task -- where the orchestrator is fetching the checkout and
+	// resolving + rendering the whole topology with nothing to show for it --
+	// so a freshly triggered build no longer looks like it's doing nothing.
+	// Gated via resolved_revision_id so it never repeats on the 2s cadence.
+	if !build.ResolvedRevisionID.Valid || build.ResolvedRevisionID.Bytes != build.ContentRevisionID.Bytes {
+		hosts, containers, scripts := 0, 0, 0
+		for _, pl := range placements {
+			if pl.kind == "container" {
+				containers++
+			} else {
+				hosts++
+			}
+			scripts += countScriptSteps(c, pl.kind, pl.objectName)
+		}
+		hosts *= env.Teams
+		containers *= env.Teams
+		scripts *= env.Teams
+		networks := len(env.Networks) * env.Teams
+		payload, _ := json.Marshal(map[string]any{
+			"teams": env.Teams, "hosts": hosts, "containers": containers,
+			"networks": networks, "scripts_rendered": scripts,
+			"content_revision_id": build.ContentRevisionID.String(),
+		})
+		q.CreateEvent(ctx, db.CreateEventParams{
+			BuildID: buildID, Kind: "build.resolved",
+			Message: fmt.Sprintf("resolved content: %d team(s), %d host(s), %d container(s), %d network(s), %d step script(s) rendered",
+				env.Teams, hosts, containers, networks, scripts),
+			Payload: payload,
+		})
+		if err := q.SetBuildResolvedRevision(ctx, db.SetBuildResolvedRevisionParams{ID: buildID, ResolvedRevisionID: build.ContentRevisionID}); err != nil {
+			return fmt.Errorf("recording resolved revision: %w", err)
+		}
+	}
+
 	return nil
+}
+
+// countScriptSteps is how many of an object's authored steps are `script`
+// steps -- the ones Fingerprint actually renders (see fingerprint.go). Used
+// only for the build.resolved event's "N step scripts rendered" summary, so an
+// unresolvable object (caught elsewhere) just contributes zero.
+func countScriptSteps(c *loader.Content, kind, objectName string) int {
+	var steps []loader.Step
+	if kind == "container" {
+		if ct := findContainer(c, objectName); ct != nil {
+			steps = ct.Steps
+		}
+	} else if h := findHost(c, objectName); h != nil {
+		steps = h.Steps
+	}
+	n := 0
+	for _, s := range steps {
+		if s.ActionKey() == "script" {
+			n++
+		}
+	}
+	return n
 }
 
 // infraUp reports whether an object's status means its instance actually
@@ -333,7 +392,7 @@ func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, tea
 	return err
 }
 
-func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, priority int, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool, gates *teamGates, networkUp, networkFailed map[string]bool) error {
+func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID, contentRevID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, priority int, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool, gates *teamGates, networkUp, networkFailed map[string]bool) error {
 	rctx, err := render.Resolve(c, envName, asName, teamNum)
 	if err != nil {
 		return fmt.Errorf("resolving: %w", err)
@@ -362,9 +421,20 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	// runs -> the object's own tags.
 	tags := effectiveTags(c, envName, networkName, objectName, steps, sched, ownTags)
 
-	fp, err := Fingerprint(repoRoot, c, rctx, disk, ports, dependsOn)
-	if err != nil {
-		return fmt.Errorf("fingerprinting: %w", err)
+	// The fingerprint re-renders every step script, which is invariant for a
+	// given (content revision, object): cache it so a settled build doesn't
+	// re-render its whole content on every 2s pass. render.Resolve above still
+	// runs each pass (rctx is needed below), but it's far cheaper than the
+	// RenderScript loop Fingerprint drives. A new content revision (a rebuild)
+	// gets a fresh key, so a content change is never masked. See fingerprintCache.
+	fpKey := fmt.Sprintf("%s\x00%s\x00%s\x00%d", contentRevID.String(), kind, asName, teamNum)
+	fp, cached := fpCache.get(fpKey)
+	if !cached {
+		fp, err = Fingerprint(repoRoot, c, rctx, disk, ports, dependsOn)
+		if err != nil {
+			return fmt.Errorf("fingerprinting: %w", err)
+		}
+		fpCache.put(fpKey, fp)
 	}
 
 	obj, err := q.EnsureDeployedObject(ctx, db.EnsureDeployedObjectParams{

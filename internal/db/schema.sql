@@ -122,6 +122,7 @@ CREATE TABLE public.build (
     auto_built boolean DEFAULT false NOT NULL,
     reconcile_error text,
     created_by_account_id uuid,
+    resolved_revision_id uuid,
     CONSTRAINT build_status_check CHECK ((status = ANY (ARRAY['planned'::text, 'deploying'::text, 'building'::text, 'finished'::text, 'failed'::text, 'tearing_down'::text, 'torn_down'::text, 'purged'::text, 'discarded'::text])))
 );
 --

@@ -171,6 +171,22 @@ func main() {
 		dir, err := resolveContent(bctx, b.ID)
 		if err != nil {
 			log.Printf("resolving content for build %s: %v", b.ID, err)
+			// Surface the checkout failure ON THE BUILD, not just in the
+			// orchestrator's stdout: a slow/failed/timed-out content fetch is the
+			// common "the build just sits there with nothing in the logs" case,
+			// and returning silently here (as this did) left the build with no
+			// reason at all. Recorded on a detached context so a timed-out bctx
+			// can still persist it, change-gated so it isn't rewritten every 2s;
+			// a later successful pass clears it via the normal reconcile-error
+			// path below.
+			cerr := "content checkout failed: " + err.Error()
+			if b.ReconcileError == nil || *b.ReconcileError != cerr {
+				recCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				if e := q.SetBuildReconcileError(recCtx, db.SetBuildReconcileErrorParams{ID: b.ID, ReconcileError: &cerr}); e != nil {
+					log.Printf("recording checkout error for build %s: %v", b.ID, e)
+				}
+				cancel()
+			}
 			return
 		}
 		mark("checkout")

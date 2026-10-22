@@ -97,6 +97,7 @@ type Build struct {
 	AutoBuilt          bool               `json:"auto_built"`
 	ReconcileError     *string            `json:"reconcile_error"`
 	CreatedByAccountID pgtype.UUID        `json:"created_by_account_id"`
+	ResolvedRevisionID pgtype.UUID        `json:"resolved_revision_id"`
 }
 
 type BuildRenderSecret struct {

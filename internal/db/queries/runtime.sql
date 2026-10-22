@@ -26,6 +26,12 @@ DELETE FROM build WHERE id = $1;
 -- (e.g. build/builder incompatibility), or NULL to clear it after a success.
 UPDATE build SET reconcile_error = $2 WHERE id = $1;
 
+-- name: SetBuildResolvedRevision :exec
+-- Records the content revision the orchestrator last emitted a build.resolved
+-- event for, so that event fires once per resolve (the first resolve, and again
+-- only when the content revision changes) rather than on every reconcile tick.
+UPDATE build SET resolved_revision_id = $2 WHERE id = $1;
+
 -- name: ApplyContentRevisionToBuild :one
 -- handleApplyUpcoming's own mechanism: reuses an existing build's own
 -- row for a new commit instead of creating a second one -- team/
