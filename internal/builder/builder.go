@@ -149,23 +149,46 @@ type HostSpec struct {
 // machine from it.
 const DockerBaseAlias = "laforge-docker-base"
 
+// OldKernelStorageDriver is Docker's built-in, dependency-free storage driver
+// for hosts whose kernel can't do overlay2. overlay2 (Docker's default) needs a
+// kernel new enough to mount overlayfs as an unprivileged/nested user, which old
+// MicroCloud nodes don't have, so Docker there fails to start or to run a
+// container. "vfs" is the naive copy-per-layer driver built into Docker with no
+// kernel feature or extra package required -- it works on any kernel, at the
+// cost of disk space and layer-copy speed. We only force it where overlay2 is
+// unavailable (MicroCloud); builders on modern kernels (Incus) keep overlay2.
+const OldKernelStorageDriver = "vfs"
+
 // DockerBaseInstallScript is what the docker-base job runs inside its build
 // container: Docker Engine and the compose plugin from Docker's own apt
 // repository (download.docker.com) rather than the distribution's packages,
 // which trail it by a long way. It then checks that the daemon came up under
 // nesting and can actually run a container, and prints DOCKER_OK on success.
-const DockerBaseInstallScript = `export DEBIAN_FRONTEND=noninteractive
+//
+// storageDriver, when non-empty, is pinned in /etc/docker/daemon.json BEFORE the
+// daemon first starts (so docker-ce's own postinst start already uses it), for
+// hosts that can't do overlay2 -- see OldKernelStorageDriver. Empty leaves
+// Docker's default (overlay2).
+func DockerBaseInstallScript(storageDriver string) string {
+	daemonJSON := ""
+	if storageDriver != "" {
+		daemonJSON = `install -m 0755 -d /etc/docker
+printf '%s' '{"storage-driver":"` + storageDriver + `"}' > /etc/docker/daemon.json
+`
+	}
+	return `export DEBIAN_FRONTEND=noninteractive
 apt-get update && apt-get install -y ca-certificates curl || exit 1
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc || exit 1
 chmod a+r /etc/apt/keyrings/docker.asc
 . /etc/os-release
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${UBUNTU_CODENAME:-$VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list
-apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || exit 1
+` + daemonJSON + `apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || exit 1
 systemctl enable --now docker
 sleep 3
 docker --version
 docker info >/dev/null 2>&1 && docker compose version && docker run --rm hello-world >/dev/null 2>&1 && docker image rm hello-world >/dev/null 2>&1 && echo DOCKER_OK || echo DOCKER_BAD`
+}
 
 // DockerBaseCleanupScript trims the build container before it is published:
 // apt caches, and cloud-init's record of having run, so an instance created

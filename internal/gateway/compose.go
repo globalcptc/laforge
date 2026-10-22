@@ -158,12 +158,28 @@ func dockerDaemonLogScript(cl *loader.ContainerLogs) string {
 		daemon["log-opts"] = cl.Options
 	}
 	b, _ := json.Marshal(daemon)
+	// The log fields WITHOUT their enclosing braces, so the shell can splice a
+	// preserved storage-driver in front of them into one JSON object.
+	inner := strings.TrimSuffix(strings.TrimPrefix(string(b), "{"), "}")
+	// Preserve any storage-driver already pinned in daemon.json before rewriting
+	// it for logs. On old MicroCloud hosts the docker base image pins
+	// storage-driver=vfs (overlay2's kernel support is missing); blindly
+	// overwriting daemon.json here and restarting Docker would bounce it back
+	// onto the default overlay2 and the daemon would fail to start. The sed reads
+	// our own simple daemon.json, so the match is reliable.
 	return fmt.Sprintf(`set -e
 mkdir -p /etc/docker
-cat > /etc/docker/daemon.json <<'LAFORGE_EOF'
-%s
-LAFORGE_EOF
-systemctl restart docker 2>/dev/null || service docker restart || true`, string(b))
+sd=""
+if [ -f /etc/docker/daemon.json ]; then
+  sd=$(sed -n 's/.*"storage-driver"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /etc/docker/daemon.json | head -n1)
+fi
+{
+  printf '{'
+  [ -n "$sd" ] && printf '"storage-driver":"%%s",' "$sd"
+  printf '%%s' '%s'
+  printf '}\n'
+} > /etc/docker/daemon.json
+systemctl restart docker 2>/dev/null || service docker restart || true`, inner)
 }
 
 func shellQuote(s string) string {

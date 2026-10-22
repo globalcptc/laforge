@@ -113,3 +113,19 @@ func TestComposeContainerLogsInOnlyWhereACredentialExists(t *testing.T) {
 		t.Errorf("login must come before pull:\n%s", all)
 	}
 }
+
+func TestDockerDaemonLogScriptPreservesStorageDriver(t *testing.T) {
+	s := dockerDaemonLogScript(&loader.ContainerLogs{Driver: "json-file", Options: map[string]string{"max-size": "10m"}})
+	// It must read any existing storage-driver and splice it back, so rewriting
+	// daemon.json for logs doesn't drop the vfs pin old MicroCloud hosts need.
+	for _, want := range []string{
+		`sed -n 's/.*"storage-driver"`,
+		`[ -n "$sd" ] && printf '"storage-driver":"%s",' "$sd"`,
+		`"log-driver":"json-file"`,
+		`"max-size":"10m"`,
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("log script missing %q:\n%s", want, s)
+		}
+	}
+}
