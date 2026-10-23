@@ -17,11 +17,12 @@ Pick it once for every instance of that host across the build's teams.
 3. [What happens underneath](#3-what-happens-underneath)
 4. [Dependents](#4-dependents)
 5. [Many hosts at once](#5-many-hosts-at-once)
-6. [API, UI, CLI](#6-api-ui-cli)
-7. [Database changes](#7-database-changes)
-8. [Edge cases and rules](#8-edge-cases-and-rules)
-9. [Phases](#9-phases)
-10. [Open decisions](#10-open-decisions)
+6. [Holding hosts through a step-only change](#6-holding-hosts-through-a-step-only-change)
+7. [API, UI, CLI](#7-api-ui-cli)
+8. [Database changes](#8-database-changes)
+9. [Edge cases and rules](#9-edge-cases-and-rules)
+10. [Phases](#10-phases)
+11. [Open decisions](#11-open-decisions)
 
 ## 1. What exists
 
@@ -52,7 +53,8 @@ The pieces this builds on, as the code has them today:
   build in place") move a live build to the new revision; each object's **fingerprint**
   (`internal/orchestrator/fingerprint.go`: image, size, disk, ports, depends_on, the
   rendered steps and script bodies) is recomputed, and a changed fingerprint means
-  **recreate**. That rule is out of scope here (§10).
+  **recreate**. A pushed one-line script fix therefore recreates every host that runs
+  the script — before anyone could restart a step on it. §6 adds a switch for that.
 - **Ad-hoc targets** (`orchestrator.MatchAdHocTargets`, used by `run`, schedules and
   rebuild) already select hosts across teams by name, tag, kind, id or search.
 
@@ -158,7 +160,47 @@ once for a **host definition** and applied to its instances:
   just queues. The result lists what happened to each.
 - **Dependents** (§4) are resolved per host: team 3's web01 resumes team 3's dependents.
 
-## 6. API, UI, CLI
+## 6. Holding hosts through a step-only change
+
+Without this, the action only helps with failures the content didn't cause: the moment a
+fix is pushed, the fingerprint rule recreates the hosts (§1). The fix is a switch, not a
+new rule — **the recreate rule stays as it is for anything but steps**, and the switch
+is off unless an operator turns it on:
+
+- **The switch** is per configured build, beside *auto-deploy*: **"Hold hosts on
+  step-only changes"** (`configured_build.hold_on_step_change`, default off). Off, the
+  build behaves exactly as today.
+- **Telling a step-only change apart.** The host's fingerprint stays one hash; alongside
+  it the deploy records a second, **`infra_fingerprint`**: the same function over
+  everything *except* the steps and script bodies (os, image, size, disk, the compose
+  archive, ports, depends_on). On a pass where the full fingerprint differs, the
+  reconciler compares the infrastructure hash too: different → recreate, as today,
+  switch or no switch; same → the change was steps only.
+- **Holding.** With the switch on and a steps-only change, the host is **not
+  recreated**. It's marked `steps_changed_at = now()`, its fingerprint is left as it was
+  (so the pass keeps noticing until it's dealt with — and so turning the switch off later
+  recreates it, as the rule would have), and the build's log gets a `steps.changed`
+  event naming the hosts. Hosts mid-build (`running`/`building`) are held too: their
+  remaining steps keep coming from the old expansion already in the table, and the
+  marker says the content has moved on.
+- **The hosts page** shows *steps changed* on the row, and *Restart from step* is offered
+  on it in **any** state — `finished` included — because that is now the way to apply
+  the fix. The dialog's "content has changed since these hosts were built" line becomes
+  the headline. Restarting from a step clears the marker and sets the host's fingerprint
+  to the new revision's (its steps are now from that revision; its infrastructure
+  never changed). *Rebuild* still works and does the same clearing, for a box the
+  operator wants clean.
+- **Nothing is automatic.** The orchestrator marks; people restart. A held host that's
+  never restarted stays as it was built, marked, and the mark is visible on the hosts
+  page and in the build's attention list until someone acts or turns the switch off.
+
+Which step to restart from is the operator's call: the marker doesn't say which step
+changed. Working that out (expand the steps from the revision the host was built from
+and the current one, compare group by group, pre-fill the first difference) needs the
+build to remember its previous revision; it's a sensible follow-up (§11), not part of
+the switch.
+
+## 7. API, UI, CLI
 
 **API** — one endpoint, modelled on rebuild and `run`:
 
@@ -176,7 +218,10 @@ POST /builds/{id}/restart-steps
   tasks and resumed dependents, or why it was skipped.
 - `409` when no target is in a restartable state or `from_group` names no step of that
   host; a host with a running step is skipped (not an error) unless `force`. Manage
-  level; the build must be deploying/building/finished/failed, as for rebuild.
+  level; the build must be deploying/building/finished/failed, as for rebuild. A host
+  marked *steps changed* (§6) is restartable in any state.
+- `PATCH /configured-builds/{id}` (or the existing per-flag route, as *auto-deploy*
+  has) sets `hold_on_step_change`.
 
 **UI** — on a host's steps panel (`ObjectLogPanel`), each authored step group gets a
 **Restart from here** control when the host is in a restartable state; the failed group
@@ -186,25 +231,35 @@ restartable ones ticked), the dependents that will resume, a note if the content
 changed since these hosts were built, and the "steps run again in full; they should be
 safe to run twice" line. On the hosts page, a `build_failed`/`invalid` row's hover
 controls gain *Restart steps…* beside *Rebuild*, and the bulk-action bar offers it when
-the selection is one host definition.
+the selection is one host definition. The configured-build page gets the **Hold hosts
+on step-only changes** switch beside *auto-deploy*, with one line on what it does.
 
 **CLI** — `laforge build restart-steps <build> --host web01 --from install-tool
 [--team 3,4] [--no-dependents] [--force] [--dry-run]`, resolving the step by label or
 index, printing the dry run and asking before acting (as `laforge run` does).
 
-## 7. Database changes
+## 8. Database changes
 
-One migration: `agent_task.step_group integer` — which authored step a row came from
-(NULL for ad-hoc); set by `materializeSteps` from `PlannedCommand.Group`. The steps API
-reads it instead of re-expanding content to attribute rows, which also fixes attribution
-after a content change (today's re-expansion attributes old rows against new content).
+One migration:
+
+- `agent_task.step_group integer` — which authored step a row came from (NULL for
+  ad-hoc); set by `materializeSteps` from `PlannedCommand.Group`. The steps API reads it
+  instead of re-expanding content to attribute rows, which also fixes attribution after a
+  content change (today's re-expansion attributes old rows against new content).
+- `deployed_object.infra_fingerprint text NOT NULL DEFAULT ''` and
+  `deployed_object.steps_changed_at timestamptz` (§6). An existing host with an empty
+  `infra_fingerprint` is treated as "unknown": a fingerprint change recreates it, as
+  today, until it has been deployed once with the new code.
+- `configured_build.hold_on_step_change boolean NOT NULL DEFAULT false` (§6).
 
 New queries: `DeleteAuthoredAgentTasksFromGroup(object, group)`,
-`SetDeployedObjectRestarting(object)` (`build_failed`/`invalid → building`, clear
-`last_error`), `ResumeDependentForRestart(object)` (`build_failed → running` where
-`steps_materialized_at IS NULL`).
+`SetDeployedObjectRestarting(object)` (`build_failed`/`invalid`/`finished → building`,
+clear `last_error`, clear `steps_changed_at`, set the fingerprint),
+`ResumeDependentForRestart(object)` (`build_failed → running` where
+`steps_materialized_at IS NULL`), `MarkDeployedObjectStepsChanged(object)`,
+`ListStepsChangedObjectsByBuild(build)`.
 
-## 8. Edge cases and rules
+## 9. Edge cases and rules
 
 | Case | Rule |
 | --- | --- |
@@ -219,27 +274,29 @@ New queries: `DeleteAuthoredAgentTasksFromGroup(object, group)`,
 | The build is `tearing_down`/`torn_down`/`purged` | `409`, as for rebuild. |
 | Two operators restart the same host at once | The second finds the host `building` and gets `409` (the state check is in the transaction). |
 | Validators (`validate:` steps) after *G* | Re-run; their old `validator_result` rows went with the deleted tasks, so the build's findings reflect the new run. |
-| A restart and the fingerprint | A restart doesn't touch the host's fingerprint; it re-expands steps from the build's current revision, which is the one the fingerprint was computed from. |
+| A restart and the fingerprint | The restart re-expands steps from the build's current revision and sets the host's fingerprint to that revision's, clearing *steps changed* if it was set. |
+| The switch is turned off while hosts are held | On the next pass their fingerprints still differ, so they're recreated — the rule resumes where it left off. The switch's description says so. |
+| A step-only change arrives while a held host is mid-build | The host keeps running the steps already in its table (the old expansion) and is marked; the operator restarts from a step once it finishes or fails. |
+| Infrastructure *and* steps change together | Recreate, as today; the switch only holds steps-only changes. |
 | Several hosts, one with a running step | That host is skipped and named in the result; the others proceed. `force` includes it. |
 
-## 9. Phases
+## 10. Phases
 
 | Phase | Size | What | Done when |
 | --- | --- | --- | --- |
 | **R1 The action** | M | `step_group` on tasks (and the steps API reading it), the endpoint with targets and dry run, the transaction in §3 per host, dependents in §4, the gateway's unknown-task tolerance, the steps-panel dialog with the instance list, the hosts-page controls, the CLI, `steps.restarted` events | a fake-builder build with three teams: web01 fails at step 2 of 4 on all three; restarting from step 2 for all of them keeps steps 0–1's output, runs 2–3 again with new task ids (a `download:` among them fetches again), and each goes `building → finished`; a dependent failed on team 2's web01 resumes and finishes; the instance with a leased task is skipped without `force`; a late report for a deleted task is dropped |
+| **R2 The hold switch** | S | `infra_fingerprint` recorded at deploy, the reconciler's steps-only test and marking, `hold_on_step_change` on the configured build and its page, the *steps changed* row state with restart offered in any state, `steps.changed` events, the attention-list entry | with the switch on, pushing a script change to a live build marks every host that runs it and recreates none; restarting them from the changed step runs it and clears the mark; changing a host's image still recreates it; turning the switch off recreates the held hosts |
 
-## 10. Open decisions
+## 11. Open decisions
 
-- **Finished hosts.** Should *Restart from step* be offered on a `finished` host (re-run
-  a validator, redo a step by hand)? Harmless to allow under `manage`; left out of the
-  first version to keep its surface small.
-- **Content fixes and the fingerprint rule.** A pushed fix to a script changes the
-  fingerprint of every host that runs it, and the in-place update recreates them before
-  anyone can restart a step. So this action helps with failures the content didn't
-  cause (a mirror down, a flaky install) and with fixes that don't reach the
-  fingerprint; a fix that does still means a rebuild. Changing that rule — treating
-  step-only changes as "restart from the first changed step" rather than "recreate" —
-  is a separate decision, deliberately not taken here.
+- **Finished hosts without a content change.** Should *Restart from step* be offered on
+  a `finished` host that isn't marked *steps changed* (re-run a validator, redo a step by
+  hand)? Harmless to allow under `manage`; left out of the first version to keep its
+  surface small.
+- **Which step changed.** The *steps changed* marker doesn't say where. Pre-filling the
+  first changed step needs the build to keep its previous content revision (one column
+  on `build`) and a group-by-group comparison of the two expansions; a follow-up once R2
+  is in use.
 - **Hosts that share steps through `extends`.** Two host definitions with the same
   base have the same early steps but may add their own; the action keeps to one
   definition. If restarting a shared base step across definitions turns out to matter,
