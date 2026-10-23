@@ -54,6 +54,7 @@ import type {
   Team,
   UnapprovedInstalledRepository,
   UpcomingChanges,
+  RestartStepsResponse,
 } from './types'
 
 export function useMe() {
@@ -192,6 +193,18 @@ export function useSetConfiguredBuildAutoDeploy(repoId: string) {
   return useMutation({
     mutationFn: ({ configuredBuildId, enabled }: { configuredBuildId: string; enabled: boolean }) =>
       api.post<ConfiguredBuild>(`/configured-builds/${configuredBuildId}/auto-deploy`, { enabled }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['configured-builds', repoId] }),
+  })
+}
+
+// useSetConfiguredBuildHoldOnStepChange toggles "hold hosts on step-only
+// changes": on, a push that changes only a host's steps or scripts marks the
+// host (restart it from a step to apply) instead of recreating it.
+export function useSetConfiguredBuildHoldOnStepChange(repoId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ configuredBuildId, enabled }: { configuredBuildId: string; enabled: boolean }) =>
+      api.post<ConfiguredBuild>(`/configured-builds/${configuredBuildId}/hold-on-step-change`, { enabled }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['configured-builds', repoId] }),
   })
 }
@@ -413,11 +426,28 @@ export function useDeployedObjects(buildId: string | undefined) {
   })
 }
 
+// useEvents is the newest page of a build's journal (the api bounds it to
+// 5,000 events); earlier pages come through fetchEventsBefore as the Logs
+// page asks for them, and useEventsSummary says how many there are in all.
 export function useEvents(buildId: string | undefined) {
   return useQuery<LFEvent[]>({
     queryKey: ['events', buildId],
     queryFn: () => api.get(`/builds/${buildId}/events`),
     enabled: !!buildId,
+    retry: 1,
+  })
+}
+
+export function fetchEventsBefore(buildId: string, before: string): Promise<LFEvent[]> {
+  return api.get(`/builds/${buildId}/events?before=${encodeURIComponent(before)}`)
+}
+
+export function useEventsSummary(buildId: string | undefined) {
+  return useQuery<{ total: number; page_size: number }>({
+    queryKey: ['events-summary', buildId],
+    queryFn: () => api.get(`/builds/${buildId}/events/summary`),
+    enabled: !!buildId,
+    refetchInterval: 30_000,
   })
 }
 
@@ -595,11 +625,15 @@ export function useCreateBuilderConfig() {
   })
 }
 
+// useUpdateBuilderConfig saves a builder. The api re-checks the builder's
+// images against the hoster only when images, hosts or the connection
+// changed; verify: false skips that check on request (the "save anyway"
+// after a slow hoster made the check time out).
 export function useUpdateBuilderConfig() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ name, ...req }: { name: string } & BuilderConfigRequest) =>
-      api.put<BuilderConfig>(`/builder-configs/${encodeURIComponent(name)}`, req),
+    mutationFn: ({ name, verify, ...req }: { name: string; verify?: boolean } & BuilderConfigRequest) =>
+      api.put<BuilderConfig>(`/builder-configs/${encodeURIComponent(name)}${verify === false ? '?verify=false' : ''}`, req),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['builder-configs'] }),
   })
 }
@@ -924,6 +958,24 @@ export function usePowerAction(buildId: string) {
   })
 }
 
+// useRestartSteps runs a host's build again from a chosen authored step on the
+// box it already has (docs/plans/restart-from-step.md): dry_run lists every
+// team's instance of the host with what would run again; a real call restarts
+// the chosen instances and refreshes the build and their steps.
+export function useRestartSteps(buildId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (req: { target: AdHocTarget; from_group: number; resume_dependents?: boolean; force?: boolean; dry_run?: boolean }) =>
+      api.post<RestartStepsResponse>(`/builds/${buildId}/restart-steps`, req),
+    onSuccess: (_res, req) => {
+      if (req.dry_run) return
+      qc.invalidateQueries({ queryKey: ['build', buildId] })
+      qc.invalidateQueries({ queryKey: ['objects', buildId] })
+      qc.invalidateQueries({ queryKey: ['object-steps'] })
+    },
+  })
+}
+
 // useRebuild forces a tear-down-and-recreate of the target host(s) and, when
 // include_dependents is set, everything in their team that depends on them.
 // dry_run resolves the affected set without changing anything (the confirm
@@ -1014,14 +1066,22 @@ export function useSetTeamAccess(buildId: string) {
 // by exposing `connected` so a caller can show that banner; the actual
 // polling fallback is handleBuild's own refetchInterval, already running
 // underneath regardless.
-export function useLiveEvents(buildId: string | undefined, onEvent?: (ev: LFEvent) => void) {
+// opts.since is the newest event the caller already holds (from GET /events):
+// the stream starts there, so nothing is replayed and nothing between the
+// fetch and the connect is missed; without it the stream starts from now.
+// opts.enabled false holds off connecting (the Logs page, until its history
+// has loaded).
+export function useLiveEvents(buildId: string | undefined, onEvent?: (ev: LFEvent) => void, opts?: { since?: string | null; enabled?: boolean }) {
   const [connected, setConnected] = useState(false)
   const onEventRef = useRef(onEvent)
   onEventRef.current = onEvent
+  const since = opts?.since ?? null
+  const enabled = opts?.enabled ?? true
 
   useEffect(() => {
-    if (!buildId) return
-    const source = new EventSource(`${API_BASE}/builds/${buildId}/live`, { withCredentials: true })
+    if (!buildId || !enabled) return
+    const url = `${API_BASE}/builds/${buildId}/live${since ? `?since=${encodeURIComponent(since)}` : ''}`
+    const source = new EventSource(url, { withCredentials: true })
     source.onopen = () => setConnected(true)
     source.onerror = () => setConnected(false)
     // One fixed frame name ("laforge-event") for every real row -- see
@@ -1039,7 +1099,7 @@ export function useLiveEvents(buildId: string | undefined, onEvent?: (ev: LFEven
       source.close()
       setConnected(false)
     }
-  }, [buildId])
+  }, [buildId, since, enabled])
 
   return { connected }
 }

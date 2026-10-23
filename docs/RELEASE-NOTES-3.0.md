@@ -119,7 +119,23 @@ This note covers the whole 3.0 line.
   waiter out of its target's rebuild cascade. See
   [CONFIGURATION.md](../CONFIGURATION.md#waiting-on-another-host-wait_for-and-milestone).
 - **Force-rebuild** a host and all its downstream dependents from the UI, and **clean
-  teardown** at the end of an event.
+  teardown** at the end of an event. A rebuilt host shows **Destroy Pending** until
+  its destroy starts, then **Destroying**, and only then **Pending** for its fresh
+  deploy — never Pending while the old instance still exists. The same goes for a host
+  recreated because its content changed.
+- **Restart from step.** A host whose build stopped — a failed step, a validator that
+  didn't pass — can be restarted from any authored step instead of rebuilt: that step and
+  every one after it run again in full (downloads fetch again, scripts write and run
+  again, validators re-check) on the box as it is, nothing destroyed, no hoster call.
+  Picked once for a host definition and applied to the chosen teams' copies; hosts that
+  were failed for depending on it resume. From the host's Steps panel, the hosts page,
+  or `laforge restart-steps --build <id> --from <step>`. Steps should be safe to run
+  twice (CONFIGURATION.md → Steps).
+- **Hold hosts on step-only changes** (per configured build, off by default): a push
+  that changes only a host's steps or scripts marks the host *steps changed* instead of
+  recreating it, so the fix is applied with a restart from the changed step. Changes to
+  the image, size, disk, ports or dependencies still recreate the host; turning the
+  switch off recreates any held hosts.
 
 ## The Agent
 
@@ -173,6 +189,98 @@ This note covers the whole 3.0 line.
 
 ## Operations & Observability
 
+- **Everything LaForge does is logged, twice**: as a line in the service's own log and
+  as an event on the build's Logs tab. The orchestrator records every decision with its
+  reason (deploy, recreate, remove, rebuild, teardown, held, failed for a network or a
+  dependency, each status move, and what it's waiting on); the runner every task
+  attempt and its duration; the api every operator action with who made it; the
+  builders every hoster request, operation and destroy phase; the gateway every step.
+  Long log lines open in place on the Logs tab, which loads the newest 5,000 events and
+  fetches earlier pages on demand ("Load earlier"), so a long or stuck build's journal
+  always opens; the live stream starts at the newest loaded event rather than replaying
+  the journal from the beginning, and rows are ordered by time whatever request they
+  arrived in. "Still waiting" entries are written to the journal at most twice an hour
+  per host (the orchestrator's own log has them every minute) and pruned after a day.
+- **Concurrency limits hold.** A builder's limit (*Max concurrency* in the wizard) now
+  applies to the next task leased, not after a pool has drained, and a task is only
+  leased once a slot is free (before, one task per pool sat leased and unheartbeated
+  while waiting). The runner logs each pool's limit, every lease's slot, and "at its
+  limit, N waiting" every 30 s while saturated. A failed destroy — a rebuild's or a
+  content change's — is queued again (with its hoster reference) before anything is
+  redeployed in its place, and a host whose old instance can't be destroyed is stopped
+  with the error instead of sitting pending.
+- **Reconcile passes finish.** The build/builder compatibility check read every source
+  image's snapshot from the hoster on every 2-second pass (10+ seconds each on a loaded
+  MicroCloud cluster), so a pass timed out inside team 1 and later teams were never
+  reconciled. A passed check is now remembered per build and revision for an hour, and
+  each source's size per builder; a pass that does time out records why on the build
+  (`reconcile.error`, naming the phase) and `reconcile.recovered` when passes complete
+  again. Builder metrics probes are bounded to 30 s.
+- **Nothing waits on a hung hoster.** The orchestrator's periodic jobs (power-state
+  poll, access and schedule dispatch, housekeeping, metrics) run off its main loop, each
+  bounded and never two at once — a tick that finds the previous run still going is
+  skipped and logged with how long it has been running. Power states are inspected per
+  builder in parallel, 60 s each; the check-in watchdog's hoster calls are bounded; the
+  runner fails and retries a task that runs past `RUNNER_TASK_TIMEOUT` (45 m) so a hung
+  builder call can't hold a concurrency slot forever; the api has header/idle timeouts
+  and bounds its live drift scan.
+- **Saving a builder no longer waits on the hoster** unless its images, hosts or
+  connection changed; a concurrency or size change saves at once. When images are
+  re-checked, the snapshot reads run in parallel, and if the check still fails or times
+  out the wizard offers *Save without verifying images*.
+- **No more stalls between deploys, destroys, rebuilds and teardowns.**
+  - A deploy that finds its instance already exists — an earlier attempt the cluster
+    accepted before the runner went away — waits for that creation to finish and adopts
+    it when it's this deployment's (every instance now records which deployment made it),
+    instead of failing; someone else's is refused, permanently. Both the MicroCloud and
+    Incus builders do this; instances created before deployment names were recorded
+    are matched by team. A destroy likewise waits out an unfinished creation instead of
+    racing it.
+  - Restarting or redeploying the runner hands its in-flight tasks back (pending, the
+    lease not counted as an attempt) instead of leaving them leased until they expire and
+    count as failures. The runner gets 30 s to stop.
+  - A rebuild of a host with a deploy queued withdraws that deploy; with one running, the
+    rebuild is recorded and carried out the moment it ends — it used to reset the host,
+    losing its hoster reference, and the request was then forgotten.
+  - A teardown withdraws deploys that haven't started rather than waiting for them to
+    create instances only to destroy them; while something is still running, it says
+    what.
+  - A host whose deploy failed is retried after a backoff (30 s doubling to 10 m) rather
+    than on every pass, and not after five failures in a row or a permanent failure — a
+    rebuild resets that.
+- **MicroCloud deploys no longer queue behind ACL rewrites.** Every external-access pass
+  re-wrote every public host's ACL, unchanged, holding the builder's networking lock
+  across the whole team — and on a loaded cluster an ACL write takes minutes, while
+  Windows/public-NIC deploys need that lock for their own ACL. An ACL that already
+  matches is now left alone (read first, no lock), the lock is taken only around a real
+  write, and waiting on it is logged every 30 s, as is any hoster request still
+  unanswered after 30 s. Opening/closing a team's access and configuring its network
+  access no longer hold the lock across the whole team either — each network change and
+  each ACL write takes it for itself — and a host's NIC isn't updated when its port ACL
+  is already attached. Access and network configuration tasks run in their own lane,
+  capped at the builder's limit (at least 4), beside its deploys.
+- **Lost agents fail the host instead of stalling it.** A host whose agent checked in and
+  then went silent for `AGENT_LOST_AFTER` (30 m) with steps still to run, or whose agent
+  never connected within `AGENT_NEVER_CHECKED_IN_AFTER` (60 m) of the instance coming
+  up, goes `build_failed` with the reason and time — visible, and rebuildable or
+  restartable — rather than sitting "building" with 31 pending steps for the rest of the
+  event.
+- **A builder's slots are shared fairly between builds.** The next task leased comes
+  from the build with the fewest deploys already running, so one build's backlog of a
+  hundred deploys can't starve another build's two.
+- **Destroys lease ahead of deploys.** A rebuild's or teardown's destroy no longer waits
+  behind a queue of deploys for one of the builder's slots: it frees capacity and is what
+  the operator asked for, so it goes first.
+- **The concurrency limit counts deploys and destroys.** A builder's *Max concurrency*
+  is how many instances are created or destroyed at once; access and network
+  configuration tasks (seconds each) run alongside instead of queueing behind a hundred
+  deploys. The runner's log names the slot per lease and what's waiting.
+- **Leaner MicroCloud destroys.** A destroy reads the instance once, stops and deletes
+  it, and then removes only what that instance actually had — its public NIC's ACL, its
+  per-host port ACL, its Windows config-drive volume — concurrently, instead of a blind
+  sequence of every cleanup plus a confirmation read. A plain Linux host is three hoster
+  requests rather than seven.
+
 - **A React operator console**: active builds grouped by repository on a home dashboard;
   per-build hosts/containers/networks with live status, infra power state, and agent
   health; live **logs over SSE**; **findings**, **topology**, **access** and **external
@@ -200,6 +308,17 @@ This note covers the whole 3.0 line.
   shell relay reuses the same CA with its own internal listener and an API client cert.
 - A hardened agent-gateway wire protocol (length-prefixed JSON inside TLS, fuzz-tested
   framing) that **speaks only the agent protocol** to the outside.
+- **No setup secrets left on hosts.** A rendered `script:` carries the environment's
+  passwords, so it never stays on a box competitors get onto: the agent writes it just
+  before each run and deletes it the moment the script exits, whether it succeeded,
+  failed or timed out, and every script step ends with a delete of the same file (for
+  agents from before this change, and for scripts that reboot the host). Each removal
+  appears in the host's Events tab ("deleted /tmp/laforge-step-…") and the gateway log.
+  Container hosts log in to registries through a temporary Docker config that is removed
+  right after the pull, so no registry password is saved in `/root/.docker/config.json`;
+  the compose project archive, the Docker installer and the Windows agent task file are
+  removed however their step ends. Hosts deployed before this change still have their
+  old script files; remove them by hand.
 
 ## CLI
 

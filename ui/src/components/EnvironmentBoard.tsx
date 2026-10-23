@@ -197,7 +197,7 @@ export function EnvironmentBoard({ repoId, buildId, onClose }: { repoId: string;
                           className={cn(
                             'flex items-center justify-center rounded-md outline-2 outline-transparent transition hover:outline-white/70 focus-visible:outline-white',
                             '[&>svg]:h-[clamp(0.7rem,2vh,1.35rem)] [&>svg]:w-[clamp(0.7rem,2vh,1.35rem)]',
-                            ghost ? 'border border-dashed border-[#352f4d] text-[#5b5570]' : 'text-white/90',
+                            ghost ? 'border border-dashed border-[#4a4366] text-[#b6afc8]' : 'text-white/90',
                             sep && 'ml-0.5',
                           )}
                         >
@@ -221,7 +221,7 @@ export function EnvironmentBoard({ repoId, buildId, onClose }: { repoId: string;
               <span key={k} className="flex items-center gap-1.5">
                 <span
                   style={ghost ? undefined : { background: STATUS_COLOR[k] ?? '#5f5e5a' }}
-                  className={cn('flex h-4 w-4 items-center justify-center rounded [&>svg]:h-2.5 [&>svg]:w-2.5', ghost ? 'border border-dashed border-[#352f4d] text-[#5b5570]' : 'text-white/90')}
+                  className={cn('flex h-4 w-4 items-center justify-center rounded [&>svg]:h-2.5 [&>svg]:w-2.5', ghost ? 'border border-dashed border-[#4a4366] text-[#b6afc8]' : 'text-white/90')}
                 >
                   <Icon />
                 </span>

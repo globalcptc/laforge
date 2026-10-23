@@ -49,7 +49,7 @@ func (q *Queries) ConfiguredBuildHasLiveBuilds(ctx context.Context, configuredBu
 const createConfiguredBuild = `-- name: CreateConfiguredBuild :one
 INSERT INTO configured_build (repository_id, branch, environment_path, builder_config_name)
 VALUES ($1, $2, $3, $4)
-RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled
+RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled, hold_on_step_change
 `
 
 type CreateConfiguredBuildParams struct {
@@ -77,6 +77,7 @@ func (q *Queries) CreateConfiguredBuild(ctx context.Context, arg CreateConfigure
 		&i.CurrentContentRevisionID,
 		&i.CreatedAt,
 		&i.AutoDeployEnabled,
+		&i.HoldOnStepChange,
 	)
 	return i, err
 }
@@ -94,7 +95,7 @@ func (q *Queries) DeleteConfiguredBuild(ctx context.Context, id pgtype.UUID) err
 }
 
 const getConfiguredBuild = `-- name: GetConfiguredBuild :one
-SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled FROM configured_build WHERE id = $1
+SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled, hold_on_step_change FROM configured_build WHERE id = $1
 `
 
 func (q *Queries) GetConfiguredBuild(ctx context.Context, id pgtype.UUID) (ConfiguredBuild, error) {
@@ -110,12 +111,13 @@ func (q *Queries) GetConfiguredBuild(ctx context.Context, id pgtype.UUID) (Confi
 		&i.CurrentContentRevisionID,
 		&i.CreatedAt,
 		&i.AutoDeployEnabled,
+		&i.HoldOnStepChange,
 	)
 	return i, err
 }
 
 const listConfiguredBuildsByRepository = `-- name: ListConfiguredBuildsByRepository :many
-SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled FROM configured_build WHERE repository_id = $1 ORDER BY created_at
+SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled, hold_on_step_change FROM configured_build WHERE repository_id = $1 ORDER BY created_at
 `
 
 func (q *Queries) ListConfiguredBuildsByRepository(ctx context.Context, repositoryID pgtype.UUID) ([]ConfiguredBuild, error) {
@@ -137,6 +139,7 @@ func (q *Queries) ListConfiguredBuildsByRepository(ctx context.Context, reposito
 			&i.CurrentContentRevisionID,
 			&i.CreatedAt,
 			&i.AutoDeployEnabled,
+			&i.HoldOnStepChange,
 		); err != nil {
 			return nil, err
 		}
@@ -149,7 +152,7 @@ func (q *Queries) ListConfiguredBuildsByRepository(ctx context.Context, reposito
 }
 
 const listConfiguredBuildsByRepositoryAndBranch = `-- name: ListConfiguredBuildsByRepositoryAndBranch :many
-SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled FROM configured_build WHERE repository_id = $1 AND branch = $2
+SELECT id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled, hold_on_step_change FROM configured_build WHERE repository_id = $1 AND branch = $2
 `
 
 type ListConfiguredBuildsByRepositoryAndBranchParams struct {
@@ -180,6 +183,7 @@ func (q *Queries) ListConfiguredBuildsByRepositoryAndBranch(ctx context.Context,
 			&i.CurrentContentRevisionID,
 			&i.CreatedAt,
 			&i.AutoDeployEnabled,
+			&i.HoldOnStepChange,
 		); err != nil {
 			return nil, err
 		}
@@ -192,7 +196,7 @@ func (q *Queries) ListConfiguredBuildsByRepositoryAndBranch(ctx context.Context,
 }
 
 const listConfiguredBuildsByRepositoryForAccount = `-- name: ListConfiguredBuildsByRepositoryForAccount :many
-SELECT cb.id, cb.repository_id, cb.branch, cb.environment_path, cb.builder_config_name, cb.competition_started, cb.current_content_revision_id, cb.created_at, cb.auto_deploy_enabled, (fav.account_id IS NOT NULL) AS favorited
+SELECT cb.id, cb.repository_id, cb.branch, cb.environment_path, cb.builder_config_name, cb.competition_started, cb.current_content_revision_id, cb.created_at, cb.auto_deploy_enabled, cb.hold_on_step_change, (fav.account_id IS NOT NULL) AS favorited
 FROM configured_build cb
 LEFT JOIN configured_build_favorite fav
   ON fav.configured_build_id = cb.id AND fav.account_id = $2
@@ -215,6 +219,7 @@ type ListConfiguredBuildsByRepositoryForAccountRow struct {
 	CurrentContentRevisionID pgtype.UUID        `json:"current_content_revision_id"`
 	CreatedAt                pgtype.Timestamptz `json:"created_at"`
 	AutoDeployEnabled        bool               `json:"auto_deploy_enabled"`
+	HoldOnStepChange         bool               `json:"hold_on_step_change"`
 	Favorited                interface{}        `json:"favorited"`
 }
 
@@ -240,6 +245,7 @@ func (q *Queries) ListConfiguredBuildsByRepositoryForAccount(ctx context.Context
 			&i.CurrentContentRevisionID,
 			&i.CreatedAt,
 			&i.AutoDeployEnabled,
+			&i.HoldOnStepChange,
 			&i.Favorited,
 		); err != nil {
 			return nil, err
@@ -267,7 +273,7 @@ func (q *Queries) RemoveConfiguredBuildFavorite(ctx context.Context, arg RemoveC
 }
 
 const setConfiguredBuildAutoDeploy = `-- name: SetConfiguredBuildAutoDeploy :one
-UPDATE configured_build SET auto_deploy_enabled = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled
+UPDATE configured_build SET auto_deploy_enabled = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled, hold_on_step_change
 `
 
 type SetConfiguredBuildAutoDeployParams struct {
@@ -291,12 +297,13 @@ func (q *Queries) SetConfiguredBuildAutoDeploy(ctx context.Context, arg SetConfi
 		&i.CurrentContentRevisionID,
 		&i.CreatedAt,
 		&i.AutoDeployEnabled,
+		&i.HoldOnStepChange,
 	)
 	return i, err
 }
 
 const setConfiguredBuildCompetitionStarted = `-- name: SetConfiguredBuildCompetitionStarted :one
-UPDATE configured_build SET competition_started = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled
+UPDATE configured_build SET competition_started = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled, hold_on_step_change
 `
 
 type SetConfiguredBuildCompetitionStartedParams struct {
@@ -321,12 +328,13 @@ func (q *Queries) SetConfiguredBuildCompetitionStarted(ctx context.Context, arg 
 		&i.CurrentContentRevisionID,
 		&i.CreatedAt,
 		&i.AutoDeployEnabled,
+		&i.HoldOnStepChange,
 	)
 	return i, err
 }
 
 const setConfiguredBuildCurrentRevision = `-- name: SetConfiguredBuildCurrentRevision :one
-UPDATE configured_build SET current_content_revision_id = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled
+UPDATE configured_build SET current_content_revision_id = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled, hold_on_step_change
 `
 
 type SetConfiguredBuildCurrentRevisionParams struct {
@@ -347,6 +355,37 @@ func (q *Queries) SetConfiguredBuildCurrentRevision(ctx context.Context, arg Set
 		&i.CurrentContentRevisionID,
 		&i.CreatedAt,
 		&i.AutoDeployEnabled,
+		&i.HoldOnStepChange,
+	)
+	return i, err
+}
+
+const setConfiguredBuildHoldOnStepChange = `-- name: SetConfiguredBuildHoldOnStepChange :one
+UPDATE configured_build SET hold_on_step_change = $2 WHERE id = $1 RETURNING id, repository_id, branch, environment_path, builder_config_name, competition_started, current_content_revision_id, created_at, auto_deploy_enabled, hold_on_step_change
+`
+
+type SetConfiguredBuildHoldOnStepChangeParams struct {
+	ID               pgtype.UUID `json:"id"`
+	HoldOnStepChange bool        `json:"hold_on_step_change"`
+}
+
+// Hold hosts on step-only changes (docs/plans/restart-from-step.md §6): on, a
+// content change that touches only a host's steps or scripts marks the host
+// instead of recreating it, so an operator restarts it from the changed step.
+func (q *Queries) SetConfiguredBuildHoldOnStepChange(ctx context.Context, arg SetConfiguredBuildHoldOnStepChangeParams) (ConfiguredBuild, error) {
+	row := q.db.QueryRow(ctx, setConfiguredBuildHoldOnStepChange, arg.ID, arg.HoldOnStepChange)
+	var i ConfiguredBuild
+	err := row.Scan(
+		&i.ID,
+		&i.RepositoryID,
+		&i.Branch,
+		&i.EnvironmentPath,
+		&i.BuilderConfigName,
+		&i.CompetitionStarted,
+		&i.CurrentContentRevisionID,
+		&i.CreatedAt,
+		&i.AutoDeployEnabled,
+		&i.HoldOnStepChange,
 	)
 	return i, err
 }

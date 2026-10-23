@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/globalcptc/laforge/internal/builder"
@@ -23,12 +24,13 @@ import (
 // (to-lport) attachment is what filters same-switch traffic too, not just routed
 // cross-network ingress. Idempotent. Mirrors incus; needs its own live smoke-test
 // against a real MicroCloud (the mechanics are Incus-verified with real packets).
+//
+// No lock is held across the whole configuration: peering and network config
+// changes are /1.0/networks mutations, which take the networking lock per
+// request in Client.do, and ACL writes take it in ensureACLObjectFull. The
+// per-host reads and NIC updates need no lock -- they're instance operations,
+// which the cluster runs concurrently.
 func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, networks []builder.NetworkAccess) error {
-	ctx, release, err := b.Client.lockNetworking(ctx)
-	if err != nil {
-		return err
-	}
-	defer release()
 	incusName := make(map[string]string, len(networks))
 	cidr := make(map[string]string, len(networks))
 	for _, na := range networks {
@@ -153,24 +155,56 @@ func (b *Builder) ensureACLObject(ctx context.Context, name, description string,
 // ensureACLObjectFull is ensureACLObject with explicit egress rules too -- used
 // by CloseAccess, the one ACL that whitelists egress (gateway + intra-env) under
 // a NIC-level default-deny egress.
+//
+// An ACL that already says exactly this is left alone: read first, without
+// the networking lock, and only a real change takes the lock and writes. On a
+// loaded cluster an ACL update takes minutes (it re-applies the rules to every
+// NIC that uses the ACL), and re-asserting unchanged rules -- which every
+// external-access pass and every redeploy did -- held the builder's
+// networking lock for the whole time, queueing every deploy behind it.
 func (b *Builder) ensureACLObjectFull(ctx context.Context, name, description string, ingress, egress []map[string]interface{}) error {
-	ctx, release, err := b.Client.lockNetworking(ctx)
-	if err != nil {
-		return err
-	}
-	defer release()
 	if ingress == nil {
 		ingress = []map[string]interface{}{}
 	}
 	if egress == nil {
 		egress = []map[string]interface{}{}
 	}
+	exists := false
+	if raw, err := b.Client.get(ctx, "/1.0/network-acls/"+name); err == nil {
+		exists = true
+		var current struct {
+			Description string                   `json:"description"`
+			Ingress     []map[string]interface{} `json:"ingress"`
+			Egress      []map[string]interface{} `json:"egress"`
+		}
+		if json.Unmarshal(raw, &current) == nil && current.Description == description &&
+			sameACLRules(current.Ingress, ingress) && sameACLRules(current.Egress, egress) {
+			slog.InfoContext(ctx, "MicroCloud ACL already up to date; not rewriting it", "acl", name)
+			return nil
+		}
+	} else {
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) || !apiErr.NotFound() {
+			return fmt.Errorf("reading ACL %s: %w", name, err)
+		}
+	}
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	acl := map[string]interface{}{
 		"name":        name,
 		"description": description,
 		"ingress":     ingress,
 		"egress":      egress,
 		"config":      map[string]string{},
+	}
+	if exists {
+		if _, err := b.Client.put(ctx, "/1.0/network-acls/"+name, acl); err != nil {
+			return fmt.Errorf("updating ACL %s: %w", name, err)
+		}
+		return nil
 	}
 	if _, err := b.Client.post(ctx, "/1.0/network-acls", acl); err != nil {
 		var apiErr *APIError
@@ -183,6 +217,38 @@ func (b *Builder) ensureACLObjectFull(ctx context.Context, name, description str
 		}
 	}
 	return nil
+}
+
+// sameACLRules compares ACL rules as the hoster stores them with the rules
+// LaForge would write: field by field, ignoring empty fields (the hoster
+// returns every field, LaForge sets only the ones it uses), in order.
+func sameACLRules(have, want []map[string]interface{}) bool {
+	if len(have) != len(want) {
+		return false
+	}
+	canon := func(r map[string]interface{}) map[string]string {
+		out := map[string]string{}
+		for k, v := range r {
+			s := fmt.Sprint(v)
+			if v == nil || s == "" {
+				continue
+			}
+			out[k] = s
+		}
+		return out
+	}
+	for i := range have {
+		h, w := canon(have[i]), canon(want[i])
+		if len(h) != len(w) {
+			return false
+		}
+		for k, v := range w {
+			if h[k] != v {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // ensureHostPortACL enforces a host's `ports:` at its instance NIC so same-switch
@@ -217,6 +283,9 @@ func (b *Builder) ensureHostPortACL(ctx context.Context, ownCIDR string, visible
 		}
 		if eth0["type"] != "nic" {
 			return fmt.Errorf("instance %s has no active primary NIC", h.ExternalRef)
+		}
+		if eth0["security.acls"] == name {
+			return nil // already attached: no instance update to make
 		}
 		eth0["security.acls"] = name
 		_, err = b.Client.do(ctx, "PATCH", "/1.0/instances/"+h.ExternalRef, map[string]interface{}{"devices": map[string]interface{}{"eth0": eth0}}, requestOptions{ifMatch: full.etag})

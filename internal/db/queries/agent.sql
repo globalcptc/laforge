@@ -103,15 +103,38 @@ WHERE team.build_id = $1;
 -- step_script name the authored step the row came from (what another
 -- host's wait_for can target); wait_for is set only on the first row of a
 -- step that itself waits (see migration 00068).
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status, max_attempts, milestone, step_script, wait_for)
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status, max_attempts, milestone, step_script, wait_for, step_group)
 VALUES (
   sqlc.arg(deployed_object_id), sqlc.arg(step_index), sqlc.arg(command),
   sqlc.arg(payload), sqlc.arg(ignore_errors), sqlc.arg(reboots),
   COALESCE(NULLIF(sqlc.arg(status)::text, ''), 'pending'),
-  sqlc.narg(max_attempts), sqlc.narg(milestone), sqlc.narg(step_script), sqlc.narg(wait_for)
+  sqlc.narg(max_attempts), sqlc.narg(milestone), sqlc.narg(step_script), sqlc.narg(wait_for), sqlc.narg(step_group)
 )
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
 RETURNING *;
+
+-- name: DeleteAuthoredAgentTasksFromGroup :execrows
+-- Restart from a step (docs/plans/restart-from-step.md): drop an object's
+-- authored steps from the chosen authored step on, so they can be queued
+-- again from the current content. Ad-hoc commands stay; validator_result rows
+-- cascade. New rows get new ids, so a late result for a deleted task finds
+-- nothing (the gateway drops it).
+DELETE FROM agent_task WHERE deployed_object_id = $1 AND NOT ad_hoc AND step_group >= $2;
+
+-- name: CountRunningAuthoredTasks :one
+-- An authored step the agent is running right now: leased and not expired. A
+-- restart from a step refuses (without force) while one is, since the agent
+-- would carry on with it alongside the restarted steps.
+SELECT count(*)::bigint FROM agent_task
+WHERE deployed_object_id = $1 AND NOT ad_hoc AND status = 'leased' AND lease_expires_at > now();
+
+-- name: ListAuthoredStepGroups :many
+-- The authored steps an object has rows for, with each one's state: for the
+-- restart dialog and for checking that the chosen step exists.
+SELECT step_group::int AS step_group, min(step_index)::int AS first_step_index, count(*)::bigint AS commands,
+       bool_or(status = 'failed') AS failed, bool_or(status IN ('pending', 'leased', 'blocked')) AS open
+FROM agent_task WHERE deployed_object_id = $1 AND NOT ad_hoc AND step_group IS NOT NULL
+GROUP BY step_group ORDER BY step_group;
 
 -- name: CompleteLeasedRebootsTaskForHost :one
 -- The reboot-aware completion: a `reboots: true` step reboots the host, which

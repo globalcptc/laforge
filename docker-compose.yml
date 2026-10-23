@@ -58,6 +58,7 @@ services:
     environment:
       DATABASE_URL: host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable
       LISTEN_ADDR: ":8080"
+      API_MAX_CONNS: "${API_MAX_CONNS:-20}"
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
       UI_BASE_URL: ${UI_BASE_URL:-http://localhost:8081}
       REPO_ROOT: /content
@@ -109,6 +110,9 @@ services:
         condition: service_completed_successfully
 
   runner:
+    # Time to hand back in-flight tasks on a redeploy (they're released, not
+    # counted as failed attempts) before Docker kills the process.
+    stop_grace_period: 30s
     build:
       context: .
       target: runner

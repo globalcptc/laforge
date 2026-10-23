@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -86,24 +88,54 @@ func PollInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.
 // of its managed resources (across every build on it), so for N builds sharing a
 // builder it's one hoster scan, not N. Best-effort per build/builder -- a resolve
 // or Inspect failure is logged and that builder's builds are skipped this pass.
+//
+// Builders are inspected in parallel, each within inspectTimeout: one slow or
+// unreachable hoster (a decommissioned test cluster still configured) must
+// not hold up every other builder's power states -- nor the orchestrator's
+// main loop, which this runs on.
 func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildIDs []pgtype.UUID) {
 	q := db.New(pool)
 	type cached struct {
 		stateByRef map[string]string
 		ok         bool
 	}
-	byBuilder := map[string]cached{}
+	// Which builder each build is on, and one representative build per
+	// builder to resolve it through.
+	builderOf := map[pgtype.UUID]string{}
+	firstBuild := map[string]pgtype.UUID{}
 	for _, id := range buildIDs {
 		name, err := builderConfigNameForBuild(ctx, q, id)
 		if err != nil {
 			continue // no builder to resolve (e.g. a planned build with no configured_build)
 		}
-		c, seen := byBuilder[name]
-		if !seen {
-			c = inspectBuilder(ctx, pool, id, name)
-			byBuilder[name] = c
+		builderOf[id] = name
+		if _, seen := firstBuild[name]; !seen {
+			firstBuild[name] = id
 		}
-		if !c.ok {
+	}
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	byBuilder := map[string]cached{}
+	for name, id := range firstBuild {
+		wg.Add(1)
+		go func(name string, id pgtype.UUID) {
+			defer wg.Done()
+			ictx, cancel := context.WithTimeout(ctx, inspectTimeout)
+			defer cancel()
+			started := time.Now()
+			c := inspectBuilder(ictx, pool, id, name)
+			if d := time.Since(started); d > 10*time.Second {
+				log.Printf("orchestrator: inspecting builder %q for power states took %s (ok=%v)", name, d.Round(time.Millisecond), c.ok)
+			}
+			mu.Lock()
+			byBuilder[name] = c
+			mu.Unlock()
+		}(name, id)
+	}
+	wg.Wait()
+	for _, id := range buildIDs {
+		c, ok := byBuilder[builderOf[id]]
+		if !ok || !c.ok {
 			continue
 		}
 		if err := applyInstanceStates(ctx, pool, id, c.stateByRef); err != nil {
@@ -111,6 +143,9 @@ func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildI
 		}
 	}
 }
+
+// inspectTimeout bounds one builder's Inspect in the power-state poll.
+const inspectTimeout = 60 * time.Second
 
 func inspectBuilder(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, name string) (c struct {
 	stateByRef map[string]string
@@ -152,7 +187,7 @@ func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype
 		if o.Kind != "host" && o.Kind != "container" {
 			continue // networks/DNS have no power state
 		}
-		if o.Status == "destroyed" || o.Status == "destroying" {
+		if o.Status == "destroyed" || o.Status == "destroying" || o.Status == "destroy_queued" {
 			continue // intentionally gone -- not a liveness concern
 		}
 		if o.ExternalRef == nil || *o.ExternalRef == "" {

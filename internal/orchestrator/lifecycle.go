@@ -3,11 +3,22 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/globalcptc/laforge/internal/db"
+)
+
+// AgentLostAfter is how long an agent that has checked in may go without a
+// heartbeat, while its host still has steps to run, before the host is
+// failed as lost. AgentNeverCheckedInAfter is the same for an agent that
+// has never connected since the instance came up (longer: a Windows first
+// boot is slow). Both are set from the orchestrator's flags; 0 disables.
+var (
+	AgentLostAfter           = 30 * time.Minute
+	AgentNeverCheckedInAfter = 60 * time.Minute
 )
 
 // AdvanceObjectLifecycle moves each host/container off the "infra is up"
@@ -56,8 +67,10 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 		return fmt.Errorf("listing agent sessions: %w", err)
 	}
 	checkedIn := make(map[string]bool, len(sessions))
+	lastHeartbeat := make(map[string]time.Time, len(sessions))
 	for _, s := range sessions {
 		checkedIn[s.DeployedObjectID.String()] = true
+		lastHeartbeat[s.DeployedObjectID.String()] = s.LastHeartbeatAt.Time
 	}
 
 	stepRows, err := q.SummarizeAgentTasksByObjectForBuild(ctx, buildID)
@@ -125,15 +138,46 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 				continue
 			}
 			if !checkedIn[id] {
+				// An agent that has never checked in, long past any first-boot
+				// deadline, isn't coming: the host stops as build_failed with
+				// that reason, so it's visible and can be rebuilt, instead of
+				// "running" for the rest of the event.
+				if AgentNeverCheckedInAfter > 0 && o.DeployedAt.Valid && time.Since(o.DeployedAt.Time) > AgentNeverCheckedInAfter {
+					msg := fmt.Sprintf("agent never checked in: the instance came up %s ago and nothing has connected (rebuild the host, or check its console)", time.Since(o.DeployedAt.Time).Round(time.Minute))
+					if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{ID: o.ID, LastError: db.StrPtr(msg)}); err != nil {
+						return fmt.Errorf("failing %s for a missing agent: %w", id, err)
+					}
+					decide(ctx, q, buildID, o.ID, "lifecycle.build_failed", fmt.Sprintf("%s: running -> build_failed: %s", objectLabel(o, 0), msg), map[string]any{"deployed_at": o.DeployedAt.Time})
+					continue
+				}
+				decideRepeating(ctx, q, "checkin-wait/"+id, buildID, o.ID, "lifecycle.waiting", fmt.Sprintf("%s: instance is up; waiting for its agent to check in", objectLabel(o, 0)), nil)
 				continue // instance up, agent not seen yet -- stay running
 			}
-			if err := applyObjectState(ctx, q, o.ID, evaluateBuild(id)); err != nil {
+			next := evaluateBuild(id)
+			if err := applyObjectState(ctx, q, o.ID, next); err != nil {
 				return err
 			}
+			noteObjectState(ctx, q, buildID, o, next, steps[id])
 		case "building":
-			if err := applyObjectState(ctx, q, o.ID, evaluateBuild(id)); err != nil {
+			next := evaluateBuild(id)
+			// An agent that checked in and then went silent, with steps still
+			// to run, isn't going to run them: the host stops as build_failed
+			// with the time of its last heartbeat. Otherwise it sits "building"
+			// indefinitely with 31 pending steps and nobody the wiser.
+			if next == "building" && AgentLostAfter > 0 {
+				if hb, ok := lastHeartbeat[id]; ok && !hb.IsZero() && time.Since(hb) > AgentLostAfter && steps[id].open > 0 {
+					msg := fmt.Sprintf("agent stopped checking in %s ago (last heartbeat %s) with %d step(s) still to run; the host may be off, rebooted into a broken state, or the agent crashed -- restart it from a step once it's back, or rebuild it", time.Since(hb).Round(time.Minute), hb.Format(time.TimeOnly), steps[id].open)
+					if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{ID: o.ID, LastError: db.StrPtr(msg)}); err != nil {
+						return fmt.Errorf("failing %s for a lost agent: %w", id, err)
+					}
+					decide(ctx, q, buildID, o.ID, "lifecycle.build_failed", fmt.Sprintf("%s: building -> build_failed: %s", objectLabel(o, 0), msg), map[string]any{"last_heartbeat": hb, "steps_open": steps[id].open})
+					continue
+				}
+			}
+			if err := applyObjectState(ctx, q, o.ID, next); err != nil {
 				return err
 			}
+			noteObjectState(ctx, q, buildID, o, next, steps[id])
 		}
 	}
 	return nil
@@ -158,4 +202,25 @@ func applyObjectState(ctx context.Context, q *db.Queries, id pgtype.UUID, state 
 		return fmt.Errorf("setting %s on %s: %w", state, id.String(), err)
 	}
 	return nil
+}
+
+// noteObjectState records an object's lifecycle move (running -> building ->
+// finished / build_failed / invalid) once, with the step counts behind it.
+func noteObjectState(ctx context.Context, q *db.Queries, buildID pgtype.UUID, o db.DeployedObject, next string, s struct{ total, open, failed int64 }) {
+	if next == o.Status {
+		return
+	}
+	var why string
+	switch next {
+	case "building":
+		why = fmt.Sprintf("agent checked in; %d of %d step(s) still to run", s.open, s.total)
+	case "finished":
+		why = fmt.Sprintf("every step done (%d) and every validator passed", s.total)
+	case "build_failed":
+		why = fmt.Sprintf("%d step(s) failed; %d of %d never ran", s.failed, s.open, s.total)
+	case "invalid":
+		why = "all steps done, but a validator did not pass"
+	}
+	decide(ctx, q, buildID, o.ID, "lifecycle."+next, fmt.Sprintf("%s: %s -> %s: %s", objectLabel(o, 0), o.Status, next, why),
+		map[string]any{"from": o.Status, "to": next, "steps_total": s.total, "steps_open": s.open, "steps_failed": s.failed})
 }

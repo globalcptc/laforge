@@ -108,6 +108,7 @@ const badgeStyles = cva(
         sky: 'bg-sky-soft text-sky',
         purple: 'bg-purple-soft text-purple',
         pink: 'bg-pink-soft text-pink',
+        magenta: 'bg-magenta-soft text-magenta',
       },
     },
     defaultVariants: { tone: 'neutral' },

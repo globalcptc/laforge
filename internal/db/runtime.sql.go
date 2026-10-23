@@ -67,6 +67,53 @@ func (q *Queries) CancelOpenTasksForBuild(ctx context.Context, arg CancelOpenTas
 	return result.RowsAffected(), nil
 }
 
+const cancelPendingDeployForObject = `-- name: CancelPendingDeployForObject :one
+UPDATE task SET status = 'failed', last_error = $1::text, updated_at = now()
+WHERE id = (SELECT t.id FROM task t WHERE t.deployed_object_id = $2 AND t.kind LIKE 'deploy\_%'
+            AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now() - interval '2 minutes'))
+            ORDER BY t.created_at DESC LIMIT 1 FOR UPDATE SKIP LOCKED)
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
+`
+
+type CancelPendingDeployForObjectParams struct {
+	Reason           string      `json:"reason"`
+	DeployedObjectID pgtype.UUID `json:"deployed_object_id"`
+}
+
+// A deploy that hasn't started yet (pending, never leased or its lease long
+// gone) is withdrawn when the object is being rebuilt or torn down instead:
+// running it would create an instance only to destroy it, or -- worse --
+// adopt the old one and make the rebuild a no-op.
+func (q *Queries) CancelPendingDeployForObject(ctx context.Context, arg CancelPendingDeployForObjectParams) (Task, error) {
+	row := q.db.QueryRow(ctx, cancelPendingDeployForObject, arg.Reason, arg.DeployedObjectID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
+	)
+	return i, err
+}
+
+const clearRebuildRequested = `-- name: ClearRebuildRequested :exec
+UPDATE deployed_object SET rebuild_requested_at = NULL WHERE id = $1
+`
+
+func (q *Queries) ClearRebuildRequested(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, clearRebuildRequested, id)
+	return err
+}
+
 const clearTeamAccessOverride = `-- name: ClearTeamAccessOverride :exec
 UPDATE team SET access_override_state = '', access_override_until = NULL WHERE id = $1
 `
@@ -146,6 +193,17 @@ func (q *Queries) CountAgentTasksByBuild(ctx context.Context, buildIds []pgtype.
 	return items, nil
 }
 
+const countEventsByBuild = `-- name: CountEventsByBuild :one
+SELECT count(*)::bigint FROM event WHERE build_id = $1
+`
+
+func (q *Queries) CountEventsByBuild(ctx context.Context, buildID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countEventsByBuild, buildID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countFakeHosterResourcesByRef = `-- name: CountFakeHosterResourcesByRef :one
 SELECT count(*) FROM fake_hoster_resource WHERE external_ref = $1
 `
@@ -155,6 +213,24 @@ SELECT count(*) FROM fake_hoster_resource WHERE external_ref = $1
 // runner called ensure for it.
 func (q *Queries) CountFakeHosterResourcesByRef(ctx context.Context, externalRef string) (int64, error) {
 	row := q.db.QueryRow(ctx, countFakeHosterResourcesByRef, externalRef)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countLeasableHeavyTasksForBuilder = `-- name: CountLeasableHeavyTasksForBuilder :one
+SELECT count(*) FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE coalesce(cb.builder_config_name, '') = $1
+  AND (t.kind LIKE 'deploy\_%' OR t.kind LIKE 'destroy\_%')
+  AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+`
+
+// How many deploy/destroy tasks one builder has waiting to be leased: what
+// its concurrency limit is holding back.
+func (q *Queries) CountLeasableHeavyTasksForBuilder(ctx context.Context, builderConfigName string) (int64, error) {
+	row := q.db.QueryRow(ctx, countLeasableHeavyTasksForBuilder, builderConfigName)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -639,7 +715,7 @@ const ensureDeployedObject = `-- name: EnsureDeployedObject :one
 INSERT INTO deployed_object (team_id, kind, object_name, as_name, network_name, fingerprint)
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (team_id, kind, (COALESCE(as_name, object_name))) DO UPDATE SET team_id = EXCLUDED.team_id
-RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 
 type EnsureDeployedObjectParams struct {
@@ -689,6 +765,10 @@ func (q *Queries) EnsureDeployedObject(ctx context.Context, arg EnsureDeployedOb
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+		&i.RebuildRequestedAt,
 	)
 	return i, err
 }
@@ -896,7 +976,7 @@ func (q *Queries) GetBuildRepository(ctx context.Context, id pgtype.UUID) (Repos
 }
 
 const getDeployedObject = `-- name: GetDeployedObject :one
-SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at FROM deployed_object WHERE id = $1
+SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at FROM deployed_object WHERE id = $1
 `
 
 func (q *Queries) GetDeployedObject(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
@@ -923,6 +1003,10 @@ func (q *Queries) GetDeployedObject(ctx context.Context, id pgtype.UUID) (Deploy
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+		&i.RebuildRequestedAt,
 	)
 	return i, err
 }
@@ -941,6 +1025,121 @@ func (q *Queries) GetFakeHosterResource(ctx context.Context, externalRef string)
 		&i.Destroyed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getLatestDeployTaskForObject = `-- name: GetLatestDeployTaskForObject :one
+SELECT t.id, t.build_id, t.deployed_object_id, t.kind, t.payload, t.status, t.attempts, t.lease_owner, t.lease_expires_at, t.last_error, t.created_at, t.updated_at, t.permanent,
+    (SELECT count(*) FROM task f
+     WHERE f.deployed_object_id = t.deployed_object_id
+       AND f.kind LIKE 'deploy\_%' AND f.status = 'failed'
+       AND f.created_at > coalesce((SELECT max(d.created_at) FROM task d
+                                    WHERE d.deployed_object_id = t.deployed_object_id AND d.status = 'done'), '-infinity'))::int AS failed_count
+FROM task t
+WHERE t.deployed_object_id = $1 AND t.kind LIKE 'deploy\_%'
+ORDER BY t.created_at DESC
+LIMIT 1
+`
+
+type GetLatestDeployTaskForObjectRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	BuildID          pgtype.UUID        `json:"build_id"`
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	Kind             string             `json:"kind"`
+	Payload          json.RawMessage    `json:"payload"`
+	Status           string             `json:"status"`
+	Attempts         int32              `json:"attempts"`
+	LeaseOwner       *string            `json:"lease_owner"`
+	LeaseExpiresAt   pgtype.Timestamptz `json:"lease_expires_at"`
+	LastError        *string            `json:"last_error"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Permanent        bool               `json:"permanent"`
+	FailedCount      int32              `json:"failed_count"`
+}
+
+// The most recent deploy task for an object, with how many of its deploy
+// tasks have failed -- what the reconciler decides a failed deploy's retry
+// from (a backoff, and a stop after enough failures), instead of queueing a
+// new deploy on every pass.
+// failed_count counts consecutive failures: deploys that failed since the
+// object's last task that succeeded (a destroy for a rebuild resets it).
+func (q *Queries) GetLatestDeployTaskForObject(ctx context.Context, deployedObjectID pgtype.UUID) (GetLatestDeployTaskForObjectRow, error) {
+	row := q.db.QueryRow(ctx, getLatestDeployTaskForObject, deployedObjectID)
+	var i GetLatestDeployTaskForObjectRow
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
+		&i.FailedCount,
+	)
+	return i, err
+}
+
+const getLatestDestroyTaskForObject = `-- name: GetLatestDestroyTaskForObject :one
+SELECT t.id, t.build_id, t.deployed_object_id, t.kind, t.payload, t.status, t.attempts, t.lease_owner, t.lease_expires_at, t.last_error, t.created_at, t.updated_at, t.permanent,
+    (SELECT count(*) FROM task f
+     WHERE f.deployed_object_id = t.deployed_object_id
+       AND f.kind LIKE 'destroy_%' AND f.status = 'failed')::int AS failed_count
+FROM task t
+WHERE t.deployed_object_id = $1 AND t.kind LIKE 'destroy_%'
+ORDER BY t.created_at DESC
+LIMIT 1
+`
+
+type GetLatestDestroyTaskForObjectRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	BuildID          pgtype.UUID        `json:"build_id"`
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	Kind             string             `json:"kind"`
+	Payload          json.RawMessage    `json:"payload"`
+	Status           string             `json:"status"`
+	Attempts         int32              `json:"attempts"`
+	LeaseOwner       *string            `json:"lease_owner"`
+	LeaseExpiresAt   pgtype.Timestamptz `json:"lease_expires_at"`
+	LastError        *string            `json:"last_error"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Permanent        bool               `json:"permanent"`
+	FailedCount      int32              `json:"failed_count"`
+}
+
+// The most recent destroy task for one object, with how many of its destroy
+// tasks have failed -- what the reconciler decides from for an object that
+// should be redeployed (a rebuild, a content change): an open one is in
+// flight (wait, and say so), a failed transient one is re-queued after a
+// backoff so the old instance is actually removed before anything is
+// deployed in its place, a failed permanent one stops the object with the
+// error, and a done one means the way is clear.
+func (q *Queries) GetLatestDestroyTaskForObject(ctx context.Context, deployedObjectID pgtype.UUID) (GetLatestDestroyTaskForObjectRow, error) {
+	row := q.db.QueryRow(ctx, getLatestDestroyTaskForObject, deployedObjectID)
+	var i GetLatestDestroyTaskForObjectRow
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
+		&i.FailedCount,
 	)
 	return i, err
 }
@@ -1010,6 +1209,34 @@ func (q *Queries) GetLogContextByDeployedObject(ctx context.Context, id pgtype.U
 		&i.ObjectName,
 		&i.AsName,
 		&i.Kind,
+	)
+	return i, err
+}
+
+const getOpenTaskForObject = `-- name: GetOpenTaskForObject :one
+SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent FROM task WHERE deployed_object_id = $1 AND status IN ('pending', 'leased')
+ORDER BY created_at DESC LIMIT 1
+`
+
+// The one open (pending or leased) task an object may have, if any -- what a
+// destroy, a rebuild or a teardown is up against when it can't queue its own.
+func (q *Queries) GetOpenTaskForObject(ctx context.Context, deployedObjectID pgtype.UUID) (Task, error) {
+	row := q.db.QueryRow(ctx, getOpenTaskForObject, deployedObjectID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -1269,6 +1496,108 @@ func (q *Queries) InsertFakeDNSRecord(ctx context.Context, arg InsertFakeDNSReco
 	return err
 }
 
+const leaseHeavyTaskForBuilder = `-- name: LeaseHeavyTaskForBuilder :one
+UPDATE task
+SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
+    attempts = attempts + 1, updated_at = now()
+WHERE id = (
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    WHERE coalesce(cb.builder_config_name, '') = $3
+      AND (t.kind LIKE 'deploy\_%' OR t.kind LIKE 'destroy\_%')
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+    ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             (SELECT count(*) FROM task x WHERE x.build_id = t.build_id AND x.status = 'leased'
+                AND x.lease_expires_at > now() AND (x.kind LIKE 'deploy\_%' OR x.kind LIKE 'destroy\_%')) ASC,
+             CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
+    FOR UPDATE OF t SKIP LOCKED
+    LIMIT 1
+)
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
+`
+
+type LeaseHeavyTaskForBuilderParams struct {
+	LeaseOwner        *string         `json:"lease_owner"`
+	Column2           pgtype.Interval `json:"column_2"`
+	BuilderConfigName string          `json:"builder_config_name"`
+}
+
+// LeaseTaskForBuilder for deploy/destroy tasks only, for a pool whose light
+// (access/network configuration) lane is full. Same order: destroys first,
+// then the build with the fewest running, then priority, then age.
+func (q *Queries) LeaseHeavyTaskForBuilder(ctx context.Context, arg LeaseHeavyTaskForBuilderParams) (Task, error) {
+	row := q.db.QueryRow(ctx, leaseHeavyTaskForBuilder, arg.LeaseOwner, arg.Column2, arg.BuilderConfigName)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
+	)
+	return i, err
+}
+
+const leaseLightTaskForBuilder = `-- name: LeaseLightTaskForBuilder :one
+UPDATE task
+SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
+    attempts = attempts + 1, updated_at = now()
+WHERE id = (
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    WHERE coalesce(cb.builder_config_name, '') = $3
+      AND t.kind NOT LIKE 'deploy\_%' AND t.kind NOT LIKE 'destroy\_%'
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+    ORDER BY t.created_at
+    FOR UPDATE OF t SKIP LOCKED
+    LIMIT 1
+)
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
+`
+
+type LeaseLightTaskForBuilderParams struct {
+	LeaseOwner        *string         `json:"lease_owner"`
+	Column2           pgtype.Interval `json:"column_2"`
+	BuilderConfigName string          `json:"builder_config_name"`
+}
+
+// LeaseTaskForBuilder for light tasks only -- those that don't create or
+// destroy an instance (not deploy_*/destroy_*): access and network
+// configuration. A pool at its deploy/destroy concurrency limit keeps
+// leasing these so an ACL change never waits hours behind queued deploys.
+func (q *Queries) LeaseLightTaskForBuilder(ctx context.Context, arg LeaseLightTaskForBuilderParams) (Task, error) {
+	row := q.db.QueryRow(ctx, leaseLightTaskForBuilder, arg.LeaseOwner, arg.Column2, arg.BuilderConfigName)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
+	)
+	return i, err
+}
+
 const leaseTask = `-- name: LeaseTask :one
 UPDATE task
 SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
@@ -1294,7 +1623,16 @@ WHERE id = (
     -- deployTaskPayload), so every team's domain controller is leased ahead of
     -- the workstations waiting on it, then oldest first. Guarded so a
     -- non-numeric value can never break leasing.
-    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+    -- Destroys first: a destroy frees capacity, and a rebuild's or a
+    -- teardown's destroy is what an operator asked for -- behind a queue of
+    -- deploys it would otherwise wait hours for its turn.
+    -- Then the build with the fewest deploy/destroy tasks already running:
+    -- a builder's slots are shared fairly between its builds, so one build's
+    -- backlog of a hundred deploys can't starve another build's two.
+    ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             (SELECT count(*) FROM task x WHERE x.build_id = t.build_id AND x.status = 'leased'
+                AND x.lease_expires_at > now() AND (x.kind LIKE 'deploy\_%' OR x.kind LIKE 'destroy\_%')) ASC,
+             CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
                   THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
              t.created_at
     FOR UPDATE OF t SKIP LOCKED
@@ -1367,7 +1705,16 @@ WHERE id = (
     -- deployTaskPayload), so every team's domain controller is leased ahead of
     -- the workstations waiting on it, then oldest first. Guarded so a
     -- non-numeric value can never break leasing.
-    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+    -- Destroys first: a destroy frees capacity, and a rebuild's or a
+    -- teardown's destroy is what an operator asked for -- behind a queue of
+    -- deploys it would otherwise wait hours for its turn.
+    -- Then the build with the fewest deploy/destroy tasks already running:
+    -- a builder's slots are shared fairly between its builds, so one build's
+    -- backlog of a hundred deploys can't starve another build's two.
+    ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             (SELECT count(*) FROM task x WHERE x.build_id = t.build_id AND x.status = 'leased'
+                AND x.lease_expires_at > now() AND (x.kind LIKE 'deploy\_%' OR x.kind LIKE 'destroy\_%')) ASC,
+             CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
                   THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
              t.created_at
     FOR UPDATE OF t SKIP LOCKED
@@ -1427,7 +1774,16 @@ WHERE id = (
     -- deployTaskPayload), so every team's domain controller is leased ahead of
     -- the workstations waiting on it, then oldest first. Guarded so a
     -- non-numeric value can never break leasing.
-    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+    -- Destroys first: a destroy frees capacity, and a rebuild's or a
+    -- teardown's destroy is what an operator asked for -- behind a queue of
+    -- deploys it would otherwise wait hours for its turn.
+    -- Then the build with the fewest deploy/destroy tasks already running:
+    -- a builder's slots are shared fairly between its builds, so one build's
+    -- backlog of a hundred deploys can't starve another build's two.
+    ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             (SELECT count(*) FROM task x WHERE x.build_id = t.build_id AND x.status = 'leased'
+                AND x.lease_expires_at > now() AND (x.kind LIKE 'deploy\_%' OR x.kind LIKE 'destroy\_%')) ASC,
+             CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
                   THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
              t.created_at
     FOR UPDATE OF t SKIP LOCKED
@@ -1734,7 +2090,7 @@ func (q *Queries) ListBuildsByStatus(ctx context.Context, statuses []string) ([]
 }
 
 const listDeployedObjectsByBuild = `-- name: ListDeployedObjectsByBuild :many
-SELECT deployed_object.id, deployed_object.team_id, deployed_object.kind, deployed_object.object_name, deployed_object.as_name, deployed_object.network_name, deployed_object.fingerprint, deployed_object.status, deployed_object.external_ref, deployed_object.last_error, deployed_object.updated_at, deployed_object.power_state, deployed_object.power_state_checked_at, deployed_object.tags, deployed_object.steps_materialized_at, deployed_object.blocked_on, deployed_object.public_address, deployed_object.deployed_at, deployed_object.agent_platform, deployed_object.agent_checkin_overdue_at FROM deployed_object
+SELECT deployed_object.id, deployed_object.team_id, deployed_object.kind, deployed_object.object_name, deployed_object.as_name, deployed_object.network_name, deployed_object.fingerprint, deployed_object.status, deployed_object.external_ref, deployed_object.last_error, deployed_object.updated_at, deployed_object.power_state, deployed_object.power_state_checked_at, deployed_object.tags, deployed_object.steps_materialized_at, deployed_object.blocked_on, deployed_object.public_address, deployed_object.deployed_at, deployed_object.agent_platform, deployed_object.agent_checkin_overdue_at, deployed_object.infra_fingerprint, deployed_object.steps_changed_at, deployed_object.steps_changed_fingerprint, deployed_object.rebuild_requested_at FROM deployed_object
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1
 `
@@ -1769,6 +2125,10 @@ func (q *Queries) ListDeployedObjectsByBuild(ctx context.Context, buildID pgtype
 			&i.DeployedAt,
 			&i.AgentPlatform,
 			&i.AgentCheckinOverdueAt,
+			&i.InfraFingerprint,
+			&i.StepsChangedAt,
+			&i.StepsChangedFingerprint,
+			&i.RebuildRequestedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1781,7 +2141,7 @@ func (q *Queries) ListDeployedObjectsByBuild(ctx context.Context, buildID pgtype
 }
 
 const listDeployedObjectsByTeam = `-- name: ListDeployedObjectsByTeam :many
-SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at FROM deployed_object WHERE team_id = $1
+SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at FROM deployed_object WHERE team_id = $1
 `
 
 func (q *Queries) ListDeployedObjectsByTeam(ctx context.Context, teamID pgtype.UUID) ([]DeployedObject, error) {
@@ -1814,6 +2174,10 @@ func (q *Queries) ListDeployedObjectsByTeam(ctx context.Context, teamID pgtype.U
 			&i.DeployedAt,
 			&i.AgentPlatform,
 			&i.AgentCheckinOverdueAt,
+			&i.InfraFingerprint,
+			&i.StepsChangedAt,
+			&i.StepsChangedFingerprint,
+			&i.RebuildRequestedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1999,6 +2363,70 @@ func (q *Queries) ListEventsByBuildWithObject(ctx context.Context, buildID pgtyp
 	var items []ListEventsByBuildWithObjectRow
 	for rows.Next() {
 		var i ListEventsByBuildWithObjectRow
+		if err := rows.Scan(
+			&i.Event.ID,
+			&i.Event.BuildID,
+			&i.Event.TaskID,
+			&i.Event.Kind,
+			&i.Event.Message,
+			&i.Event.Payload,
+			&i.Event.CreatedAt,
+			&i.Event.DeployedObjectID,
+			&i.ObjAsName,
+			&i.ObjObjectName,
+			&i.TeamNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEventsByBuildWithObjectPage = `-- name: ListEventsByBuildWithObjectPage :many
+SELECT event.id, event.build_id, event.task_id, event.kind, event.message, event.payload, event.created_at, event.deployed_object_id,
+       obj.as_name AS obj_as_name,
+       obj.object_name AS obj_object_name,
+       tm.team_number AS team_number
+FROM event
+LEFT JOIN task ON task.id = event.task_id
+LEFT JOIN deployed_object obj ON obj.id = COALESCE(event.deployed_object_id, task.deployed_object_id)
+LEFT JOIN team tm ON tm.id = obj.team_id
+WHERE event.build_id = $1 AND event.created_at < $2
+ORDER BY event.created_at DESC
+LIMIT $3::int
+`
+
+type ListEventsByBuildWithObjectPageParams struct {
+	BuildID pgtype.UUID        `json:"build_id"`
+	Before  pgtype.Timestamptz `json:"before"`
+	MaxRows int32              `json:"max_rows"`
+}
+
+type ListEventsByBuildWithObjectPageRow struct {
+	Event         Event   `json:"event"`
+	ObjAsName     *string `json:"obj_as_name"`
+	ObjObjectName *string `json:"obj_object_name"`
+	TeamNumber    *int32  `json:"team_number"`
+}
+
+// The Logs page's bounded read: the newest `limit` events before `before`
+// (newest first), each resolved to its host as ListEventsByBuildWithObject
+// does. A long or stuck build's journal runs to hundreds of thousands of
+// rows; the page loads the newest few thousand and asks for earlier ones
+// on demand rather than all of them at once.
+func (q *Queries) ListEventsByBuildWithObjectPage(ctx context.Context, arg ListEventsByBuildWithObjectPageParams) ([]ListEventsByBuildWithObjectPageRow, error) {
+	rows, err := q.db.Query(ctx, listEventsByBuildWithObjectPage, arg.BuildID, arg.Before, arg.MaxRows)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEventsByBuildWithObjectPageRow
+	for rows.Next() {
+		var i ListEventsByBuildWithObjectPageRow
 		if err := rows.Scan(
 			&i.Event.ID,
 			&i.Event.BuildID,
@@ -2287,7 +2715,7 @@ func (q *Queries) MarkAgentCheckinOverdue(ctx context.Context, id pgtype.UUID) (
 }
 
 const markDeployedObjectDeployFailed = `-- name: MarkDeployedObjectDeployFailed :one
-UPDATE deployed_object SET status = 'deploy_failed', last_error = $2, updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+UPDATE deployed_object SET status = 'deploy_failed', last_error = $2, updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 
 type MarkDeployedObjectDeployFailedParams struct {
@@ -2322,12 +2750,16 @@ func (q *Queries) MarkDeployedObjectDeployFailed(ctx context.Context, arg MarkDe
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+		&i.RebuildRequestedAt,
 	)
 	return i, err
 }
 
 const markDeployedObjectDeploying = `-- name: MarkDeployedObjectDeploying :one
-UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 
 func (q *Queries) MarkDeployedObjectDeploying(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
@@ -2354,13 +2786,17 @@ func (q *Queries) MarkDeployedObjectDeploying(ctx context.Context, id pgtype.UUI
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+		&i.RebuildRequestedAt,
 	)
 	return i, err
 }
 
 const markDeployedObjectDestroyFailed = `-- name: MarkDeployedObjectDestroyFailed :one
 UPDATE deployed_object SET status = 'destroy_failed', last_error = $2, updated_at = now()
-WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 
 type MarkDeployedObjectDestroyFailedParams struct {
@@ -2396,12 +2832,32 @@ func (q *Queries) MarkDeployedObjectDestroyFailed(ctx context.Context, arg MarkD
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+		&i.RebuildRequestedAt,
 	)
 	return i, err
 }
 
+const markDeployedObjectDestroyQueued = `-- name: MarkDeployedObjectDestroyQueued :execrows
+UPDATE deployed_object SET status = 'destroy_queued', last_error = NULL, updated_at = now()
+WHERE id = $1 AND status NOT IN ('destroying', 'destroyed')
+`
+
+// A destroy for it is queued and hasn't started: shown as waiting to be
+// destroyed, with its hoster reference kept for the destroy. The runner moves
+// it to destroying, then (for a rebuild) to pending once it's gone.
+func (q *Queries) MarkDeployedObjectDestroyQueued(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, markDeployedObjectDestroyQueued, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const markDeployedObjectDestroyed = `-- name: MarkDeployedObjectDestroyed :one
-UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 
 // The real terminal destroy outcome, for a build teardown
@@ -2440,12 +2896,16 @@ func (q *Queries) MarkDeployedObjectDestroyed(ctx context.Context, id pgtype.UUI
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+		&i.RebuildRequestedAt,
 	)
 	return i, err
 }
 
 const markDeployedObjectDestroying = `-- name: MarkDeployedObjectDestroying :one
-UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 
 func (q *Queries) MarkDeployedObjectDestroying(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
@@ -2472,20 +2932,25 @@ func (q *Queries) MarkDeployedObjectDestroying(ctx context.Context, id pgtype.UU
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+		&i.RebuildRequestedAt,
 	)
 	return i, err
 }
 
 const markDeployedObjectRunning = `-- name: MarkDeployedObjectRunning :one
-UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, last_error = NULL, updated_at = now(),
+UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, infra_fingerprint = $4, last_error = NULL, updated_at = now(),
     deployed_at = now(), agent_checkin_overdue_at = NULL
-WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 
 type MarkDeployedObjectRunningParams struct {
-	ID          pgtype.UUID `json:"id"`
-	ExternalRef *string     `json:"external_ref"`
-	Fingerprint string      `json:"fingerprint"`
+	ID               pgtype.UUID `json:"id"`
+	ExternalRef      *string     `json:"external_ref"`
+	Fingerprint      string      `json:"fingerprint"`
+	InfraFingerprint string      `json:"infra_fingerprint"`
 }
 
 // Infra is up: the hoster created the instance. NOT "finished" -- the agent
@@ -2495,7 +2960,12 @@ type MarkDeployedObjectRunningParams struct {
 // deployed_at restarts the never-checked-in watchdog's clock, and a redeploy
 // clears any earlier overdue flag.
 func (q *Queries) MarkDeployedObjectRunning(ctx context.Context, arg MarkDeployedObjectRunningParams) (DeployedObject, error) {
-	row := q.db.QueryRow(ctx, markDeployedObjectRunning, arg.ID, arg.ExternalRef, arg.Fingerprint)
+	row := q.db.QueryRow(ctx, markDeployedObjectRunning,
+		arg.ID,
+		arg.ExternalRef,
+		arg.Fingerprint,
+		arg.InfraFingerprint,
+	)
 	var i DeployedObject
 	err := row.Scan(
 		&i.ID,
@@ -2518,8 +2988,34 @@ func (q *Queries) MarkDeployedObjectRunning(ctx context.Context, arg MarkDeploye
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+		&i.RebuildRequestedAt,
 	)
 	return i, err
+}
+
+const markDeployedObjectStepsChanged = `-- name: MarkDeployedObjectStepsChanged :execrows
+UPDATE deployed_object SET steps_changed_at = coalesce(steps_changed_at, now()), steps_changed_fingerprint = $2, updated_at = now()
+WHERE id = $1 AND steps_changed_fingerprint IS DISTINCT FROM $2
+`
+
+type MarkDeployedObjectStepsChangedParams struct {
+	ID                      pgtype.UUID `json:"id"`
+	StepsChangedFingerprint string      `json:"steps_changed_fingerprint"`
+}
+
+// The reconciler, for a build holding hosts on step-only changes: the object's
+// steps or scripts changed under it, and this is the fingerprint it would
+// have if recreated. Updates only when the target fingerprint is new, so a
+// settled pass writes nothing and the caller logs an event only once.
+func (q *Queries) MarkDeployedObjectStepsChanged(ctx context.Context, arg MarkDeployedObjectStepsChangedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markDeployedObjectStepsChanged, arg.ID, arg.StepsChangedFingerprint)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const markDeployedObjectStepsMaterialized = `-- name: MarkDeployedObjectStepsMaterialized :exec
@@ -2537,9 +3033,64 @@ func (q *Queries) MarkDeployedObjectStepsMaterialized(ctx context.Context, id pg
 	return err
 }
 
+const pruneRepeatingEvents = `-- name: PruneRepeatingEvents :execrows
+DELETE FROM event WHERE kind LIKE '%.waiting' AND created_at < now() - $1::interval
+`
+
+// The orchestrator's "still waiting" events (reconcile.waiting,
+// lifecycle.waiting, teardown.waiting, rebuild.waiting) repeat while a
+// condition lasts; the latest says what's being waited on, the older ones
+// say only that it was. Dropped after `older_than`, build by build, so a
+// long-stuck build's journal stays readable and the Logs page loadable.
+func (q *Queries) PruneRepeatingEvents(ctx context.Context, olderThan pgtype.Interval) (int64, error) {
+	result, err := q.db.Exec(ctx, pruneRepeatingEvents, olderThan)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const releaseTask = `-- name: ReleaseTask :one
+UPDATE task SET status = 'pending', lease_owner = NULL, lease_expires_at = NULL,
+    attempts = GREATEST(attempts - 1, 0), last_error = $3, updated_at = now()
+WHERE id = $1 AND lease_owner = $2
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
+`
+
+type ReleaseTaskParams struct {
+	ID         pgtype.UUID `json:"id"`
+	LeaseOwner *string     `json:"lease_owner"`
+	LastError  *string     `json:"last_error"`
+}
+
+// A runner shutting down hands back a task it was running: pending again,
+// this lease not counted as an attempt, so redeploying LaForge doesn't burn
+// the retry budget of every deploy in flight.
+func (q *Queries) ReleaseTask(ctx context.Context, arg ReleaseTaskParams) (Task, error) {
+	row := q.db.QueryRow(ctx, releaseTask, arg.ID, arg.LeaseOwner, arg.LastError)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
+	)
+	return i, err
+}
+
 const resetDeployedObjectForRedeploy = `-- name: ResetDeployedObjectForRedeploy :one
-UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', last_error = NULL, steps_materialized_at = NULL, updated_at = now()
-WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', infra_fingerprint = '', last_error = NULL,
+    steps_materialized_at = NULL, steps_changed_at = NULL, steps_changed_fingerprint = '', updated_at = now()
+WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 
 // Used after a destroy that happened only because the fingerprint changed
@@ -2572,6 +3123,10 @@ func (q *Queries) ResetDeployedObjectForRedeploy(ctx context.Context, id pgtype.
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+		&i.RebuildRequestedAt,
 	)
 	return i, err
 }
@@ -2580,7 +3135,7 @@ const resetDestroyFailedObjectsForBuild = `-- name: ResetDestroyFailedObjectsFor
 UPDATE deployed_object SET status = 'destroying', last_error = NULL, updated_at = now()
 WHERE status = 'destroy_failed'
   AND team_id IN (SELECT id FROM team WHERE build_id = $1)
-RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 
 // The explicit operator retry after fixing the builder: every destroy_failed
@@ -2616,6 +3171,10 @@ func (q *Queries) ResetDestroyFailedObjectsForBuild(ctx context.Context, buildID
 			&i.DeployedAt,
 			&i.AgentPlatform,
 			&i.AgentCheckinOverdueAt,
+			&i.InfraFingerprint,
+			&i.StepsChangedAt,
+			&i.StepsChangedFingerprint,
+			&i.RebuildRequestedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -2625,6 +3184,22 @@ func (q *Queries) ResetDestroyFailedObjectsForBuild(ctx context.Context, buildID
 		return nil, err
 	}
 	return items, nil
+}
+
+const resumeDependentForRestart = `-- name: ResumeDependentForRestart :execrows
+UPDATE deployed_object SET status = 'running', last_error = NULL, updated_at = now()
+WHERE id = $1 AND status = 'build_failed' AND steps_materialized_at IS NULL
+`
+
+// A dependent that was failed before its steps ever ran ("dependency X failed
+// to configure") goes back to running; materializeStepsIfReady queues its
+// steps once the restarted dependency finishes, as on a first deploy.
+func (q *Queries) ResumeDependentForRestart(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, resumeDependentForRestart, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const retryTask = `-- name: RetryTask :one
@@ -2883,6 +3458,52 @@ func (q *Queries) SetDeployedObjectPublicAddress(ctx context.Context, arg SetDep
 	return err
 }
 
+const setDeployedObjectRestarting = `-- name: SetDeployedObjectRestarting :one
+UPDATE deployed_object SET status = 'building', last_error = NULL,
+    fingerprint = CASE WHEN steps_changed_fingerprint <> '' THEN steps_changed_fingerprint ELSE fingerprint END,
+    steps_changed_at = NULL, steps_changed_fingerprint = '', updated_at = now()
+WHERE id = $1 AND (status IN ('build_failed', 'invalid') OR (status = 'finished' AND steps_changed_at IS NOT NULL))
+RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
+`
+
+// Restart from a step: a host whose build stopped (build_failed, invalid) --
+// or a finished one marked steps-changed -- goes back to building with its
+// steps re-queued. If the content had changed under it (steps_changed_*), its
+// fingerprint becomes the one it would have if recreated now: its steps are
+// the current revision's after the restart, and its infrastructure never
+// changed. Only from those states, so two restarts can't race.
+func (q *Queries) SetDeployedObjectRestarting(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
+	row := q.db.QueryRow(ctx, setDeployedObjectRestarting, id)
+	var i DeployedObject
+	err := row.Scan(
+		&i.ID,
+		&i.TeamID,
+		&i.Kind,
+		&i.ObjectName,
+		&i.AsName,
+		&i.NetworkName,
+		&i.Fingerprint,
+		&i.Status,
+		&i.ExternalRef,
+		&i.LastError,
+		&i.UpdatedAt,
+		&i.PowerState,
+		&i.PowerStateCheckedAt,
+		&i.Tags,
+		&i.StepsMaterializedAt,
+		&i.BlockedOn,
+		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+		&i.RebuildRequestedAt,
+	)
+	return i, err
+}
+
 const setDeployedObjectTags = `-- name: SetDeployedObjectTags :exec
 UPDATE deployed_object SET tags = $2 WHERE id = $1
 `
@@ -2897,6 +3518,15 @@ type SetDeployedObjectTagsParams struct {
 // fingerprint), so an edited tag propagates without a redeploy.
 func (q *Queries) SetDeployedObjectTags(ctx context.Context, arg SetDeployedObjectTagsParams) error {
 	_, err := q.db.Exec(ctx, setDeployedObjectTags, arg.ID, arg.Tags)
+	return err
+}
+
+const setRebuildRequested = `-- name: SetRebuildRequested :exec
+UPDATE deployed_object SET rebuild_requested_at = coalesce(rebuild_requested_at, now()), updated_at = now() WHERE id = $1
+`
+
+func (q *Queries) SetRebuildRequested(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, setRebuildRequested, id)
 	return err
 }
 

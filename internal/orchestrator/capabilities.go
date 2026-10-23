@@ -6,6 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -70,9 +73,34 @@ func resolveBuilderImages(ctx context.Context, q *db.Queries, pool *pgxpool.Pool
 	return images, cb.BuilderConfigName, row.Kind, b, nil
 }
 
+// compatibilityRecheck is how long a passed compatibility check holds for one
+// (build, content revision). The check asks the hoster about every source
+// image (SourceDiskMinBytes reads each image's snapshot), which on a loaded
+// MicroCloud cluster takes 10+ seconds per image -- run on every 2-second
+// pass per team, as it was, it ate the whole pass budget before a single
+// host was reconciled. The answer only changes when the content revision or
+// the builder's images change, so it's kept and re-asked hourly.
+const compatibilityRecheck = time.Hour
+
+var (
+	compatMu      sync.Mutex
+	compatPassed  = map[string]time.Time{}    // "build\x00revision\x00builder" -> when it last passed
+	diskMinCache  = map[string]diskMinEntry{} // "builder\x00os" -> the source's minimum
+	diskMinExpiry = time.Hour
+)
+
+type diskMinEntry struct {
+	minBytes int64
+	source   string
+	ok       bool
+	at       time.Time
+}
+
 // checkBuilderCompatibility validates image mappings, team placement, and that
 // each host's requested disk fits its mapped source (a copied block volume can't
-// be shrunk below the template it comes from).
+// be shrunk below the template it comes from). A pass is remembered per
+// (build, revision, builder) for compatibilityRecheck; a failure is not, so
+// the next pass asks again and the build's error clears as soon as it's fixed.
 func checkBuilderCompatibility(ctx context.Context, q *db.Queries, pool *pgxpool.Pool, build db.Build, c *loader.Content, env *loader.Environment, containerNames map[string]bool) error {
 	images, builderName, kind, b, err := resolveBuilderImages(ctx, q, pool, build, env.Teams)
 	if err != nil {
@@ -81,6 +109,23 @@ func checkBuilderCompatibility(ctx context.Context, q *db.Queries, pool *pgxpool
 	if builderName == "" {
 		return nil // ad-hoc/test build, nothing configured to check against
 	}
+	cacheKey := build.ID.String() + "\x00" + build.ContentRevisionID.String() + "\x00" + builderName
+	compatMu.Lock()
+	passedAt, passed := compatPassed[cacheKey]
+	compatMu.Unlock()
+	if passed && time.Since(passedAt) < compatibilityRecheck {
+		return nil
+	}
+	if err := checkBuilderCompatibilityNow(ctx, b, builderName, kind, c, env, containerNames, images); err != nil {
+		return err
+	}
+	compatMu.Lock()
+	compatPassed[cacheKey] = time.Now()
+	compatMu.Unlock()
+	return nil
+}
+
+func checkBuilderCompatibilityNow(ctx context.Context, b builder.Builder, builderName, kind string, c *loader.Content, env *loader.Environment, containerNames map[string]bool, images map[string]bool) error {
 	if err := checkEnvironmentImages(env, c, containerNames, images); err != nil {
 		// The compose-host remedy differs by builder kind (LXD builds a base image,
 		// cloud builders map one), so format that one here where the kind is known.
@@ -89,7 +134,7 @@ func checkBuilderCompatibility(ctx context.Context, q *db.Queries, pool *pgxpool
 		}
 		return fmt.Errorf("environment %q incompatible with builder %q: %w", env.Name, builderName, err)
 	}
-	if err := checkHostDiskCapacity(ctx, b, c, env, containerNames); err != nil {
+	if err := checkHostDiskCapacity(ctx, b, builderName, c, env, containerNames); err != nil {
 		return fmt.Errorf("environment %q incompatible with builder %q: %w", env.Name, builderName, err)
 	}
 	return nil
@@ -108,10 +153,33 @@ type diskCapacitySource interface {
 // with an explicit disk size are checked -- with none, the copy keeps the
 // source's own size and can't shrink. A source whose minimum can't be determined
 // is left to the deploy-time shrink guard. Reads are deduplicated by (os,disk).
-func checkHostDiskCapacity(ctx context.Context, b builder.Builder, c *loader.Content, env *loader.Environment, containerNames map[string]bool) error {
+func checkHostDiskCapacity(ctx context.Context, b builder.Builder, builderName string, c *loader.Content, env *loader.Environment, containerNames map[string]bool) error {
 	dc, ok := b.(diskCapacitySource)
 	if !ok {
 		return nil
+	}
+	// A source's minimum is a property of the builder's image, not of this
+	// build: remembered per (builder, os) for diskMinExpiry so a dozen builds
+	// on one cluster read each snapshot once an hour, not each per pass.
+	sourceMin := func(os string) (int64, string, bool, error) {
+		key := builderName + "\x00" + os
+		compatMu.Lock()
+		e, hit := diskMinCache[key]
+		compatMu.Unlock()
+		if hit && time.Since(e.at) < diskMinExpiry {
+			return e.minBytes, e.source, e.ok, nil
+		}
+		started := time.Now()
+		minBytes, source, ok, err := dc.SourceDiskMinBytes(ctx, os)
+		if err != nil {
+			log.Printf("orchestrator: builder %q: reading the source size for os %q failed after %s (the deploy-time guard still applies): %v", builderName, os, time.Since(started).Round(time.Millisecond), err)
+			return 0, source, false, err
+		}
+		log.Printf("orchestrator: builder %q: source for os %q is %s, minimum %d bytes (read in %s; cached for %s)", builderName, os, source, minBytes, time.Since(started).Round(time.Millisecond), diskMinExpiry)
+		compatMu.Lock()
+		diskMinCache[key] = diskMinEntry{minBytes: minBytes, source: source, ok: ok, at: time.Now()}
+		compatMu.Unlock()
+		return minBytes, source, ok, nil
 	}
 	checked := map[string]bool{}
 	for _, objs := range env.Networks {
@@ -128,7 +196,7 @@ func checkHostDiskCapacity(ctx context.Context, b builder.Builder, c *loader.Con
 				continue
 			}
 			checked[key] = true
-			minBytes, source, ok, err := dc.SourceDiskMinBytes(ctx, h.OS)
+			minBytes, source, ok, err := sourceMin(h.OS)
 			if err != nil || !ok {
 				continue // transient read error, or minimum undeterminable -- deploy guards it
 			}

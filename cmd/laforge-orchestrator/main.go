@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -59,6 +60,8 @@ func main() {
 	checkinLinux := flag.Duration("agent-checkin-deadline-linux", envDurationDefault("AGENT_CHECKIN_DEADLINE_LINUX", orchestrator.DefaultCheckinWatchdog.Linux), "how long after deploy a Linux host's agent may take to send its first heartbeat before the watchdog flags it (event + needs-attention, console log captured); 0 disables")
 	checkinWindows := flag.Duration("agent-checkin-deadline-windows", envDurationDefault("AGENT_CHECKIN_DEADLINE_WINDOWS", orchestrator.DefaultCheckinWatchdog.Windows), "the same deadline for a Windows host, whose first boot (sysprep, cloudbase-init) is far slower; 0 disables")
 	checkinReboot := flag.Bool("agent-checkin-reboot", envBoolDefault("AGENT_CHECKIN_REBOOT", false), "force-reboot a host once when its agent misses the check-in deadline")
+	agentLostAfter := flag.Duration("agent-lost-after", envDurationDefault("AGENT_LOST_AFTER", orchestrator.AgentLostAfter), "how long a host's agent may go without a heartbeat, with steps still to run, before the host is failed as lost (build_failed, with the reason); 0 disables")
+	agentNeverAfter := flag.Duration("agent-never-checked-in-after", envDurationDefault("AGENT_NEVER_CHECKED_IN_AFTER", orchestrator.AgentNeverCheckedInAfter), "how long after its instance came up a host whose agent has never connected is failed (build_failed, with the reason); 0 disables")
 	once := flag.Bool("once", false, "reconcile every non-terminal build exactly once, then exit (for scripting/tests)")
 	flag.Parse()
 
@@ -234,9 +237,22 @@ func main() {
 			if recErr != "" {
 				val = &recErr
 			}
-			if e := q.SetBuildReconcileError(bctx, db.SetBuildReconcileErrorParams{ID: b.ID, ReconcileError: val}); e != nil {
+			// A detached context: when the pass timed out, bctx is already
+			// dead, and the one thing that must still be written is WHY.
+			recCtx, cancelRec := context.WithTimeout(context.Background(), 5*time.Second)
+			if e := q.SetBuildReconcileError(recCtx, db.SetBuildReconcileErrorParams{ID: b.ID, ReconcileError: val}); e != nil {
 				log.Printf("recording reconcile error for build %s: %v", b.ID, e)
 			}
+			if recErr != "" {
+				msg := "reconcile pass failed: " + recErr
+				if errors.Is(bctx.Err(), context.DeadlineExceeded) {
+					msg = fmt.Sprintf("reconcile pass gave up after %s (RECONCILE_BUILD_TIMEOUT) in phase %q: %s -- the hoster calls in this phase are logged above; hosts in later teams were not reconciled this pass", reconcileBuildTimeout.Round(time.Second), lastPhase(phases), recErr)
+				}
+				q.CreateEvent(recCtx, db.CreateEventParams{BuildID: b.ID, Kind: "reconcile.error", Message: msg, Payload: []byte("{}")})
+			} else {
+				q.CreateEvent(recCtx, db.CreateEventParams{BuildID: b.ID, Kind: "reconcile.recovered", Message: "reconcile passes are completing again (was: " + prev + ")", Payload: []byte("{}")})
+			}
+			cancelRec()
 		}
 		// Enforce visible_from once a team's networks are up (peering + ACLs
 		// via the builder). Deliberately after Reconcile, which drives the
@@ -336,7 +352,7 @@ func main() {
 	// true as builds are created/removed; this sweep heals a backlog that
 	// predates it and backstops those paths. Startup + the slow housekeeping
 	// tick: a miss costs one planned-cadence pass, nothing more.
-	discardStalePlannedBuilds := func() {
+	discardStalePlannedBuilds := func(ctx context.Context) {
 		n, err := orchestrator.DiscardStalePlannedBuilds(ctx, pool)
 		if err != nil {
 			log.Printf("discarding stale planned builds: %v", err)
@@ -351,7 +367,7 @@ func main() {
 	// style as agent_heartbeat's own cleanupHeartbeats below -- an
 	// unused cached checkout costs disk indefinitely otherwise. A no-op
 	// on every tick when no cache is configured.
-	cleanupCheckouts := func() {
+	cleanupCheckouts := func(ctx context.Context) {
 		if cache == nil || *checkoutCacheRetention <= 0 {
 			return
 		}
@@ -378,7 +394,7 @@ func main() {
 	// an orchestration concern -- there's no dedicated housekeeping
 	// service, and standing one up for a single DELETE query would be
 	// its own kind of overbuilt.
-	cleanupHeartbeats := func() {
+	cleanupHeartbeats := func(ctx context.Context) {
 		if *heartbeatRetention <= 0 {
 			return
 		}
@@ -393,13 +409,28 @@ func main() {
 		}
 	}
 
+	// Repeating-event retention: the orchestrator's "still waiting" journal
+	// entries say what a stuck object is waiting on; after a day the old ones
+	// say only that it was. Drop them so a long-stuck build's Logs page stays
+	// loadable. Everything else in the journal is kept.
+	cleanupRepeatingEvents := func(ctx context.Context) {
+		n, err := q.PruneRepeatingEvents(ctx, db.Interval(24*time.Hour))
+		if err != nil {
+			log.Printf("pruning repeating events: %v", err)
+			return
+		}
+		if n > 0 {
+			log.Printf("pruned %d repeating 'waiting' event(s) older than a day", n)
+		}
+	}
+
 	// Session retention: expired session rows are otherwise never
 	// deleted anywhere -- the exact same unbounded-growth shape already
 	// fixed for agent_heartbeat, just missed for session. No retention window to
 	// configure -- expires_at is already the boundary, set once at
 	// CreateSession time -- so this always runs, same interval as
 	// heartbeat cleanup.
-	cleanupSessions := func() {
+	cleanupSessions := func(ctx context.Context) {
 		n, err := q.DeleteExpiredSessions(ctx)
 		if err != nil {
 			log.Printf("cleaning up expired sessions: %v", err)
@@ -418,7 +449,7 @@ func main() {
 	// schedule entry a few seconds late is fine, and coupling it to
 	// reconcileAll's own cadence would make one flag control two
 	// unrelated things.
-	dispatchScheduledTasks := func() {
+	dispatchScheduledTasks := func(ctx context.Context) {
 		if err := orchestrator.DispatchDueScheduledTasks(ctx, pool, resolveContent, 100); err != nil {
 			log.Printf("dispatching scheduled tasks: %v", err)
 		}
@@ -432,7 +463,8 @@ func main() {
 	// tracked. Only builds that can have live instances are polled.
 	checkinWatchdog := orchestrator.DefaultCheckinWatchdog
 	checkinWatchdog.Linux, checkinWatchdog.Windows, checkinWatchdog.Reboot = *checkinLinux, *checkinWindows, *checkinReboot
-	pollInstanceStates := func() {
+	orchestrator.AgentLostAfter, orchestrator.AgentNeverCheckedInAfter = *agentLostAfter, *agentNeverAfter
+	pollInstanceStates := func(ctx context.Context) {
 		builds, err := q.ListBuildsByStatus(ctx, []string{"deploying", "building", "finished", "failed"})
 		if err != nil {
 			log.Printf("listing builds for instance-state poll: %v", err)
@@ -470,15 +502,20 @@ func main() {
 	// collectBuilderMetrics samples every builder's own backend health on its own
 	// slow cadence (one gather per builder, not per build). cleanupBuilderMetrics
 	// ages the samples out on the same retention window as agent_heartbeat.
-	collectBuilderMetrics := func() {
+	collectBuilderMetrics := func(ctx context.Context) {
 		if *builderMetricsInterval <= 0 {
 			return
 		}
-		if err := orchestrator.CollectBuilderMetrics(ctx, pool); err != nil {
+		// Bounded: a probe of an unreachable hoster (a decommissioned test
+		// cluster) otherwise waits the full operation timeout, minutes, and
+		// holds the metrics loop with it.
+		mctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		if err := orchestrator.CollectBuilderMetrics(mctx, pool); err != nil {
 			log.Printf("collecting builder metrics: %v", err)
 		}
 	}
-	cleanupBuilderMetrics := func() {
+	cleanupBuilderMetrics := func(ctx context.Context) {
 		if *heartbeatRetention <= 0 {
 			return
 		}
@@ -500,7 +537,7 @@ func main() {
 	// including `finished`, the competition state reconcileAll stops watching,
 	// which is exactly when windows open and close. A near-future window edge
 	// takes effect within one -access-interval.
-	reconcileAccess := func() {
+	reconcileAccess := func(ctx context.Context) {
 		builds, err := q.ListBuildsByStatus(ctx, []string{"deploying", "building", "finished"})
 		if err != nil {
 			log.Printf("listing builds for access enforcement: %v", err)
@@ -518,7 +555,7 @@ func main() {
 	// it (in its own goroutine -- a build takes minutes). Its own short
 	// cadence, independent of reconcile: a build is queued when a builder is
 	// added or the operator clicks Rebuild, and should start promptly.
-	dispatchImageBuilds := func() {
+	dispatchImageBuilds := func(ctx context.Context) {
 		if err := orchestrator.RunPendingImageBuilds(ctx, pool); err != nil {
 			log.Printf("dispatching image builds: %v", err)
 		}
@@ -531,17 +568,23 @@ func main() {
 		// when started, so starting the lanes IS the startup pass -- bounded
 		// by the same slot budget, instead of one unbounded reconcileAll over
 		// every planned build before the ticker even begins.
-		discardStalePlannedBuilds()
+		discardStalePlannedBuilds(ctx)
 		superviseReconcileLanes()
 	}
-	cleanupHeartbeats()
-	cleanupSessions()
-	dispatchScheduledTasks()
-	reconcileAccess()
-	pollInstanceStates()
-	dispatchImageBuilds()
-	collectBuilderMetrics()
-	cleanupCheckouts()
+	// Every periodic job runs off the main loop, bounded, and a tick is skipped
+	// while the previous run of that job is still going: one slow hoster (an
+	// Inspect against a loaded cluster, a probe of a decommissioned one) used
+	// to hold this single goroutine, and with it every other job's tick.
+	jobs := &tickJobs{}
+	jobs.run(ctx, "heartbeat-cleanup", 5*time.Minute, cleanupHeartbeats)
+	jobs.run(ctx, "session-cleanup", 5*time.Minute, cleanupSessions)
+	jobs.run(ctx, "event-cleanup", 5*time.Minute, cleanupRepeatingEvents)
+	jobs.run(ctx, "schedules", 2*time.Minute, dispatchScheduledTasks)
+	jobs.run(ctx, "access", 2*time.Minute, reconcileAccess)
+	jobs.run(ctx, "instance-states", 3*time.Minute, pollInstanceStates)
+	jobs.run(ctx, "image-builds", 0, dispatchImageBuilds) // spawns long-running builds: never bounded
+	jobs.run(ctx, "builder-metrics", time.Minute, collectBuilderMetrics)
+	jobs.run(ctx, "checkout-cleanup", 5*time.Minute, cleanupCheckouts)
 	if *once {
 		return
 	}
@@ -588,22 +631,23 @@ func main() {
 			// another's reconcile or a new build's first task.
 			superviseReconcileLanes()
 		case <-checkoutCleanupTicker.C:
-			cleanupCheckouts()
+			jobs.run(ctx, "checkout-cleanup", 5*time.Minute, cleanupCheckouts)
 		case <-heartbeatTicker.C:
-			cleanupHeartbeats()
-			cleanupSessions()
-			cleanupBuilderMetrics()
-			discardStalePlannedBuilds()
+			jobs.run(ctx, "heartbeat-cleanup", 5*time.Minute, cleanupHeartbeats)
+			jobs.run(ctx, "session-cleanup", 5*time.Minute, cleanupSessions)
+			jobs.run(ctx, "event-cleanup", 5*time.Minute, cleanupRepeatingEvents)
+			jobs.run(ctx, "metrics-cleanup", 5*time.Minute, cleanupBuilderMetrics)
+			jobs.run(ctx, "stale-planned", 2*time.Minute, discardStalePlannedBuilds)
 		case <-scheduleTicker.C:
-			dispatchScheduledTasks()
+			jobs.run(ctx, "schedules", 2*time.Minute, dispatchScheduledTasks)
 		case <-accessTicker.C:
-			reconcileAccess()
+			jobs.run(ctx, "access", 2*time.Minute, reconcileAccess)
 		case <-instanceStateTicker.C:
-			pollInstanceStates()
+			jobs.run(ctx, "instance-states", 3*time.Minute, pollInstanceStates)
 		case <-imageBuildTicker.C:
-			dispatchImageBuilds()
+			jobs.run(ctx, "image-builds", 0, dispatchImageBuilds)
 		case <-builderMetricsTicker.C:
-			collectBuilderMetrics()
+			jobs.run(ctx, "builder-metrics", time.Minute, collectBuilderMetrics)
 		}
 	}
 }
@@ -642,4 +686,57 @@ func envDurationDefault(name string, def time.Duration) time.Duration {
 		}
 	}
 	return def
+}
+
+// lastPhase names the phase a pass was in when it stopped, from the marks
+// collected so far ("reconcile=1m59s" -> "reconcile").
+func lastPhase(phases []string) string {
+	if len(phases) == 0 {
+		return "start"
+	}
+	name, _, _ := strings.Cut(phases[len(phases)-1], "=")
+	return name
+}
+
+// tickJobs runs the orchestrator's periodic jobs off the main loop. Each job
+// runs in its own goroutine under a bounded context (0 = unbounded, for a
+// dispatcher that only spawns work), at most one instance at a time: a tick
+// that arrives while the job is still running is skipped and logged, with
+// how long the job has been going, so a job that has stopped making progress
+// is visible in the log instead of silently stalling every other job.
+type tickJobs struct {
+	mu      sync.Mutex
+	running map[string]time.Time
+}
+
+func (j *tickJobs) run(ctx context.Context, name string, timeout time.Duration, fn func(ctx context.Context)) {
+	j.mu.Lock()
+	if j.running == nil {
+		j.running = map[string]time.Time{}
+	}
+	if since, busy := j.running[name]; busy {
+		j.mu.Unlock()
+		log.Printf("job %q: skipping this tick; the previous run has been going for %s", name, time.Since(since).Round(time.Second))
+		return
+	}
+	j.running[name] = time.Now()
+	j.mu.Unlock()
+	go func() {
+		started := time.Now()
+		jctx := ctx
+		if timeout > 0 {
+			var cancel context.CancelFunc
+			jctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
+		defer func() {
+			j.mu.Lock()
+			delete(j.running, name)
+			j.mu.Unlock()
+			if d := time.Since(started); d > 30*time.Second {
+				log.Printf("job %q: took %s%s", name, d.Round(time.Second), map[bool]string{true: " (hit its " + timeout.String() + " limit)", false: ""}[timeout > 0 && d >= timeout])
+			}
+		}()
+		fn(jctx)
+	}()
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"net/http/cookiejar"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/loader"
@@ -1457,5 +1459,148 @@ func TestDetectDriftRequiresLevelManage(t *testing.T) {
 	defer resp2.Body.Close()
 	if resp2.StatusCode != statusUpstreamFailed {
 		t.Fatalf("drift with no configured_build: status = %d, want %d", resp2.StatusCode, statusUpstreamFailed)
+	}
+}
+
+// TestLiveStreamsShareOneRead: open streams cost the database nothing.
+// Hundreds of streams on one build are fed from one read per new batch of
+// events -- the database work doesn't grow with the number watching -- no
+// pool connection is held while they wait, and other reads still answer at
+// once. A reconnecting stream resumes from its Last-Event-ID instead of
+// replaying from its original start.
+func TestLiveStreamsShareOneRead(t *testing.T) {
+	env := setupAPITest(t)
+	build := realBuildFixture(t, env)
+	client := signedInClient(t, env, "read-only-viewer")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	open := func(header map[string]string) *http.Response {
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, env.httpURL+"/builds/"+build.ID.String()+"/live", nil)
+		for k, v := range header {
+			req.Header.Set(k, v)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("stream: status %d", resp.StatusCode)
+		}
+		return resp
+	}
+	// Read frames off a stream in the background, reporting each event id line.
+	watch := func(resp *http.Response, got chan<- string) {
+		go func() {
+			defer resp.Body.Close()
+			sc := bufio.NewScanner(resp.Body)
+			for sc.Scan() {
+				if strings.HasPrefix(sc.Text(), "data: ") && strings.Contains(sc.Text(), "test.live.shared") {
+					got <- sc.Text()
+				}
+			}
+		}()
+	}
+
+	const streams = 200
+	got := make(chan string, streams*4)
+	for i := 0; i < streams; i++ {
+		watch(open(nil), got)
+	}
+	time.Sleep(300 * time.Millisecond) // every stream past its initial catch-up
+	if n := env.server.Pool.Stat().AcquiredConns(); n != 0 {
+		t.Fatalf("%d pool connections held with %d idle streams open; want 0", n, streams)
+	}
+
+	before := env.server.Pool.Stat().AcquireCount()
+	if _, err := env.q.CreateEvent(context.Background(), db.CreateEventParams{
+		BuildID: build.ID, Kind: "test.live.shared", Message: "for everyone", Payload: []byte("{}"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.After(10 * time.Second)
+	for i := 0; i < streams; i++ {
+		select {
+		case <-got:
+		case <-deadline:
+			t.Fatalf("only %d of %d streams received the event", i, streams)
+		}
+	}
+	// The insert itself plus the feed's one read (and a safety re-read at
+	// most) -- not one read per stream.
+	if used := env.server.Pool.Stat().AcquireCount() - before; used > 5 {
+		t.Fatalf("%d pool acquisitions to deliver one event to %d streams; want a handful", used, streams)
+	}
+
+	started := time.Now()
+	resp, err := client.Get(env.httpURL + "/builds/" + build.ID.String() + "/events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || time.Since(started) > 2*time.Second {
+		t.Fatalf("read with %d streams open: status %d in %s", streams, resp.StatusCode, time.Since(started))
+	}
+
+	// A reconnect carrying Last-Event-ID (the event's time) gets nothing
+	// replayed; one starting from before it gets the event.
+	var at time.Time
+	env.server.Pool.QueryRow(ctx, "SELECT created_at FROM event WHERE build_id = $1 AND kind = 'test.live.shared'", build.ID).Scan(&at)
+	resumed := make(chan string, 4)
+	watch(open(map[string]string{"Last-Event-ID": at.UTC().Format(time.RFC3339Nano)}), resumed)
+	replayed := make(chan string, 4)
+	watch(open(map[string]string{"Last-Event-ID": at.Add(-time.Second).UTC().Format(time.RFC3339Nano)}), replayed)
+	select {
+	case <-replayed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("a stream resuming from before the event didn't get it")
+	}
+	select {
+	case line := <-resumed:
+		t.Fatalf("a stream resuming after the event got it again: %s", line)
+	case <-time.After(500 * time.Millisecond):
+	}
+}
+
+// TestBuildReadsAreSharedAcrossViewers: the build-wide reads every open page
+// polls are computed once for everyone, not once per viewer -- many
+// concurrent viewers cost the database about what one does.
+func TestBuildReadsAreSharedAcrossViewers(t *testing.T) {
+	env := setupAPITest(t)
+	build := realBuildFixture(t, env)
+	client := signedInClient(t, env, "read-only-viewer")
+	url := env.httpURL + "/builds/" + build.ID.String() + "/objects"
+	get := func() string {
+		resp, err := client.Get(url)
+		if err != nil {
+			t.Error(err)
+			return ""
+		}
+		defer resp.Body.Close()
+		var b strings.Builder
+		bufio.NewReader(resp.Body).WriteTo(&b)
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("status %d: %s", resp.StatusCode, b.String())
+		}
+		return b.String()
+	}
+	one := env.server.Pool.Stat().AcquireCount()
+	get()
+	perViewer := env.server.Pool.Stat().AcquireCount() - one
+
+	env.server.shared.forgetBuild(build.ID.String())
+	const viewers = 100
+	before := env.server.Pool.Stat().AcquireCount()
+	done := make(chan struct{})
+	for i := 0; i < viewers; i++ {
+		go func() { get(); done <- struct{}{} }()
+	}
+	for i := 0; i < viewers; i++ {
+		<-done
+	}
+	used := env.server.Pool.Stat().AcquireCount() - before
+	// The build's data is read once for all of them, and their access
+	// answers come from memory: about what a single viewer costs.
+	if used > perViewer {
+		t.Fatalf("%d viewers used %d pool acquisitions; one viewer alone uses %d -- the cost grows with viewers", viewers, used, perViewer)
 	}
 }

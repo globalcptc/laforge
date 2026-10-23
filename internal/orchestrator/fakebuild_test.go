@@ -65,7 +65,7 @@ func deployToConvergence(t *testing.T, pool *pgxpool.Pool, repoRoot string, buil
 		}
 		pending := 0
 		for _, o := range objs {
-			if o.Status == "pending" || o.Status == "deploying" {
+			if o.Status == "pending" || o.Status == "deploying" || o.Status == "destroy_queued" || o.Status == "destroying" {
 				pending++
 			}
 		}

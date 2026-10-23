@@ -10,6 +10,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"sort"
 	"time"
@@ -63,7 +64,7 @@ func classifyHealth(o objectView, failedSteps map[string]bool) string {
 		return healthFailedInfra
 	case "build_failed", "invalid":
 		return healthFailedSteps
-	case "destroying", "destroy_failed", "destroyed":
+	case "destroy_queued", "destroying", "destroy_failed", "destroyed":
 		return ""
 	}
 	// The instance is gone or powered off at the hoster -- an infra failure,
@@ -279,7 +280,7 @@ func bucketHeartbeats(heartbeats []db.AgentHeartbeat) []activityBucket {
 }
 
 func (s *Server) handleGetDashboard(w http.ResponseWriter, r *http.Request) {
-	build, repo, err := s.buildAndOwningRepository(r)
+	buildID, repo, err := s.buildRepository(r)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err)
 		return
@@ -288,104 +289,112 @@ func (s *Server) handleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-
-	teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	teamNumberByID := make(map[string]int32, len(teams))
-	for _, tm := range teams {
-		teamNumberByID[tm.ID.String()] = tm.TeamNumber
-	}
-
-	objs, err := s.Queries.ListDeployedObjectsByBuild(r.Context(), build.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	// Agent health per object, computed exactly the way the matrix and
-	// build detail compute it (attachAgentHealth), so "failed check-in"
-	// here means the same thing it does everywhere else in the UI.
-	views, err := attachAgentHealth(r.Context(), s.Queries, build.ID, objs)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	// Which objects have a failed step (a failed agent_task), so a
-	// step-level failure is told apart from an infra one.
-	failedStepIDs, err := s.Queries.ListFailedStepObjectIDsByBuild(r.Context(), build.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	failedSteps := make(map[string]bool, len(failedStepIDs))
-	for _, id := range failedStepIDs {
-		failedSteps[id.String()] = true
-	}
-
-	data := dashboardData{
-		ProvisioningByStatus: map[string]int{},
-		ByTeam:               []teamStateCounts{},
-		FailuresByCause:      []failureGroup{},
-		AgentActivity:        []activityBucket{},
-		ResourceUsage:        []resourceBucket{},
-	}
-	byTeam := map[int32]map[string]int{}
-	byTeamHealth := map[int32]map[string]int{}
-	failureIndex := map[string]*failureGroup{}
-
-	for _, o := range views {
-		data.ProvisioningByStatus[o.Status]++
-
-		teamNumber := teamNumberByID[o.TeamID.String()]
-		if byTeam[teamNumber] == nil {
-			byTeam[teamNumber] = map[string]int{}
-			byTeamHealth[teamNumber] = map[string]int{}
+	// The same for everyone who may read the build: computed once and
+	// shared by every open page polling it (sharedread.go).
+	s.shared.serve(w, r, "dashboard:"+buildID.String(), func(w http.ResponseWriter, r *http.Request) {
+		build, err := s.Queries.GetBuild(r.Context(), buildID)
+		if err != nil {
+			writeError(w, http.StatusNotFound, errors.New("no such build"))
+			return
 		}
-		byTeam[teamNumber][o.Status]++
-		if h := classifyHealth(o, failedSteps); h != "" {
-			byTeamHealth[teamNumber][h]++
+		teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		teamNumberByID := make(map[string]int32, len(teams))
+		for _, tm := range teams {
+			teamNumberByID[tm.ID.String()] = tm.TeamNumber
 		}
 
-		if isFailedStatus(o.Status) && o.LastError != nil && *o.LastError != "" {
-			g, ok := failureIndex[*o.LastError]
-			if !ok {
-				g = &failureGroup{Message: *o.LastError}
-				failureIndex[*o.LastError] = g
+		objs, err := s.Queries.ListDeployedObjectsByBuild(r.Context(), build.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		// Agent health per object, computed exactly the way the matrix and
+		// build detail compute it (attachAgentHealth), so "failed check-in"
+		// here means the same thing it does everywhere else in the UI.
+		views, err := attachAgentHealth(r.Context(), s.Queries, build.ID, objs)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		// Which objects have a failed step (a failed agent_task), so a
+		// step-level failure is told apart from an infra one.
+		failedStepIDs, err := s.Queries.ListFailedStepObjectIDsByBuild(r.Context(), build.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		failedSteps := make(map[string]bool, len(failedStepIDs))
+		for _, id := range failedStepIDs {
+			failedSteps[id.String()] = true
+		}
+
+		data := dashboardData{
+			ProvisioningByStatus: map[string]int{},
+			ByTeam:               []teamStateCounts{},
+			FailuresByCause:      []failureGroup{},
+			AgentActivity:        []activityBucket{},
+			ResourceUsage:        []resourceBucket{},
+		}
+		byTeam := map[int32]map[string]int{}
+		byTeamHealth := map[int32]map[string]int{}
+		failureIndex := map[string]*failureGroup{}
+
+		for _, o := range views {
+			data.ProvisioningByStatus[o.Status]++
+
+			teamNumber := teamNumberByID[o.TeamID.String()]
+			if byTeam[teamNumber] == nil {
+				byTeam[teamNumber] = map[string]int{}
+				byTeamHealth[teamNumber] = map[string]int{}
 			}
-			g.Count++
-			name := db.StrOrEmpty(o.AsName)
-			if name == "" {
-				name = o.ObjectName
+			byTeam[teamNumber][o.Status]++
+			if h := classifyHealth(o, failedSteps); h != "" {
+				byTeamHealth[teamNumber][h]++
 			}
-			g.Objects = append(g.Objects, name)
+
+			if isFailedStatus(o.Status) && o.LastError != nil && *o.LastError != "" {
+				g, ok := failureIndex[*o.LastError]
+				if !ok {
+					g = &failureGroup{Message: *o.LastError}
+					failureIndex[*o.LastError] = g
+				}
+				g.Count++
+				name := db.StrOrEmpty(o.AsName)
+				if name == "" {
+					name = o.ObjectName
+				}
+				g.Objects = append(g.Objects, name)
+			}
 		}
-	}
 
-	teamNumbers := make([]int32, 0, len(byTeam))
-	for tn := range byTeam {
-		teamNumbers = append(teamNumbers, tn)
-	}
-	sort.Slice(teamNumbers, func(i, j int) bool { return teamNumbers[i] < teamNumbers[j] })
-	for _, tn := range teamNumbers {
-		data.ByTeam = append(data.ByTeam, teamStateCounts{TeamNumber: tn, ByStatus: byTeam[tn], ByHealth: byTeamHealth[tn]})
-	}
+		teamNumbers := make([]int32, 0, len(byTeam))
+		for tn := range byTeam {
+			teamNumbers = append(teamNumbers, tn)
+		}
+		sort.Slice(teamNumbers, func(i, j int) bool { return teamNumbers[i] < teamNumbers[j] })
+		for _, tn := range teamNumbers {
+			data.ByTeam = append(data.ByTeam, teamStateCounts{TeamNumber: tn, ByStatus: byTeam[tn], ByHealth: byTeamHealth[tn]})
+		}
 
-	for _, g := range failureIndex {
-		data.FailuresByCause = append(data.FailuresByCause, *g)
-	}
-	sort.Slice(data.FailuresByCause, func(i, j int) bool { return data.FailuresByCause[i].Count > data.FailuresByCause[j].Count })
+		for _, g := range failureIndex {
+			data.FailuresByCause = append(data.FailuresByCause, *g)
+		}
+		sort.Slice(data.FailuresByCause, func(i, j int) bool { return data.FailuresByCause[i].Count > data.FailuresByCause[j].Count })
 
-	heartbeats, err := s.Queries.ListAgentHeartbeatsByBuild(r.Context(), build.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	data.AgentActivity = bucketHeartbeats(heartbeats)
-	data.ResourceUsage = bucketResourceUsage(heartbeats)
+		heartbeats, err := s.Queries.ListAgentHeartbeatsByBuild(r.Context(), build.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		data.AgentActivity = bucketHeartbeats(heartbeats)
+		data.ResourceUsage = bucketResourceUsage(heartbeats)
 
-	writeJSON(w, http.StatusOK, data)
+		writeJSON(w, http.StatusOK, data)
+	})
 }

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -103,7 +104,7 @@ type buildDetail struct {
 }
 
 func (s *Server) handleGetBuild(w http.ResponseWriter, r *http.Request) {
-	build, repo, err := s.buildAndOwningRepository(r)
+	buildID, repo, err := s.buildRepository(r)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err)
 		return
@@ -112,58 +113,67 @@ func (s *Server) handleGetBuild(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	// One query for every object in the build, one for every agent
-	// session, rather than a query per team -- the matrix/table already
-	// want the whole build's data at once, and this is the same shape
-	// handleListDeployedObjects uses.
-	allObjs, err := s.Queries.ListDeployedObjectsByBuild(r.Context(), build.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	views, err := attachAgentHealth(r.Context(), s.Queries, build.ID, allObjs)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	byTeam := make(map[string][]objectView, len(teams))
-	for _, v := range views {
-		key := v.TeamID.String()
-		byTeam[key] = append(byTeam[key], v)
-	}
-	detail := buildDetail{Build: build, Teams: make([]teamSummary, 0, len(teams))}
-	if env, err := s.Queries.GetEnvironmentByRevisionAndName(r.Context(), db.GetEnvironmentByRevisionAndNameParams{
-		ContentRevisionID: build.ContentRevisionID, Name: build.EnvironmentName,
-	}); err == nil {
-		json.Unmarshal(env.Access, &detail.Access) // malformed/absent -- leave Access nil, not a request failure
-	}
-	// Commit + builder for the header, best-effort per hop.
-	if rev, err := s.Queries.GetContentRevision(r.Context(), build.ContentRevisionID); err == nil {
-		detail.CommitSha = rev.CommitSha
-		detail.CommitMessage = db.StrOrEmpty(rev.CommitMessage)
-	}
-	if build.ConfiguredBuildID.Valid {
-		if cb, err := s.Queries.GetConfiguredBuild(r.Context(), build.ConfiguredBuildID); err == nil {
-			detail.BuilderConfigName = cb.BuilderConfigName
-			detail.Branch = cb.Branch
-			if bc, err := s.Queries.GetBuilderConfigByName(r.Context(), cb.BuilderConfigName); err == nil {
-				detail.BuilderKind = bc.Kind
+	// The same for everyone who may read the build: computed once and
+	// shared by every open page polling it (sharedread.go).
+	s.shared.serve(w, r, "build:"+buildID.String(), func(w http.ResponseWriter, r *http.Request) {
+		build, err := s.Queries.GetBuild(r.Context(), buildID)
+		if err != nil {
+			writeError(w, http.StatusNotFound, errors.New("no such build"))
+			return
+		}
+		teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		// One query for every object in the build, one for every agent
+		// session, rather than a query per team -- the matrix/table already
+		// want the whole build's data at once, and this is the same shape
+		// handleListDeployedObjects uses.
+		allObjs, err := s.Queries.ListDeployedObjectsByBuild(r.Context(), build.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		views, err := attachAgentHealth(r.Context(), s.Queries, build.ID, allObjs)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		byTeam := make(map[string][]objectView, len(teams))
+		for _, v := range views {
+			key := v.TeamID.String()
+			byTeam[key] = append(byTeam[key], v)
+		}
+		detail := buildDetail{Build: build, Teams: make([]teamSummary, 0, len(teams))}
+		if env, err := s.Queries.GetEnvironmentByRevisionAndName(r.Context(), db.GetEnvironmentByRevisionAndNameParams{
+			ContentRevisionID: build.ContentRevisionID, Name: build.EnvironmentName,
+		}); err == nil {
+			json.Unmarshal(env.Access, &detail.Access) // malformed/absent -- leave Access nil, not a request failure
+		}
+		// Commit + builder for the header, best-effort per hop.
+		if rev, err := s.Queries.GetContentRevision(r.Context(), build.ContentRevisionID); err == nil {
+			detail.CommitSha = rev.CommitSha
+			detail.CommitMessage = db.StrOrEmpty(rev.CommitMessage)
+		}
+		if build.ConfiguredBuildID.Valid {
+			if cb, err := s.Queries.GetConfiguredBuild(r.Context(), build.ConfiguredBuildID); err == nil {
+				detail.BuilderConfigName = cb.BuilderConfigName
+				detail.Branch = cb.Branch
+				if bc, err := s.Queries.GetBuilderConfigByName(r.Context(), cb.BuilderConfigName); err == nil {
+					detail.BuilderKind = bc.Kind
+				}
 			}
 		}
-	}
-	for _, tm := range teams {
-		objs := byTeam[tm.ID.String()]
-		if objs == nil {
-			objs = []objectView{}
+		for _, tm := range teams {
+			objs := byTeam[tm.ID.String()]
+			if objs == nil {
+				objs = []objectView{}
+			}
+			detail.Teams = append(detail.Teams, teamSummary{Team: tm, Objects: objs})
 		}
-		detail.Teams = append(detail.Teams, teamSummary{Team: tm, Objects: objs})
-	}
-	writeJSON(w, http.StatusOK, detail)
+		writeJSON(w, http.StatusOK, detail)
+	})
 }
 
 // handleListDeployedObjects is the flat form of the same data -- "Build →
@@ -172,7 +182,7 @@ func (s *Server) handleGetBuild(w http.ResponseWriter, r *http.Request) {
 // TargetPicker) actually wants, rather than walking handleGetBuild's
 // team-nested shape.
 func (s *Server) handleListDeployedObjects(w http.ResponseWriter, r *http.Request) {
-	build, repo, err := s.buildAndOwningRepository(r)
+	buildID, repo, err := s.buildRepository(r)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err)
 		return
@@ -181,36 +191,55 @@ func (s *Server) handleListDeployedObjects(w http.ResponseWriter, r *http.Reques
 		writeAuthError(w, err)
 		return
 	}
-	objs, err := s.Queries.ListDeployedObjectsByBuild(r.Context(), build.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	views, err := attachAgentHealth(r.Context(), s.Queries, build.ID, objs)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	if views == nil {
-		views = []objectView{}
-	}
-	// Fill in the human team number per object so a client (e.g. `laforge shell`)
-	// can resolve a single host by team + name without mapping team_id itself.
-	if teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID); err == nil {
-		num := make(map[string]int32, len(teams))
-		for _, t := range teams {
-			num[t.ID.String()] = t.TeamNumber
+	// The same for everyone who may read the build: computed once and
+	// shared by every open page polling it (sharedread.go).
+	s.shared.serve(w, r, "objects:"+buildID.String(), func(w http.ResponseWriter, r *http.Request) {
+		build, err := s.Queries.GetBuild(r.Context(), buildID)
+		if err != nil {
+			writeError(w, http.StatusNotFound, errors.New("no such build"))
+			return
 		}
-		for i := range views {
-			views[i].TeamNumber = num[views[i].TeamID.String()]
+		objs, err := s.Queries.ListDeployedObjectsByBuild(r.Context(), build.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
 		}
-	}
-	writeJSON(w, http.StatusOK, views)
+		views, err := attachAgentHealth(r.Context(), s.Queries, build.ID, objs)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if views == nil {
+			views = []objectView{}
+		}
+		// Fill in the human team number per object so a client (e.g. `laforge shell`)
+		// can resolve a single host by team + name without mapping team_id itself.
+		if teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID); err == nil {
+			num := make(map[string]int32, len(teams))
+			for _, t := range teams {
+				num[t.ID.String()] = t.TeamNumber
+			}
+			for i := range views {
+				views[i].TeamNumber = num[views[i].TeamID.String()]
+			}
+		}
+		writeJSON(w, http.StatusOK, views)
+	})
 }
 
-// handleListEvents is "Build → Logs", the plain
-// (non-live) read of the whole journal -- handleLiveStatus (live.go) is
-// the same data, tailed.
+// Events a page loads at once, and the most it may ask for. A long or
+// stuck build's journal runs to hundreds of thousands of rows; the Logs page
+// loads the newest page and asks for earlier ones on demand.
+const (
+	eventsPageDefault = 5000
+	eventsPageMax     = 20000
+)
+
+// handleListEvents is "Build → Logs", the plain (non-live) read of the
+// journal, newest first, bounded: `?limit=` (default 5000, at most 20000)
+// and `?before=<RFC 3339>` for the page before that. handleLiveStatus
+// (live.go) is the same data, tailed. GET …/events/summary says how many
+// there are in all.
 func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 	build, repo, err := s.buildAndOwningRepository(r)
 	if err != nil {
@@ -221,16 +250,59 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	rows, err := s.Queries.ListEventsByBuildWithObject(r.Context(), build.ID)
+	limit := eventsPageDefault
+	if v := r.URL.Query().Get("limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			writeError(w, http.StatusBadRequest, errors.New("limit must be a positive number"))
+			return
+		}
+		limit = min(n, eventsPageMax)
+	}
+	before := time.Now().Add(time.Hour) // "everything so far"
+	if v := r.URL.Query().Get("before"); v != "" {
+		t, err := time.Parse(time.RFC3339Nano, v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, errors.New("before must be an RFC 3339 time"))
+			return
+		}
+		before = t
+	}
+	rows, err := s.Queries.ListEventsByBuildWithObjectPage(r.Context(), db.ListEventsByBuildWithObjectPageParams{
+		BuildID: build.ID, Before: pgtype.Timestamptz{Time: before, Valid: true}, MaxRows: int32(limit),
+	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	// Oldest first, as the journal has always been served; the page reverses
+	// for display.
 	views := make([]eventView, 0, len(rows))
-	for _, row := range rows {
+	for i := len(rows) - 1; i >= 0; i-- {
+		row := rows[i]
 		views = append(views, makeEventView(row.Event, row.ObjAsName, row.ObjObjectName, row.TeamNumber))
 	}
 	writeJSON(w, http.StatusOK, views)
+}
+
+// handleEventsSummary is GET /builds/{id}/events/summary: how many events the
+// build's journal holds, so the Logs page can say what fraction it has.
+func (s *Server) handleEventsSummary(w http.ResponseWriter, r *http.Request) {
+	build, repo, err := s.buildAndOwningRepository(r)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	if _, err := s.requireLevel(r.Context(), r, repo, levelRead); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	n, err := s.Queries.CountEventsByBuild(r.Context(), build.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"total": n, "page_size": eventsPageDefault})
 }
 
 // eventView is a journal event flattened together with the host it's
@@ -399,10 +471,18 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	// Best-effort grouping: which authored step each materialized step_index
-	// belongs to. A failure here (content not resolvable, etc.) just leaves
-	// the steps ungrouped rather than failing the list.
+	// Which authored step each row belongs to: the row says (step_group,
+	// since migration 00072), and the content's expansion supplies the label.
+	// Rows from before that fall back to lining the expansion up by
+	// step_index. Best-effort: a failure here (content not resolvable, etc.)
+	// just leaves the steps ungrouped rather than failing the list.
 	groups := s.stepGroups(r.Context(), build, objectID)
+	labels := map[int]string{}
+	for _, g := range groups {
+		if g.label != "" {
+			labels[g.group] = g.label
+		}
+	}
 	views := make([]stepView, 0, len(tasks))
 	for _, t := range tasks {
 		results, err := s.Queries.ListValidatorResultsByTask(r.Context(), t.ID)
@@ -434,7 +514,10 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 		if t.FinishedAt.Valid {
 			v.FinishedAt = &t.FinishedAt.Time
 		}
-		if idx := int(t.StepIndex); idx >= 0 && idx < len(groups) {
+		if t.StepGroup != nil {
+			v.GroupIndex = int(*t.StepGroup)
+			v.GroupLabel = labels[v.GroupIndex]
+		} else if idx := int(t.StepIndex); idx >= 0 && idx < len(groups) {
 			v.GroupIndex = groups[idx].group
 			v.GroupLabel = groups[idx].label
 		}

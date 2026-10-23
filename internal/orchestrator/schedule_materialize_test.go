@@ -189,17 +189,20 @@ func TestDispatchMultiCommandScheduleEntryEnqueuesEveryCommand(t *testing.T) {
 		t.Fatalf("ListAgentTasksByHost: %v", err)
 	}
 	added := len(agentTasks) - len(before)
-	if added != 2 {
-		t.Fatalf("dispatch added %d agent_task rows for %s, want 2 (write_file then execute -- script: reboot's real expansion)", added, st.DeployedObjectID)
+	if added != 3 {
+		t.Fatalf("dispatch added %d agent_task rows for %s, want 3 (write_file, execute, then delete -- script: reboot's real expansion)", added, st.DeployedObjectID)
 	}
 	// The two newest (appended after the host's existing steps) are the
 	// dispatched pair, in order.
-	newest := agentTasks[len(agentTasks)-2:]
+	newest := agentTasks[len(agentTasks)-3:]
 	if newest[0].Command != "write_file" {
 		t.Errorf("newest[0].Command = %q, want \"write_file\"", newest[0].Command)
 	}
 	if newest[1].Command != "execute" {
 		t.Errorf("newest[1].Command = %q, want \"execute\"", newest[1].Command)
+	}
+	if newest[2].Command != "delete" {
+		t.Errorf("newest[2].Command = %q, want \"delete\" (the script is removed from the host)", newest[2].Command)
 	}
 	if newest[0].StepIndex >= newest[1].StepIndex {
 		t.Errorf("step order wrong: write_file at %d, execute at %d -- must run in order", newest[0].StepIndex, newest[1].StepIndex)

@@ -92,6 +92,7 @@ CREATE TABLE public.agent_task (
     step_script text,
     wait_for jsonb,
     scheduled_task_id uuid,
+    step_group integer,
     CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text, 'blocked'::text])))
 );
 --
@@ -106,12 +107,6 @@ CREATE TABLE public.attention_dismissal (
 --
 -- Name: build; Type: TABLE; Schema: public; Owner: -
 --
-CREATE TABLE public.build_render_secret (
-    build_id uuid NOT NULL,
-    secret bytea NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
 CREATE TABLE public.build (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     configured_build_id uuid,
@@ -124,6 +119,14 @@ CREATE TABLE public.build (
     created_by_account_id uuid,
     resolved_revision_id uuid,
     CONSTRAINT build_status_check CHECK ((status = ANY (ARRAY['planned'::text, 'deploying'::text, 'building'::text, 'finished'::text, 'failed'::text, 'tearing_down'::text, 'torn_down'::text, 'purged'::text, 'discarded'::text])))
+);
+--
+-- Name: build_render_secret; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.build_render_secret (
+    build_id uuid NOT NULL,
+    secret bytea NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 --
 -- Name: builder_config; Type: TABLE; Schema: public; Owner: -
@@ -242,7 +245,8 @@ CREATE TABLE public.configured_build (
     competition_started boolean DEFAULT false NOT NULL,
     current_content_revision_id uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    auto_deploy_enabled boolean DEFAULT true NOT NULL
+    auto_deploy_enabled boolean DEFAULT true NOT NULL,
+    hold_on_step_change boolean DEFAULT false NOT NULL
 );
 --
 -- Name: configured_build_favorite; Type: TABLE; Schema: public; Owner: -
@@ -312,8 +316,12 @@ CREATE TABLE public.deployed_object (
     deployed_at timestamp with time zone,
     agent_platform text DEFAULT ''::text NOT NULL,
     agent_checkin_overdue_at timestamp with time zone,
+    infra_fingerprint text DEFAULT ''::text NOT NULL,
+    steps_changed_at timestamp with time zone,
+    steps_changed_fingerprint text DEFAULT ''::text NOT NULL,
+    rebuild_requested_at timestamp with time zone,
     CONSTRAINT deployed_object_kind_check CHECK ((kind = ANY (ARRAY['network'::text, 'host'::text, 'container'::text, 'dns'::text]))),
-    CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroying'::text, 'destroy_failed'::text, 'destroyed'::text])))
+    CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroy_queued'::text, 'destroying'::text, 'destroy_failed'::text, 'destroyed'::text])))
 );
 --
 -- Name: environment; Type: TABLE; Schema: public; Owner: -
@@ -728,12 +736,9 @@ ALTER TABLE ONLY public.attention_dismissal
 --
 ALTER TABLE ONLY public.build
     ADD CONSTRAINT build_pkey PRIMARY KEY (id);
-
-
 --
 -- Name: build_render_secret build_render_secret_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
-
 ALTER TABLE ONLY public.build_render_secret
     ADD CONSTRAINT build_render_secret_pkey PRIMARY KEY (build_id);
 --
@@ -1068,6 +1073,13 @@ CREATE INDEX event_build_idx ON public.event USING btree (build_id, created_at);
 -- Name: event_deployed_object_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 CREATE INDEX event_deployed_object_id_idx ON public.event USING btree (deployed_object_id) WHERE (deployed_object_id IS NOT NULL);
+
+
+--
+-- Name: event_task_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX event_task_id_idx ON public.event USING btree (task_id) WHERE (task_id IS NOT NULL);
 --
 -- Name: external_access_object_idx; Type: INDEX; Schema: public; Owner: -
 --
@@ -1136,6 +1148,9 @@ ALTER TABLE ONLY public.agent_session
 --
 ALTER TABLE ONLY public.agent_task
     ADD CONSTRAINT agent_task_deployed_object_id_fkey FOREIGN KEY (deployed_object_id) REFERENCES public.deployed_object(id) ON DELETE CASCADE;
+--
+-- Name: agent_task agent_task_scheduled_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 ALTER TABLE ONLY public.agent_task
     ADD CONSTRAINT agent_task_scheduled_task_id_fkey FOREIGN KEY (scheduled_task_id) REFERENCES public.scheduled_task(id) ON DELETE SET NULL;
 --
@@ -1148,11 +1163,6 @@ ALTER TABLE ONLY public.attention_dismissal
 --
 ALTER TABLE ONLY public.attention_dismissal
     ADD CONSTRAINT attention_dismissal_build_id_fkey FOREIGN KEY (build_id) REFERENCES public.build(id) ON DELETE CASCADE;
---
--- Name: build_render_secret build_render_secret_build_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-ALTER TABLE ONLY public.build_render_secret
-    ADD CONSTRAINT build_render_secret_build_id_fkey FOREIGN KEY (build_id) REFERENCES public.build(id) ON DELETE CASCADE;
 --
 -- Name: build build_configured_build_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
@@ -1168,6 +1178,11 @@ ALTER TABLE ONLY public.build
 --
 ALTER TABLE ONLY public.build
     ADD CONSTRAINT build_created_by_account_id_fkey FOREIGN KEY (created_by_account_id) REFERENCES public.account(id) ON DELETE SET NULL;
+--
+-- Name: build_render_secret build_render_secret_build_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.build_render_secret
+    ADD CONSTRAINT build_render_secret_build_id_fkey FOREIGN KEY (build_id) REFERENCES public.build(id) ON DELETE CASCADE;
 --
 -- Name: builder_config builder_config_aws_credential_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --

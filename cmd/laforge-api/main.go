@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -113,7 +114,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	q, pool, err := db.Open(ctx, databaseURL)
+	// API_MAX_CONNS sizes the API's database pool. pgx's default is the CPU
+	// count -- 4 on a small host -- which a handful of page loads (each fans
+	// out several requests) and the agent endpoints exhaust, queueing every
+	// other request behind them.
+	apiConns := int32(20)
+	if v := os.Getenv("API_MAX_CONNS"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			log.Fatalf("API_MAX_CONNS must be a positive number, got %q", v)
+		}
+		apiConns = int32(n)
+	}
+	q, pool, err := db.OpenWithMaxConns(ctx, databaseURL, apiConns)
 	if err != nil {
 		log.Fatalf("connecting to database: %v", err)
 	}
@@ -162,7 +175,9 @@ func main() {
 			Q:       q, GH: gh, AppID: appID, AppPrivateKey: appPrivateKey, ServiceToken: serviceToken,
 		}
 	}
-	httpServer := &http.Server{Addr: addr, Handler: server}
+	// Header and idle timeouts only: SSE and WebSocket handlers hold a
+	// response open for as long as the client stays, so no WriteTimeout.
+	httpServer := &http.Server{Addr: addr, Handler: server, ReadHeaderTimeout: 15 * time.Second, IdleTimeout: 2 * time.Minute}
 
 	go func() {
 		<-ctx.Done()
@@ -193,4 +208,3 @@ func envOr(name, fallback string) string {
 	}
 	return fallback
 }
-

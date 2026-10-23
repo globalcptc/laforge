@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/globalcptc/laforge/internal/builder"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -93,7 +94,20 @@ func (c *Client) waitForInstanceCreation(ctx context.Context, name string) error
 	return nil
 }
 
-func (c *Client) createInstance(ctx context.Context, name string, body interface{}) error {
+// externalNameKey records, on every instance LaForge creates, the deployment
+// it was created for (the runner's deterministic external name), so an
+// instance found already existing at create time -- an earlier attempt that
+// the hoster accepted before the runner went away -- is adopted only when
+// it's this deployment's.
+const externalNameKey = "user.laforge_external_name"
+
+// instanceOwner is who an instance being created is for.
+type instanceOwner struct {
+	externalName string
+	team         string
+}
+
+func (c *Client) createInstance(ctx context.Context, name string, body interface{}, owner instanceOwner) error {
 	_, err := c.post(ctx, "/1.0/instances", body)
 	var pending *operationPendingError
 	if errors.As(err, &pending) {
@@ -106,7 +120,34 @@ func (c *Client) createInstance(ctx context.Context, name string, body interface
 		}
 		// A failed create can disappear while we wait. Do not adopt an
 		// instance merely because its name existed at the start of the poll.
-		_, err = c.get(ctx, "/1.0/instances/"+url.PathEscape(name))
+		raw, err := c.get(ctx, "/1.0/instances/"+url.PathEscape(name))
+		if err != nil {
+			return err
+		}
+		return checkOwner(name, raw, owner)
 	}
 	return err
+}
+
+// checkOwner refuses, permanently, to adopt an existing instance that isn't
+// this deployment's: by the deployment name it records, or -- for instances
+// created before that was recorded -- by its team.
+func checkOwner(name string, raw json.RawMessage, owner instanceOwner) error {
+	var inst struct {
+		Config map[string]string `json:"config"`
+	}
+	if err := json.Unmarshal(raw, &inst); err != nil {
+		return fmt.Errorf("reading existing instance %s: %w", name, err)
+	}
+	if recorded := inst.Config[externalNameKey]; recorded != "" {
+		if recorded != owner.externalName {
+			return fmt.Errorf("%w: instance %s already exists and belongs to deployment %s, not %s; refusing to adopt it",
+				builder.ErrPermanentConfig, name, recorded, owner.externalName)
+		}
+	} else if inst.Config[teamConfigKey] != owner.team {
+		return fmt.Errorf("%w: instance %s already exists and isn't recorded as this deployment's (team %q, want %q); refusing to adopt it -- remove it at the hoster or rebuild",
+			builder.ErrPermanentConfig, name, inst.Config[teamConfigKey], owner.team)
+	}
+	slog.Info("Incus instance already existed from an earlier attempt; adopting it", "instance", name, "external_name", owner.externalName)
+	return nil
 }

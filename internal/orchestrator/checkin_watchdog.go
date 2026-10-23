@@ -116,9 +116,12 @@ func CheckAgentCheckins(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.
 				payload["builder_error"] = bldrErr.Error()
 				notes = append(notes, "builder unavailable")
 			} else {
+				// Each hoster call bounded: the watchdog runs on the orchestrator's
+				// main loop, and a hoster that hangs must not take it along.
+				hctx, cancelH := context.WithTimeout(ctx, 30*time.Second)
 				if w.ConsoleBytes > 0 {
 					if cr, ok := bldr.(builder.ConsoleLogReader); ok {
-						if logText, err := cr.ConsoleLog(ctx, team, ref, w.ConsoleBytes); err != nil {
+						if logText, err := cr.ConsoleLog(hctx, team, ref, w.ConsoleBytes); err != nil {
 							payload["console_log_error"] = err.Error()
 						} else {
 							payload["console_log"] = logText
@@ -127,7 +130,7 @@ func CheckAgentCheckins(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.
 					}
 				}
 				if w.Reboot {
-					if err := bldr.PowerAction(ctx, team, ref, builder.PowerReboot, true); err != nil {
+					if err := bldr.PowerAction(hctx, team, ref, builder.PowerReboot, true); err != nil {
 						payload["reboot_error"] = err.Error()
 						notes = append(notes, "forced reboot failed")
 					} else {
@@ -135,6 +138,7 @@ func CheckAgentCheckins(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.
 						notes = append(notes, "forced a reboot")
 					}
 				}
+				cancelH()
 			}
 		}
 

@@ -254,6 +254,8 @@ if (-not $svc -or $svc.Status -ne 'Running') {
   $xmlPath = "C:\laforge-agent-task.xml"
   Set-Content -Path $xmlPath -Value $taskXml -Encoding Unicode
   schtasks /create /tn LaForgeAgent /xml "$xmlPath" /f
+  Remove-Item -LiteralPath $xmlPath -Force -ErrorAction SilentlyContinue
+  Write-Host "deleted $xmlPath"
   schtasks /run /tn LaForgeAgent
 }
 `, setTemp, WindowsAgentFile, binaryURL)

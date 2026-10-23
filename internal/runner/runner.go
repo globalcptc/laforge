@@ -16,8 +16,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -104,6 +106,12 @@ type Runner struct {
 	ID                string
 	LeaseDuration     time.Duration
 	HeartbeatInterval time.Duration
+	// TaskTimeout bounds one task's execution (the builder calls it makes,
+	// retries included). A hung hoster call would otherwise hold the task's
+	// lease -- the heartbeat keeps renewing it -- and with it one of the
+	// builder's concurrency slots, forever. Past it the task fails this
+	// attempt and is retried like any other failure. Zero disables.
+	TaskTimeout time.Duration
 	// RetryBackoffBase scales how long a failed-but-retryable task is held
 	// before it can be re-leased (see RetryBackoff). Zero means the
 	// production default (retryBackoffBase); tests that exercise the retry
@@ -186,6 +194,46 @@ func (r *Runner) LeaseOneForBuilder(ctx context.Context, builderConfigName strin
 	return &task, nil
 }
 
+// IsHeavyTask reports whether a task kind creates or destroys an instance at
+// the hoster -- what a builder's concurrency limit (builder_config.
+// max_concurrency) counts. Access and network configuration tasks are light:
+// ACL and forwarding updates that take seconds and run alongside.
+func IsHeavyTask(kind string) bool {
+	return strings.HasPrefix(kind, "deploy_") || strings.HasPrefix(kind, "destroy_")
+}
+
+// LeaseOneLightForBuilder is LeaseOneForBuilder restricted to light tasks
+// (IsHeavyTask false), for a pool whose deploy/destroy slots are all taken.
+func (r *Runner) LeaseOneLightForBuilder(ctx context.Context, builderConfigName string) (*db.Task, error) {
+	q := db.New(r.Pool)
+	task, err := q.LeaseLightTaskForBuilder(ctx, db.LeaseLightTaskForBuilderParams{
+		LeaseOwner: db.StrPtr(r.ID), Column2: db.Interval(r.LeaseDuration), BuilderConfigName: builderConfigName,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("leasing a light task for builder %q: %w", builderConfigName, err)
+	}
+	return &task, nil
+}
+
+// LeaseOneHeavyForBuilder is LeaseOneForBuilder restricted to deploy/destroy
+// tasks, for a pool whose light lane is full.
+func (r *Runner) LeaseOneHeavyForBuilder(ctx context.Context, builderConfigName string) (*db.Task, error) {
+	q := db.New(r.Pool)
+	task, err := q.LeaseHeavyTaskForBuilder(ctx, db.LeaseHeavyTaskForBuilderParams{
+		LeaseOwner: db.StrPtr(r.ID), Column2: db.Interval(r.LeaseDuration), BuilderConfigName: builderConfigName,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("leasing a deploy/destroy task for builder %q: %w", builderConfigName, err)
+	}
+	return &task, nil
+}
+
 // LeaseAndExecuteOne leases the next available task, if any, executes it
 // against r.Builder, and records the result. Returns (false, nil) when
 // there was nothing leasable right now, distinct from an error, so a
@@ -208,21 +256,51 @@ func (r *Runner) LeaseAndExecuteOne(ctx context.Context) (bool, error) {
 // reason LeaseOne is.
 func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	q := db.New(r.Pool)
+	if cancelled := r.cancelIfBuildGone(ctx, q, task); cancelled {
+		return nil
+	}
 	// Log the START of every task, not just its outcome, so a host's event
 	// timeline shows the whole bring-up (deploy_network started -> completed,
 	// deploy_host started -> completed, access configured, ...) rather than only
 	// terminal lines. Fires per attempt, so retries are visible too.
-	r.logEvent(ctx, q, task.BuildID, task.ID, "task.started", fmt.Sprintf("%s (attempt %d)", task.Kind, task.Attempts))
-	stopHeartbeat := make(chan struct{})
+	r.logEvent(ctx, q, task.BuildID, task.ID, "task.started", fmt.Sprintf("%s (attempt %d of %d, object %s, lease %s)", task.Kind, task.Attempts, MaxAttempts, shortID(task.DeployedObjectID), r.LeaseDuration))
+	taskStarted := time.Now()
+	stopHeartbeatCh := make(chan struct{})
+	var stopOnce sync.Once
+	stopHeartbeat := stopHeartbeatCh
+	closeHeartbeat := func() { stopOnce.Do(func() { close(stopHeartbeatCh) }) }
 	go r.heartbeatLoop(ctx, task.ID, stopHeartbeat)
 	// A builder that times its phases (image copy, config drive, start, time
 	// queued for a host slot) records them here; they ride on this task's
 	// terminal event so the host's event timeline shows where a slow deploy's
 	// time went, on success and failure alike.
 	execCtx, phases := builder.WithPhaseTimer(ctx)
+	if r.TaskTimeout > 0 {
+		var cancel context.CancelFunc
+		execCtx, cancel = context.WithTimeout(execCtx, r.TaskTimeout)
+		defer cancel()
+	}
 	resolved, execErr := r.execute(execCtx, q, task)
-	close(stopHeartbeat)
+	if execErr != nil && ctx.Err() != nil {
+		// The runner is shutting down, not the task failing: hand it back.
+		// Its builder call may have been accepted by the hoster already; the
+		// next attempt adopts what it finds (builders' create is ensure-style).
+		closeHeartbeat()
+		rctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if _, err := db.New(r.Pool).ReleaseTask(rctx, db.ReleaseTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr("handed back: the runner was shutting down")}); err != nil {
+			log.Printf("[%s] task %s: handing it back on shutdown failed (its lease will expire instead): %v", r.ID, shortID(task.ID), err)
+		} else {
+			log.Printf("[%s] build %s task %s: %s handed back on shutdown after %s; it will run again without counting as an attempt", r.ID, shortID(task.BuildID), shortID(task.ID), task.Kind, time.Since(taskStarted).Round(time.Millisecond))
+		}
+		return nil
+	}
+	if execErr != nil && r.TaskTimeout > 0 && errors.Is(execCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
+		execErr = fmt.Errorf("gave up after %s (RUNNER_TASK_TIMEOUT): %w", r.TaskTimeout, execErr)
+	}
+	closeHeartbeat()
 	phaseDetail := phasePayload(phases.Phases())
+	log.Printf("[%s] build %s task %s: %s returned after %s (error: %v)", r.ID, shortID(task.BuildID), shortID(task.ID), task.Kind, time.Since(taskStarted).Round(time.Millisecond), execErr)
 
 	if resolved {
 		// The task row itself is already gone (a "remove" destroy deletes
@@ -241,11 +319,12 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	// success (the network-access bug this handling fixes).
 	if errors.Is(execErr, builder.ErrExternalAccessNotReady) &&
 		(task.Kind == "configure_external_access" || task.Kind == "configure_network_access") {
-		_, err := q.DeferTask(ctx, db.DeferTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Column4: db.Interval(r.RetryBackoff(1))})
+		wait := accessWaitBackoff(r.RetryBackoff(1), time.Since(task.CreatedAt.Time))
+		_, err := q.DeferTask(ctx, db.DeferTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Column4: db.Interval(wait)})
 		if err != nil {
 			return fmt.Errorf("deferring access configuration: %w", err)
 		}
-		r.logEvent(ctx, q, task.BuildID, task.ID, "task.waiting", execErr.Error())
+		r.logEvent(ctx, q, task.BuildID, task.ID, "task.waiting", fmt.Sprintf("%s; checking again in %s", execErr.Error(), wait))
 		return nil
 	}
 	if execErr != nil {
@@ -289,6 +368,49 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	return nil
 }
 
+// accessWaitBackoff is how long an access task waiting on its hosts sleeps
+// before checking again: the runner's first retry backoff at first, growing
+// with how long it has waited (a tenth of it), to at most ten minutes. A wait
+// for hosts that take hours -- or never come back -- used to wake every 30s
+// for as long as the task existed.
+func accessWaitBackoff(first, waited time.Duration) time.Duration {
+	wait := waited / 10
+	if wait < first {
+		wait = first
+	}
+	if wait > 10*time.Minute {
+		wait = 10 * time.Minute
+	}
+	return wait
+}
+
+// cancelIfBuildGone fails a deploy or access task whose build is torn down,
+// being torn down, discarded or purged, instead of running it: nothing it
+// would create is wanted any more. (Access tasks deferred while their hosts
+// were rebuilt used to keep waking for a build torn down days earlier.) Destroys
+// and every other task still run. Returns whether it cancelled the task.
+func (r *Runner) cancelIfBuildGone(ctx context.Context, q *db.Queries, task db.Task) bool {
+	if !strings.HasPrefix(task.Kind, "deploy_") && task.Kind != "configure_external_access" && task.Kind != "configure_network_access" {
+		return false
+	}
+	b, err := q.GetBuild(ctx, task.BuildID)
+	if err != nil {
+		return false // can't tell: run it as before
+	}
+	switch b.Status {
+	case "tearing_down", "torn_down", "discarded", "purged":
+	default:
+		return false
+	}
+	reason := fmt.Sprintf("cancelled: the build is %s, so this %s is no longer wanted", strings.ReplaceAll(b.Status, "_", " "), task.Kind)
+	if _, err := q.FailTask(ctx, db.FailTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(reason), Permanent: true}); err != nil {
+		log.Printf("[%s] build %s task %s: cancelling %s failed: %v", r.ID, shortID(task.BuildID), shortID(task.ID), task.Kind, err)
+		return false
+	}
+	r.logEvent(ctx, q, task.BuildID, task.ID, "task.cancelled", reason)
+	return true
+}
+
 // phasePayload turns a builder's recorded phases into a task event's payload:
 // one human-readable duration per phase (the event timeline renders each key as
 // a detail row), the order they ran in, their total, and the same in
@@ -330,9 +452,13 @@ func (r *Runner) heartbeatLoop(ctx context.Context, taskID pgtype.UUID, stop <-c
 			// `WHERE lease_owner = $2`. A reclaimed runner's eventual
 			// Complete/Retry/Fail calls simply affect zero rows and are
 			// harmless -- whoever reclaimed the lease owns the outcome.
-			q.HeartbeatTask(ctx, db.HeartbeatTaskParams{
+			if _, err := q.HeartbeatTask(ctx, db.HeartbeatTaskParams{
 				ID: taskID, LeaseOwner: db.StrPtr(r.ID), Column3: db.Interval(r.LeaseDuration),
-			})
+			}); err != nil {
+				// Said, not acted on (see above): the log is where a lost
+				// lease shows up while the builder call is still running.
+				log.Printf("[%s] task %s: renewing the lease failed: %v -- another runner may now own it", r.ID, shortID(taskID), err)
+			}
 		case <-stop:
 			return
 		case <-ctx.Done():
@@ -342,9 +468,21 @@ func (r *Runner) heartbeatLoop(ctx context.Context, taskID pgtype.UUID, stop <-c
 }
 
 func (r *Runner) logEvent(ctx context.Context, q *db.Queries, buildID pgtype.UUID, taskID pgtype.UUID, kind, message string) {
+	// Every event the runner records for a build's timeline is also a line
+	// in its own log, so a stalled task can be followed from the process
+	// without the UI, and the two agree.
+	log.Printf("[%s] build %s task %s: %s -- %s", r.ID, shortID(buildID), shortID(taskID), kind, message)
 	q.CreateEvent(ctx, db.CreateEventParams{
 		BuildID: buildID, TaskID: taskID, Kind: kind, Message: message, Payload: []byte("{}"),
 	})
+}
+
+// shortID is the first 8 characters of an id, for log lines; "-" for none.
+func shortID(id pgtype.UUID) string {
+	if !id.Valid {
+		return "-"
+	}
+	return id.String()[:8]
 }
 
 // logBuilderCall records one event per request the runner makes to a builder's
@@ -358,6 +496,7 @@ func (r *Runner) logBuilderCall(ctx context.Context, q *db.Queries, buildID, tas
 	if err != nil || len(payload) == 0 || string(payload) == "null" {
 		payload = []byte("{}")
 	}
+	log.Printf("[%s] build %s task %s: %s -- %s %s", r.ID, shortID(buildID), shortID(taskID), kind, message, payload)
 	q.CreateEvent(ctx, db.CreateEventParams{BuildID: buildID, TaskID: taskID, Kind: kind, Message: message, Payload: payload})
 }
 
@@ -538,8 +677,9 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 	// deployTaskPayload); the priority rides on the spec so a builder that
 	// queues creates (Incus's per-host cap) admits the critical path first.
 	var payload struct {
-		Fingerprint string `json:"fingerprint"`
-		Priority    int    `json:"priority"`
+		Fingerprint      string `json:"fingerprint"`
+		InfraFingerprint string `json:"infra_fingerprint"`
+		Priority         int    `json:"priority"`
 	}
 	json.Unmarshal(task.Payload, &payload)
 
@@ -748,7 +888,7 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 	}
 
 	if _, err := q.MarkDeployedObjectRunning(ctx, db.MarkDeployedObjectRunningParams{
-		ID: obj.ID, ExternalRef: db.StrPtr(externalRef), Fingerprint: payload.Fingerprint,
+		ID: obj.ID, ExternalRef: db.StrPtr(externalRef), Fingerprint: payload.Fingerprint, InfraFingerprint: payload.InfraFingerprint,
 	}); err != nil {
 		return fmt.Errorf("recording running state: %w", err)
 	}

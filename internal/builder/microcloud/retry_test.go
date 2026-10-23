@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/globalcptc/laforge/internal/builder"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -43,7 +44,7 @@ func TestCreateRetriesWaitForOriginalOperation(t *testing.T) {
 	b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: time.Second}, Config{})
 	var delays []time.Duration
 	b.retryWait = func(_ context.Context, d time.Duration) error { delays = append(delays, d); return nil }
-	if err := b.createInstance(context.Background(), "box", map[string]string{"name": "box"}, ""); err != nil {
+	if err := b.createInstance(context.Background(), "box", map[string]string{"name": "box"}, "", instanceOwner{}); err != nil {
 		t.Fatal(err)
 	}
 	if creates != 1 || waits != 3 || reads != 0 || !reflect.DeepEqual(delays, []time.Duration{15 * time.Second, 30 * time.Second}) {
@@ -67,6 +68,9 @@ func TestCreateRetryChecksExactInstanceBeforeResubmitting(t *testing.T) {
 						json.NewEncoder(w).Encode(map[string]interface{}{"type": "error", "error_code": 500, "error": "Failed to begin transaction: context deadline exceeded"})
 						return
 					}
+				} else if r.Method == "GET" && r.URL.Path == "/1.0/operations" {
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "metadata": map[string]interface{}{}})
+					return
 				} else if r.Method == "GET" && r.URL.Path == "/1.0/instances/box" {
 					reads++
 					// A transient exact-read failure must not permit another POST.
@@ -89,14 +93,14 @@ func TestCreateRetryChecksExactInstanceBeforeResubmitting(t *testing.T) {
 			b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client()}, Config{})
 			b.retryWait = func(context.Context, time.Duration) error { return nil }
 			body := map[string]interface{}{"name": "box", "config": map[string]string{"cloud-init.user-data": "same token", publicNICKey: "same IP"}}
-			if err := b.createInstance(context.Background(), "box", body, ""); err != nil {
+			if err := b.createInstance(context.Background(), "box", body, "", instanceOwner{}); err != nil {
 				t.Fatal(err)
 			}
-			want := 2
+			want, wantReads := 2, 2
 			if exists {
-				want = 1
+				want, wantReads = 1, 3 // the found instance is read once more to check it's ours
 			}
-			if creates != want || reads != 2 {
+			if creates != want || reads != wantReads {
 				t.Fatalf("creates=%d reads=%d", creates, reads)
 			}
 			if len(bodies) == 2 && !reflect.DeepEqual(bodies[0], bodies[1]) {
@@ -220,5 +224,78 @@ func TestStartAlreadyRunningStillRequiresStateRead(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// TestCreateAdoptsOwnInstanceThatAlreadyExists is the production failure: an
+// earlier attempt's create was accepted by the cluster before the runner went
+// away, so this attempt's create comes back "already exists" -- as an error
+// envelope from the operation wait (HTTP 200, code 409), which used to stop
+// the deploy on its first attempt. It's adopted when it's this deployment's,
+// and refused, permanently, when it's someone else's.
+func TestCreateAdoptsOwnInstanceThatAlreadyExists(t *testing.T) {
+	for _, owner := range []string{"build-a-team-1-host-web", "build-b-team-1-host-web"} {
+		t.Run(owner, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.Method == "POST" && r.URL.Path == "/1.0/instances":
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "async", "operation": "/1.0/operations/op-1"})
+				case r.URL.Path == "/1.0/operations/op-1/wait":
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "error", "error_code": 409, "error": `Failed creating instance record: Instance "box" already exists`})
+				case r.URL.Path == "/1.0/operations":
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "metadata": map[string]interface{}{}})
+				case r.Method == "GET" && r.URL.Path == "/1.0/instances/box":
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "metadata": map[string]interface{}{
+						"name": "box", "config": map[string]string{externalNameKey: "build-a-team-1-host-web", teamConfigKey: "1"}}})
+				default:
+					t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+				}
+			}))
+			defer srv.Close()
+			b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: time.Second}, Config{})
+			b.retryWait = func(context.Context, time.Duration) error { return nil }
+			err := b.createInstance(context.Background(), "box", map[string]interface{}{"name": "box"}, "", instanceOwner{externalName: owner, team: "1"})
+			if owner == "build-a-team-1-host-web" && err != nil {
+				t.Fatalf("own instance not adopted: %v", err)
+			}
+			if owner == "build-b-team-1-host-web" && (err == nil || !errors.Is(err, builder.ErrPermanentConfig)) {
+				t.Fatalf("another deployment's instance: err = %v, want a permanent refusal", err)
+			}
+		})
+	}
+}
+
+// TestCreateAdoptsLegacyInstanceByTeam is the upgrade case: a deploy the old
+// runner had started when it was replaced left an instance created before
+// LaForge recorded deployment names on instances. The new runner's retry
+// adopts it by its team key -- and refuses one recorded for another team.
+func TestCreateAdoptsLegacyInstanceByTeam(t *testing.T) {
+	for _, team := range []string{"7", "8"} {
+		t.Run("team "+team, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.Method == "POST" && r.URL.Path == "/1.0/instances":
+					w.WriteHeader(409)
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "error", "error_code": 409, "error": `Instance "box" already exists`})
+				case r.URL.Path == "/1.0/operations":
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "metadata": map[string]interface{}{}})
+				case r.Method == "GET" && r.URL.Path == "/1.0/instances/box":
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "metadata": map[string]interface{}{
+						"name": "box", "config": map[string]string{teamConfigKey: "7"}}})
+				default:
+					t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+				}
+			}))
+			defer srv.Close()
+			b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: time.Second}, Config{})
+			b.retryWait = func(context.Context, time.Duration) error { return nil }
+			err := b.createInstance(context.Background(), "box", map[string]interface{}{"name": "box"}, "", instanceOwner{externalName: "build-a-team-7-host-web", team: team})
+			if team == "7" && err != nil {
+				t.Fatalf("legacy instance of the same team not adopted: %v", err)
+			}
+			if team == "8" && (err == nil || !errors.Is(err, builder.ErrPermanentConfig)) {
+				t.Fatalf("legacy instance of another team: err = %v, want a permanent refusal", err)
+			}
+		})
 	}
 }

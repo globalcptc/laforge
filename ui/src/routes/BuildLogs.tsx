@@ -1,8 +1,9 @@
 import { useParams } from '@tanstack/react-router'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Radio, Search, ChevronRight, Download, Copy, Check } from 'lucide-react'
-import { useEvents, useLiveEvents } from '../api/hooks'
+import { ApiError } from '../api/client'
+import { fetchEventsBefore, useEvents, useEventsSummary, useLiveEvents } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import type { LFEvent } from '../api/types'
 import { EmptyState } from '../components/EmptyState'
@@ -93,7 +94,14 @@ function eventDetail(payload: unknown): string {
 // lifecycle) lands here alongside the deploy/access lifecycle.
 export function BuildLogs() {
   const { buildId } = useParams({ from: '/repos/$repoId/builds/$buildId/logs' })
-  const { data: history } = useEvents(buildId)
+  const { data: history, error: historyError, isLoading: historyLoading } = useEvents(buildId)
+  const { data: summary } = useEventsSummary(buildId)
+  // Earlier pages, fetched on demand ("Load earlier"): the api serves the
+  // newest 5,000 at first; a long build's journal can be far larger.
+  const [older, setOlder] = useState<LFEvent[]>([])
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [olderError, setOlderError] = useState<string | null>(null)
+  const [exhausted, setExhausted] = useState(false)
   const [live, setLive] = useState<LFEvent[]>([])
   // Batch incoming live events instead of a setState per event. A busy build
   // streams events faster than React can repaint; appending one at a time meant
@@ -101,9 +109,16 @@ export function BuildLogs() {
   // the main cause of the "page is slowing down" warning. Buffer in a ref and
   // flush on a short interval, so N events become one re-render.
   const liveBuf = useRef<LFEvent[]>([])
-  const { connected } = useLiveEvents(buildId, (ev) => {
-    liveBuf.current.push(ev)
-  })
+  // Connect the live stream once the history is in, from its newest event
+  // (null = history loaded but empty: stream from now).
+  const liveSince = history && history.length > 0 ? history[history.length - 1].created_at : null
+  const { connected } = useLiveEvents(
+    buildId,
+    (ev) => {
+      liveBuf.current.push(ev)
+    },
+    { since: liveSince, enabled: history !== undefined },
+  )
   useEffect(() => {
     const t = setInterval(() => {
       if (liveBuf.current.length === 0) return
@@ -155,10 +170,39 @@ export function BuildLogs() {
     }
   }
 
+  // The whole loaded journal, oldest first, by timestamp -- not by which
+  // request a row arrived in, so an earlier page, the newest page and the
+  // live stream always read in order whatever the fetch order was.
   const all = useMemo(() => {
-    const seen = new Set((history ?? []).map((e) => e.id))
-    return [...(history ?? []), ...live.filter((e) => !seen.has(e.id))]
-  }, [history, live])
+    const seen = new Set<string>()
+    const merged: LFEvent[] = []
+    for (const e of [...older, ...(history ?? []), ...live]) {
+      if (seen.has(e.id)) continue
+      seen.add(e.id)
+      merged.push(e)
+    }
+    merged.sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0))
+    return merged
+  }, [older, history, live])
+
+  async function loadEarlier() {
+    const oldest = all[0]
+    if (!oldest || loadingOlder) return
+    setLoadingOlder(true)
+    setOlderError(null)
+    try {
+      const page = await fetchEventsBefore(buildId, oldest.created_at)
+      if (page.length === 0) setExhausted(true)
+      setOlder((prev) => [...page, ...prev])
+    } catch (e) {
+      setOlderError(e instanceof ApiError ? e.message : 'Could not load earlier events')
+    } finally {
+      setLoadingOlder(false)
+    }
+  }
+  const total = summary?.total
+  const loaded = (older.length + (history?.length ?? 0))
+  const moreAvailable = !exhausted && total != null && loaded < total
 
   // Every distinct kind actually present, for the kind filter -- so it only
   // ever offers values that exist in this build's journal.
@@ -243,7 +287,15 @@ export function BuildLogs() {
         </div>
       </div>
 
-      {all.length === 0 ? (
+      {historyError ? (
+        <EmptyState
+          icon={Radio}
+          title="The log couldn’t be loaded"
+          hint={`${historyError instanceof ApiError ? historyError.message : 'The request failed.'} Live events still stream in below as they happen; reload the page to try again.`}
+        />
+      ) : historyLoading && all.length === 0 ? (
+        <EmptyState icon={Radio} title="Loading the log…" hint="Fetching the newest events." />
+      ) : all.length === 0 ? (
         <EmptyState icon={Radio} title="No events yet" hint="Events appear here as the build progresses." />
       ) : shown.length === 0 ? (
         <EmptyState icon={Search} title="No events match" hint="Clear the search or kind filter to see the full journal." />
@@ -255,38 +307,6 @@ export function BuildLogs() {
           <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }}>
             {rowVirtualizer.getVirtualItems().map((vi) => {
               const ev = shown[vi.index]
-              const detail = eventDetail(ev.payload)
-              // Only rows that carry real extra detail (a step error, a builder
-              // request payload) are expandable. The majority -- step start/done,
-              // task lifecycle, access/network reconciles -- have no payload beyond
-              // their one-line message, so they render as a plain, non-clickable
-              // row (no chevron, nothing to expand into a pointless repeat).
-              const expandable = detail !== ''
-              const isOpen = expandable && expanded.has(ev.id)
-              // Shared leading cells (chevron slot, time, host, kind, message) so
-              // the clickable and plain variants line up pixel-for-pixel.
-              const lead = (
-                <>
-                  {expandable ? (
-                    <ChevronRight size={12} className={cn('shrink-0 text-fg-subtle transition-transform', isOpen && 'rotate-90')} />
-                  ) : (
-                    <span className="w-3 shrink-0" />
-                  )}
-                  <span className="w-24 shrink-0 tabular-nums text-fg-muted">{fmt.time(ev.created_at)}</span>
-                  {ev.host ? (
-                    <span className="w-28 shrink-0 truncate text-fg-muted" title={ev.team_number != null ? `t${ev.team_number}/${ev.host}` : ev.host}>
-                      {ev.team_number != null && <span className="text-fg-subtle">t{ev.team_number}/</span>}
-                      {ev.host}
-                    </span>
-                  ) : (
-                    <span className="w-28 shrink-0 text-fg-subtle">build</span>
-                  )}
-                  <Badge tone={toneForKind(ev.kind)} className="shrink-0">
-                    {ev.kind}
-                  </Badge>
-                  <span className={cn('min-w-0 flex-1 text-fg', !isOpen && 'truncate')} title={ev.message}>{ev.message}</span>
-                </>
-              )
               return (
                 <div
                   key={vi.key}
@@ -295,30 +315,88 @@ export function BuildLogs() {
                   className="absolute left-0 top-0 w-full border-b border-border"
                   style={{ transform: `translateY(${vi.start}px)` }}
                 >
-                  {expandable ? (
-                    <button
-                      type="button"
-                      onClick={() => toggle(ev.id)}
-                      className="flex w-full items-center gap-3 py-1.5 text-left hover:bg-surface-hover"
-                    >
-                      {lead}
-                    </button>
-                  ) : (
-                    <div className="flex w-full items-center gap-3 py-1.5">{lead}</div>
-                  )}
-                  {isOpen && (
-                    // Only the detail -- the message is already on the row above, so
-                    // we never repeat it here.
-                    <pre className="mb-2 ml-[9.75rem] mr-3 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-token border border-border bg-surface-sunken p-2 text-fg">
-                      {detail}
-                    </pre>
-                  )}
+                  <LogRow ev={ev} open={expanded.has(ev.id)} onToggle={() => toggle(ev.id)} timeLabel={fmt.time(ev.created_at)} />
                 </div>
               )
             })}
           </div>
         </div>
       )}
+      {!historyError && all.length > 0 && (total != null || moreAvailable) && (
+        <div className="flex shrink-0 items-center gap-3 border-t border-border pt-2 text-xs text-fg-muted">
+          <span>
+            {total != null && loaded < total ? `Showing the newest ${loaded.toLocaleString()} of ${total.toLocaleString()} events` : `${loaded.toLocaleString()} events`}
+            {query || kind ? ` (${shown.length.toLocaleString()} match the filter)` : ''}
+          </span>
+          {moreAvailable && (
+            <Button variant="secondary" size="sm" onClick={loadEarlier} disabled={loadingOlder}>
+              {loadingOlder ? 'Loading…' : 'Load earlier'}
+            </Button>
+          )}
+          {olderError && <span className="text-danger">{olderError}</span>}
+        </div>
+      )}
     </div>
+  )
+}
+
+// LogRow is one event: one line by default. A row can be opened when there's
+// more to read than fits -- its message is cut off at the window's edge, or
+// it carries detail (a step's error, a builder request) -- and opening it
+// shows the whole message wrapped, then the detail. A short row with nothing
+// more to show has no chevron and doesn't open.
+function LogRow({ ev, open, onToggle, timeLabel }: { ev: LFEvent; open: boolean; onToggle: () => void; timeLabel: string }) {
+  const detail = eventDetail(ev.payload)
+  const msgRef = useRef<HTMLSpanElement>(null)
+  const [overflows, setOverflows] = useState(false)
+  // Measured, not guessed: whether the one-line message is cut off depends on
+  // the window. Re-measured when the window resizes.
+  useLayoutEffect(() => {
+    const el = msgRef.current
+    if (!el) return
+    const measure = () => setOverflows(el.scrollWidth > el.clientWidth + 1)
+    measure()
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    ro?.observe(el)
+    return () => ro?.disconnect()
+  }, [ev.message, open])
+  const expandable = detail !== '' || overflows || open
+  const lead = (
+    <>
+      {expandable ? (
+        <ChevronRight size={12} className={cn('shrink-0 text-fg-subtle transition-transform', open && 'rotate-90')} />
+      ) : (
+        <span className="w-3 shrink-0" />
+      )}
+      <span className="w-24 shrink-0 tabular-nums text-fg-muted">{timeLabel}</span>
+      {ev.host ? (
+        <span className="w-28 shrink-0 truncate text-fg-muted" title={ev.team_number != null ? `t${ev.team_number}/${ev.host}` : ev.host}>
+          {ev.team_number != null && <span className="text-fg-subtle">t{ev.team_number}/</span>}
+          {ev.host}
+        </span>
+      ) : (
+        <span className="w-28 shrink-0 text-fg-subtle">build</span>
+      )}
+      <Badge tone={toneForKind(ev.kind)} className="shrink-0">
+        {ev.kind}
+      </Badge>
+      <span ref={msgRef} className={cn('min-w-0 flex-1 text-fg', open ? 'whitespace-pre-wrap break-words' : 'truncate')} title={open ? undefined : ev.message}>
+        {ev.message}
+      </span>
+    </>
+  )
+  return (
+    <>
+      {expandable ? (
+        <button type="button" onClick={onToggle} className="flex w-full items-start gap-3 py-1.5 text-left hover:bg-surface-hover" aria-expanded={open}>
+          {lead}
+        </button>
+      ) : (
+        <div className="flex w-full items-center gap-3 py-1.5">{lead}</div>
+      )}
+      {open && detail !== '' && (
+        <pre className="mb-2 ml-[9.75rem] mr-3 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-token border border-border bg-surface-sunken p-2 text-fg">{detail}</pre>
+      )}
+    </>
   )
 }

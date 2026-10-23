@@ -147,9 +147,28 @@ func Teardown(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID) erro
 			}
 		}
 
+		// A deploy queued but not started is withdrawn: the build is going
+		// away, and creating the instance only to destroy it holds up the
+		// teardown behind the whole deploy queue.
+		if cancelled, err := q.CancelPendingDeployForObject(ctx, db.CancelPendingDeployForObjectParams{
+			DeployedObjectID: obj.ID, Reason: "withdrawn: the build is being torn down",
+		}); err == nil {
+			decide(ctx, q, buildID, obj.ID, "teardown.withdrew_deploy", fmt.Sprintf("%s: withdrew its queued deploy (not started); the build is being torn down", objectLabel(obj, 0)), map[string]any{"task_id": cancelled.ID.String()})
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("withdrawing %s's queued deploy: %w", objectLabel(obj, 0), err)
+		}
 		created, err := requestTerminalDestroy(ctx, q, buildID, obj)
 		if err != nil {
 			return err
+		}
+		if created {
+			decide(ctx, q, buildID, obj.ID, "teardown.destroy", fmt.Sprintf("%s: destroy task queued for the teardown (hoster ref %s)", objectLabel(obj, 0), db.StrOrEmpty(obj.ExternalRef)), nil)
+		} else {
+			what := "a task"
+			if open, err := q.GetOpenTaskForObject(ctx, obj.ID); err == nil {
+				what = fmt.Sprintf("a %s task (%s, attempt %d)", open.Kind, open.Status, open.Attempts)
+			}
+			decideRepeating(ctx, q, "teardown-wait/"+obj.ID.String(), buildID, obj.ID, "teardown.waiting", fmt.Sprintf("%s: still %s; it has %s in flight, and its destroy is queued once that ends", objectLabel(obj, 0), obj.Status, what), nil)
 		}
 		if created && seen && last.Status == "failed" {
 			q.CreateObjectEvent(ctx, db.CreateObjectEventParams{

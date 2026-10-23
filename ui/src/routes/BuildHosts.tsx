@@ -1,10 +1,11 @@
 import { useParams } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useRef, useState } from 'react'
-import { Box, CalendarClock, Check, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
+import { Box, CalendarClock, Check, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCcw, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
 import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
 import { ObjectLogPanel } from '../components/ObjectLogPanel'
+import { RestartStepsDialog, canRestartSteps } from '../components/RestartStepsDialog'
 import { EnvironmentBoard } from '../components/EnvironmentBoard'
 import { DependencyGraph } from '../components/DependencyGraph'
 import { TaskActionFields, buildTaskPayload, taskFormValid } from '../components/TaskActionForm'
@@ -98,11 +99,12 @@ const POWER_ACTIONS: Record<string, { action: PowerAct; icon: LucideIcon; label:
 // InfraCell shows the live power pill, and on hover (after a ~0.5s dwell, so it
 // doesn't flicker while scanning the list) reveals same-size Start/Stop/Restart
 // controls just past the pill. Each opens the confirm modal for this one host.
-function InfraCell({ obj, onAction, onRebuild }: { obj: DeployedObject; onAction: (action: PowerAct, obj: DeployedObject) => void; onRebuild?: (obj: DeployedObject) => void }) {
+function InfraCell({ obj, onAction, onRebuild, onRestartSteps }: { obj: DeployedObject; onAction: (action: PowerAct, obj: DeployedObject) => void; onRebuild?: (obj: DeployedObject) => void; onRestartSteps?: (obj: DeployedObject) => void }) {
   if (!obj.power_state || GONE_STATES.has(obj.status)) return <span className="text-fg-muted">—</span>
   const actions = POWER_ACTIONS[obj.power_state] ?? []
   const name = obj.as_name ?? obj.object_name
-  if (actions.length === 0 && !onRebuild) return <PowerBadge state={obj.power_state} />
+  const restartable = !!onRestartSteps && canRestartSteps(obj)
+  if (actions.length === 0 && !onRebuild && !restartable) return <PowerBadge state={obj.power_state} />
   return (
     <div className="group/pw relative inline-flex items-center">
       <PowerBadge state={obj.power_state} />
@@ -121,9 +123,22 @@ function InfraCell({ obj, onAction, onRebuild }: { obj: DeployedObject; onAction
             </button>
           )
         })}
-        {onRebuild && (
+        {restartable && (
           <>
             {actions.length > 0 && <span className="mx-0.5 h-3.5 w-px bg-border" />}
+            <button
+              onClick={() => onRestartSteps!(obj)}
+              title={`Restart ${name}'s build from a step, on the box as it is`}
+              aria-label={`Restart ${name} from a step`}
+              className="flex h-5 w-5 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-warning-soft hover:text-warning"
+            >
+              <RotateCcw size={12} />
+            </button>
+          </>
+        )}
+        {onRebuild && (
+          <>
+            {(actions.length > 0 || restartable) && <span className="mx-0.5 h-3.5 w-px bg-border" />}
             <button
               onClick={() => onRebuild(obj)}
               title={`Rebuild ${name} and everything that depends on it`}
@@ -233,7 +248,10 @@ export function BuildHosts() {
   // A forced rebuild (tear down + recreate) of one or more hosts plus their
   // dependents; confirmed in RebuildDialog, which previews the full blast radius.
   const [rebuilding, setRebuilding] = useState<{ ids: string[]; names: string[]; closedTeams: number[] } | null>(null)
-  const [logPanelFor, setLogPanelFor] = useState<{ id: string; label: string; kind: ObjectKind; object?: DeployedObject; teamNumber?: number } | null>(null)
+  // Restart from step: the host(s) it was started from and the authored step;
+  // RestartStepsDialog widens to every team's copy and confirms.
+  const [restarting, setRestarting] = useState<{ ids: string[]; fromGroup: number } | null>(null)
+  const [logPanelFor, setLogPanelFor] = useState<{ id: string; label: string; kind: ObjectKind; object?: DeployedObject; teamNumber?: number; initialTab?: 'steps' } | null>(null)
   const [boardOpen, setBoardOpen] = useState(false)
   const [graphOpen, setGraphOpen] = useState(false)
   const [filter, setFilter] = useState('')
@@ -626,13 +644,25 @@ export function BuildHosts() {
                                       )}
                                     </Td>
                                     <Td>
-                                      <StatusBadge status={h.status} kind={h.kind} blockedOn={h.blocked_on} />
+                                      <span className="flex flex-wrap items-center gap-1">
+                                        <StatusBadge status={h.status} kind={h.kind} blockedOn={h.blocked_on} />
+                                        {h.steps_changed_at && (
+                                          <button
+                                            type="button"
+                                            onClick={() => !readOnly && setRestarting({ ids: [h.id], fromGroup: 0 })}
+                                            title="Its steps or scripts changed in the content; this build holds hosts instead of recreating them. Restart it from a step to apply the change."
+                                          >
+                                            <Badge tone="warning">steps changed</Badge>
+                                          </button>
+                                        )}
+                                      </span>
                                     </Td>
                                     <Td>
                                       <InfraCell
                                         obj={h}
                                         onAction={(action, obj) => setPowerSingle({ action, id: obj.id, name: obj.as_name ?? obj.object_name, team: teamNumberById.get(obj.team_id) ?? null })}
                                         onRebuild={readOnly ? undefined : (obj) => setRebuilding({ ids: [obj.id], names: [obj.as_name ?? obj.object_name], closedTeams: closedTeamsForHosts([obj]) })}
+                                        onRestartSteps={readOnly ? undefined : (obj) => setLogPanelFor({ id: obj.id, label: obj.as_name ?? obj.object_name, kind: obj.kind, object: obj, teamNumber: teamNumberById.get(obj.team_id), initialTab: 'steps' })}
                                       />
                                     </Td>
                                     <Td>{h.agent ? <StatusBadge status={h.agent.agent_status} /> : <span className="text-fg-muted">—</span>}</Td>
@@ -677,6 +707,17 @@ export function BuildHosts() {
             >
               <Hammer size={14} />
             </Button>
+            {new Set(selectedHosts.map((h) => h.object_name)).size === 1 && selectedHosts.some(canRestartSteps) && (
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => setRestarting({ ids: selectedHosts.map((h) => h.id), fromGroup: 0 })}
+                title="Restart from step — run these hosts' builds again from a step, on the boxes as they are"
+                aria-label="Restart from step"
+              >
+                <RotateCcw size={14} />
+              </Button>
+            )}
           </span>
 
           <span className="h-4 w-px bg-border" />
@@ -713,6 +754,19 @@ export function BuildHosts() {
           matched={[{ name: powerSingle.name, team: powerSingle.team }]}
           onClose={() => setPowerSingle(null)}
           onDone={() => setPowerSingle(null)}
+        />
+      )}
+
+      {restarting && buildId && (
+        <RestartStepsDialog
+          buildId={buildId}
+          seedIds={restarting.ids}
+          fromGroup={restarting.fromGroup}
+          onClose={() => setRestarting(null)}
+          onDone={() => {
+            setRestarting(null)
+            setSelected(new Set())
+          }}
         />
       )}
 
@@ -754,7 +808,18 @@ export function BuildHosts() {
       )}
 
       {logPanelFor && buildId && (
-        <ObjectLogPanel repoId={repoId} buildId={buildId} objectId={logPanelFor.id} label={logPanelFor.label} kind={logPanelFor.kind} object={logPanelFor.object} teamNumber={logPanelFor.teamNumber} onClose={() => setLogPanelFor(null)} />
+        <ObjectLogPanel
+          repoId={repoId}
+          buildId={buildId}
+          objectId={logPanelFor.id}
+          label={logPanelFor.label}
+          kind={logPanelFor.kind}
+          object={logPanelFor.object}
+          teamNumber={logPanelFor.teamNumber}
+          initialTab={logPanelFor.initialTab}
+          onRestartFrom={!readOnly && logPanelFor.object && canRestartSteps(logPanelFor.object) ? (group) => setRestarting({ ids: [logPanelFor.id], fromGroup: group }) : undefined}
+          onClose={() => setLogPanelFor(null)}
+        />
       )}
 
       <StatusLegendDialog open={legendOpen} onClose={() => setLegendOpen(false)} />

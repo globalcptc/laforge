@@ -163,6 +163,15 @@ components:
         dry_run:
           type: boolean
           description: Resolve and return the affected set without changing anything.
+    RestartStepsRequest:
+      type: object
+      required: [target, from_group]
+      properties:
+        target: { $ref: '#/components/schemas/AdHocTarget' }
+        from_group: { type: integer, description: The authored step (index into the host's `steps:`) to restart from. }
+        resume_dependents: { type: boolean, default: true, description: Put hosts failed for depending on these back to running, so their steps queue once these finish. }
+        force: { type: boolean, description: Restart a host even while a step is running on it. }
+        dry_run: { type: boolean }
     RebuildResponse:
       type: object
       properties:
@@ -411,6 +420,8 @@ paths:
     delete: { tags: [Configured Builds], summary: Delete a configured build (build)., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
   /configured-builds/{id}/auto-deploy:
     post: { tags: [Configured Builds], summary: Toggle auto-deploy following (build)., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
+  /configured-builds/{id}/hold-on-step-change:
+    post: { tags: [Configured Builds], summary: "Toggle holding hosts on step-only content changes: marked for a restart from a step instead of recreated (build).", parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
   /configured-builds/{id}/lock:
     post: { tags: [Configured Builds], summary: Toggle the competition-started lock (build)., parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ], responses: { '200': { description: OK } } }
   /configured-builds/{id}/sync:
@@ -527,6 +538,19 @@ paths:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/RebuildResponse' } } } }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/BadRequest' }
+  /builds/{id}/restart-steps:
+    post:
+      tags: [Operations]
+      summary: "Run hosts' builds again from an authored step, on the boxes as they are (manage)."
+      description: "Restart from step (docs/plans/restart-from-step.md). The target must be one host definition (same object_name); every step from `from_group` on is deleted and queued again from the build's current content, in full, and each host goes back to building. `dry_run` widens an id target to every team's copy of the host and reports, per host, its state, the steps that would run again, whether a step is running now, and the dependents that would resume. Without `force`, a host with a step running is skipped. 409 when no target can be restarted."
+      parameters: [ { $ref: '#/components/parameters/BuildId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/RestartStepsRequest' } } }
+      responses:
+        '200': { description: "{ hosts: [RestartHost], restarted, dry_run, from_group }" }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Nothing to restart, or the build isn't deployed }
   /builds/{id}/teams/{team}/access:
     post:
       tags: [Operations]

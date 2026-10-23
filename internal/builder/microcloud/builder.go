@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/globalcptc/laforge/internal/agentdelivery"
@@ -491,7 +492,7 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	if len(publicPlans) > 0 {
 		public = publicPlans[0]
 	}
-	config := map[string]string{teamConfigKey: team}
+	config := map[string]string{teamConfigKey: team, externalNameKey: externalName}
 	if nesting {
 		// A LaForge Docker container runs Docker INSIDE this LXD system
 		// container, which needs nested-container support enabled.
@@ -663,7 +664,7 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 			return name, err
 		}
 	}
-	if err := b.createInstance(ctx, name, request, b.clusterTarget(ctx)); err != nil {
+	if err := b.createInstance(ctx, name, request, b.clusterTarget(ctx), instanceOwner{externalName: externalName, team: team}); err != nil {
 		// A copy whose requested root disk is smaller than the source snapshot's
 		// block volume fails here with "Block volumes cannot be shrunk" -- a
 		// configuration mismatch retrying can't fix (and preflight catches when
@@ -780,76 +781,214 @@ func (b *Builder) destroyInstance(ctx context.Context, name string, options ...d
 		opts = options[0]
 	}
 	retain := opts.keepPublicAddress
-	if opts.externalName != "" {
-		full, _, err := b.getInstancePut(ctx, name)
-		if err != nil {
-			var apiErr *APIError
-			if !errors.As(err, &apiErr) || apiErr.HTTPStatus != 404 {
-				return err
-			}
+	destroyStarted := time.Now()
+
+	// A create the cluster is still carrying out (an interrupted deploy's) is
+	// waited out first: destroying around it would either miss the instance
+	// it's about to produce or fail against a busy one.
+	if err := b.Client.waitForInstanceCreation(ctx, name); err != nil {
+		slog.WarnContext(ctx, "MicroCloud destroy: couldn't check for an unfinished creation; going ahead", "instance", name, "error", err)
+	}
+
+	// One read first, always: it guards against deleting another deployment's
+	// box, and it says what this instance actually has -- a public NIC with
+	// its ACL, a per-host port ACL, a config-drive volume -- so the cleanup
+	// after the delete removes exactly those, not a blind list of everything
+	// it might have had. A destroy is otherwise six or seven hoster requests
+	// whatever the host; this makes a plain Linux host three.
+	var leftovers []leftover
+	exists := true
+	full, expanded, err := b.getInstancePut(ctx, name)
+	if err != nil {
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) || apiErr.HTTPStatus != 404 {
+			return err
+		}
+		exists = false
+		if opts.externalName != "" {
 			// Nothing exists at this exact name. Do not delete later by name:
 			// a different colliding deployment could be creating it right now.
+			slog.InfoContext(ctx, "MicroCloud destroy: no instance by this name; nothing to delete", "project", b.Client.Project, "instance", name)
 			if b.PublicAddresses != nil && !retain {
 				return b.PublicAddresses.Release(ctx, b.publicProject(), name, opts.externalName)
 			}
 			return nil
 		}
-		if raw := full.Config[publicNICKey]; raw != "" {
-			var plan publicNICPlan
-			if err := json.Unmarshal([]byte(raw), &plan); err != nil {
-				return err
-			}
-			if plan.ExternalName != opts.externalName {
-				return fmt.Errorf("instance %s belongs to another deployment; refusing to delete it", name)
+		// A destroy by deterministic name for something whose creation may
+		// have half-happened: nothing to stop or delete, but anything it left
+		// behind is removed blind, since there's no instance to ask.
+		slog.InfoContext(ctx, "MicroCloud destroy: no instance by this name; removing anything a partial create left behind", "project", b.Client.Project, "instance", name)
+		leftovers = []leftover{b.publicACLLeftover(name), b.hostACLLeftover(name), b.cidataLeftover(name)}
+	} else {
+		if opts.externalName != "" {
+			if raw := full.Config[publicNICKey]; raw != "" {
+				var plan publicNICPlan
+				if err := json.Unmarshal([]byte(raw), &plan); err != nil {
+					return err
+				}
+				if plan.ExternalName != opts.externalName {
+					return fmt.Errorf("instance %s belongs to another deployment; refusing to delete it", name)
+				}
 			}
 		}
+		leftovers = b.leftoversOf(name, full, expanded)
 	}
-	slog.InfoContext(ctx, "MicroCloud deleting instance", "project", b.Client.Project, "instance", name, "retain_public_ip_for_rebuild", retain)
-	_, err := b.Client.put(ctx, "/1.0/instances/"+name+"/state", map[string]interface{}{
-		"action": "stop", "timeout": 30, "force": true,
-	})
-	if err != nil {
-		var apiErr *APIError
-		alreadyStopped := errors.As(err, &apiErr) && (apiErr.NotFound() ||
-			strings.Contains(apiErr.Message, "already stopped") || strings.Contains(apiErr.Message, "not running"))
-		if !alreadyStopped {
-			return fmt.Errorf("stopping instance %s: %w", name, err)
-		}
-	}
-	_, err = b.Client.delete(ctx, "/1.0/instances/"+name)
-	if err != nil {
-		var apiErr *APIError
-		if errors.As(err, &apiErr) && apiErr.NotFound() {
-			// Still clean up the config-drive volume below.
+
+	if exists {
+		slog.InfoContext(ctx, "MicroCloud destroying instance: stopping it (force, 30s)", "project", b.Client.Project, "instance", name, "retain_public_ip_for_rebuild", retain, "leftovers_to_remove", leftoverNames(leftovers))
+		_, err = b.Client.put(ctx, "/1.0/instances/"+name+"/state", map[string]interface{}{
+			"action": "stop", "timeout": 30, "force": true,
+		})
+		if err != nil {
+			var apiErr *APIError
+			alreadyStopped := errors.As(err, &apiErr) && (apiErr.NotFound() ||
+				strings.Contains(apiErr.Message, "already stopped") || strings.Contains(apiErr.Message, "not running"))
+			if !alreadyStopped {
+				slog.ErrorContext(ctx, "MicroCloud destroy: stop failed", "instance", name, "elapsed", time.Since(destroyStarted).Round(time.Millisecond), "error", err)
+				return fmt.Errorf("stopping instance %s: %w", name, err)
+			}
+			slog.InfoContext(ctx, "MicroCloud destroy: instance already stopped or gone", "instance", name, "detail", err.Error())
 		} else {
-			return fmt.Errorf("deleting instance %s: %w", name, err)
+			slog.InfoContext(ctx, "MicroCloud destroy: instance stopped", "instance", name, "elapsed", time.Since(destroyStarted).Round(time.Millisecond))
+		}
+		deleteStarted := time.Now()
+		slog.InfoContext(ctx, "MicroCloud destroy: deleting the instance", "instance", name)
+		_, err = b.Client.delete(ctx, "/1.0/instances/"+name)
+		if err != nil {
+			var apiErr *APIError
+			if errors.As(err, &apiErr) && apiErr.NotFound() {
+				slog.InfoContext(ctx, "MicroCloud destroy: instance was already gone", "instance", name)
+			} else {
+				slog.ErrorContext(ctx, "MicroCloud destroy: delete failed", "instance", name, "elapsed", time.Since(deleteStarted).Round(time.Millisecond), "error", err)
+				return fmt.Errorf("deleting instance %s: %w", name, err)
+			}
+		} else {
+			slog.InfoContext(ctx, "MicroCloud destroy: instance deleted", "instance", name, "elapsed", time.Since(deleteStarted).Round(time.Millisecond))
 		}
 	}
+
+	// The delete operation's own result is the confirmation (a 404 on delete
+	// means it was already gone); no second read. The public address is only
+	// released once the instance is known gone, which is now.
 	if b.PublicAddresses != nil {
-		// A successful asynchronous delete is followed by an exact read. Do
-		// not free the address while deletion is still in flight or uncertain.
-		_, readErr := b.Client.get(ctx, "/1.0/instances/"+name)
-		var apiErr *APIError
-		if !errors.As(readErr, &apiErr) || apiErr.HTTPStatus != 404 {
-			slog.WarnContext(ctx, "MicroCloud deletion uncertain; public IP remains reserved", "project", b.publicProject(), "instance", name, "error", readErr)
-			return fmt.Errorf("instance %s deletion not confirmed; retaining public address: %v", name, readErr)
-		}
 		if !retain {
 			if err := b.PublicAddresses.Release(ctx, b.publicProject(), name, opts.externalName); err != nil {
+				slog.ErrorContext(ctx, "MicroCloud destroy: releasing the public address failed", "instance", name, "error", err)
 				return fmt.Errorf("releasing public address: %w", err)
 			}
+			slog.InfoContext(ctx, "MicroCloud destroy: public address released", "instance", name)
 		} else {
 			slog.InfoContext(ctx, "MicroCloud public IP reservation retained for rebuild", "project", b.publicProject(), "instance", name)
 		}
 	}
-	_, _ = b.Client.delete(ctx, "/1.0/network-acls/"+publicACLName(b.publicProject(), name))
-	// Remove the config-drive volume, if this instance had one (Windows).
-	// A no-op when there wasn't one; never fails the destroy.
-	_ = b.Client.deleteVolume(ctx, b.Config.storagePoolOrDefault(), cidataVolName(name))
-	// Remove this instance's per-host port-firewall ACL now that its only user
-	// is gone, so it doesn't linger orphaned. Best-effort. Mirrors incus.
-	_, _ = b.Client.delete(ctx, "/1.0/network-acls/"+hostACLName(name))
+
+	// What the instance left behind goes concurrently -- the ACLs and the
+	// volume are independent of each other, and all belong to this one task,
+	// so this stays within the builder's concurrency limit. Best-effort, and
+	// logged by the client request by request; a failure never fails the
+	// destroy (the next deploy's own ensure/replace handles a straggler).
+	if len(leftovers) > 0 {
+		slog.InfoContext(ctx, "MicroCloud destroy: removing what it left behind", "instance", name, "leftovers", leftoverNames(leftovers))
+		var wg sync.WaitGroup
+		for _, l := range leftovers {
+			wg.Add(1)
+			go func(l leftover) {
+				defer wg.Done()
+				if err := l.remove(ctx); err != nil {
+					slog.WarnContext(ctx, "MicroCloud destroy: leftover not removed", "instance", name, "leftover", l.name, "error", err)
+				}
+			}(l)
+		}
+		wg.Wait()
+	}
+	slog.InfoContext(ctx, "MicroCloud destroy: done", "instance", name, "elapsed", time.Since(destroyStarted).Round(time.Millisecond))
 	return nil
+}
+
+// leftover is one thing a destroyed instance leaves behind to remove.
+type leftover struct {
+	name   string
+	remove func(ctx context.Context) error
+}
+
+func leftoverNames(ls []leftover) []string {
+	out := make([]string, 0, len(ls))
+	for _, l := range ls {
+		out = append(out, l.name)
+	}
+	return out
+}
+
+// leftoversOf reads, from the instance as the hoster describes it, which of
+// the things LaForge attaches at deploy this instance actually has: the public
+// NIC's ACL (eth1), the per-host port ACL on eth0, and a config-drive volume
+// (Windows: the cidata disk is a custom volume in a pool; Linux's is the
+// built-in cloud-init:config and has no volume).
+func (b *Builder) leftoversOf(name string, full instancePut, expanded map[string]interface{}) []leftover {
+	device := func(dev string) map[string]interface{} {
+		if raw, ok := full.Devices[dev]; ok {
+			var d map[string]interface{}
+			if json.Unmarshal(raw, &d) == nil {
+				return d
+			}
+		}
+		if d, ok := expanded[dev].(map[string]interface{}); ok {
+			return d
+		}
+		return nil
+	}
+	acls := func(dev string) string {
+		if d := device(dev); d != nil {
+			if v, ok := d["security.acls"].(string); ok {
+				return v
+			}
+		}
+		return ""
+	}
+	var out []leftover
+	if strings.Contains(acls(publicNICName), publicACLName(b.publicProject(), name)) {
+		out = append(out, b.publicACLLeftover(name))
+	}
+	if strings.Contains(acls("eth0"), hostACLName(name)) {
+		out = append(out, b.hostACLLeftover(name))
+	}
+	if d := device("cidata"); d != nil {
+		if pool, _ := d["pool"].(string); pool != "" {
+			out = append(out, b.cidataLeftover(name))
+		}
+	}
+	return out
+}
+
+func (b *Builder) publicACLLeftover(name string) leftover {
+	acl := publicACLName(b.publicProject(), name)
+	return leftover{name: "public ACL " + acl, remove: func(ctx context.Context) error {
+		_, err := b.Client.delete(ctx, "/1.0/network-acls/"+acl)
+		return ignoreNotFound(err)
+	}}
+}
+
+func (b *Builder) hostACLLeftover(name string) leftover {
+	acl := hostACLName(name)
+	return leftover{name: "host port ACL " + acl, remove: func(ctx context.Context) error {
+		_, err := b.Client.delete(ctx, "/1.0/network-acls/"+acl)
+		return ignoreNotFound(err)
+	}}
+}
+
+func (b *Builder) cidataLeftover(name string) leftover {
+	vol := cidataVolName(name)
+	return leftover{name: "config drive " + vol, remove: func(ctx context.Context) error {
+		return b.Client.deleteVolume(ctx, b.Config.storagePoolOrDefault(), vol)
+	}}
+}
+
+func ignoreNotFound(err error) error {
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && apiErr.NotFound() {
+		return nil
+	}
+	return err
 }
 
 type mcInstance struct {

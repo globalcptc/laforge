@@ -365,7 +365,11 @@ func (s *Server) sessionFromRequest(r *http.Request) (authSession, error) {
 	if err != nil || c.Value == "" {
 		return authSession{}, errUnauthenticated
 	}
-	row, err := s.Queries.GetSessionByTokenHash(r.Context(), hashToken(c.Value))
+	hash := hashToken(c.Value)
+	if row, ok := s.auth.session(hash); ok {
+		return authSession{row}, nil
+	}
+	row, err := s.Queries.GetSessionByTokenHash(r.Context(), hash)
 	if err != nil {
 		return authSession{}, errUnauthenticated
 	}
@@ -373,6 +377,7 @@ func (s *Server) sessionFromRequest(r *http.Request) (authSession, error) {
 	if err != nil {
 		return authSession{}, err
 	}
+	s.auth.putSession(hash, row)
 	return authSession{row}, nil
 }
 
@@ -513,16 +518,25 @@ func (s *Server) effectiveLevel(ctx context.Context, sess authSession, repo db.R
 	if s.isInstanceAdmin(sess) {
 		return levelAdmin, nil
 	}
+	if l, ok := s.auth.level(sess.AccountID, repo.ID); ok {
+		return l, nil
+	}
 	grant, err := s.Queries.GetRepositoryAccess(ctx, db.GetRepositoryAccessParams{RepositoryID: repo.ID, AccountID: sess.AccountID})
 	if err == nil {
-		return parseLevel(grant.Level), nil
+		l := parseLevel(grant.Level)
+		s.auth.putLevel(sess.AccountID, repo.ID, l)
+		return l, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return levelNone, err
 	}
 	ghRepo, err := s.GH.GetRepo(ctx, sess.GithubToken, repo.GithubOwner, repo.GithubRepo)
 	if err != nil {
-		return levelNone, nil // can't see the repo on GitHub -- no access unless an admin grants it
+		// Can't see the repo on GitHub -- no access unless an admin grants
+		// it. Not cached: it may be a passing GitHub failure.
+		return levelNone, nil
 	}
-	return githubRoleLevel(ghRepo.Permissions), nil
+	l := githubRoleLevel(ghRepo.Permissions)
+	s.auth.putLevel(sess.AccountID, repo.ID, l)
+	return l, nil
 }

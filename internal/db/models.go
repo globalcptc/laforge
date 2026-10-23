@@ -78,6 +78,7 @@ type AgentTask struct {
 	StepScript       *string            `json:"step_script"`
 	WaitFor          json.RawMessage    `json:"wait_for"`
 	ScheduledTaskID  pgtype.UUID        `json:"scheduled_task_id"`
+	StepGroup        *int32             `json:"step_group"`
 }
 
 type AttentionDismissal struct {
@@ -196,6 +197,7 @@ type ConfiguredBuild struct {
 	CurrentContentRevisionID pgtype.UUID        `json:"current_content_revision_id"`
 	CreatedAt                pgtype.Timestamptz `json:"created_at"`
 	AutoDeployEnabled        bool               `json:"auto_deploy_enabled"`
+	HoldOnStepChange         bool               `json:"hold_on_step_change"`
 }
 
 type ConfiguredBuildFavorite struct {
@@ -237,26 +239,30 @@ type ContentRevision struct {
 }
 
 type DeployedObject struct {
-	ID                    pgtype.UUID        `json:"id"`
-	TeamID                pgtype.UUID        `json:"team_id"`
-	Kind                  string             `json:"kind"`
-	ObjectName            string             `json:"object_name"`
-	AsName                *string            `json:"as_name"`
-	NetworkName           *string            `json:"network_name"`
-	Fingerprint           string             `json:"fingerprint"`
-	Status                string             `json:"status"`
-	ExternalRef           *string            `json:"external_ref"`
-	LastError             *string            `json:"last_error"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
-	PowerState            string             `json:"power_state"`
-	PowerStateCheckedAt   pgtype.Timestamptz `json:"power_state_checked_at"`
-	Tags                  json.RawMessage    `json:"tags"`
-	StepsMaterializedAt   pgtype.Timestamptz `json:"steps_materialized_at"`
-	BlockedOn             json.RawMessage    `json:"blocked_on"`
-	PublicAddress         string             `json:"public_address"`
-	DeployedAt            pgtype.Timestamptz `json:"deployed_at"`
-	AgentPlatform         string             `json:"agent_platform"`
-	AgentCheckinOverdueAt pgtype.Timestamptz `json:"agent_checkin_overdue_at"`
+	ID                      pgtype.UUID        `json:"id"`
+	TeamID                  pgtype.UUID        `json:"team_id"`
+	Kind                    string             `json:"kind"`
+	ObjectName              string             `json:"object_name"`
+	AsName                  *string            `json:"as_name"`
+	NetworkName             *string            `json:"network_name"`
+	Fingerprint             string             `json:"fingerprint"`
+	Status                  string             `json:"status"`
+	ExternalRef             *string            `json:"external_ref"`
+	LastError               *string            `json:"last_error"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	PowerState              string             `json:"power_state"`
+	PowerStateCheckedAt     pgtype.Timestamptz `json:"power_state_checked_at"`
+	Tags                    json.RawMessage    `json:"tags"`
+	StepsMaterializedAt     pgtype.Timestamptz `json:"steps_materialized_at"`
+	BlockedOn               json.RawMessage    `json:"blocked_on"`
+	PublicAddress           string             `json:"public_address"`
+	DeployedAt              pgtype.Timestamptz `json:"deployed_at"`
+	AgentPlatform           string             `json:"agent_platform"`
+	AgentCheckinOverdueAt   pgtype.Timestamptz `json:"agent_checkin_overdue_at"`
+	InfraFingerprint        string             `json:"infra_fingerprint"`
+	StepsChangedAt          pgtype.Timestamptz `json:"steps_changed_at"`
+	StepsChangedFingerprint string             `json:"steps_changed_fingerprint"`
+	RebuildRequestedAt      pgtype.Timestamptz `json:"rebuild_requested_at"`
 }
 
 type Environment struct {

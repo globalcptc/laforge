@@ -19,8 +19,12 @@ package api
 
 import (
 	"crypto/rsa"
+	"log"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -31,6 +35,13 @@ import (
 
 type Server struct {
 	Queries *db.Queries
+	// live is the one shared LISTEN behind every live stream (livehub.go).
+	live *liveHub
+	// shared lets every viewer of a build share one computation of the
+	// build-wide reads open pages poll (sharedread.go).
+	shared sharedReads
+	// auth caches the answers access checks need (authcache.go).
+	auth authCache
 	// Pool is used only where a transaction spans more than one query --
 	// today, that's internal/ingest.ValidateAndStore, called from
 	// webhook.go's reconcile. Every other handler goes through Queries.
@@ -119,7 +130,8 @@ type Server struct {
 }
 
 func New(q *db.Queries, pool *pgxpool.Pool, gh *ghclient.Client, webhookSecret, serviceToken string) *Server {
-	s := &Server{Queries: q, Pool: pool, GH: gh, WebhookSecret: webhookSecret, ServiceToken: serviceToken}
+	s := &Server{Queries: q, Pool: pool, GH: gh, WebhookSecret: webhookSecret, ServiceToken: serviceToken, live: newLiveHub(pool, q)}
+	s.live.changed = s.shared.forgetBuild
 	s.routes()
 	return s
 }
@@ -145,7 +157,80 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	s.mux.ServeHTTP(w, r)
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		// Reads are logged only when they fail or are slow -- the ones an
+		// operator goes looking for when a page won't load. Streams (live
+		// updates, terminals) are long by design and aren't timed.
+		// The writer goes to them unwrapped (they need its Flusher/Hijacker).
+		if strings.HasSuffix(r.URL.Path, "/live") || strings.HasSuffix(r.URL.Path, "/terminal") {
+			s.mux.ServeHTTP(w, r)
+			return
+		}
+		started := time.Now()
+		rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		s.mux.ServeHTTP(rw, r)
+		took := time.Since(started)
+		if rw.status >= 400 || took > slowRequest {
+			log.Printf("api: %s %s -> %d in %s (by %s from %s)", r.Method, r.URL.Path, rw.status, took.Round(time.Millisecond), s.actorFor(r), clientAddr(r))
+		}
+		return
+	}
+	// Every request that changes something is a line in the api's log --
+	// who, what, the answer and how long -- so an operator's action
+	// (deploy, rebuild, restart, teardown, a command) can be found in the
+	// log next to what the orchestrator and runner then did about it.
+	started := time.Now()
+	rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+	s.mux.ServeHTTP(rw, r)
+	// A change to a build shows on the next read, not up to sharedReadMaxAge
+	// later.
+	// Sessions and access levels are re-read after any change: a logout or
+	// an access grant takes effect on the next request.
+	s.auth.forgetAccess()
+	if rest, ok := strings.CutPrefix(r.URL.Path, "/builds/"); ok {
+		id, _, _ := strings.Cut(rest, "/")
+		s.shared.forgetBuild(id)
+	}
+	log.Printf("api: %s %s -> %d in %s (by %s from %s)", r.Method, r.URL.Path, rw.status, time.Since(started).Round(time.Millisecond), s.actorFor(r), clientAddr(r))
+}
+
+// slowRequest is how long a read can take before it's logged.
+const slowRequest = 2 * time.Second
+
+// statusRecorder remembers the status a handler wrote, for the request log.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusRecorder) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+// Unwrap lets http.ResponseController reach the real writer (flushing,
+// hijacking for WebSockets) through the recorder.
+func (w *statusRecorder) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
+// actorFor names who made a request, for the log: the session's or token's
+// GitHub login, the agent or site for machine callers, or "anonymous".
+func (s *Server) actorFor(r *http.Request) string {
+	if sess, err := s.sessionFromRequest(r); err == nil && sess.GithubLogin != "" {
+		return sess.GithubLogin
+	}
+	if auth := r.Header.Get("Authorization"); auth != "" {
+		scheme, _, _ := strings.Cut(auth, " ")
+		return strings.ToLower(scheme) + " token"
+	}
+	return "anonymous"
+}
+
+// clientAddr is the request's peer address without the port.
+func clientAddr(r *http.Request) string {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
 
 func (s *Server) routes() {
@@ -171,6 +256,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /configured-builds/{id}", s.handleGetConfiguredBuild)
 	mux.HandleFunc("DELETE /configured-builds/{id}", s.handleDeleteConfiguredBuild)
 	mux.HandleFunc("POST /configured-builds/{id}/auto-deploy", s.handleSetConfiguredBuildAutoDeploy)
+	mux.HandleFunc("POST /configured-builds/{id}/hold-on-step-change", s.handleSetConfiguredBuildHoldOnStepChange)
 	mux.HandleFunc("POST /configured-builds/{id}/lock", s.handleSetLock)
 	mux.HandleFunc("POST /configured-builds/{id}/sync", s.handleSyncConfiguredBuild)
 	mux.HandleFunc("POST /configured-builds/{id}/builds", s.handleTriggerBuild)
@@ -250,10 +336,12 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/infra", s.handleObjectInfra)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/config", s.handleObjectConfig)
 	mux.HandleFunc("GET /builds/{id}/events", s.handleListEvents)
+	mux.HandleFunc("GET /builds/{id}/events/summary", s.handleEventsSummary)
 	mux.HandleFunc("GET /builds/{id}/live", s.handleLiveStatus)
 	mux.HandleFunc("POST /builds/{id}/tasks", s.handleCreateAdHocTask)
 	mux.HandleFunc("POST /builds/{id}/power", s.handlePowerAction)
 	mux.HandleFunc("POST /builds/{id}/rebuild", s.handleRebuild)
+	mux.HandleFunc("POST /builds/{id}/restart-steps", s.handleRestartSteps)
 	mux.HandleFunc("GET /cert-status", s.handleCertStatus)
 	mux.HandleFunc("POST /builds/{id}/scheduled-tasks", s.handleCreateScheduledTask)
 	mux.HandleFunc("POST /builds/{id}/scheduled-tasks/preview", s.handlePreviewScheduledTask)

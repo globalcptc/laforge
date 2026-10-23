@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { ChevronDown, GitBranch, GitCommitHorizontal, Hammer, IterationCw, MousePointerClick, Plus, Rocket, Lock, Unlock, Star, Trash2, RefreshCw } from 'lucide-react'
+import { ChevronDown, GitBranch, GitCommitHorizontal, Hammer, IterationCw, MousePointerClick, Plus, Rocket, Lock, Unlock, Star, Trash2, RefreshCw, RotateCcw } from 'lucide-react'
 import {
   useBuilderConfigs,
   useBuilds,
@@ -10,6 +10,7 @@ import {
   useSyncConfiguredBuild,
   useDeleteConfiguredBuild,
   useSetConfiguredBuildAutoDeploy,
+  useSetConfiguredBuildHoldOnStepChange,
   useSetConfiguredBuildFavorite,
   useSetLock,
 } from '../api/hooks'
@@ -167,6 +168,7 @@ function ConfiguredBuildRow({
   const sync = useSyncConfiguredBuild(repoId)
   const remove = useDeleteConfiguredBuild(repoId)
   const setAutoDeploy = useSetConfiguredBuildAutoDeploy(repoId)
+  const setHold = useSetConfiguredBuildHoldOnStepChange(repoId)
   const setLock = useSetLock(repoId)
   const favorite = useSetConfiguredBuildFavorite(repoId)
 
@@ -225,6 +227,15 @@ function ConfiguredBuildRow({
       await setAutoDeploy.mutateAsync({ configuredBuildId: cb.id, enabled: !cb.auto_deploy_enabled })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Failed to change auto-deploy')
+    }
+  }
+
+  async function onToggleHold() {
+    setError(null)
+    try {
+      await setHold.mutateAsync({ configuredBuildId: cb.id, enabled: !cb.hold_on_step_change })
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to change the hold')
     }
   }
 
@@ -292,6 +303,22 @@ function ConfiguredBuildRow({
           )}
         >
           <Rocket size={12} /> {cb.auto_deploy_enabled ? 'Auto-deploy' : 'Build only'}
+        </button>
+
+        <button
+          onClick={onToggleHold}
+          disabled={setHold.isPending}
+          title={
+            cb.hold_on_step_change
+              ? 'Holding: a push that changes only a host’s steps or scripts marks the host (“steps changed”) instead of recreating it; restart it from a step to apply. Changes to its image, size, ports or dependencies still recreate it. Click to recreate on any change.'
+              : 'Recreating: a push that changes a host’s steps or scripts recreates the host from scratch, like any other change. Click to hold such hosts and restart them from the changed step instead.'
+          }
+          className={cn(
+            'flex shrink-0 items-center gap-1 rounded-token-sm border px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40',
+            cb.hold_on_step_change ? 'border-warning text-warning' : 'border-border text-fg-muted hover:bg-surface-hover',
+          )}
+        >
+          <RotateCcw size={12} /> {cb.hold_on_step_change ? 'Hold on step change' : 'Recreate on change'}
         </button>
 
         <button

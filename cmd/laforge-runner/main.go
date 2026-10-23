@@ -15,12 +15,15 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -53,6 +56,7 @@ func main() {
 	maxTasks := flag.Int("max-tasks", 0, "stop after completing this many tasks (0 = run until the queue is empty)")
 	workDelayMS := flag.Int("work-delay-ms", 0, "fake builder: simulated hoster API latency per call, in milliseconds")
 	pollInterval := flag.Duration("poll-interval", 200*time.Millisecond, "how often to check for work when the queue is empty")
+	taskTimeout := flag.Duration("task-timeout", envDurationDefaultRunner("RUNNER_TASK_TIMEOUT", 45*time.Minute), "the most one task may run before it is failed and retried; a hung builder call otherwise holds a concurrency slot forever (0 disables)")
 	concurrency := flag.Int("concurrency", envIntDefault("RUNNER_CONCURRENCY", 1), "how many tasks to lease and execute in PARALLEL. Each worker is an independent lease->execute loop; FOR UPDATE SKIP LOCKED makes concurrent leasing safe, so N workers deploy N hosts at once instead of one at a time. Default 1 (serial). The chaos/crash flags assume 1.")
 	crashAfterLease := flag.Int("crash-after-lease", -1, "os.Exit(9) immediately after leasing the Nth task this process leases (1-indexed; -1 = never), zero work done")
 	crashAfterBuilderCall := flag.Int("crash-after-builder-call", -1, "os.Exit(9) immediately after the Nth builder call this process makes succeeds, before recording the result (1-indexed; -1 = never)")
@@ -75,7 +79,12 @@ func main() {
 	// lane mode, -concurrency / RUNNER_CONCURRENCY is the PER-BUILD parallelism.
 	legacyMode := *buildID != "" || *maxTasks > 0 || *crashAfterLease >= 0
 
-	ctx := context.Background()
+	// SIGTERM/SIGINT (a compose redeploy, a restart) cancels the root context:
+	// in-flight builder calls stop, and each task they belonged to is handed
+	// back (pending, the lease not counted as an attempt) instead of being
+	// left leased until its lease runs out and counted as a failure.
+	ctx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
+	defer stopSignals()
 	// Pool sizing. A worker/task holds a connection only briefly (the multi-minute
 	// deploy is an HTTP call to the hoster, no DB connection held), so a modest
 	// pool serves far more concurrent tasks than its size. Legacy: workers+8. Lane
@@ -130,6 +139,7 @@ func main() {
 		Pool: pool, Builder: b, RepoRoot: *repoRoot, Checkouts: cache, ID: *id, Delivery: delivery,
 		LeaseDuration:     time.Duration(*leaseSeconds) * time.Second,
 		HeartbeatInterval: time.Duration(*heartbeatSeconds) * time.Second,
+		TaskTimeout:       *taskTimeout,
 	}
 	r.Builders = r.ResolveBuilderFromDB
 	if *buildID != "" {
@@ -261,12 +271,11 @@ func runBuilderPools(ctx context.Context, r *runner.Runner, id string, pollInter
 			if _, running := pools[name]; running {
 				continue
 			}
-			limit := builderConcurrency(ctx, q, name)
 			h := &poolHandle{}
 			pools[name] = h
 			builderName := name
 			go func() {
-				runBuilderPool(ctx, r, id, builderName, pollInterval, limit)
+				runBuilderPool(ctx, r, id, builderName, pollInterval)
 				mu.Lock()
 				if pools[builderName] == h { // don't delete a newer pool for the same builder
 					delete(pools, builderName)
@@ -295,27 +304,81 @@ func builderConcurrency(ctx context.Context, q *db.Queries, builderConfigName st
 	return int(bc.MaxConcurrency)
 }
 
-// runBuilderPool drains one configured builder's task queue, running up to
-// `limit` tasks in parallel (limit <= 0 = unbounded). It leases only this
-// builder's tasks, so it is fully independent of every other builder. Exits when
-// the builder has no leasable tasks left AND nothing is in flight; the
-// supervisor restarts it when work reappears. Exits promptly on context
-// cancellation (shutdown).
-func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName string, pollInterval time.Duration, limit int) {
+// runBuilderPool drains one configured builder's task queue, running up to the
+// builder's concurrency limit (builder_config.max_concurrency; 0 = unbounded)
+// in parallel. It leases only this builder's tasks, so it is fully independent
+// of every other builder. Exits when the builder has no leasable tasks left AND
+// nothing is in flight; the supervisor restarts it when work reappears. Exits
+// promptly on context cancellation (shutdown).
+//
+// The limit is "the most hosts LaForge deploys on this cluster at once" (the
+// wizard's words), so it counts the tasks that create or destroy instances
+// (deploy_*, destroy_*). Access and network configuration tasks run alongside
+// in their own lane -- otherwise a limit of 2 with a hundred queued deploys
+// also made every access change wait hours behind them -- capped at the same
+// number (at least 4), because each one walks a team's hosts with requests of
+// its own: forty of them at once was a load on the cluster on its own.
+//
+// Two things keep the limit honest. A slot is taken BEFORE a task is leased:
+// leasing first and then waiting for a slot left a leased task sitting with no
+// heartbeat, its lease quietly expiring (and, with a second runner, open to
+// being leased again and run twice). And the limit is re-read from the
+// database every few seconds rather than once: a limit set or changed while a
+// pool is alive -- during a competition, which is when it gets set -- applies
+// to the next lease, not after the queue has drained. The limit is per runner
+// process: run one laforge-runner per deployment.
+func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName string, pollInterval time.Duration) {
 	q := db.New(r.Pool)
-	var sem chan struct{}
-	if limit > 0 {
-		sem = make(chan struct{}, limit)
-	}
-	var inFlight int64
+	limit := builderConcurrency(ctx, q, builderConfigName)
+	limitRead := time.Now()
+	log.Printf("[%s] builder %q: worker pool started, concurrency limit %s", id, builderConfigName, describeLimit(limit))
+	var inFlight, heavyInFlight int64
 	var wg sync.WaitGroup
 	defer wg.Wait() // never leave tasks running past the pool
+	lastSaturated := time.Time{}
+	idleSince := time.Time{}
 
 	for {
 		if ctx.Err() != nil {
 			return
 		}
-		task, err := r.LeaseOneForBuilder(ctx, builderConfigName)
+		if time.Since(limitRead) > 10*time.Second {
+			if fresh := builderConcurrency(ctx, q, builderConfigName); fresh != limit {
+				log.Printf("[%s] builder %q: concurrency limit changed %s -> %s; applies to the next lease", id, builderConfigName, describeLimit(limit), describeLimit(fresh))
+				limit = fresh
+			}
+			limitRead = time.Now()
+		}
+		busy := atomic.LoadInt64(&heavyInFlight)
+		saturated := limit > 0 && busy >= int64(limit)
+		if saturated && time.Since(lastSaturated) > 30*time.Second {
+			// Every slot is taken: only light tasks are leased until one frees.
+			// Say so every 30s while it lasts, with how much is waiting, so a
+			// slow builder reads as "at its limit", not as "doing nothing".
+			waiting, _ := q.CountLeasableHeavyTasksForBuilder(ctx, builderConfigName)
+			log.Printf("[%s] builder %q: at its concurrency limit (%d/%d deploy/destroy tasks running, %d waiting to be leased)", id, builderConfigName, busy, limit, waiting)
+			lastSaturated = time.Now()
+		}
+		lightLimit := int64(0)
+		if limit > 0 {
+			lightLimit = int64(max(limit, 4))
+		}
+		lightFull := lightLimit > 0 && atomic.LoadInt64(&inFlight)-atomic.LoadInt64(&heavyInFlight) >= lightLimit
+		var task *db.Task
+		var err error
+		switch {
+		case saturated && lightFull:
+			if sleepCtx(ctx, pollInterval) {
+				return
+			}
+			continue
+		case saturated:
+			task, err = r.LeaseOneLightForBuilder(ctx, builderConfigName)
+		case lightFull:
+			task, err = r.LeaseOneHeavyForBuilder(ctx, builderConfigName)
+		default:
+			task, err = r.LeaseOneForBuilder(ctx, builderConfigName)
+		}
 		if err != nil {
 			log.Printf("[%s] builder %q lease error: %v", id, builderConfigName, err)
 			if sleepCtx(ctx, pollInterval) {
@@ -324,18 +387,20 @@ func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName
 			continue
 		}
 		if task != nil {
-			log.Printf("LEASED %s kind=%s attempt=%d", task.ID, task.Kind, task.Attempts)
-			if sem != nil {
-				sem <- struct{}{}
-			}
-			wg.Add(1)
 			atomic.AddInt64(&inFlight, 1)
+			heavy := runner.IsHeavyTask(task.Kind)
+			slot := "light"
+			if heavy {
+				slot = fmt.Sprintf("%d/%s", atomic.AddInt64(&heavyInFlight, 1), describeLimit(limit))
+			}
+			log.Printf("LEASED %s kind=%s attempt=%d builder=%q slot=%s", task.ID, task.Kind, task.Attempts, builderConfigName, slot)
+			wg.Add(1)
 			t := *task
 			go func() {
 				defer wg.Done()
 				defer atomic.AddInt64(&inFlight, -1)
-				if sem != nil {
-					defer func() { <-sem }()
+				if heavy {
+					defer atomic.AddInt64(&heavyInFlight, -1)
 				}
 				if err := r.ExecuteAndRecord(ctx, t); err != nil {
 					log.Printf("[%s] task %s error: %v", id, t.ID, err)
@@ -352,7 +417,18 @@ func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName
 			continue
 		}
 		if pending == 0 && atomic.LoadInt64(&inFlight) == 0 {
-			return // queue drained, nothing in flight -- this builder's pool is idle
+			// Queue drained, nothing in flight. Stay for a while rather than
+			// exit at once: tasks held in a retry backoff become leasable
+			// again within seconds, and a pool that exits and is restarted
+			// for each of them logs "worker pool started" in a loop.
+			if idleSince.IsZero() {
+				idleSince = time.Now()
+			} else if time.Since(idleSince) > 30*time.Second {
+				log.Printf("[%s] builder %q: worker pool idle for 30s; exiting (it restarts when work appears)", id, builderConfigName)
+				return
+			}
+		} else {
+			idleSince = time.Time{}
 		}
 		if sleepCtx(ctx, pollInterval) {
 			return
@@ -387,6 +463,25 @@ func envIntDefault(name string, def int) int {
 	if v := os.Getenv(name); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			return n
+		}
+	}
+	return def
+}
+
+// describeLimit renders a concurrency limit for the log: "unbounded" for 0.
+func describeLimit(limit int) string {
+	if limit <= 0 {
+		return "unbounded"
+	}
+	return fmt.Sprint(limit)
+}
+
+// envDurationDefaultRunner reads a duration environment variable, falling
+// back to def when unset or unparseable.
+func envDurationDefaultRunner(name string, def time.Duration) time.Duration {
+	if v := os.Getenv(name); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
 		}
 	}
 	return def

@@ -21,8 +21,10 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -270,11 +272,45 @@ type requestOptions struct {
 	etag    *string
 }
 
+// do is every request this client makes. Each one is logged -- method, path,
+// how long the hoster took, and what came back (sync, an async operation and
+// how that ended, or an error) -- because when a deploy or a rebuild stalls,
+// the question is always "is the cluster slow, is it us, or is nothing
+// happening at all?", and only the request log answers it.
 func (c *Client) do(ctx context.Context, method, path string, body interface{}, options ...requestOptions) (json.RawMessage, error) {
+	started := time.Now()
+	// A request that's slow to answer is said while it's slow, not only when
+	// it ends: a hung request is otherwise invisible until its timeout.
+	stop := logWaitProgress(ctx, "MicroCloud", method+" "+path, started)
+	defer stop()
+	result, err := c.doLogged(ctx, method, path, body, options...)
+	logRequest(ctx, "MicroCloud", method, path, started, err)
+	return result, err
+}
+
+// logRequest is the one line per hoster API request (see Client.do).
+func logRequest(ctx context.Context, hoster, method, path string, started time.Time, err error) {
+	elapsed := time.Since(started).Round(time.Millisecond)
+	switch {
+	case err == nil:
+		slog.InfoContext(ctx, hoster+" API request", "method", method, "path", path, "elapsed", elapsed)
+	case errors.Is(err, context.Canceled):
+		slog.WarnContext(ctx, hoster+" API request cancelled", "method", method, "path", path, "elapsed", elapsed)
+	default:
+		slog.WarnContext(ctx, hoster+" API request failed", "method", method, "path", path, "elapsed", elapsed, "error", err)
+	}
+}
+
+func (c *Client) doLogged(ctx context.Context, method, path string, body interface{}, options ...requestOptions) (json.RawMessage, error) {
 	if isNetworkingMutation(method, path) {
+		lockStarted := time.Now()
 		lockedCtx, release, err := c.lockNetworking(ctx)
 		if err != nil {
+			slog.WarnContext(ctx, "MicroCloud networking lock not acquired", "method", method, "path", path, "waited", time.Since(lockStarted).Round(time.Millisecond), "error", err)
 			return nil, err
+		}
+		if waited := time.Since(lockStarted); waited > time.Second {
+			slog.InfoContext(ctx, "MicroCloud networking lock acquired after a wait", "method", method, "path", path, "waited", waited.Round(time.Millisecond))
 		}
 		defer release()
 		ctx = lockedCtx
@@ -292,6 +328,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 	}
 	reqCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	reqStarted := time.Now()
 	u := c.BaseURL + path
 	if c.Project != "" {
 		sep := "?"
@@ -348,6 +385,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 	case "error":
 		return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: ar.ErrorCode, Message: ar.Error}
 	case "async":
+		slog.InfoContext(ctx, "MicroCloud API accepted an async operation", "method", method, "path", path, "operation", ar.Operation, "submit_elapsed", time.Since(reqStarted).Round(time.Millisecond))
 		return c.waitForOperation(ctx, ar.Operation)
 	default: // "sync"
 		return ar.Metadata, nil
@@ -394,9 +432,23 @@ type operationResult struct {
 // (network/instance create, start/stop, ...) was affected equally.
 func (c *Client) waitForOperation(ctx context.Context, opPath string) (result json.RawMessage, resultErr error) {
 	terminal := false
+	started := time.Now()
+	// Say so while the wait is long: a single long-poll can sit for minutes
+	// with nothing else in the log, which looks exactly like a hang.
+	stopProgress := logWaitProgress(ctx, "MicroCloud", opPath, started)
 	defer func() {
+		stopProgress()
 		if resultErr != nil && !terminal {
 			resultErr = &pendingOperationError{Path: opPath, Err: resultErr}
+		}
+		elapsed := time.Since(started).Round(time.Millisecond)
+		switch {
+		case resultErr == nil:
+			slog.InfoContext(ctx, "MicroCloud operation finished", "operation", opPath, "elapsed", elapsed)
+		case terminal:
+			slog.WarnContext(ctx, "MicroCloud operation failed", "operation", opPath, "elapsed", elapsed, "error", resultErr)
+		default:
+			slog.WarnContext(ctx, "MicroCloud operation still unfinished when the wait ended", "operation", opPath, "elapsed", elapsed, "wait_limit", c.OperationTimeout, "error", resultErr)
 		}
 	}()
 	// The client's own deadline must be strictly longer than what the
@@ -465,4 +517,26 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (result js
 
 func pemEncodeCert(der []byte) []byte {
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+}
+
+// logWaitProgress logs every 30 seconds that an operation is still being
+// waited on, until the returned stop is called. Without it a slow cluster
+// looks like a stalled runner.
+func logWaitProgress(ctx context.Context, hoster, opPath string, started time.Time) (stop func()) {
+	done := make(chan struct{})
+	go func() {
+		t := time.NewTicker(30 * time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				slog.InfoContext(ctx, hoster+" still waiting on the hoster", "for", opPath, "waited", time.Since(started).Round(time.Second))
+			}
+		}
+	}()
+	return func() { close(done) }
 }

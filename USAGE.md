@@ -246,6 +246,45 @@ agent's own diagnostics stay silent on the box (see
 however, is visible in the container's normal log stream so the platform driver can ship
 it — e.g. with the `splunk` driver it goes to Splunk, not to `docker logs`.
 
+### What LaForge logs about itself
+
+Every service writes what *it* decided to its own log (the container's stdout; `docker
+compose logs -f <service>`), and the same decisions appear on the build's **Logs** tab,
+so the two agree:
+
+- **api**: every request that changes something — `POST /builds/…/rebuild -> 200 in 41ms
+  (by alice from 10.0.0.5)` — with who made it.
+- **orchestrator**: every decision, with its reason: a deploy or destroy requested and
+  why (`reconcile.deploy`, `reconcile.recreate` with the old and new fingerprints,
+  `reconcile.remove`, `rebuild.destroy`, `teardown.destroy`); a failed destroy queued
+  again before anything is redeployed in its place (`reconcile.destroy_retry`), or the
+  host stopped with the error when the hoster says it never will be; a host held on a step-only
+  change; a host failed for its network or a dependency; steps queued or blocked; every
+  object and build status move (`lifecycle.building`, `lifecycle.finished`,
+  `build.status`); and, once a minute while it lasts, what it's waiting for
+  (`reconcile.waiting`, `lifecycle.waiting`: an open task, a network, an agent).
+- **runner**: every task it leases, starts, retries, fails or completes, with the attempt
+  and how long the builder call took; the lease renewals that fail. A task that runs past
+  `RUNNER_TASK_TIMEOUT` (default 45m) fails that attempt and is retried, so a hung hoster
+  call never holds a slot for good.
+- **orchestrator jobs**: each periodic job (`instance-states`, `access`, `schedules`,
+  `builder-metrics`, the cleanups) logs when it takes over 30 s or hits its limit, and
+  `job "x": skipping this tick; the previous run has been going for 2m10s` when it's
+  stuck — the line to look for when the hosts page stops updating.
+- **the builders** (MicroCloud, Incus): every request to the hoster's API with its path,
+  duration and outcome; every async operation accepted, a line every 30 s while it's
+  still running, and how it ended; each phase of a destroy (stop, delete, confirm,
+  release the public address, clean up). AWS logs each phase of a deploy and destroy
+  and the SDK's retries.
+- **gateway**: every step a host starts, finishes, retries or fails, and what it ran.
+
+On the Logs tab each event is one line; a line that's cut off at the window's edge, or
+that carries detail (a step's error, what was sent to the hoster), has a chevron and
+opens in place. The tab loads the newest 5,000 events and offers **Load earlier** for the
+rest (the footer says how many there are in all); the `…waiting` entries are journaled at
+most twice an hour per host and pruned after a day, while the orchestrator's own log has
+them every minute.
+
 ### Sending to Splunk
 
 Use the `splunk` driver in `container_logs`; its options are the driver's own keys:

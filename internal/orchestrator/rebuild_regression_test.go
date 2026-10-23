@@ -67,8 +67,8 @@ func firstHost(t *testing.T, q *db.Queries, buildID db.Build) db.DeployedObject 
 
 // TestRebuildCarriesExternalRefInPayload is the issue-#1 regression: the destroy
 // task a rebuild enqueues must carry the real hoster reference, so the runner
-// deletes the actual instance even though Rebuild immediately clears the row's
-// external_ref to hold the build in the deploy phase.
+// deletes the actual instance. The object itself now keeps its reference too,
+// shown as waiting to be destroyed until the runner gets to it.
 func TestRebuildCarriesExternalRefInPayload(t *testing.T) {
 	pool := testPool(t)
 	ctx := context.Background()
@@ -83,16 +83,17 @@ func TestRebuildCarriesExternalRefInPayload(t *testing.T) {
 		t.Fatalf("Rebuild: %v", err)
 	}
 
-	// The row's ref is cleared and it's pending again (holds infraPending > 0).
+	// Waiting to be destroyed -- not pending, which would look like a host
+	// waiting for its first deploy -- with its hoster reference intact.
 	reread, err := q.GetDeployedObject(ctx, host.ID)
 	if err != nil {
 		t.Fatalf("GetDeployedObject: %v", err)
 	}
-	if reread.Status != "pending" {
-		t.Errorf("object status = %q, want pending", reread.Status)
+	if reread.Status != "destroy_queued" {
+		t.Errorf("object status = %q, want destroy_queued", reread.Status)
 	}
-	if reread.ExternalRef != nil && *reread.ExternalRef != "" {
-		t.Errorf("external_ref = %q, want cleared", *reread.ExternalRef)
+	if db.StrOrEmpty(reread.ExternalRef) != originalRef {
+		t.Errorf("external_ref = %q, want it kept (%q) until the destroy runs", db.StrOrEmpty(reread.ExternalRef), originalRef)
 	}
 
 	// The destroy task must still know the real ref, via its payload.
@@ -231,5 +232,61 @@ func TestRebuildConverges(t *testing.T) {
 				t.Fatalf("build stranded in building with a pending object %s", o.ID.String())
 			}
 		}
+	}
+}
+
+// TestRebuildDestroysThenGoesPending: a rebuilt host waits to be destroyed,
+// then is destroyed, and only then is pending for its fresh deploy. While it
+// waits, reconcile passes do nothing for it: no deploy is queued, and nothing
+// is logged about it (its status says what it's waiting for). The build can't
+// be judged finished in the meantime.
+func TestRebuildDestroysThenGoesPending(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	q := db.New(pool)
+	build := newTestBuildWithFakeBuilder(t, pool, "rebuild-destroy-first")
+	deployToConvergence(t, pool, "../../examples/lm-test", build.ID)
+	host := firstHost(t, q, build)
+	originalRef := *host.ExternalRef
+
+	if _, err := Rebuild(ctx, pool, build, nil, AdHocTarget{IDs: []string{host.ID.String()}}, false, false); err != nil {
+		t.Fatalf("Rebuild: %v", err)
+	}
+	var eventsBefore int
+	pool.QueryRow(ctx, "SELECT count(*) FROM event WHERE deployed_object_id = $1", host.ID).Scan(&eventsBefore)
+	for pass := 0; pass < 3; pass++ {
+		if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
+			t.Fatalf("Reconcile: %v", err)
+		}
+	}
+	got, _ := q.GetDeployedObject(ctx, host.ID)
+	if got.Status != "destroy_queued" {
+		t.Fatalf("after reconcile passes, status = %q, want still destroy_queued (its destroy hasn't run)", got.Status)
+	}
+	var deploys, events int
+	pool.QueryRow(ctx, "SELECT count(*) FROM task WHERE deployed_object_id = $1 AND kind = 'deploy_host' AND status IN ('pending','leased')", host.ID).Scan(&deploys)
+	pool.QueryRow(ctx, "SELECT count(*) FROM event WHERE deployed_object_id = $1", host.ID).Scan(&events)
+	if deploys != 0 {
+		t.Fatalf("%d deploy(s) queued while the old instance still exists", deploys)
+	}
+	if events != eventsBefore {
+		t.Fatalf("reconcile passes logged %d event(s) about a host that's only waiting for its destroy", events-eventsBefore)
+	}
+	b, _ := q.GetBuild(ctx, build.ID)
+	if b.Status != "deploying" {
+		t.Fatalf("build status %q while a host waits to be destroyed, want deploying", b.Status)
+	}
+
+	// The runner destroys it (by its recorded reference), then it's
+	// redeployed fresh.
+	deployToConvergence(t, pool, "../../examples/lm-test", build.ID)
+	var destroyed int
+	pool.QueryRow(ctx, "SELECT count(*) FROM task WHERE deployed_object_id = $1 AND kind = 'destroy_host' AND status = 'done' AND payload->>'external_ref' = $2", host.ID, originalRef).Scan(&destroyed)
+	if destroyed != 1 {
+		t.Fatalf("destroy of %s done %d time(s), want 1", originalRef, destroyed)
+	}
+	got, _ = q.GetDeployedObject(ctx, host.ID)
+	if got.Status == "destroy_queued" || got.Status == "destroying" || got.Status == "pending" {
+		t.Fatalf("after the destroy and a redeploy, status = %q", got.Status)
 	}
 }
