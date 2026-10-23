@@ -77,6 +77,10 @@ export function ObjectLogPanel({
   const router = useRouter()
   const [tab, setTab] = useState<Tab>(initialTab ?? 'info')
   const [wide, setWide] = useState(false)
+  // When a step in the Steps tab is clicked, jump to the Render tab and scroll
+  // its rendered script into view (RenderedStep.index). Carries a nonce so
+  // clicking the same step twice still re-scrolls.
+  const [renderFocus, setRenderFocus] = useState<{ index: number; n: number } | null>(null)
 
   // The interactive shell always opens in its own standalone window (not a tab
   // or in-app navigation): the terminal is a long-lived session you keep open
@@ -242,7 +246,17 @@ export function ObjectLogPanel({
               hint="Steps appear here once the agent has checked in and they're queued to run."
             />
           )}
-          {buildSteps && buildSteps.length > 0 && <StepStatusList steps={buildSteps} focusGroup={focusGroup} onRestartFrom={onRestartFrom} />}
+          {buildSteps && buildSteps.length > 0 && (
+            <StepStatusList
+              steps={buildSteps}
+              focusGroup={focusGroup}
+              onRestartFrom={onRestartFrom}
+              onOpenRendered={(index) => {
+                setRenderFocus({ index, n: Date.now() })
+                setTab('render')
+              }}
+            />
+          )}
         </>
       )}
       {tab === 'render' && (
@@ -251,7 +265,7 @@ export function ObjectLogPanel({
           {renderLoading && <LoadingRow />}
           {renderError && <div className="text-sm text-danger">{renderError instanceof ApiError ? renderError.message : 'Failed to render'}</div>}
           {renderedSteps && renderedSteps.length === 0 && <EmptyState icon={FileCode} title="No steps on this object" hint="Nothing to render." />}
-          {renderedSteps && renderedSteps.length > 0 && <RenderedSteps steps={renderedSteps} />}
+          {renderedSteps && renderedSteps.length > 0 && <RenderedSteps steps={renderedSteps} focus={renderFocus} />}
         </>
       )}
     </InspectorPanel>
@@ -261,8 +275,21 @@ export function ObjectLogPanel({
 // RenderedSteps lists a host's fully-resolved steps -- shared by the narrow
 // drawer preview and the wide expanded modal, so both show identical
 // content, just with different room.
-function RenderedSteps({ steps }: { steps: RenderedStep[] }) {
+function RenderedSteps({ steps, focus }: { steps: RenderedStep[]; focus?: { index: number; n: number } | null }) {
   const hasTemplated = steps.some((s) => s.segments?.some((seg) => seg.templated))
+  const stepRefs = useRef<Record<number, HTMLDivElement | null>>({})
+  const [flash, setFlash] = useState<number | null>(null)
+  // Scroll the step the Steps tab linked to into view and briefly flash it.
+  // Keyed on focus.n so re-clicking the same step re-triggers.
+  useEffect(() => {
+    if (!focus) return
+    const el = stepRefs.current[focus.index]
+    if (!el) return
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setFlash(focus.index)
+    const t = setTimeout(() => setFlash(null), 1800)
+    return () => clearTimeout(t)
+  }, [focus])
   return (
     <div className="flex flex-col gap-3">
       {hasTemplated && (
@@ -272,7 +299,11 @@ function RenderedSteps({ steps }: { steps: RenderedStep[] }) {
         </div>
       )}
       {steps.map((s) => (
-        <div key={s.index} className="overflow-hidden rounded-token border border-border">
+        <div
+          key={s.index}
+          ref={(el) => { stepRefs.current[s.index] = el }}
+          className={cn('overflow-hidden rounded-token border', flash === s.index ? 'border-accent ring-2 ring-accent/50 transition-colors' : 'border-border')}
+        >
           <div className="flex items-center gap-2 border-b border-border bg-surface-sunken px-2 py-1 text-xs">
             <span className="text-fg-muted">#{s.index}</span>
             <span className="font-medium text-fg">{s.action}</span>
@@ -426,7 +457,7 @@ function formatStepDuration(ms: number): string {
   return mm ? `${h}h ${mm}m` : `${h}h`
 }
 
-function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatus[]; focusGroup?: number; onRestartFrom?: (group: number) => void }) {
+function StepStatusList({ steps, focusGroup, onRestartFrom, onOpenRendered }: { steps: StepStatus[]; focusGroup?: number; onRestartFrom?: (group: number) => void; onOpenRendered?: (renderIndex: number) => void }) {
   const [open, setOpen] = useState<Set<number>>(new Set())
   const groupRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const [flash, setFlash] = useState<number | null>(null)
@@ -451,11 +482,11 @@ function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatu
   // Group consecutive steps that came from the same authored step, so the
   // expanded sub-commands (write file, execute, validate) read as one step
   // under a named heading rather than a flat wall of rows.
-  const groups: { key: number; label?: string; steps: StepStatus[]; waitFor?: string[]; milestone?: string }[] = []
+  const groups: { key: number; label?: string; steps: StepStatus[]; waitFor?: string[]; milestone?: string; renderIndex?: number }[] = []
   for (const s of steps) {
     const last = groups[groups.length - 1]
     if (last && last.key === s.group_index) last.steps.push(s)
-    else groups.push({ key: s.group_index, label: s.group_label, steps: [s], waitFor: s.wait_for, milestone: s.milestone })
+    else groups.push({ key: s.group_index, label: s.group_label, steps: [s], waitFor: s.wait_for, milestone: s.milestone, renderIndex: s.render_index })
   }
   return (
     <div className="flex flex-col gap-3">
@@ -465,8 +496,16 @@ function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatu
           ref={(el) => { groupRefs.current[g.key] = el }}
           className={cn('flex flex-col gap-1.5 rounded-token', flash === g.key && 'bg-accent-soft/60 ring-2 ring-accent/50 -mx-1 px-1 py-1 transition-colors')}
         >
-          {g.label && (
-            <div className="flex items-center gap-2 px-0.5">
+          {g.label && (() => {
+            // Clicking the step heading jumps to its rendered script in the Render
+            // tab. Visually unchanged -- only the cursor becomes a pointer.
+            const canLink = !!onOpenRendered && g.renderIndex != null && g.renderIndex >= 0
+            return (
+            <div
+              className={cn('flex items-center gap-2 px-0.5', canLink && 'cursor-pointer')}
+              onClick={canLink ? () => onOpenRendered!(g.renderIndex!) : undefined}
+              title={canLink ? 'View the rendered script for this step' : undefined}
+            >
               <span className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">{g.label}</span>
               {g.milestone && (
                 <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-accent" title="Other hosts can wait_for this milestone">
@@ -477,7 +516,7 @@ function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatu
               {onRestartFrom && g.label && (
                 <button
                   type="button"
-                  onClick={() => onRestartFrom(g.key)}
+                  onClick={(e) => { e.stopPropagation(); onRestartFrom(g.key) }}
                   title="Run this step and every step after it again, in full, on the box as it is"
                   className={cn(
                     'inline-flex shrink-0 items-center gap-1 rounded-token-sm px-1.5 py-0.5 text-[11px] hover:bg-surface-hover',
@@ -492,7 +531,8 @@ function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatu
                 return ms != null ? <span className="shrink-0 font-mono text-[11px] tabular-nums text-fg-subtle">{formatStepDuration(ms)}</span> : null
               })()}
             </div>
-          )}
+            )
+          })()}
           {g.waitFor && g.waitFor.length > 0 && (
             <div
               className={cn(

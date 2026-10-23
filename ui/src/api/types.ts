@@ -418,6 +418,8 @@ export interface StepStatus {
   // of one step (write_file + execute + validate) group under one heading.
   group_index: number
   group_label?: string
+  /** Index of this step's rendered counterpart in the Render tab (RenderedStep.index), so a step can link to its rendered script. -1 when there's no rendered counterpart. */
+  render_index?: number
   validators: StepValidator[]
   /** When the agent started/finished this step (null until it does) -- for showing how long a step took. */
   started_at?: string | null

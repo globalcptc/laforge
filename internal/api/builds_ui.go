@@ -432,7 +432,12 @@ type stepView struct {
 	// command past the materialized set, or when content can't be resolved).
 	GroupIndex int             `json:"group_index"`
 	GroupLabel string          `json:"group_label,omitempty"`
-	Validators []validatorView `json:"validators"`
+	// RenderIndex is the authored step's index in the Render tab's rendered-step
+	// list, so the UI can link a step to its rendered script. -1 for a step with
+	// no rendered counterpart (the admin-password prelude, a compose startup, or
+	// an unattributable ad-hoc command).
+	RenderIndex int             `json:"render_index"`
+	Validators  []validatorView `json:"validators"`
 	// When the agent first started this step and when it finished (nil until it
 	// does), so the UI can show how long each authored step took.
 	StartedAt  *time.Time `json:"started_at,omitempty"`
@@ -478,10 +483,12 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 	// just leaves the steps ungrouped rather than failing the list.
 	groups := s.stepGroups(r.Context(), build, objectID)
 	labels := map[int]string{}
+	authoredByGroup := map[int]int{}
 	for _, g := range groups {
 		if g.label != "" {
 			labels[g.group] = g.label
 		}
+		authoredByGroup[g.group] = g.authored
 	}
 	views := make([]stepView, 0, len(tasks))
 	for _, t := range tasks {
@@ -497,7 +504,7 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 		v := stepView{
 			StepIndex: t.StepIndex, Command: t.Command, Status: t.Status, Attempts: t.Attempts,
 			LastError: db.StrOrEmpty(t.LastError), Output: db.StrOrEmpty(t.Output), Validators: vs,
-			GroupIndex: int(t.StepIndex),
+			GroupIndex: int(t.StepIndex), RenderIndex: -1,
 		}
 		if len(t.WaitFor) > 0 {
 			var waits []loader.WaitFor
@@ -521,14 +528,18 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 			v.GroupIndex = groups[idx].group
 			v.GroupLabel = groups[idx].label
 		}
+		if a, ok := authoredByGroup[v.GroupIndex]; ok {
+			v.RenderIndex = a
+		}
 		views = append(views, v)
 	}
 	writeJSON(w, http.StatusOK, views)
 }
 
 type stepGroupRef struct {
-	group int
-	label string
+	group    int
+	label    string
+	authored int
 }
 
 // stepGroups recomputes, aligned to materialized step_index, the authored
@@ -567,7 +578,7 @@ func (s *Server) stepGroups(ctx context.Context, build db.Build, objectID pgtype
 	// the image pull/run is the builder's business, never a materialized step.
 	refs := make([]stepGroupRef, 0, len(cmds))
 	for _, cmd := range cmds {
-		refs = append(refs, stepGroupRef{group: cmd.Group, label: cmd.GroupLabel})
+		refs = append(refs, stepGroupRef{group: cmd.Group, label: cmd.GroupLabel, authored: cmd.AuthoredStep})
 	}
 	return refs
 }
