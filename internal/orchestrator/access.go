@@ -59,8 +59,23 @@ func ReconcileAccess(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUI
 		return fmt.Errorf("listing teams: %w", err)
 	}
 
+	// A build is still actively provisioning while it is deploying/building: its
+	// agents are fetching files and running steps, and a scheduled close cuts the
+	// egress those steps need (a download is a DIRECT agent GET, not
+	// gateway-proxied). A pre-competition "closed" window that overlaps the build
+	// would otherwise close teams mid-build -- the intermittent download failures
+	// this fixes. So hold every team OPEN until the build is fully built, and only
+	// then let the schedule close it.
+	building := build.Status == "deploying" || build.Status == "building"
+
 	for _, team := range teams {
 		want, enforce := desiredAccess(windows, team, now)
+
+		// Keep open through the build, EXCEPT when an operator has deliberately
+		// closed by hand (a live manual override wins even mid-build).
+		if enforce && want == "closed" && building && !activeOverride(team, now) {
+			want = "open"
+		}
 
 		// Drop a lapsed override so the team is driven purely by the schedule
 		// again -- but not too early for a lapsed OPEN override, which represents
@@ -149,6 +164,14 @@ func ReconcileAccess(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUI
 		})
 	}
 	return nil
+}
+
+// activeOverride reports whether a team has a manual open/close override still
+// in effect (no expiry, or not yet reached) -- a deliberate operator action the
+// reconciler honors even while the build is still building.
+func activeOverride(team db.Team, now time.Time) bool {
+	return team.AccessOverrideState != "" &&
+		(!team.AccessOverrideUntil.Valid || now.Before(team.AccessOverrideUntil.Time))
 }
 
 // teamHosterReady reports whether a team's hoster state has materialized and

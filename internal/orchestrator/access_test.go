@@ -239,10 +239,23 @@ func TestReconcileAccessEnforcesWindows(t *testing.T) {
 		t.Fatalf("open_access tasks after dedup pass = %d, want 1 (no duplicate)", got)
 	}
 
-	// Well after the window (want=closed): team 1 is open (its honest label) and
-	// never had a close applied, so it must be closed now.
+	// A scheduled close is held while the build is still deploying/building (its
+	// agents still need egress for downloads/steps) -- so even well after the
+	// window, a building build closes nothing.
 	if err := ReconcileAccess(ctx, pool, build.ID, now.Add(3*time.Hour)); err != nil {
-		t.Fatalf("ReconcileAccess (after window): %v", err)
+		t.Fatalf("ReconcileAccess (after window, still building): %v", err)
+	}
+	if got := countTasksOfKind(t, pool, build.ID, "close_access"); got != 1 {
+		t.Fatalf("close_access tasks while building = %d, want 1 (only the seeded one -- closes held until built)", got)
+	}
+
+	// Once the build is fully built, the schedule enforces: team 1 (open, never
+	// explicitly closed) must be closed now.
+	if _, err := q.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: build.ID, Status: "finished"}); err != nil {
+		t.Fatalf("SetBuildStatus finished: %v", err)
+	}
+	if err := ReconcileAccess(ctx, pool, build.ID, now.Add(3*time.Hour)); err != nil {
+		t.Fatalf("ReconcileAccess (after window, built): %v", err)
 	}
 	if got := countTasksOfKind(t, pool, build.ID, "close_access"); got != 2 {
 		t.Fatalf("close_access tasks after window = %d, want 2 (seeded + team 1)", got)
