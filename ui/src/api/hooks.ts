@@ -1066,14 +1066,22 @@ export function useSetTeamAccess(buildId: string) {
 // by exposing `connected` so a caller can show that banner; the actual
 // polling fallback is handleBuild's own refetchInterval, already running
 // underneath regardless.
-export function useLiveEvents(buildId: string | undefined, onEvent?: (ev: LFEvent) => void) {
+// opts.since is the newest event the caller already holds (from GET /events):
+// the stream starts there, so nothing is replayed and nothing between the
+// fetch and the connect is missed; without it the stream starts from now.
+// opts.enabled false holds off connecting (the Logs page, until its history
+// has loaded).
+export function useLiveEvents(buildId: string | undefined, onEvent?: (ev: LFEvent) => void, opts?: { since?: string | null; enabled?: boolean }) {
   const [connected, setConnected] = useState(false)
   const onEventRef = useRef(onEvent)
   onEventRef.current = onEvent
+  const since = opts?.since ?? null
+  const enabled = opts?.enabled ?? true
 
   useEffect(() => {
-    if (!buildId) return
-    const source = new EventSource(`${API_BASE}/builds/${buildId}/live`, { withCredentials: true })
+    if (!buildId || !enabled) return
+    const url = `${API_BASE}/builds/${buildId}/live${since ? `?since=${encodeURIComponent(since)}` : ''}`
+    const source = new EventSource(url, { withCredentials: true })
     source.onopen = () => setConnected(true)
     source.onerror = () => setConnected(false)
     // One fixed frame name ("laforge-event") for every real row -- see
@@ -1091,7 +1099,7 @@ export function useLiveEvents(buildId: string | undefined, onEvent?: (ev: LFEven
       source.close()
       setConnected(false)
     }
-  }, [buildId])
+  }, [buildId, since, enabled])
 
   return { connected }
 }

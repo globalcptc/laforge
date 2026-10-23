@@ -49,6 +49,20 @@ func (s *Server) handleLiveStatus(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("streaming unsupported"))
 		return
 	}
+	// Where the stream starts: `?since=<RFC 3339>` -- the newest event the
+	// client already has from GET /events -- or now. It used to start at
+	// time zero, which replayed the whole journal through the stream in 500-
+	// event batches; the page appended those as if they were new, so old
+	// rows kept arriving at the "newest" end for minutes.
+	since := time.Now().Add(-5 * time.Second)
+	if v := r.URL.Query().Get("since"); v != "" {
+		t, err := time.Parse(time.RFC3339Nano, v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, errors.New("since must be an RFC 3339 time"))
+			return
+		}
+		since = t
+	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -57,7 +71,6 @@ func (s *Server) handleLiveStatus(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	buildID := build.ID.String()
-	var since time.Time
 
 	// sendNew forwards every event since the last one seen as an SSE frame.
 	// Returns the count sent and whether the stream should keep going (false on

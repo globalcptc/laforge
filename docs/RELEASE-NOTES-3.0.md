@@ -194,7 +194,9 @@ This note covers the whole 3.0 line.
   builders every hoster request, operation and destroy phase; the gateway every step.
   Long log lines open in place on the Logs tab, which loads the newest 5,000 events and
   fetches earlier pages on demand ("Load earlier"), so a long or stuck build's journal
-  always opens. "Still waiting" entries are written to the journal at most twice an hour
+  always opens; the live stream starts at the newest loaded event rather than replaying
+  the journal from the beginning, and rows are ordered by time whatever request they
+  arrived in. "Still waiting" entries are written to the journal at most twice an hour
   per host (the orchestrator's own log has them every minute) and pruned after a day.
 - **Concurrency limits hold.** A builder's limit (*Max concurrency* in the wizard) now
   applies to the next task leased, not after a pool has drained, and a task is only

@@ -109,9 +109,16 @@ export function BuildLogs() {
   // the main cause of the "page is slowing down" warning. Buffer in a ref and
   // flush on a short interval, so N events become one re-render.
   const liveBuf = useRef<LFEvent[]>([])
-  const { connected } = useLiveEvents(buildId, (ev) => {
-    liveBuf.current.push(ev)
-  })
+  // Connect the live stream once the history is in, from its newest event
+  // (null = history loaded but empty: stream from now).
+  const liveSince = history && history.length > 0 ? history[history.length - 1].created_at : null
+  const { connected } = useLiveEvents(
+    buildId,
+    (ev) => {
+      liveBuf.current.push(ev)
+    },
+    { since: liveSince, enabled: history !== undefined },
+  )
   useEffect(() => {
     const t = setInterval(() => {
       if (liveBuf.current.length === 0) return
@@ -163,9 +170,19 @@ export function BuildLogs() {
     }
   }
 
+  // The whole loaded journal, oldest first, by timestamp -- not by which
+  // request a row arrived in, so an earlier page, the newest page and the
+  // live stream always read in order whatever the fetch order was.
   const all = useMemo(() => {
-    const seen = new Set([...older, ...(history ?? [])].map((e) => e.id))
-    return [...older, ...(history ?? []), ...live.filter((e) => !seen.has(e.id))]
+    const seen = new Set<string>()
+    const merged: LFEvent[] = []
+    for (const e of [...older, ...(history ?? []), ...live]) {
+      if (seen.has(e.id)) continue
+      seen.add(e.id)
+      merged.push(e)
+    }
+    merged.sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0))
+    return merged
   }, [older, history, live])
 
   async function loadEarlier() {
