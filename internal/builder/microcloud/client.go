@@ -279,6 +279,10 @@ type requestOptions struct {
 // happening at all?", and only the request log answers it.
 func (c *Client) do(ctx context.Context, method, path string, body interface{}, options ...requestOptions) (json.RawMessage, error) {
 	started := time.Now()
+	// A request that's slow to answer is said while it's slow, not only when
+	// it ends: a hung request is otherwise invisible until its timeout.
+	stop := logWaitProgress(ctx, "MicroCloud", method+" "+path, started)
+	defer stop()
 	result, err := c.doLogged(ctx, method, path, body, options...)
 	logRequest(ctx, "MicroCloud", method, path, started, err)
 	return result, err
@@ -530,7 +534,7 @@ func logWaitProgress(ctx context.Context, hoster, opPath string, started time.Ti
 			case <-ctx.Done():
 				return
 			case <-t.C:
-				slog.InfoContext(ctx, hoster+" operation still running", "operation", opPath, "waited", time.Since(started).Round(time.Second))
+				slog.InfoContext(ctx, hoster+" still waiting on the hoster", "for", opPath, "waited", time.Since(started).Round(time.Second))
 			}
 		}
 	}()

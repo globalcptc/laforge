@@ -32,6 +32,11 @@ func (l SQLNetworkLocker) Lock(ctx context.Context) (func(), error) {
 	if l.Pool == nil {
 		return nil, fmt.Errorf("MicroCloud networking lock requires a database")
 	}
+	// Waiting is said, every 30 s while it lasts and once on acquiring: a
+	// deploy waiting here makes no hoster request at all, so without this it
+	// looks exactly like a hang.
+	started := time.Now()
+	lastSaid := started
 	for {
 		tx, err := l.Pool.Begin(ctx)
 		if err != nil {
@@ -47,7 +52,14 @@ func (l SQLNetworkLocker) Lock(ctx context.Context) (func(), error) {
 		var locked bool
 		err = tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended('microcloud-networking:' || $1, 0))`, l.Key).Scan(&locked)
 		if err == nil && locked {
+			if waited := time.Since(started); waited > time.Second {
+				slog.InfoContext(ctx, "MicroCloud networking lock acquired", "builder", l.Key, "waited", waited.Round(time.Millisecond))
+			}
 			return release, nil
+		}
+		if time.Since(lastSaid) > 30*time.Second {
+			slog.InfoContext(ctx, "MicroCloud networking lock: still waiting (another operation on this cluster holds it)", "builder", l.Key, "waited", time.Since(started).Round(time.Second))
+			lastSaid = time.Now()
 		}
 		release()
 		if err != nil {

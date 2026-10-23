@@ -55,14 +55,18 @@ func (b *Builder) externalPortRange() (min, max int) {
 // and surfacing are all exercised by the fake builder; this is the real-fabric
 // half to confirm live.
 func (b *Builder) ConfigureExternalAccess(ctx context.Context, team string, hosts []builder.ExternalHost) ([]builder.ExternalEndpoint, error) {
+	// The public-NIC path only touches per-host ACLs, each of which takes the
+	// networking lock itself for just its own write (ensureACLObjectFull) --
+	// holding it across the whole team loop, with its per-host reads, kept
+	// every deploy on the cluster waiting for minutes.
+	if b.PublicNICEnabled() {
+		return b.configurePublicNICAccess(ctx, hosts)
+	}
 	ctx, release, err := b.Client.lockNetworking(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer release()
-	if b.PublicNICEnabled() {
-		return b.configurePublicNICAccess(ctx, hosts)
-	}
 	if b.Config.ExternalAccessIP == "" {
 		return nil, fmt.Errorf("this builder has no external_access_ip configured -- set one before content can expose public: ports")
 	}
