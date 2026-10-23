@@ -2840,6 +2840,22 @@ func (q *Queries) MarkDeployedObjectDestroyFailed(ctx context.Context, arg MarkD
 	return i, err
 }
 
+const markDeployedObjectDestroyQueued = `-- name: MarkDeployedObjectDestroyQueued :execrows
+UPDATE deployed_object SET status = 'destroy_queued', last_error = NULL, updated_at = now()
+WHERE id = $1 AND status NOT IN ('destroying', 'destroyed')
+`
+
+// A destroy for it is queued and hasn't started: shown as waiting to be
+// destroyed, with its hoster reference kept for the destroy. The runner moves
+// it to destroying, then (for a rebuild) to pending once it's gone.
+func (q *Queries) MarkDeployedObjectDestroyQueued(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, markDeployedObjectDestroyQueued, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const markDeployedObjectDestroyed = `-- name: MarkDeployedObjectDestroyed :one
 UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `

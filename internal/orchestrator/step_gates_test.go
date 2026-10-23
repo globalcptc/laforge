@@ -93,7 +93,7 @@ func writeWaitForRepo(t *testing.T) string {
 // steps before the gate run at once, the gated step and everything after it
 // wait for the target's milestone on the SAME team's copy, a failed target
 // fails the waiter, and a whole-host wait releases only when the target is
-// finished. (Each script step expands to write_file + execute: 2 rows.)
+// finished. (Each script step expands to write_file + execute + delete: 3 rows.)
 func TestWaitForHoldsFromTheGatedStep(t *testing.T) {
 	pool := testPool(t)
 	ctx := context.Background()
@@ -162,25 +162,25 @@ func TestWaitForHoldsFromTheGatedStep(t *testing.T) {
 
 	// Materialized: ws's first step runs now; the gated step and the rest wait.
 	for team := 1; team <= 2; team++ {
-		if got, want := statuses(team, "ws"), "pending,pending,blocked,blocked,blocked,blocked"; got != want {
+		if got, want := statuses(team, "ws"), "pending,pending,pending,blocked,blocked,blocked,blocked,blocked,blocked"; got != want {
 			t.Fatalf("team %d ws steps = %s, want %s", team, got, want)
 		}
 		if got := blockedOn(team, "ws"); len(got) != 0 {
 			t.Fatalf("team %d ws blocked_on = %v while still working toward the gate, want empty", team, got)
 		}
-		if got, want := statuses(team, "dc"), "pending,pending,pending,pending,pending,pending"; got != want {
+		if got, want := statuses(team, "dc"), "pending,pending,pending,pending,pending,pending,pending,pending,pending"; got != want {
 			t.Fatalf("team %d dc steps = %s, want %s", team, got, want)
 		}
 	}
 	// The target side carries its milestone and script on every row of the step.
 	var marked int
 	if err := pool.QueryRow(ctx, "SELECT count(*) FROM agent_task WHERE deployed_object_id=$1 AND milestone='ready' AND step_script='two'",
-		obj(1, "dc").ID).Scan(&marked); err != nil || marked != 2 {
-		t.Fatalf("dc rows marked with milestone ready = %d (%v), want 2", marked, err)
+		obj(1, "dc").ID).Scan(&marked); err != nil || marked != 3 {
+		t.Fatalf("dc rows marked with milestone ready = %d (%v), want 3", marked, err)
 	}
 
 	// ws team 1 works up to the gate: now it is actually waiting, and says on what.
-	setRows(1, "ws", "done", 0, 1)
+	setRows(1, "ws", "done", 0, 1, 2)
 	reconcile()
 	if got := blockedOn(1, "ws"); len(got) != 1 || got[0] != "dc · ready" {
 		t.Fatalf("team 1 ws blocked_on = %v, want [dc · ready]", got)
@@ -188,19 +188,19 @@ func TestWaitForHoldsFromTheGatedStep(t *testing.T) {
 
 	// dc team 1 reaches the milestone (its later step still pending); dc team 2
 	// does not. Only team 1's ws is released -- gates are per team.
-	setRows(1, "dc", "done", 0, 1, 2, 3)
+	setRows(1, "dc", "done", 0, 1, 2, 3, 4, 5)
 	reconcile()
-	if got, want := statuses(1, "ws"), "done,done,pending,pending,pending,pending"; got != want {
+	if got, want := statuses(1, "ws"), "done,done,done,pending,pending,pending,pending,pending,pending"; got != want {
 		t.Fatalf("team 1 ws after dc reached ready = %s, want %s", got, want)
 	}
 	if got := blockedOn(1, "ws"); len(got) != 0 {
 		t.Fatalf("team 1 ws blocked_on = %v after release, want empty", got)
 	}
-	if got, want := statuses(2, "ws"), "pending,pending,blocked,blocked,blocked,blocked"; got != want {
+	if got, want := statuses(2, "ws"), "pending,pending,pending,blocked,blocked,blocked,blocked,blocked,blocked"; got != want {
 		t.Fatalf("team 2 ws = %s, want still held (%s)", got, want)
 	}
 	// The whole-host wait isn't satisfied by a milestone: dc isn't finished.
-	if got, want := statuses(1, "vdi"), "pending,pending,blocked,blocked"; got != want {
+	if got, want := statuses(1, "vdi"), "pending,pending,pending,blocked,blocked,blocked"; got != want {
 		t.Fatalf("team 1 vdi = %s, want %s", got, want)
 	}
 
@@ -209,13 +209,13 @@ func TestWaitForHoldsFromTheGatedStep(t *testing.T) {
 		t.Fatal(err)
 	}
 	reconcile()
-	if got, want := statuses(1, "vdi"), "pending,pending,pending,pending"; got != want {
+	if got, want := statuses(1, "vdi"), "pending,pending,pending,pending,pending,pending"; got != want {
 		t.Fatalf("team 1 vdi after dc finished = %s, want %s", got, want)
 	}
 
 	// dc team 2 fails the milestone step for good: team 2's ws can never
 	// continue, so it fails, naming what it waited on.
-	setRows(2, "dc", "failed", 2)
+	setRows(2, "dc", "failed", 3)
 	reconcile()
 	ws2 := obj(2, "ws")
 	if ws2.Status != "build_failed" || !strings.Contains(db.StrOrEmpty(ws2.LastError), "dc · ready, which failed") {

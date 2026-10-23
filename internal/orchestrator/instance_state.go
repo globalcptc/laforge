@@ -187,7 +187,7 @@ func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype
 		if o.Kind != "host" && o.Kind != "container" {
 			continue // networks/DNS have no power state
 		}
-		if o.Status == "destroyed" || o.Status == "destroying" {
+		if o.Status == "destroyed" || o.Status == "destroying" || o.Status == "destroy_queued" {
 			continue // intentionally gone -- not a liveness concern
 		}
 		if o.ExternalRef == nil || *o.ExternalRef == "" {

@@ -41,6 +41,13 @@ type ExecutePayload struct {
 	Args       []string `json:"args,omitempty"`
 	WorkingDir string   `json:"working_dir,omitempty"`
 	TimeoutSec int      `json:"timeout_sec,omitempty"`
+	// Script, when set, is the rendered script file this command runs. The
+	// agent writes it just before each attempt and removes it as soon as the
+	// process exits -- succeeded, failed or timed out -- because a rendered
+	// script carries the environment's passwords and must not stay on a box
+	// competitors control. (A separate write_file before and a delete after
+	// still bracket the command, for agents that predate this field.)
+	Script *WriteFilePayload `json:"script,omitempty"`
 }
 
 type WriteFilePayload struct {

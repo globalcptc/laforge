@@ -305,7 +305,7 @@ func finalizeBuildStatus(ctx context.Context, q *db.Queries, buildID pgtype.UUID
 	infraPending, agentWorking, live, failed := 0, 0, 0, 0
 	for _, o := range objs {
 		switch o.Status {
-		case "pending", "deploying", "destroying":
+		case "pending", "deploying", "destroy_queued", "destroying":
 			// "destroying" counts as infra-in-progress too: during a rebuild the
 			// runner briefly marks the object destroying before resetting it to
 			// pending, and the build must not be judged finished/failed in that
@@ -504,7 +504,7 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	// still exist at the hoster with an unusable allocation.
 	// Fail its dependent guests without bootstrapping them on that network. This
 	// also lets the build settle instead of leaving those guests pending forever.
-	if deployTasks && !infraUp(obj.Status) && obj.Status != "destroying" && obj.Status != "destroyed" && networkName != "" && !networkUp[networkName] {
+	if deployTasks && !infraUp(obj.Status) && obj.Status != "destroy_queued" && obj.Status != "destroying" && obj.Status != "destroyed" && networkName != "" && !networkUp[networkName] {
 		if networkFailed[networkName] && obj.Status != "deploy_failed" {
 			msg := fmt.Sprintf("network %q failed to deploy; resolve its failure before redeploying", networkName)
 			_, err := q.MarkDeployedObjectDeployFailed(ctx, db.MarkDeployedObjectDeployFailedParams{ID: obj.ID, LastError: db.StrPtr(msg)})
@@ -592,7 +592,7 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 		if err := q.ClearRebuildRequested(ctx, obj.ID); err != nil {
 			return false, err
 		}
-		if _, err := q.ResetDeployedObjectForRedeploy(ctx, obj.ID); err != nil {
+		if _, err := q.MarkDeployedObjectDestroyQueued(ctx, obj.ID); err != nil {
 			return false, err
 		}
 		decide(ctx, q, buildID, obj.ID, "rebuild.destroy", fmt.Sprintf("%s: the task it was busy with ended; destroy queued for the rebuild recorded %s ago", objectLabel(obj, 0), time.Since(obj.RebuildRequestedAt.Time).Round(time.Second)),
@@ -657,6 +657,26 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 		if proceed, err := settleLastDeploy(ctx, q, buildID, obj); err != nil || !proceed {
 			return false, err
 		}
+	}
+	if obj.Status == "destroy_queued" {
+		// Waiting to be destroyed, yet no destroy is open or failed
+		// (settleLastDestroy would have stopped here): the one it was waiting
+		// for went away -- withdrawn, or lost. Queue it again, with the hoster
+		// reference the object still holds, rather than wait forever.
+		payload, err := json.Marshal(map[string]any{"remove": false, "external_ref": db.StrOrEmpty(obj.ExternalRef)})
+		if err != nil {
+			return false, err
+		}
+		task, err := q.CreateTaskIfNoneOpen(ctx, db.CreateTaskIfNoneOpenParams{BuildID: buildID, DeployedObjectID: obj.ID, Kind: "destroy_" + obj.Kind, Payload: payload})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		if err != nil {
+			return false, fmt.Errorf("re-queuing the destroy of %s: %w", objectLabel(obj, 0), err)
+		}
+		decide(ctx, q, buildID, obj.ID, "reconcile.destroy_retry", fmt.Sprintf("%s: was waiting to be destroyed but had no destroy queued; queued one (hoster ref %s)", objectLabel(obj, 0), db.StrOrEmpty(obj.ExternalRef)),
+			map[string]any{"task_id": task.ID.String(), "external_ref": db.StrOrEmpty(obj.ExternalRef)})
+		return false, nil
 	}
 	if obj.Status == "destroying" {
 		// No destroy task is in flight (settleLastDestroy would have said), yet
@@ -726,6 +746,10 @@ func requestDestroy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil
 		}
+		return false, err
+	}
+	// Shown as waiting to be destroyed until the runner starts on it.
+	if _, err := q.MarkDeployedObjectDestroyQueued(ctx, obj.ID); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -928,6 +952,11 @@ func settleLastDestroy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 	case "done":
 		return true, nil
 	case "pending", "leased":
+		// The object's own status (waiting to be destroyed / destroying) says
+		// this; only an object that doesn't show it gets the log line.
+		if obj.Status == "destroy_queued" || obj.Status == "destroying" {
+			return false, nil
+		}
 		state := last.Status
 		if last.Status == "leased" {
 			state = fmt.Sprintf("leased by %s until %s", db.StrOrEmpty(last.LeaseOwner), last.LeaseExpiresAt.Time.Format(time.TimeOnly))

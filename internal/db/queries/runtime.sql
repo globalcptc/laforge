@@ -355,6 +355,13 @@ UPDATE deployed_object SET external_ref = $2 WHERE id = $1 AND (external_ref IS 
 -- modified. checked_at records when it was last confirmed.
 UPDATE deployed_object SET power_state = $2, power_state_checked_at = now() WHERE id = $1;
 
+-- name: MarkDeployedObjectDestroyQueued :execrows
+-- A destroy for it is queued and hasn't started: shown as waiting to be
+-- destroyed, with its hoster reference kept for the destroy. The runner moves
+-- it to destroying, then (for a rebuild) to pending once it's gone.
+UPDATE deployed_object SET status = 'destroy_queued', last_error = NULL, updated_at = now()
+WHERE id = $1 AND status NOT IN ('destroying', 'destroyed');
+
 -- name: MarkDeployedObjectDestroying :one
 UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = $1 RETURNING *;
 

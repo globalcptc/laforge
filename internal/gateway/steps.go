@@ -343,6 +343,9 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 	}
 	var out []PlannedCommand
 	var notes []string
+	// scriptPath is the file a `script:` step writes on the host. It's
+	// deleted as the step's last command (see the end of this function).
+	var scriptPath string
 	// ignoreErrors is set by an action whose failure the author chose to
 	// tolerate (a `script:` with `ignore_errors:`). It rides on that action's
 	// own command AND on the step's trailing validate, since "a failed check
@@ -361,9 +364,9 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 			return nil, nil, fmt.Errorf("step %d (script %s): %w", i, name, err)
 		}
 		path, mode := scriptFile(i, script.Name, script.Language)
-		out = append(out, PlannedCommand{Command: agentproto.CmdWriteFile, Payload: agentproto.WriteFilePayload{
-			Path: path, Content: rendered, Mode: mode,
-		}})
+		scriptPath = path
+		scriptBody := agentproto.WriteFilePayload{Path: path, Content: rendered, Mode: mode}
+		out = append(out, PlannedCommand{Command: agentproto.CmdWriteFile, Payload: scriptBody})
 		ignoreErrors = script.IgnoreErrors
 		interp, prefixArgs := languageInterpreter(script.Language)
 		// interpreter flags, then the script path, then the script's own
@@ -373,7 +376,7 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 		execArgs = append(execArgs, script.Args...)
 		maxAttempts := scriptMaxAttempts(script.Retries)
 		out = append(out, PlannedCommand{Command: agentproto.CmdExecute, IgnoreErrors: ignoreErrors, Reboots: script.Reboots, MaxAttempts: maxAttempts, Payload: agentproto.ExecutePayload{
-			Command: interp, Args: execArgs, TimeoutSec: script.Timeout,
+			Command: interp, Args: execArgs, TimeoutSec: script.Timeout, Script: &scriptBody,
 		}})
 		// A script's OWN `validate:` block runs after its execution, on every
 		// host that runs it -- on top of (before) any validate the step itself
@@ -499,6 +502,17 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 			return nil, nil, fmt.Errorf("step %d validate: %w", i, err)
 		}
 		out = append(out, PlannedCommand{Command: agentproto.CmdValidate, IgnoreErrors: ignoreErrors, Payload: agentproto.ValidatePayload{Checks: checks}})
+	}
+
+	// A rendered script holds the environment's passwords, and the host is
+	// one competitors get onto: it's deleted as soon as the step is through.
+	// Current agents already remove it the moment the script exits (the
+	// execute payload's Script); this delete is for older agents, and for a
+	// script that rebooted the host before the agent could remove it. Its
+	// output ("deleted <path>") is the step's event, so the removal is logged
+	// on the host's Events tab and in the gateway's log.
+	if scriptPath != "" {
+		out = append(out, PlannedCommand{Command: agentproto.CmdDelete, Payload: agentproto.DeletePayload{Path: scriptPath}})
 	}
 
 	return out, notes, nil

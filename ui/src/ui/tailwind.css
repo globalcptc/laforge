@@ -77,6 +77,10 @@
   --color-purple-soft: #f3e8ff;
   --color-pink: #be185d;
   --color-pink-soft: #fce7f3;
+  /* mauve = destroy pending: a dusty pink between pending's slate and
+     destroying's pink. */
+  --color-mauve: #8b4a68;
+  --color-mauve-soft: #f3e8ee;
 
   /* CPTC coral logo ink -- a light chip fill (e.g. the "Sizes" edit action),
      with a fixed dark ink for its text. Both are fixed (never redefined for dark
@@ -183,6 +187,8 @@
   --color-purple-soft: #2e1065;
   --color-pink: #f9a8d4;
   --color-pink-soft: #3a0f24;
+  --color-mauve: #d9b0c4;
+  --color-mauve-soft: #2a1822;
 
   /* Shadows can't lift on black: they deepen instead, and the border does the separating. */
   --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 32px -16px rgb(0 0 0 / 0.7);

@@ -3,6 +3,10 @@ import {
   CircleHelp,
   Hourglass,
   Loader,
+  LoaderPinwheel,
+  OctagonPause,
+  OctagonX,
+  SquarePause,
   Check,
   CircleCheck,
   CircleX,
@@ -14,10 +18,10 @@ import {
   PlugZap,
   SatelliteDish,
   Cog,
-  ServerCrash,
   ServerOff,
+  TrashOff,
   Wrench,
-  ShieldX,
+  ShieldOff,
   type LucideIcon,
 } from 'lucide-react'
 import { Badge, cn, Modal, type BadgeProps } from '../ui'
@@ -63,6 +67,7 @@ type Kind =
   | 'torn_down'
   | 'purged'
   | 'discarded'
+  | 'destroy_queued'
   | 'destroying'
   | 'destroy_failed'
   | 'destroyed'
@@ -92,9 +97,9 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   // Pending is queued for the system to act on -- a spinning dashed ring reads
   // as a loading spinner, so "queued, nothing at the hoster yet" still signals
   // activity rather than looking stuck.
-  pending: { icon: CircleDashed, anim: 'spin', tone: 'ink', label: 'Pending' },
+  pending: { icon: SquarePause, anim: 'pulse', tone: 'ink', label: 'Pending' },
   // Infra being created -- dark blue, spinning.
-  deploying: { icon: Loader, anim: 'spin', tone: 'indigo', label: 'Creating Hosts' },
+  deploying: { icon: LoaderPinwheel, anim: 'spin', tone: 'indigo', label: 'Creating Hosts' },
   // Infra up, agent not yet checked in -- light blue, animated. The satellite
   // dish reads as "listening for the agent's first check-in."
   running: { icon: SatelliteDish, anim: 'pulse', tone: 'sky', label: 'Awaiting Agent' },
@@ -110,9 +115,9 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   // marks the single "done" state.
   finished: { icon: Check, tone: 'success', label: 'Build Complete' },
   // Three distinct failure hues, one per cause -- all terminal, all still.
-  deploy_failed: { icon: ServerCrash, tone: 'danger', label: 'Creation Failed' },
+  deploy_failed: { icon: ServerOff, tone: 'danger', label: 'Creation Failed' },
   build_failed: { icon: Wrench, tone: 'orange', label: 'Build Failed' },
-  invalid: { icon: ShieldX, tone: 'warning', label: 'Validation Failed' },
+  invalid: { icon: ShieldOff, tone: 'warning', label: 'Validation Failed' },
   // Build-level aggregate failure -- terminal, still.
   failed: { icon: CircleX, tone: 'danger', label: 'Failed' },
   tearing_down: { icon: Loader, anim: 'spin', tone: 'pink', label: 'Tearing down' },
@@ -123,13 +128,17 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   // build was removed -- never deployed, nothing was ever created. Terminal,
   // resting, grey like the other history states.
   discarded: { icon: MinusCircle, tone: 'neutral', label: 'Discarded' },
-  destroying: { icon: Loader, anim: 'spin', tone: 'pink', label: 'Destroying' },
+  // A destroy is queued (a rebuild, a content change) but hasn't started: the
+  // instance is still there. A dusty pink, between Pending and Destroying, and
+  // pulsing like Pending -- waiting, not working.
+  destroy_queued: { icon: OctagonPause, anim: 'pulse', tone: 'mauve', label: 'Destroy Pending' },
+  destroying: { icon: OctagonX, anim: 'spin', tone: 'pink', label: 'Destroying' },
   // The destroy-side twin of Creation Failed: the hoster refused to remove the
   // instance for a reason retrying cannot fix, so teardown stopped here. Terminal
   // and still until an operator retries the teardown or forces the build down. A
-  // distinct icon (ServerOff, not deploy_failed's ServerCrash) so the two don't
+  // distinct icon (TrashOff, not deploy_failed's ServerOff) so the two don't
   // read identically on the environment board, where color + icon carry it alone.
-  destroy_failed: { icon: ServerOff, tone: 'danger', label: 'Destroy Failed' },
+  destroy_failed: { icon: TrashOff, tone: 'danger', label: 'Destroy Failed' },
   destroyed: { icon: MinusCircle, tone: 'neutral', label: 'Destroyed' },
   open: { icon: CircleCheck, tone: 'success', label: 'Open' },
   closed: { icon: MinusCircle, tone: 'warning', label: 'Closed' },
@@ -186,7 +195,8 @@ const STATUS_DESC: Partial<Record<Kind, string>> = {
   torn_down: 'Removed from the hoster.',
   purged: 'Records cleared after teardown.',
   discarded: 'Planned build set aside — a newer commit superseded it, or its configured build was removed. Nothing was ever created.',
-  destroying: 'Being removed during teardown.',
+  destroy_queued: 'A destroy is queued (a rebuild or a content change) and hasn’t started; the instance is still up. Once it’s destroyed the host is recreated.',
+  destroying: 'The hoster is removing the instance — for a teardown, or before it’s recreated.',
   destroy_failed: 'The hoster could not remove the instance; teardown is stuck until retried.',
   destroyed: 'Removed from the hoster.',
   open: 'External ingress is allowed.',
@@ -342,6 +352,7 @@ export const LIFECYCLE_STATES = [
   'deploy_failed',
   'build_failed',
   'invalid',
+  'destroy_queued',
   'destroying',
   'destroy_failed',
   'torn_down',

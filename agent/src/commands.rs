@@ -122,7 +122,80 @@ fn opt_str<'a>(payload: &'a Value, field: &str) -> &'a str {
     payload.get(field).and_then(Value::as_str).unwrap_or("")
 }
 
+/// The rendered script an `execute` runs (its payload's `script`), written just
+/// before the run and removed the moment the process exits -- succeeded, failed,
+/// timed out or never started. A rendered script carries the environment's
+/// passwords, and this host is one competitors get onto. Removal happens in
+/// Drop so no early return can skip it; the outcome is reported in the step's
+/// output, which the gateway records as the step's event.
+struct StagedScript {
+    path: String,
+}
+
+impl StagedScript {
+    fn write(script: &Value) -> Result<Option<StagedScript>, String> {
+        let path = opt_str(script, "path");
+        if path.is_empty() {
+            return Ok(None);
+        }
+        fs::write(path, opt_str(script, "content")).map_err(|e| format!("writing script {path}: {e}"))?;
+        let staged = StagedScript { path: path.to_string() };
+        let mode = opt_str(script, "mode");
+        if !mode.is_empty() {
+            set_mode(path, mode)?; // on error, Drop still removes the file
+        }
+        Ok(Some(staged))
+    }
+
+    /// Removes the script now and says what happened, for the step's output.
+    fn remove(&mut self) -> String {
+        let path = std::mem::take(&mut self.path);
+        if path.is_empty() {
+            return String::new();
+        }
+        match fs::remove_file(&path) {
+            Ok(()) => format!("[laforge] deleted script {path}"),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => format!("[laforge] script {path} already gone"),
+            Err(e) => format!("[laforge] FAILED to delete script {path}: {e}"),
+        }
+    }
+}
+
+impl Drop for StagedScript {
+    fn drop(&mut self) {
+        let note = self.remove();
+        if note.contains("FAILED") {
+            eprintln!("{note}");
+        }
+    }
+}
+
+/// Appends the script-removal note to a step's output or error.
+fn with_note(text: String, note: &str) -> String {
+    if note.is_empty() {
+        return text;
+    }
+    if text.is_empty() || text.ends_with('\n') {
+        format!("{text}{note}")
+    } else {
+        format!("{text}\n{note}")
+    }
+}
+
 fn cmd_execute(payload: &Value) -> Result<String, String> {
+    let mut staged = match payload.get("script") {
+        Some(script) if script.is_object() => StagedScript::write(script)?,
+        _ => None,
+    };
+    let result = run_execute(payload);
+    let note = staged.as_mut().map(StagedScript::remove).unwrap_or_default();
+    match result {
+        Ok(out) => Ok(with_note(out, &note)),
+        Err(err) => Err(with_note(err, &note)),
+    }
+}
+
+fn run_execute(payload: &Value) -> Result<String, String> {
     let command = req_str(payload, "command")?;
     let args: Vec<String> = payload
         .get("args")
@@ -936,6 +1009,30 @@ mod tests {
         assert_eq!(outcome.status, "done", "delete should be idempotent, got error: {}", outcome.error);
 
         fs::remove_dir_all(&dir).ok();
+    }
+
+    // A payload's script holds the environment's passwords: it's written for the
+    // run and gone afterwards, whether the script succeeded or failed, and the
+    // removal is reported in the step's output.
+    #[cfg(unix)]
+    #[test]
+    fn execute_removes_its_script_whatever_the_outcome() {
+        for (body, ok) in [("echo hello", true), ("echo boom >&2; exit 3", false)] {
+            let path = std::env::temp_dir().join(format!("laforge-step-test-{}-{ok}", std::process::id()));
+            let p = path.to_string_lossy().to_string();
+            let payload = serde_json::json!({
+                "command": "/bin/sh", "args": [p],
+                "script": {"path": p, "content": body, "mode": "0700"},
+            });
+            let out = cmd_execute(&payload);
+            assert!(!path.exists(), "script left on disk after a run that {}", if ok { "succeeded" } else { "failed" });
+            let text = match &out {
+                Ok(s) => s.clone(),
+                Err(e) => e.clone(),
+            };
+            assert_eq!(out.is_ok(), ok, "outcome: {text}");
+            assert!(text.contains(&format!("deleted script {p}")), "removal not reported: {text}");
+        }
     }
 
     #[test]

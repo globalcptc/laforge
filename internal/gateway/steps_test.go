@@ -112,10 +112,10 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 	// steps follow. TestExpandStepsAdminPasswordBackstop covers the step itself.
 	wantCommands := []string{
 		agentproto.CmdSetPassword, // admin-password backstop (root)
-		agentproto.CmdWriteFile, agentproto.CmdExecute, // script: base
+		agentproto.CmdWriteFile, agentproto.CmdExecute, agentproto.CmdDelete, // script: base
 		agentproto.CmdDownload,
 		agentproto.CmdExtract,
-		agentproto.CmdWriteFile, agentproto.CmdExecute, // script: vuln-sqli
+		agentproto.CmdWriteFile, agentproto.CmdExecute, agentproto.CmdDelete, // script: vuln-sqli
 	}
 	if len(cmds) != len(wantCommands) {
 		t.Fatalf("got %d commands, want %d: %+v", len(cmds), len(wantCommands), cmds)
@@ -127,11 +127,11 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 	}
 
 	// ignore_errors rides from a script onto its execute command: vuln-sqli sets
-	// it (cmds[6]), base does not (cmds[2]).
+	// it (cmds[7]), base does not (cmds[2]).
 	if cmds[2].IgnoreErrors {
 		t.Errorf("base's execute should not ignore errors")
 	}
-	if !cmds[6].IgnoreErrors {
+	if !cmds[7].IgnoreErrors {
 		t.Errorf("vuln-sqli sets ignore_errors: true, but its execute command didn't carry it")
 	}
 
@@ -148,6 +148,18 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 		t.Fatalf("rendered script content still has an unrendered template marker:\n%s", wf.Content)
 	}
 
+	// The rendered script holds the environment's passwords, so it never stays
+	// on the host: the execute carries it (the agent writes it per attempt and
+	// removes it when the script exits, whatever the outcome), and a delete of
+	// the same path ends the step for agents that predate that.
+	ex, ok := cmds[2].Payload.(agentproto.ExecutePayload)
+	if !ok || ex.Script == nil || ex.Script.Path != wf.Path || ex.Script.Content != wf.Content {
+		t.Fatalf("execute should carry the script it runs (%s) for the agent to remove: %+v", wf.Path, cmds[2].Payload)
+	}
+	if del, ok := cmds[3].Payload.(agentproto.DeletePayload); !ok || del.Path != wf.Path {
+		t.Fatalf("cmds[3] should delete %s, got %+v", wf.Path, cmds[3].Payload)
+	}
+
 	exec, ok := cmds[2].Payload.(agentproto.ExecutePayload)
 	if !ok {
 		t.Fatalf("cmds[2].Payload is %T, want agentproto.ExecutePayload", cmds[2].Payload)
@@ -159,9 +171,9 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 		t.Fatalf("exec.Args = %v, want exactly [%q] (the path the script was just written to)", exec.Args, wf.Path)
 	}
 
-	dl, ok := cmds[3].Payload.(agentproto.DownloadPayload)
+	dl, ok := cmds[4].Payload.(agentproto.DownloadPayload)
 	if !ok {
-		t.Fatalf("cmds[3].Payload is %T, want agentproto.DownloadPayload", cmds[3].Payload)
+		t.Fatalf("cmds[4].Payload is %T, want agentproto.DownloadPayload", cmds[4].Payload)
 	}
 	if dl.From != "https://files.cp.tc/site.tar.gz" || dl.To != "/var/www/site.tar.gz" {
 		t.Fatalf("download payload = %+v, want matching webserver.yaml's from/to", dl)

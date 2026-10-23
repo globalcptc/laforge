@@ -119,6 +119,7 @@ export type ObjectStatus =
   | 'deploy_failed'
   | 'build_failed'
   | 'invalid'
+  | 'destroy_queued'
   | 'destroying'
   | 'destroy_failed'
   | 'destroyed'

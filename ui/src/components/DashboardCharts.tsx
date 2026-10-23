@@ -22,6 +22,7 @@ const STATUS_ORDER = [
   'deploy_failed',
   'build_failed',
   'invalid',
+  'destroy_queued',
   'destroying',
   'destroyed',
 ] as const

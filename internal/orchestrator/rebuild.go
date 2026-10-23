@@ -31,19 +31,17 @@ type RebuildAffected struct {
 // built on top of it). dryRun resolves and returns the affected set without
 // touching anything; otherwise it enqueues the work and returns the same set.
 //
-// How a non-dry-run rebuild actually re-enters the deploy pipeline, race-free:
-// for each affected object it (1) enqueues a destroy task with remove=false --
-// the runner tears the instance down at the hoster, resets the row for
-// redeploy, and clears its materialized steps so they re-run -- and (2) resets
-// the row to 'pending' synchronously, right now. Step 2 matters: an object left
-// 'finished'/'running' would let finalizeBuildStatus mark the whole build
-// finished in the window before the destroy runs, and the orchestrator only
-// reconciles non-terminal builds, so the reset would then never redeploy.
-// Holding the objects at 'pending' (infraPending > 0) keeps the build in the
-// deploy phase until the rebuild genuinely completes. The destroy is enqueued
-// first so it is the one open task per object; a premature deploy task is
-// blocked by task_one_open_per_object until the teardown finishes. Finally the
-// build is flipped back to 'deploying' so the poll loop recreates everything.
+// How a non-dry-run rebuild re-enters the deploy pipeline: for each affected
+// object it (1) enqueues a destroy task with remove=false and (2) marks the
+// object destroy_queued -- waiting to be destroyed, its hoster reference kept.
+// The runner then marks it destroying, tears the instance down, and only then
+// resets it to pending (clearing its steps so they re-run), and the reconciler
+// deploys it fresh. destroy_queued counts as infrastructure in progress, so the
+// build can't be finalized as finished in the window before the destroy runs
+// (the orchestrator only reconciles non-terminal builds; a build finalized
+// then would never redeploy). The destroy is the object's one open task, so no
+// deploy can be queued until it ends. Finally the build is flipped back to
+// 'deploying' so the poll loop recreates everything.
 func Rebuild(ctx context.Context, pool *pgxpool.Pool, build db.Build, content *loader.Content, target AdHocTarget, includeDependents, dryRun bool) ([]RebuildAffected, error) {
 	q := db.New(pool)
 
@@ -118,8 +116,8 @@ func Rebuild(ctx context.Context, pool *pgxpool.Pool, build db.Build, content *l
 		if err := q.ClearRebuildRequested(ctx, o.ID); err != nil {
 			return nil, err
 		}
-		if _, err := q.ResetDeployedObjectForRedeploy(ctx, o.ID); err != nil {
-			return nil, fmt.Errorf("resetting %s for rebuild: %w", o.ID.String(), err)
+		if _, err := q.MarkDeployedObjectDestroyQueued(ctx, o.ID); err != nil {
+			return nil, fmt.Errorf("marking %s waiting to be destroyed: %w", o.ID.String(), err)
 		}
 	}
 	if _, err := q.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: build.ID, Status: "deploying"}); err != nil {

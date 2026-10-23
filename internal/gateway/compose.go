@@ -51,13 +51,14 @@ if [ -r /etc/os-release ] && . /etc/os-release && [ "$ID" = "amzn" ]; then
   docker compose version
   exit 0
 fi
+# The downloaded installer is removed however the install ends.
+trap 'rm -f /tmp/laforge-get-docker.sh && echo "deleted /tmp/laforge-get-docker.sh"' EXIT
 if command -v curl >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com -o /tmp/laforge-get-docker.sh
 else
   wget -qO /tmp/laforge-get-docker.sh https://get.docker.com
 fi
 sh /tmp/laforge-get-docker.sh
-rm -f /tmp/laforge-get-docker.sh
 systemctl enable --now docker 2>/dev/null || service docker start
 docker compose version`
 
@@ -96,7 +97,9 @@ func expandCompose(repoRoot string, ctx *render.Context, c *loader.Content, o ex
 		{Command: agentproto.CmdWriteFile, Payload: agentproto.WriteFilePayload{
 			Path: archivePath, Content: base64.StdEncoding.EncodeToString(b.Archive), Mode: "0600",
 		}},
-		sh(fmt.Sprintf("base64 -d %s | tar -xzf - -C %s && rm -f %s", archivePath, dir, archivePath)),
+		// The archive is removed whether or not it unpacks: it's the rendered
+		// project, secrets included.
+		sh(fmt.Sprintf("base64 -d %s | tar -xzf - -C %s; rc=$?; rm -f %s && echo \"deleted %s\"; exit $rc", archivePath, dir, archivePath, archivePath)),
 	}
 
 	out = append(out, sh(installDockerScript))
@@ -110,6 +113,12 @@ func expandCompose(repoRoot string, ctx *render.Context, c *loader.Content, o ex
 		out = append(out, sh(dockerDaemonLogScript(o.containerLogs)))
 	}
 
+	// Registry logins go into a throwaway Docker config used only for the
+	// pull and removed the moment it ends, whether it worked or not: a plain
+	// `docker login` saves the registry password in /root/.docker/config.json
+	// on a box competitors control. The images are on the host after the
+	// pull, so `up` needs no login.
+	var logins []string
 	if o.registryAuth != nil {
 		seen := map[string]bool{}
 		for _, image := range b.Images {
@@ -131,14 +140,22 @@ func expandCompose(repoRoot string, ctx *render.Context, c *loader.Content, o ex
 			if host != "" {
 				server = " " + shellQuote(host)
 			}
-			out = append(out, sh(fmt.Sprintf("printf %%s %s | docker login%s -u %s --password-stdin",
-				shellQuote(auth.Secret), server, shellQuote(auth.Username))))
+			logins = append(logins, fmt.Sprintf("printf %%s %s | docker login%s -u %s --password-stdin",
+				shellQuote(auth.Secret), server, shellQuote(auth.Username)))
 		}
 	}
 
 	dc := fmt.Sprintf("docker compose -p %s --project-directory %s -f %s/%s", project, dir, dir, shellQuote(b.File))
+	pull := dc + " pull"
+	if len(logins) > 0 {
+		pull = fmt.Sprintf(`DOCKER_CONFIG=$(mktemp -d) || exit 1
+export DOCKER_CONFIG
+cleanup() { rm -rf "$DOCKER_CONFIG" && echo "deleted the temporary registry login ($DOCKER_CONFIG)"; }
+trap cleanup EXIT
+%s && %s`, strings.Join(logins, " && \\\n"), pull)
+	}
 	out = append(out,
-		sh(dc+" pull"),
+		sh(pull),
 		// --no-build: an image that couldn't be pulled is an error here, never a
 		// reason to build on the host. --wait holds until every service is
 		// running and, where it has a healthcheck, healthy.

@@ -220,16 +220,16 @@ func TestFullBuildConverges(t *testing.T) {
 	if err := json.Unmarshal(web01.BlockedOn, &blockedOn); err != nil || len(blockedOn) != 1 || blockedOn[0] != "database" {
 		t.Errorf("web01 blocked_on = %s, want [\"database\"]", web01.BlockedOn)
 	}
-	// script: expands to two commands each (write_file the rendered script,
-	// then execute it) -- see internal/gateway/steps.go's own "script" case --
-	// so webserver.yaml's base + download + extract + vuln-sqli is 6 real
-	// commands, not 4; plus ExpandSteps prepends the admin-password backstop
-	// (set_password from the environment's root_password) as the first command,
-	// for 7.
+	// script: expands to three commands each (write_file the rendered script,
+	// execute it, delete it) -- see internal/gateway/steps.go's own "script"
+	// case -- so webserver.yaml's base + download + extract + vuln-sqli is 8
+	// real commands, not 4; plus ExpandSteps prepends the admin-password
+	// backstop (set_password from the environment's root_password) as the
+	// first command, for 9.
 	if gated, err := q.ListAgentTasksByHost(ctx, web01.ID); err != nil {
 		t.Fatalf("ListAgentTasksByHost(web01): %v", err)
-	} else if len(gated) != 7 {
-		t.Fatalf("web01 agent_task rows = %d while gated on database, want 7 queued and blocked", len(gated))
+	} else if len(gated) != 9 {
+		t.Fatalf("web01 agent_task rows = %d while gated on database, want 9 queued and blocked", len(gated))
 	} else {
 		for i, at := range gated {
 			if at.Status != "blocked" {
@@ -240,7 +240,7 @@ func TestFullBuildConverges(t *testing.T) {
 
 	// Now let every database copy finish, then reconcile once: web01's queued
 	// steps must be released (blocked -> pending) and its blocked_on cleared,
-	// with no new rows -- the same 7 commands, now runnable.
+	// with no new rows -- the same 9 commands, now runnable.
 	for _, dbCopy := range databaseCopies {
 		if err := q.SetDeployedObjectFinished(ctx, dbCopy.ID); err != nil {
 			t.Fatalf("SetDeployedObjectFinished(%s): %v", db.StrOrEmpty(dbCopy.AsName), err)
@@ -253,10 +253,10 @@ func TestFullBuildConverges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListAgentTasksByHost: %v", err)
 	}
-	if len(agentTasks) != 7 {
-		t.Fatalf("web01 agent_task rows = %d after database finished, want 7 (set_password admin backstop, then script:base -> write_file+execute, download, extract, script:vuln-sqli -> write_file+execute)", len(agentTasks))
+	if len(agentTasks) != 9 {
+		t.Fatalf("web01 agent_task rows = %d after database finished, want 9 (set_password admin backstop, then script:base -> write_file+execute+delete, download, extract, script:vuln-sqli -> write_file+execute+delete)", len(agentTasks))
 	}
-	wantCommands := []string{"set_password", "write_file", "execute", "download", "extract", "write_file", "execute"}
+	wantCommands := []string{"set_password", "write_file", "execute", "delete", "download", "extract", "write_file", "execute", "delete"}
 	for i, at := range agentTasks {
 		if at.Command != wantCommands[i] {
 			t.Errorf("web01 agent_task[%d].Command = %q, want %q", i, at.Command, wantCommands[i])

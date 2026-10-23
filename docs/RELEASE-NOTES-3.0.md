@@ -119,7 +119,10 @@ This note covers the whole 3.0 line.
   waiter out of its target's rebuild cascade. See
   [CONFIGURATION.md](../CONFIGURATION.md#waiting-on-another-host-wait_for-and-milestone).
 - **Force-rebuild** a host and all its downstream dependents from the UI, and **clean
-  teardown** at the end of an event.
+  teardown** at the end of an event. A rebuilt host shows **Destroy Pending** until
+  its destroy starts, then **Destroying**, and only then **Pending** for its fresh
+  deploy — never Pending while the old instance still exists. The same goes for a host
+  recreated because its content changed.
 - **Restart from step.** A host whose build stopped — a failed step, a validator that
   didn't pass — can be restarted from any authored step instead of rebuilt: that step and
   every one after it run again in full (downloads fetch again, scripts write and run
@@ -305,6 +308,17 @@ This note covers the whole 3.0 line.
   shell relay reuses the same CA with its own internal listener and an API client cert.
 - A hardened agent-gateway wire protocol (length-prefixed JSON inside TLS, fuzz-tested
   framing) that **speaks only the agent protocol** to the outside.
+- **No setup secrets left on hosts.** A rendered `script:` carries the environment's
+  passwords, so it never stays on a box competitors get onto: the agent writes it just
+  before each run and deletes it the moment the script exits, whether it succeeded,
+  failed or timed out, and every script step ends with a delete of the same file (for
+  agents from before this change, and for scripts that reboot the host). Each removal
+  appears in the host's Events tab ("deleted /tmp/laforge-step-…") and the gateway log.
+  Container hosts log in to registries through a temporary Docker config that is removed
+  right after the pull, so no registry password is saved in `/root/.docker/config.json`;
+  the compose project archive, the Docker installer and the Windows agent task file are
+  removed however their step ends. Hosts deployed before this change still have their
+  old script files; remove them by hand.
 
 ## CLI
 

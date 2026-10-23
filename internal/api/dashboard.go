@@ -64,7 +64,7 @@ func classifyHealth(o objectView, failedSteps map[string]bool) string {
 		return healthFailedInfra
 	case "build_failed", "invalid":
 		return healthFailedSteps
-	case "destroying", "destroy_failed", "destroyed":
+	case "destroy_queued", "destroying", "destroy_failed", "destroyed":
 		return ""
 	}
 	// The instance is gone or powered off at the hoster -- an infra failure,

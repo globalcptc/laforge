@@ -578,6 +578,9 @@ func stepDescriptor(task db.AgentTask) string {
 		if p.From != "" {
 			return p.From
 		}
+	case "delete":
+		// The full path: what was removed from the host is the point.
+		return p.Path
 	}
 	return ""
 }

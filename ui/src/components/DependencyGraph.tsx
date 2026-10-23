@@ -31,7 +31,7 @@ type GEdge = { from: string; to: string; gate: string; msIdx?: number }
 const CARD_W = 272, NET_H = 38, HOST_H = 58, BAR = 17, BASE_X = 12, TOP_PAD = 16, COL_W = CARD_W + 92, V_GAP = 16
 const stepCenterX = (k: number, i: number) => 9 + (i + 0.5) * ((CARD_W - 16) / Math.max(1, k))
 
-const PRI: Record<string, number> = { deploy_failed: 5, build_failed: 5, invalid: 5, destroy_failed: 5, failed: 5, dependency_blocked: 4, building: 3, running: 3, deploying: 3, destroying: 3, booting: 3, pending: 2, planned: 2, finished: 1, open: 1, deployed: 1 }
+const PRI: Record<string, number> = { deploy_failed: 5, build_failed: 5, invalid: 5, destroy_failed: 5, failed: 5, dependency_blocked: 4, building: 3, running: 3, deploying: 3, destroy_queued: 3, destroying: 3, booting: 3, pending: 2, planned: 2, finished: 1, open: 1, deployed: 1 }
 function worst(keys: string[]): string {
   return keys.reduce((b, k) => ((PRI[k] ?? 1) > (PRI[b] ?? 1) ? k : b), keys[0] ?? 'finished')
 }
@@ -354,7 +354,7 @@ function GraphNode({ node: n, dim, onEnter, onLeave, onNodeMove, onStepMove, onO
         onClick={onOpenNode}
         onMouseMove={onNodeMove}
         className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[13px] font-medium"
-        style={ghost ? { background: 'transparent', color: BOARD.muted, border: '1px dashed #352f4d', borderRadius: 9 } : { background: statusColor(n.key), color: '#fff', borderRadius: n.groups.length ? '9px 9px 0 0' : 9 }}
+        style={ghost ? { background: 'transparent', color: '#b6afc8', border: '1px dashed #4a4366', borderRadius: 9 } : { background: statusColor(n.key), color: '#fff', borderRadius: n.groups.length ? '9px 9px 0 0' : 9 }}
       >
         <Icon size={15} className={statusAnimClass(n.key)} />
         <span className="truncate font-mono">{n.name}</span>

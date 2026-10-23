@@ -256,6 +256,9 @@ func (r *Runner) LeaseAndExecuteOne(ctx context.Context) (bool, error) {
 // reason LeaseOne is.
 func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	q := db.New(r.Pool)
+	if cancelled := r.cancelIfBuildGone(ctx, q, task); cancelled {
+		return nil
+	}
 	// Log the START of every task, not just its outcome, so a host's event
 	// timeline shows the whole bring-up (deploy_network started -> completed,
 	// deploy_host started -> completed, access configured, ...) rather than only
@@ -316,11 +319,12 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	// success (the network-access bug this handling fixes).
 	if errors.Is(execErr, builder.ErrExternalAccessNotReady) &&
 		(task.Kind == "configure_external_access" || task.Kind == "configure_network_access") {
-		_, err := q.DeferTask(ctx, db.DeferTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Column4: db.Interval(r.RetryBackoff(1))})
+		wait := accessWaitBackoff(r.RetryBackoff(1), time.Since(task.CreatedAt.Time))
+		_, err := q.DeferTask(ctx, db.DeferTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Column4: db.Interval(wait)})
 		if err != nil {
 			return fmt.Errorf("deferring access configuration: %w", err)
 		}
-		r.logEvent(ctx, q, task.BuildID, task.ID, "task.waiting", execErr.Error())
+		r.logEvent(ctx, q, task.BuildID, task.ID, "task.waiting", fmt.Sprintf("%s; checking again in %s", execErr.Error(), wait))
 		return nil
 	}
 	if execErr != nil {
@@ -362,6 +366,49 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	}
 	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "task.completed", message, phaseDetail)
 	return nil
+}
+
+// accessWaitBackoff is how long an access task waiting on its hosts sleeps
+// before checking again: the runner's first retry backoff at first, growing
+// with how long it has waited (a tenth of it), to at most ten minutes. A wait
+// for hosts that take hours -- or never come back -- used to wake every 30s
+// for as long as the task existed.
+func accessWaitBackoff(first, waited time.Duration) time.Duration {
+	wait := waited / 10
+	if wait < first {
+		wait = first
+	}
+	if wait > 10*time.Minute {
+		wait = 10 * time.Minute
+	}
+	return wait
+}
+
+// cancelIfBuildGone fails a deploy or access task whose build is torn down,
+// being torn down, discarded or purged, instead of running it: nothing it
+// would create is wanted any more. (Access tasks deferred while their hosts
+// were rebuilt used to keep waking for a build torn down days earlier.) Destroys
+// and every other task still run. Returns whether it cancelled the task.
+func (r *Runner) cancelIfBuildGone(ctx context.Context, q *db.Queries, task db.Task) bool {
+	if !strings.HasPrefix(task.Kind, "deploy_") && task.Kind != "configure_external_access" && task.Kind != "configure_network_access" {
+		return false
+	}
+	b, err := q.GetBuild(ctx, task.BuildID)
+	if err != nil {
+		return false // can't tell: run it as before
+	}
+	switch b.Status {
+	case "tearing_down", "torn_down", "discarded", "purged":
+	default:
+		return false
+	}
+	reason := fmt.Sprintf("cancelled: the build is %s, so this %s is no longer wanted", strings.ReplaceAll(b.Status, "_", " "), task.Kind)
+	if _, err := q.FailTask(ctx, db.FailTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(reason), Permanent: true}); err != nil {
+		log.Printf("[%s] build %s task %s: cancelling %s failed: %v", r.ID, shortID(task.BuildID), shortID(task.ID), task.Kind, err)
+		return false
+	}
+	r.logEvent(ctx, q, task.BuildID, task.ID, "task.cancelled", reason)
+	return true
 }
 
 // phasePayload turns a builder's recorded phases into a task event's payload:
