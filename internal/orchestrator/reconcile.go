@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -33,7 +34,12 @@ import (
 // needs a destroy this pass and a deploy next pass, once the destroy has
 // actually completed ("rebuild means recreate"). Call it in a loop (see
 // cmd/laforge-orchestrator) until nothing changes.
-func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID) error {
+// onPhase, when non-nil, is called with the duration of each major internal
+// phase (content parse, topology resolve + render) so the caller can surface it
+// -- the orchestrator passes a callback that writes build.phase timeline events
+// while a build is still preparing, so the startup gap shows where the time
+// goes. nil disables it (every test, and steady-state passes).
+func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID, onPhase func(label string, d time.Duration)) error {
 	q := db.New(pool)
 
 	build, err := q.GetBuild(ctx, buildID)
@@ -41,10 +47,15 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 		return fmt.Errorf("loading build: %w", err)
 	}
 
+	loadStart := time.Now()
 	c, err := loader.Load(repoRoot)
 	if err != nil {
 		return fmt.Errorf("loading content: %w", err)
 	}
+	if onPhase != nil {
+		onPhase("content parsed", time.Since(loadStart))
+	}
+	resolveStart := time.Now()
 	if len(c.Errors) > 0 {
 		return fmt.Errorf("content at %s is not valid, refusing to reconcile: %d schema/reference error(s) (first: %s)",
 			repoRoot, len(c.Errors), c.Errors[0].Message)
@@ -157,6 +168,10 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 		if err := reconcileRemovals(ctx, q, buildID, team.ID, desired, deployTasks); err != nil {
 			return fmt.Errorf("team %d: %w", teamNum, err)
 		}
+	}
+
+	if onPhase != nil {
+		onPhase("topology resolved & rendered", time.Since(resolveStart))
 	}
 
 	// Announce the resolve on the build's own timeline, once per content

@@ -132,9 +132,26 @@ func main() {
 		}
 		lastMark := buildStart
 		var phases []string
+		// While a build is still PREPARING -- it hasn't completed its first
+		// resolve, so resolved_revision_id doesn't yet match its content revision
+		// -- surface each pass phase's duration on the build timeline, so the
+		// otherwise-silent startup gap shows where the time actually goes
+		// (checkout vs content load vs topology resolve vs the access passes).
+		// Gated to the preparing window so steady-state 2s passes don't spam it;
+		// once the first resolve lands (build.resolved sets resolved_revision_id)
+		// this stops. Each `mark` boundary becomes a build.phase event.
+		preparing := !b.ResolvedRevisionID.Valid || b.ResolvedRevisionID.Bytes != b.ContentRevisionID.Bytes
 		mark := func(label string) {
 			now := time.Now()
-			phases = append(phases, fmt.Sprintf("%s=%s", label, now.Sub(lastMark).Round(time.Millisecond)))
+			d := now.Sub(lastMark).Round(time.Millisecond)
+			phases = append(phases, fmt.Sprintf("%s=%s", label, d))
+			if preparing {
+				q.CreateEvent(bctx, db.CreateEventParams{
+					BuildID: b.ID, Kind: "build.phase",
+					Message: fmt.Sprintf("%s took %s", label, d),
+					Payload: []byte("{}"),
+				})
+			}
 			lastMark = now
 		}
 		// Teardown deliberately
@@ -191,7 +208,15 @@ func main() {
 		}
 		mark("checkout")
 		recErr := ""
-		if err := orchestrator.Reconcile(bctx, pool, dir, b.ID); err != nil {
+		// While preparing, split the reconcile phase into its internal steps
+		// (content parse vs topology resolve + render) onto the timeline too.
+		var onPhase func(string, time.Duration)
+		if preparing {
+			onPhase = func(label string, d time.Duration) {
+				q.CreateEvent(bctx, db.CreateEventParams{BuildID: b.ID, Kind: "build.phase", Message: fmt.Sprintf("%s took %s", label, d.Round(time.Millisecond)), Payload: []byte("{}")})
+			}
+		}
+		if err := orchestrator.Reconcile(bctx, pool, dir, b.ID, onPhase); err != nil {
 			log.Printf("reconcile build %s: %v", b.ID, err)
 			recErr = err.Error()
 		}

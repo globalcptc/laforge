@@ -394,12 +394,13 @@ func TestPublicNICGuestRoutesDNSAndInheritedMTU(t *testing.T) {
 		t.Fatalf("NICs: %+v", guest)
 	}
 	pub := guest.Config[1]
-	// eth0 (the team network) must ALWAYS carry a resolver so the guest can
-	// resolve the agent download URL on first boot, even when the public NIC has
-	// its own DNS (which here lands on eth1). Regression guard for public hosts
-	// booting with an empty eth0 resolver and failing to download the agent.
-	if len(guest.Config[0].Subnets[0].DNS) != 1 {
-		t.Fatalf("eth0 (primary) must have a DNS resolver: %+v", guest.Config[0].Subnets[0])
+	// eth0 (the team network) must carry the operator-configured DNS -- the
+	// "DNS servers (optional)" value from the builder config -- not the team
+	// gateway, so the guest resolves the agent download URL on first boot.
+	// Regression guard: an earlier fix set eth0 to the gateway, which this
+	// environment's OVN gateway can't resolve external names through.
+	if len(guest.Config[0].Subnets[0].DNS) != 1 || guest.Config[0].Subnets[0].DNS[0] != "10.250.0.1" {
+		t.Fatalf("eth0 (primary) must use the configured DNS (10.250.0.1), got: %+v", guest.Config[0].Subnets[0])
 	}
 	if guest.Config[0].Subnets[0].Gateway != "" || pub.MTU != 1500 || pub.Subnets[0].Gateway != "10.250.0.1" || len(pub.Subnets[0].DNS) != 1 || pub.Subnets[0].DNS[0] != "10.250.0.1" {
 		t.Fatalf("routing/DNS/MTU: %+v", guest)

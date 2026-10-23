@@ -244,6 +244,17 @@ func (s *Server) handleTriggerBuild(w http.ResponseWriter, r *http.Request) {
 		Message: sess.GithubLogin + " started a manual build",
 		Payload: []byte("{}"),
 	})
+	// Opening bookend for the otherwise-silent startup gap: the orchestrator's
+	// first pass fetches the content checkout (a real git clone on a cold cache)
+	// and resolves + renders the whole topology before it can create the first
+	// deploy task -- minutes, with nothing on the timeline until build.resolved
+	// lands at the END of that work. This marks the START so the build doesn't
+	// read as idle while that happens.
+	s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
+		BuildID: build.ID, Kind: "build.preparing",
+		Message: "fetching the content checkout and resolving the topology (first pass can take a minute on a cold checkout)",
+		Payload: []byte("{}"),
+	})
 	// Go straight to deploying rather than leaving a 'planned' build for a
 	// second, manual "Deploy" click: now that a Build Now only runs off a
 	// CI-passed tracked commit, the plan-then-deploy split is friction, not a

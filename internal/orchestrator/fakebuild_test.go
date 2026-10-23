@@ -24,7 +24,7 @@ import (
 // deploy without running the fake builder pass by pass.
 func reconcileWithNetworksUp(t *testing.T, ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID) {
 	t.Helper()
-	if err := Reconcile(ctx, pool, repoRoot, buildID); err != nil {
+	if err := Reconcile(ctx, pool, repoRoot, buildID, nil); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 	if _, err := pool.Exec(ctx,
@@ -32,7 +32,7 @@ func reconcileWithNetworksUp(t *testing.T, ctx context.Context, pool *pgxpool.Po
 		buildID); err != nil {
 		t.Fatalf("marking networks up: %v", err)
 	}
-	if err := Reconcile(ctx, pool, repoRoot, buildID); err != nil {
+	if err := Reconcile(ctx, pool, repoRoot, buildID, nil); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 }
@@ -47,7 +47,7 @@ func deployToConvergence(t *testing.T, pool *pgxpool.Pool, repoRoot string, buil
 		BuildID: &buildID,
 	}
 	for pass := 0; pass < 10; pass++ {
-		if err := Reconcile(ctx, pool, repoRoot, buildID); err != nil {
+		if err := Reconcile(ctx, pool, repoRoot, buildID, nil); err != nil {
 			t.Fatalf("Reconcile (pass %d): %v", pass, err)
 		}
 		for {

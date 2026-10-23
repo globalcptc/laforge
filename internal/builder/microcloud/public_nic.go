@@ -229,17 +229,18 @@ func publicGuestNetwork(plan *publicNICPlan, primaryAddress string, primary neti
 	} else {
 		primarySubnet["gateway"] = primary.Addr().String()
 	}
-	// eth0 (the team network) ALWAYS gets a resolver: the managed network's own
-	// gateway runs dnsmasq, which forwards upstream, so the guest can resolve
-	// external names -- notably the agent download URL -- on first boot, and it's
-	// on-link so it needs no default route of its own. Previously eth0 got a
-	// resolver only when the public NIC had none of its own; a public host WITH a
-	// configured public DNS left eth0 empty, so the guest booted with no usable
-	// resolver on its primary interface and the agent download couldn't resolve.
-	// The public NIC still carries its own DNS when one is configured.
-	primarySubnet["dns_nameservers"] = []string{primary.Addr().String()}
+	// Both NICs get a resolver so the guest can resolve the agent download URL on
+	// first boot. Prefer the operator-configured public-NIC DNS ("DNS servers
+	// (optional)" in the builder config) -- a resolver the operator knows works --
+	// on BOTH interfaces, since the team network's own gateway dnsmasq does not
+	// necessarily forward/resolve external names (that assumption was the earlier
+	// bug: eth0 was set to the gateway and still couldn't resolve). Only when no
+	// DNS is configured do we fall back to the team gateway on the primary NIC.
 	if len(plan.Settings.DNS) > 0 {
+		primarySubnet["dns_nameservers"] = plan.Settings.DNS
 		publicSubnet["dns_nameservers"] = plan.Settings.DNS
+	} else {
+		primarySubnet["dns_nameservers"] = []string{primary.Addr().String()}
 	}
 	var routes []map[string]string
 	for _, route := range plan.Settings.Routes {

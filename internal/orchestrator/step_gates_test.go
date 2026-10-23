@@ -109,7 +109,7 @@ func TestWaitForHoldsFromTheGatedStep(t *testing.T) {
 	}
 	reconcile := func() {
 		t.Helper()
-		if err := Reconcile(ctx, pool, repo, build.ID); err != nil {
+		if err := Reconcile(ctx, pool, repo, build.ID, nil); err != nil {
 			t.Fatalf("Reconcile: %v", err)
 		}
 	}

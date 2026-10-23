@@ -71,7 +71,7 @@ func TestReconcileMaterializesSingleCommandScheduleEntry(t *testing.T) {
 	// First pass creates the network deploy task; a host deploy (and so its
 	// schedule materialization) waits for its network to be up. Bring it up as a
 	// completed DeployNetwork would, then reconcile again.
-	if err := Reconcile(ctx, pool, repoRoot, build.ID); err != nil {
+	if err := Reconcile(ctx, pool, repoRoot, build.ID, nil); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 	if _, err := pool.Exec(ctx,
@@ -79,7 +79,7 @@ func TestReconcileMaterializesSingleCommandScheduleEntry(t *testing.T) {
 		build.ID); err != nil {
 		t.Fatalf("marking networks up: %v", err)
 	}
-	if err := Reconcile(ctx, pool, repoRoot, build.ID); err != nil {
+	if err := Reconcile(ctx, pool, repoRoot, build.ID, nil); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 
@@ -125,7 +125,7 @@ func TestReconcileMaterializesSingleCommandScheduleEntry(t *testing.T) {
 	// materialization on a genuinely new deploy task, and even if it
 	// fired twice, CreateContentScheduledTask's own ON CONFLICT upserts
 	// rather than duplicating.
-	if err := Reconcile(ctx, pool, repoRoot, build.ID); err != nil {
+	if err := Reconcile(ctx, pool, repoRoot, build.ID, nil); err != nil {
 		t.Fatalf("Reconcile (second pass): %v", err)
 	}
 	tasksAfter, err := q.ListScheduledTasksByBuild(ctx, build.ID)

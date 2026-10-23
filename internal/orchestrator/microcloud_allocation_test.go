@@ -61,7 +61,7 @@ func TestMicrocloudDuplicateAllocationBlocksGuests(t *testing.T) {
 	defer srv.Close()
 	b := microcloud.New(&microcloud.Client{BaseURL: srv.URL, HTTPClient: srv.Client(), NetworkLock: microcloud.SQLNetworkLocker{Pool: pool}}, microcloud.Config{OVNUplinkNetwork: "UPLINK"})
 	r := &runner.Runner{Pool: pool, Builder: b, RepoRoot: "../../examples/lm-test", ID: "duplicate-allocation-runner", BuildID: &build.ID, LeaseDuration: time.Minute, HeartbeatInterval: time.Second}
-	if err := Reconcile(ctx, pool, r.RepoRoot, build.ID); err != nil {
+	if err := Reconcile(ctx, pool, r.RepoRoot, build.ID, nil); err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; ; i++ {
@@ -76,7 +76,7 @@ func TestMicrocloudDuplicateAllocationBlocksGuests(t *testing.T) {
 			break
 		}
 	}
-	if err := Reconcile(ctx, pool, r.RepoRoot, build.ID); err != nil {
+	if err := Reconcile(ctx, pool, r.RepoRoot, build.ID, nil); err != nil {
 		t.Fatal(err)
 	}
 	objects, err := q.ListDeployedObjectsByBuild(ctx, build.ID)

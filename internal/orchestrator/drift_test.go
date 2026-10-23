@@ -22,7 +22,7 @@ func TestDetectDriftAgainstARealDeployWithNoDrift(t *testing.T) {
 	q := db.New(pool)
 	build := newTestBuildWithFakeBuilder(t, pool, "drift-clean")
 
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 	r := &runner.Runner{
@@ -85,7 +85,7 @@ func TestDetectDriftFindsOrphanedAndMissingResources(t *testing.T) {
 	q := db.New(pool)
 	build := newTestBuildWithFakeBuilder(t, pool, "drift-dirty")
 
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 	r := &runner.Runner{

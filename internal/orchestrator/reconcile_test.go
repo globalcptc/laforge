@@ -151,7 +151,7 @@ func TestReconcileOnRealExampleRepo(t *testing.T) {
 	}
 
 	// --- idempotency: reconciling again must not create a single new task ---
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile (second pass): %v", err)
 	}
 	tasksAfter, err := q.ListTasksByBuild(ctx, build.ID)
@@ -172,7 +172,7 @@ func TestReconcileRebuildsOnFingerprintChange(t *testing.T) {
 	q := db.New(pool)
 	build := newTestBuild(t, pool, "reconcile-fingerprint-change")
 
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 	objs, err := q.ListDeployedObjectsByBuild(ctx, build.ID)
@@ -213,7 +213,7 @@ func TestReconcileRebuildsOnFingerprintChange(t *testing.T) {
 		t.Fatalf("MarkDeployedObjectRunning: %v", err)
 	}
 
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile (after marking stale): %v", err)
 	}
 
@@ -279,7 +279,7 @@ func TestReconcilePlannedBuildCreatesNoRealWork(t *testing.T) {
 		t.Fatalf("a freshly created build's status = %q, want the schema default planned", build.Status)
 	}
 
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile (planned): %v", err)
 	}
 
@@ -420,7 +420,7 @@ func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 	// First pass creates the network deploy tasks; a box's deploy waits for its
 	// network's subnet/bridge to exist (a physical prerequisite), so bring the
 	// networks up as a completed DeployNetwork would.
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 	if _, err := pool.Exec(ctx,
@@ -431,7 +431,7 @@ func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 	// Next pass: the box deploys ahead of time, so webserver gets its deploy task
 	// even though database hasn't finished -- deploy is NOT gated on depends_on,
 	// only on its network existing.
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 	if got := countWebserverTasks(); got != 5 {
@@ -445,7 +445,7 @@ func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 		build.ID); err != nil {
 		t.Fatalf("marking boxes up: %v", err)
 	}
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile (boxes up): %v", err)
 	}
 	// Steps now materialize eagerly (so the UI can show them) -- but while the
@@ -468,7 +468,7 @@ func TestDependsOnHoldsStepsUntilDependencyFinished(t *testing.T) {
 		build.ID); err != nil {
 		t.Fatalf("finishing database: %v", err)
 	}
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile (database finished): %v", err)
 	}
 	if got := webserverSteps(); got != 5*7 {

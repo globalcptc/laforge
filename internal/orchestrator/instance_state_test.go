@@ -28,7 +28,7 @@ func TestPollInstanceStates(t *testing.T) {
 	// Reconcile + drain, repeatedly: a host's deploy waits for its network, so the
 	// networks deploy on the first pass and the hosts on the next.
 	for pass := 0; pass < 4; pass++ {
-		if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+		if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 			t.Fatalf("Reconcile (pass %d): %v", pass, err)
 		}
 		for {
