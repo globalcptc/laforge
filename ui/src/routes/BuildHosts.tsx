@@ -232,7 +232,7 @@ export function BuildHosts() {
   const [powerSingle, setPowerSingle] = useState<{ action: 'start' | 'stop' | 'reboot'; id: string; name: string; team: number | null } | null>(null)
   // A forced rebuild (tear down + recreate) of one or more hosts plus their
   // dependents; confirmed in RebuildDialog, which previews the full blast radius.
-  const [rebuilding, setRebuilding] = useState<{ ids: string[]; names: string[] } | null>(null)
+  const [rebuilding, setRebuilding] = useState<{ ids: string[]; names: string[]; closedTeams: number[] } | null>(null)
   const [logPanelFor, setLogPanelFor] = useState<{ id: string; label: string; kind: ObjectKind; object?: DeployedObject; teamNumber?: number } | null>(null)
   const [boardOpen, setBoardOpen] = useState(false)
   const [graphOpen, setGraphOpen] = useState(false)
@@ -255,6 +255,23 @@ export function BuildHosts() {
     for (const t of build?.teams ?? []) m.set(t.id, t.team_number)
     return m
   }, [build])
+
+  // team_id -> whether that team's access is currently closed. A closed team is
+  // firewalled down to the gateway (no general egress), so a rebuilt host can't
+  // fetch its agent/step downloads -- the rebuild will likely hang or fail. The
+  // rebuild confirmation warns when any target is on a closed team.
+  const closedTeamById = useMemo(() => {
+    const m = new Map<string, boolean>()
+    for (const t of build?.teams ?? []) m.set(t.id, t.access_state === 'closed')
+    return m
+  }, [build])
+  const closedTeamsForHosts = (hs: DeployedObject[]): number[] => {
+    const nums = new Set<number>()
+    for (const h of hs) {
+      if (closedTeamById.get(h.team_id)) nums.add(teamNumberById.get(h.team_id) ?? 0)
+    }
+    return [...nums].sort((a, b) => a - b)
+  }
 
   // Router doesn't remount this component when navigating between two
   // builds that hit the same route (only buildId's param value changes),
@@ -615,7 +632,7 @@ export function BuildHosts() {
                                       <InfraCell
                                         obj={h}
                                         onAction={(action, obj) => setPowerSingle({ action, id: obj.id, name: obj.as_name ?? obj.object_name, team: teamNumberById.get(obj.team_id) ?? null })}
-                                        onRebuild={readOnly ? undefined : (obj) => setRebuilding({ ids: [obj.id], names: [obj.as_name ?? obj.object_name] })}
+                                        onRebuild={readOnly ? undefined : (obj) => setRebuilding({ ids: [obj.id], names: [obj.as_name ?? obj.object_name], closedTeams: closedTeamsForHosts([obj]) })}
                                       />
                                     </Td>
                                     <Td>{h.agent ? <StatusBadge status={h.agent.agent_status} /> : <span className="text-fg-muted">—</span>}</Td>
@@ -654,7 +671,7 @@ export function BuildHosts() {
             <Button
               variant="secondary"
               size="icon"
-              onClick={() => setRebuilding({ ids: selectedHosts.map((h) => h.id), names: selectedHosts.map((h) => h.as_name ?? h.object_name) })}
+              onClick={() => setRebuilding({ ids: selectedHosts.map((h) => h.id), names: selectedHosts.map((h) => h.as_name ?? h.object_name), closedTeams: closedTeamsForHosts(selectedHosts) })}
               title="Rebuild — tear down and recreate, cascading to dependents"
               aria-label="Rebuild"
             >
@@ -703,6 +720,7 @@ export function BuildHosts() {
         <RebuildDialog
           buildId={buildId}
           targetIds={rebuilding.ids}
+          closedTeams={rebuilding.closedTeams}
           onClose={() => setRebuilding(null)}
           onDone={() => {
             setRebuilding(null)
@@ -864,11 +882,16 @@ function PowerDialog({
 function RebuildDialog({
   buildId,
   targetIds,
+  closedTeams,
   onClose,
   onDone,
 }: {
   buildId: string
   targetIds: string[]
+  // Team numbers among the targets whose access is currently closed -- a rebuilt
+  // host on a closed team can't reach anything but the gateway, so its agent
+  // install and step downloads will likely fail. Surfaced as a warning.
+  closedTeams: number[]
   onClose: () => void
   onDone: () => void
 }) {
@@ -934,6 +957,17 @@ function RebuildDialog({
         <TriangleAlert size={13} className="mt-0.5 shrink-0" />
         <span>This destroys the instances at the hoster and recreates them. Anything changed on them since deploy is lost.</span>
       </div>
+
+      {closedTeams.length > 0 && (
+        <div className="mb-3 flex items-start gap-1.5 rounded-token border border-warning bg-warning-soft p-2 text-xs text-fg">
+          <TriangleAlert size={13} className="mt-0.5 shrink-0 text-warning" />
+          <span>
+            Access is <span className="font-medium">closed</span> for team{closedTeams.length > 1 ? 's' : ''} {closedTeams.join(', ')}. A
+            rebuilt host can only reach the gateway while access is closed, so its agent install and step downloads will likely fail — open
+            access for {closedTeams.length > 1 ? 'those teams' : 'that team'} before rebuilding, or expect the rebuild to hang.
+          </span>
+        </div>
+      )}
 
       <Label>
         Will rebuild
