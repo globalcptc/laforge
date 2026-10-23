@@ -38,6 +38,7 @@ type Client struct {
 	Project          string
 	HTTPClient       *http.Client
 	OperationTimeout time.Duration
+	NetworkLock      NetworkLocker
 }
 
 // NewClient builds a Client that presents clientCertPEM/clientKeyPEM and
@@ -108,15 +109,14 @@ func NewClient(baseURL string, clientCertPEM, clientKeyPEM, serverCertPEM []byte
 		// time OperationTimeout actually promises it. Ordinary calls also
 		// honor that budget: cluster reads can exceed 30 seconds under load.
 		HTTPClient: &http.Client{Transport: &http.Transport{TLSClientConfig: tlsCfg}},
-		// 5 minutes: a win2019 VM's first image clone onto network-attached
-		// Ceph RBD genuinely runs past two minutes (found live -- deploys
-		// failed at "context deadline exceeded" with the old 120s default),
-		// and this budget bounds ordinary API calls as well as asynchronous
-		// operation waits. A builder config can raise it further via
-		// OperationTimeoutSeconds. Caller cancellation always wins.
-		OperationTimeout: 300 * time.Second,
+		// Busy Ceph clusters and large image copies can take several minutes.
+		// The builder can override this budget; caller cancellation always wins.
+		OperationTimeout: DefaultOperationTimeout,
 	}, nil
 }
+
+// DefaultOperationTimeout bounds cluster reads and operation waits when unset.
+const DefaultOperationTimeout = 10 * time.Minute
 
 // requestTimeout is the minimum per-request budget when a client does not
 // configure a longer cluster operation timeout. Every request remains bounded,
@@ -218,6 +218,40 @@ func (e *APIError) Busy() bool {
 func (c *Client) get(ctx context.Context, path string) (json.RawMessage, error) {
 	return c.do(ctx, http.MethodGet, path, nil)
 }
+
+// getRaw does a GET and returns the untouched response body, for endpoints that
+// don't speak the LXD JSON envelope -- notably /1.0/metrics, which is OpenMetrics
+// text. The normal do()/get() path would fail trying to json.Unmarshal it.
+func (c *Client) getRaw(ctx context.Context, path string) ([]byte, error) {
+	reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+	defer cancel()
+	u := c.BaseURL + path
+	if c.Project != "" {
+		sep := "?"
+		if strings.Contains(path, "?") {
+			sep = "&"
+		}
+		u += sep + "project=" + url.QueryEscape(c.Project)
+	}
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GET %s: %w", u, err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GET %s: HTTP %d", u, resp.StatusCode)
+	}
+	return data, nil
+}
+
 func (c *Client) post(ctx context.Context, path string, body interface{}) (json.RawMessage, error) {
 	return c.do(ctx, http.MethodPost, path, body)
 }
@@ -237,6 +271,14 @@ type requestOptions struct {
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body interface{}, options ...requestOptions) (json.RawMessage, error) {
+	if isNetworkingMutation(method, path) {
+		lockedCtx, release, err := c.lockNetworking(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer release()
+		ctx = lockedCtx
+	}
 	// Keep the original caller context for waitForOperation. Submission
 	// and waiting each need their own bounded budget; time spent submitting
 	// must not consume the operation wait's budget. Both still obey the

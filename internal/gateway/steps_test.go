@@ -8,6 +8,83 @@ import (
 	"github.com/globalcptc/laforge/internal/loader"
 )
 
+// TestExpandStepsCarriesScriptRebootsOntoExecute proves a `reboots: true` on a
+// script's config rides onto the execute command that runs it -- the flag the
+// gateway uses to complete a reboot-and-die step on the agent's reconnect
+// instead of re-running it (dcpromo's "already domain joined").
+func TestExpandStepsCarriesScriptRebootsOntoExecute(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatalf("loader.Load: %v", err)
+	}
+	// Mark the "base" script as rebooting, in memory -- real content, one field.
+	var marked bool
+	for i := range c.Scripts {
+		if c.Scripts[i].Name == "base" {
+			c.Scripts[i].Reboots = true
+			marked = true
+		}
+	}
+	if !marked {
+		t.Fatal("expected a 'base' script in examples/lm-test to mark")
+	}
+
+	cmds, _, err := ExpandSteps("../../examples/lm-test", c, "lm-test", "web01", 1)
+	if err != nil {
+		t.Fatalf("ExpandSteps: %v", err)
+	}
+	// web01's commands: set_password backstop, then base's write_file + execute,
+	// then download/extract, then vuln-sqli's write_file + execute. The base
+	// execute (cmds[2]) must carry Reboots; the vuln-sqli execute (cmds[6]) must
+	// not -- the flag is per-script, not blanket.
+	if cmds[2].Command != agentproto.CmdExecute || !cmds[2].Reboots {
+		t.Errorf("base execute (cmds[2]) = %+v, want an execute with Reboots=true", cmds[2])
+	}
+	if cmds[6].Command == agentproto.CmdExecute && cmds[6].Reboots {
+		t.Errorf("vuln-sqli execute (cmds[6]) should NOT carry Reboots -- only the marked script does")
+	}
+}
+
+// TestExpandStepsAdminPasswordBackstop proves ExpandSteps prepends a single
+// set_password for the host's built-in admin account from the environment's
+// root_password -- root on Linux, Administrator on Windows -- as the first
+// command for every host. examples/lm-test sets root_password: P@ssword123.
+func TestExpandStepsAdminPasswordBackstop(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatalf("loader.Load: %v", err)
+	}
+	if len(c.Errors) != 0 {
+		t.Fatalf("content has schema errors: %+v", c.Errors)
+	}
+
+	check := func(asName, wantUser string) {
+		t.Helper()
+		cmds, _, err := ExpandSteps("../../examples/lm-test", c, "lm-test", asName, 1)
+		if err != nil {
+			t.Fatalf("ExpandSteps (%s): %v", asName, err)
+		}
+		if len(cmds) == 0 || cmds[0].Command != agentproto.CmdSetPassword {
+			t.Fatalf("%s: first command = %v, want set_password", asName, cmds)
+		}
+		pw, ok := cmds[0].Payload.(agentproto.SetPasswordPayload)
+		if !ok {
+			t.Fatalf("%s: payload is %T, want SetPasswordPayload", asName, cmds[0].Payload)
+		}
+		if pw.Username != wantUser {
+			t.Errorf("%s: admin user = %q, want %q", asName, pw.Username, wantUser)
+		}
+		if pw.Password != "P@ssword123" {
+			t.Errorf("%s: password = %q, want the env's root_password", asName, pw.Password)
+		}
+		if !cmds[0].IgnoreErrors {
+			t.Errorf("%s: backstop should ignore_errors so it never fails an otherwise-good host", asName)
+		}
+	}
+	check("web01", "root")         // ubuntu22 -> root
+	check("dc01", "Administrator") // windows-server-2022 -> Administrator
+}
+
 // TestExpandStepsOnRealWebserverHost exercises every interesting
 // expansion path against real content in one shot:
 // examples/lm-test/hosts/webserver.yaml's steps are
@@ -30,7 +107,11 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 		t.Fatalf("ExpandSteps: %v", err)
 	}
 
+	// cmds[0] is the admin-password backstop (root on this ubuntu22 host) that
+	// ExpandSteps prepends from the environment's root_password; the authored
+	// steps follow. TestExpandStepsAdminPasswordBackstop covers the step itself.
 	wantCommands := []string{
+		agentproto.CmdSetPassword, // admin-password backstop (root)
 		agentproto.CmdWriteFile, agentproto.CmdExecute, // script: base
 		agentproto.CmdDownload,
 		agentproto.CmdExtract,
@@ -46,19 +127,19 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 	}
 
 	// ignore_errors rides from a script onto its execute command: vuln-sqli sets
-	// it (cmds[5]), base does not (cmds[1]).
-	if cmds[1].IgnoreErrors {
+	// it (cmds[6]), base does not (cmds[2]).
+	if cmds[2].IgnoreErrors {
 		t.Errorf("base's execute should not ignore errors")
 	}
-	if !cmds[5].IgnoreErrors {
+	if !cmds[6].IgnoreErrors {
 		t.Errorf("vuln-sqli sets ignore_errors: true, but its execute command didn't carry it")
 	}
 
 	// The first script's rendered content actually made it into the
 	// write_file payload -- not empty, not a template artifact.
-	wf, ok := cmds[0].Payload.(agentproto.WriteFilePayload)
+	wf, ok := cmds[1].Payload.(agentproto.WriteFilePayload)
 	if !ok {
-		t.Fatalf("cmds[0].Payload is %T, want agentproto.WriteFilePayload", cmds[0].Payload)
+		t.Fatalf("cmds[1].Payload is %T, want agentproto.WriteFilePayload", cmds[1].Payload)
 	}
 	if wf.Content == "" {
 		t.Fatal("rendered script content is empty")
@@ -67,9 +148,9 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 		t.Fatalf("rendered script content still has an unrendered template marker:\n%s", wf.Content)
 	}
 
-	exec, ok := cmds[1].Payload.(agentproto.ExecutePayload)
+	exec, ok := cmds[2].Payload.(agentproto.ExecutePayload)
 	if !ok {
-		t.Fatalf("cmds[1].Payload is %T, want agentproto.ExecutePayload", cmds[1].Payload)
+		t.Fatalf("cmds[2].Payload is %T, want agentproto.ExecutePayload", cmds[2].Payload)
 	}
 	if exec.Command != "/bin/bash" {
 		t.Fatalf("exec.Command = %q, want /bin/bash (base.yaml's language is bash)", exec.Command)
@@ -78,9 +159,9 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 		t.Fatalf("exec.Args = %v, want exactly [%q] (the path the script was just written to)", exec.Args, wf.Path)
 	}
 
-	dl, ok := cmds[2].Payload.(agentproto.DownloadPayload)
+	dl, ok := cmds[3].Payload.(agentproto.DownloadPayload)
 	if !ok {
-		t.Fatalf("cmds[2].Payload is %T, want agentproto.DownloadPayload", cmds[2].Payload)
+		t.Fatalf("cmds[3].Payload is %T, want agentproto.DownloadPayload", cmds[3].Payload)
 	}
 	if dl.From != "https://files.cp.tc/site.tar.gz" || dl.To != "/var/www/site.tar.gz" {
 		t.Fatalf("download payload = %+v, want matching webserver.yaml's from/to", dl)
@@ -288,11 +369,88 @@ func TestExpandStepsUsesRuntimePublicAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cmds) != 1 {
+	// cmds[0] is the admin-password backstop ExpandSteps prepends for every host;
+	// the authored write_file follows at cmds[1].
+	if len(cmds) != 2 {
 		t.Fatalf("commands: %v", cmds)
 	}
-	payload, ok := cmds[0].Payload.(agentproto.WriteFilePayload)
+	payload, ok := cmds[1].Payload.(agentproto.WriteFilePayload)
 	if !ok || payload.Content != "10.250.3.100" {
-		t.Fatalf("runtime public IP missing: %+v", cmds[0])
+		t.Fatalf("runtime public IP missing: %+v", cmds[1])
+	}
+}
+
+// TestExpandStepsCarriesScriptRetries: a script's `retries:` becomes the
+// attempt cap (retries + 1) on its execute command; a script without one leaves
+// the gateway default (nil).
+func TestExpandStepsCarriesScriptRetries(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatalf("loader.Load: %v", err)
+	}
+	zero := 0
+	for i := range c.Scripts {
+		if c.Scripts[i].Name == "base" {
+			c.Scripts[i].Retries = &zero
+		}
+	}
+	cmds, _, err := ExpandSteps("../../examples/lm-test", c, "lm-test", "web01", 1)
+	if err != nil {
+		t.Fatalf("ExpandSteps: %v", err)
+	}
+	// Same layout as TestExpandStepsCarriesScriptRebootsOntoExecute: base's
+	// execute is cmds[2], vuln-sqli's is cmds[6].
+	if cmds[2].Command != agentproto.CmdExecute || cmds[2].MaxAttempts == nil || *cmds[2].MaxAttempts != 1 {
+		t.Fatalf("base execute = %+v, want MaxAttempts 1 from retries: 0", cmds[2])
+	}
+	if cmds[6].MaxAttempts != nil {
+		t.Errorf("vuln-sqli sets no retries:, but its execute carried MaxAttempts %d", *cmds[6].MaxAttempts)
+	}
+}
+
+// TestExpandStepsCarriesStepGates proves the step-gate marks ride onto the
+// expanded commands: a step's milestone and script name land on EVERY command
+// it expands into (so another host's wait_for can tell when it is done), and a
+// step's wait_for lands on its FIRST command only (the gate row).
+func TestExpandStepsCarriesStepGates(t *testing.T) {
+	c, err := loader.Load("../../examples/lm-test")
+	if err != nil {
+		t.Fatalf("loader.Load: %v", err)
+	}
+	for i := range c.Hosts {
+		if c.Hosts[i].Name == "webserver" {
+			c.Hosts[i].Steps[0]["milestone"] = "base-done"
+			c.Hosts[i].Steps[len(c.Hosts[i].Steps)-1]["wait_for"] = map[string]interface{}{"host": "database", "milestone": "ready"}
+			defer delete(c.Hosts[i].Steps[0], "milestone")
+			defer delete(c.Hosts[i].Steps[len(c.Hosts[i].Steps)-1], "wait_for")
+		}
+	}
+	cmds, _, err := ExpandSteps("../../examples/lm-test", c, "lm-test", "web01", 1)
+	if err != nil {
+		t.Fatalf("ExpandSteps: %v", err)
+	}
+	// cmds[0] is the admin-password backstop (no authored step); base is 1-2.
+	if cmds[0].Milestone != "" || cmds[0].WaitFor != nil {
+		t.Errorf("backstop carries gate marks: %+v", cmds[0])
+	}
+	for _, k := range []int{1, 2} {
+		if cmds[k].Milestone != "base-done" || cmds[k].StepScript != "base" {
+			t.Errorf("cmds[%d] milestone/script = %q/%q, want base-done/base", k, cmds[k].Milestone, cmds[k].StepScript)
+		}
+	}
+	lastGroup := cmds[len(cmds)-1].Group
+	first := -1
+	for k := range cmds {
+		if cmds[k].Group == lastGroup {
+			if first < 0 {
+				first = k
+			}
+			if k != first && cmds[k].WaitFor != nil {
+				t.Errorf("cmds[%d] (not the step's first command) carries wait_for", k)
+			}
+		}
+	}
+	if w := cmds[first].WaitFor; len(w) != 1 || w[0].Host != "database" || w[0].Milestone != "ready" {
+		t.Errorf("gated step's first command wait_for = %+v", w)
 	}
 }

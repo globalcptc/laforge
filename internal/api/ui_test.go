@@ -279,6 +279,18 @@ func realBuildFixture(t *testing.T, env *apiTestEnv) db.Build {
 		t.Fatalf("SetBuildStatus: %v", err)
 	}
 	build.Status = "deploying"
+	// A host/container's deploy waits for its network to be up (a subnet/bridge
+	// must exist first). Reconcile once to create the network deploy tasks, bring
+	// the networks up as a completed DeployNetwork would, then reconcile again so
+	// every object has its deploy task for callers that drive the runner.
+	if err := orchestrator.Reconcile(ctx, env.server.Pool, "../../examples/m7-two-team", build.ID); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if _, err := env.server.Pool.Exec(ctx,
+		"UPDATE deployed_object SET status='running' WHERE kind='network' AND team_id IN (SELECT id FROM team WHERE build_id=$1)",
+		build.ID); err != nil {
+		t.Fatalf("marking networks up: %v", err)
+	}
 	if err := orchestrator.Reconcile(ctx, env.server.Pool, "../../examples/m7-two-team", build.ID); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
@@ -580,6 +592,31 @@ func TestTeamAccessOpenCloseExtend(t *testing.T) {
 	json.NewDecoder(closeResp.Body).Decode(&closeTask)
 	if closeTask.Kind != "close_access" {
 		t.Fatalf("task kind = %q, want close_access", closeTask.Kind)
+	}
+
+	// Fix 3: flipping straight to open must SUPERSEDE the still-pending close so
+	// the runner doesn't execute a stale close after the operator's newest
+	// decision -- exactly one pending access task should remain, the open.
+	openResp, err := adminClient.Post(env.httpURL+"/builds/"+build.ID.String()+"/teams/1/access", "application/json", strings.NewReader(`{"action":"open"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer openResp.Body.Close()
+	if openResp.StatusCode != http.StatusAccepted {
+		t.Fatalf("open status = %d, want 202", openResp.StatusCode)
+	}
+	allTasks, err := env.q.ListTasksByBuild(context.Background(), build.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pendingKinds []string
+	for _, tk := range allTasks {
+		if (tk.Kind == "open_access" || tk.Kind == "close_access") && tk.Status == "pending" {
+			pendingKinds = append(pendingKinds, tk.Kind)
+		}
+	}
+	if len(pendingKinds) != 1 || pendingKinds[0] != "open_access" {
+		t.Fatalf("pending access tasks = %v, want exactly [open_access] -- the superseded close must be canceled", pendingKinds)
 	}
 
 	extendResp, err := adminClient.Post(env.httpURL+"/builds/"+build.ID.String()+"/teams/1/access", "application/json", strings.NewReader(`{"action":"extend","extend_minutes":30}`))

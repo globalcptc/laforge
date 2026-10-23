@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -33,7 +34,12 @@ import (
 // needs a destroy this pass and a deploy next pass, once the destroy has
 // actually completed ("rebuild means recreate"). Call it in a loop (see
 // cmd/laforge-orchestrator) until nothing changes.
-func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID) error {
+// onPhase, when non-nil, is called with the duration of each major internal
+// phase (content parse, topology resolve + render) so the caller can surface it
+// -- the orchestrator passes a callback that writes build.phase timeline events
+// while a build is still preparing, so the startup gap shows where the time
+// goes. nil disables it (every test, and steady-state passes).
+func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID, onPhase func(label string, d time.Duration)) error {
 	q := db.New(pool)
 
 	build, err := q.GetBuild(ctx, buildID)
@@ -41,10 +47,15 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 		return fmt.Errorf("loading build: %w", err)
 	}
 
+	loadStart := time.Now()
 	c, err := loader.Load(repoRoot)
 	if err != nil {
 		return fmt.Errorf("loading content: %w", err)
 	}
+	if onPhase != nil {
+		onPhase("content parsed", time.Since(loadStart))
+	}
+	resolveStart := time.Now()
 	if len(c.Errors) > 0 {
 		return fmt.Errorf("content at %s is not valid, refusing to reconcile: %d schema/reference error(s) (first: %s)",
 			repoRoot, len(c.Errors), c.Errors[0].Message)
@@ -100,7 +111,14 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 	// longer gated on depends_on (the box deploys ahead of time); ordering
 	// their creation is what makes the tree-priority real, since LeaseTask
 	// draws pending tasks oldest-first.
-	placements := orderedPlacements(env, containerNames, c.DependencyDepth())
+	//
+	// Creation order alone can't hold that priority once every task is leased at
+	// once (an unbounded pool), so each deploy task also carries its critical-path
+	// priority (DependentCounts: how many objects wait on it) in its payload. The
+	// lease queries serve higher priorities first, across every team, and the
+	// Incus builder's per-host admission queue does the same.
+	placements := orderedPlacements(env, containerNames, c.DependencyDepth(), c.DependentCounts())
+	usesWaitFor := contentUsesWaitFor(c)
 
 	for teamNum := 1; teamNum <= env.Teams; teamNum++ {
 		team, err := q.EnsureTeam(ctx, db.EnsureTeamParams{BuildID: buildID, TeamNumber: int32(teamNum)})
@@ -113,9 +131,17 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 		// true only when every copy of that object has fully FINISHED
 		// configuring; failedDeps[name] is true when any copy failed terminally
 		// (so a dependent can be failed rather than waiting on it forever).
-		finishedDeps, failedDeps, err := teamDepReadiness(ctx, q, team.ID)
+		finishedDeps, failedDeps, networkUp, networkFailed, err := teamDepReadiness(ctx, q, team.ID)
 		if err != nil {
 			return fmt.Errorf("team %d readiness: %w", teamNum, err)
+		}
+		// Step-level wait_for readiness (milestones/steps reached per copy),
+		// read only when some step actually waits.
+		var gates *teamGates
+		if usesWaitFor && materializeActive {
+			if gates, err = loadTeamGates(ctx, q, team.ID, placed, finishedDeps, failedDeps); err != nil {
+				return fmt.Errorf("team %d step gates: %w", teamNum, err)
+			}
 		}
 
 		desired := make(map[string]bool)
@@ -129,7 +155,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 
 		for _, pl := range placements {
 			desired[pl.kind+"/"+pl.as] = true
-			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps); err != nil {
+			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, build.ContentRevisionID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, pl.priority, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps, gates, networkUp, networkFailed); err != nil {
 				return fmt.Errorf("team %d, %s %q: %w", teamNum, pl.kind, pl.as, err)
 			}
 		}
@@ -144,7 +170,70 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 		}
 	}
 
+	if onPhase != nil {
+		onPhase("topology resolved & rendered", time.Since(resolveStart))
+	}
+
+	// Announce the resolve on the build's own timeline, once per content
+	// revision (the first resolve, and again on a rebuild to a new commit).
+	// This fills the otherwise-silent gap between build.triggered and the first
+	// deploy task -- where the orchestrator is fetching the checkout and
+	// resolving + rendering the whole topology with nothing to show for it --
+	// so a freshly triggered build no longer looks like it's doing nothing.
+	// Gated via resolved_revision_id so it never repeats on the 2s cadence.
+	if !build.ResolvedRevisionID.Valid || build.ResolvedRevisionID.Bytes != build.ContentRevisionID.Bytes {
+		hosts, containers, scripts := 0, 0, 0
+		for _, pl := range placements {
+			if pl.kind == "container" {
+				containers++
+			} else {
+				hosts++
+			}
+			scripts += countScriptSteps(c, pl.kind, pl.objectName)
+		}
+		hosts *= env.Teams
+		containers *= env.Teams
+		scripts *= env.Teams
+		networks := len(env.Networks) * env.Teams
+		payload, _ := json.Marshal(map[string]any{
+			"teams": env.Teams, "hosts": hosts, "containers": containers,
+			"networks": networks, "scripts_rendered": scripts,
+			"content_revision_id": build.ContentRevisionID.String(),
+		})
+		q.CreateEvent(ctx, db.CreateEventParams{
+			BuildID: buildID, Kind: "build.resolved",
+			Message: fmt.Sprintf("resolved content: %d team(s), %d host(s), %d container(s), %d network(s), %d step script(s) rendered",
+				env.Teams, hosts, containers, networks, scripts),
+			Payload: payload,
+		})
+		if err := q.SetBuildResolvedRevision(ctx, db.SetBuildResolvedRevisionParams{ID: buildID, ResolvedRevisionID: build.ContentRevisionID}); err != nil {
+			return fmt.Errorf("recording resolved revision: %w", err)
+		}
+	}
+
 	return nil
+}
+
+// countScriptSteps is how many of an object's authored steps are `script`
+// steps -- the ones Fingerprint actually renders (see fingerprint.go). Used
+// only for the build.resolved event's "N step scripts rendered" summary, so an
+// unresolvable object (caught elsewhere) just contributes zero.
+func countScriptSteps(c *loader.Content, kind, objectName string) int {
+	var steps []loader.Step
+	if kind == "container" {
+		if ct := findContainer(c, objectName); ct != nil {
+			steps = ct.Steps
+		}
+	} else if h := findHost(c, objectName); h != nil {
+		steps = h.Steps
+	}
+	n := 0
+	for _, s := range steps {
+		if s.ActionKey() == "script" {
+			n++
+		}
+	}
+	return n
 }
 
 // infraUp reports whether an object's status means its instance actually
@@ -203,7 +292,12 @@ func finalizeBuildStatus(ctx context.Context, q *db.Queries, buildID pgtype.UUID
 	infraPending, agentWorking, live, failed := 0, 0, 0, 0
 	for _, o := range objs {
 		switch o.Status {
-		case "pending", "deploying":
+		case "pending", "deploying", "destroying":
+			// "destroying" counts as infra-in-progress too: during a rebuild the
+			// runner briefly marks the object destroying before resetting it to
+			// pending, and the build must not be judged finished/failed in that
+			// window -- otherwise a concurrent pass advances it past the deploy
+			// phase and the pending replacement is never redeployed.
 			infraPending++
 		case "running", "building":
 			agentWorking++
@@ -215,9 +309,18 @@ func finalizeBuildStatus(ctx context.Context, q *db.Queries, buildID pgtype.UUID
 			live++
 		}
 	}
-	// Infra still being created, or nothing actually stood up (an
+	// Infra still being created/destroyed, or nothing actually stood up (an
 	// all-teardown or empty build) -- not a deploy to advance yet.
 	if infraPending > 0 || live == 0 {
+		// Recover an active build that left the deploy phase but now has infra
+		// pending again (a rebuild reset an object to pending while the build was
+		// already "building"). Reconcile only queues deploy tasks in "deploying",
+		// so without this the pending replacement strands indefinitely.
+		if infraPending > 0 && current == "building" {
+			if _, err := q.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: buildID, Status: "deploying"}); err != nil {
+				return false, fmt.Errorf("re-entering deploy phase for pending infra: %w", err)
+			}
+		}
 		return false, nil
 	}
 
@@ -236,6 +339,17 @@ func finalizeBuildStatus(ctx context.Context, q *db.Queries, buildID pgtype.UUID
 	if status != current {
 		if _, err := q.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: buildID, Status: status}); err != nil {
 			return false, fmt.Errorf("marking build %s: %w", status, err)
+		}
+		// A failed build is terminal and will never run its schedule:
+		// rows, so cancel them -- otherwise they stay pending and overdue
+		// and the dispatch loop keeps resolving content + minting a GitHub
+		// token every pass. Deliberately NOT done for "finished": a
+		// finished build is the competition running, when schedule: and
+		// access: windows are exactly what should keep firing.
+		if status == "failed" {
+			if _, err := q.CancelScheduledTasksForBuild(ctx, buildID); err != nil {
+				return false, fmt.Errorf("canceling scheduled tasks for failed build: %w", err)
+			}
 		}
 	}
 	return terminal, nil
@@ -283,11 +397,17 @@ func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, tea
 	if err != nil {
 		return err
 	}
-	_, err = reconcileObject(ctx, q, buildID, obj, fp, deployTasks)
+	// The runner has exhausted retries or reported a permanent network error.
+	// Keep that failure terminal until the object is explicitly reset;
+	// creating a fresh task here would silently reset the retry budget.
+	if obj.Status == "deploy_failed" {
+		return nil
+	}
+	_, err = reconcileObject(ctx, q, buildID, obj, fp, networkDeployPriority, deployTasks)
 	return err
 }
 
-func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool) error {
+func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID, contentRevID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, priority int, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool, gates *teamGates, networkUp, networkFailed map[string]bool) error {
 	rctx, err := render.Resolve(c, envName, asName, teamNum)
 	if err != nil {
 		return fmt.Errorf("resolving: %w", err)
@@ -316,9 +436,20 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	// runs -> the object's own tags.
 	tags := effectiveTags(c, envName, networkName, objectName, steps, sched, ownTags)
 
-	fp, err := Fingerprint(repoRoot, c, rctx, disk, ports, dependsOn)
-	if err != nil {
-		return fmt.Errorf("fingerprinting: %w", err)
+	// The fingerprint re-renders every step script, which is invariant for a
+	// given (content revision, object): cache it so a settled build doesn't
+	// re-render its whole content on every 2s pass. render.Resolve above still
+	// runs each pass (rctx is needed below), but it's far cheaper than the
+	// RenderScript loop Fingerprint drives. A new content revision (a rebuild)
+	// gets a fresh key, so a content change is never masked. See fingerprintCache.
+	fpKey := fmt.Sprintf("%s\x00%s\x00%s\x00%d", contentRevID.String(), kind, asName, teamNum)
+	fp, cached := fpCache.get(fpKey)
+	if !cached {
+		fp, err = Fingerprint(repoRoot, c, rctx, disk, ports, dependsOn)
+		if err != nil {
+			return fmt.Errorf("fingerprinting: %w", err)
+		}
+		fpCache.put(fpKey, fp)
 	}
 
 	obj, err := q.EnsureDeployedObject(ctx, db.EnsureDeployedObjectParams{
@@ -339,13 +470,26 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	if err := q.SetDeployedObjectTags(ctx, db.SetDeployedObjectTagsParams{ID: obj.ID, Tags: tagsJSON}); err != nil {
 		return fmt.Errorf("setting tags: %w", err)
 	}
+	// Hold a guest's deployment until its network is ready. A failed network may
+	// still exist at the hoster with an unusable allocation.
+	// Fail its dependent guests without bootstrapping them on that network. This
+	// also lets the build settle instead of leaving those guests pending forever.
+	if deployTasks && !infraUp(obj.Status) && obj.Status != "destroying" && obj.Status != "destroyed" && networkName != "" && !networkUp[networkName] {
+		if networkFailed[networkName] && obj.Status != "deploy_failed" {
+			_, err := q.MarkDeployedObjectDeployFailed(ctx, db.MarkDeployedObjectDeployFailedParams{
+				ID: obj.ID, LastError: db.StrPtr(fmt.Sprintf("network %q failed to deploy; resolve its failure before redeploying", networkName)),
+			})
+			return err
+		}
+		return nil
+	}
 	// The box deploys ahead of time: its deploy task is no longer gated on
 	// depends_on (that only ever waited for a dependency's instance to exist,
 	// which isn't the same as the dependency being configured). Ordering is
 	// handled instead by deploying roots-first (see orderedPlacements), and
 	// correctness by holding this object's STEP execution below until every
 	// dependency has actually finished.
-	created, err := reconcileObject(ctx, q, buildID, obj, fp, deployTasks)
+	created, err := reconcileObject(ctx, q, buildID, obj, fp, priority, deployTasks)
 	if err != nil {
 		return err
 	}
@@ -361,7 +505,7 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	// status and steps_materialized_at are current via EnsureDeployedObject's
 	// RETURNING), so this converges over successive passes as dependencies
 	// finish.
-	if err := materializeStepsIfReady(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, dependsOn, placed, finishedDeps, failedDeps, materializeActive); err != nil {
+	if err := materializeStepsIfReady(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, dependsOn, placed, finishedDeps, failedDeps, gates, materializeActive); err != nil {
 		return fmt.Errorf("materializing steps: %w", err)
 	}
 	return nil
@@ -385,7 +529,10 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 // turn comes (ordered roots-first by the caller), ahead of its dependencies
 // finishing. depends_on now holds only step EXECUTION (materializeStepsIfReady),
 // not the infrastructure deploy.
-func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, desiredFP string, deployTasks bool) (created bool, err error) {
+//
+// priority is recorded on the deploy task's payload (see deployTaskPayload) so
+// the runner leases, and the builder admits, critical-path objects first.
+func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, desiredFP string, priority int, deployTasks bool) (created bool, err error) {
 	if infraUp(obj.Status) {
 		if obj.Fingerprint == desiredFP {
 			return false, nil // already correct
@@ -407,7 +554,7 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 	// already leased/pending for this object, this is a no-op (and
 	// ErrNoRows, its own signal for "nothing inserted" -- ends up back
 	// here as created=false).
-	payload, err := json.Marshal(map[string]string{"fingerprint": desiredFP})
+	payload, err := deployTaskPayload(desiredFP, priority)
 	if err != nil {
 		return false, err
 	}
@@ -421,6 +568,23 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 		return false, err
 	}
 	return true, nil
+}
+
+// networkDeployPriority ranks a network's deploy above every host and container:
+// each of a team's instances waits for its network to exist, so a network
+// queued behind another team's hosts would stall its whole team.
+const networkDeployPriority = 1 << 20
+
+// deployTaskPayload is a deploy task's payload: the fingerprint it deploys and
+// its critical-path priority. The lease queries order by payload->'priority'
+// (internal/db/queries/runtime.sql) and the runner hands it to the builder as
+// HostSpec/ContainerSpec.Priority. Omitted when 0, as on a destroy task.
+func deployTaskPayload(fingerprint string, priority int) ([]byte, error) {
+	p := map[string]any{"fingerprint": fingerprint}
+	if priority > 0 {
+		p["priority"] = priority
+	}
+	return json.Marshal(p)
 }
 
 func requestDestroy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, remove bool, deployTasks bool) error {
@@ -461,6 +625,7 @@ type placement struct {
 	as          string
 	kind        string
 	depth       int
+	priority    int // how many objects transitively depends_on this one (loader.DependentCounts)
 }
 
 // orderedPlacements flattens an environment's topology into every copy it
@@ -469,7 +634,7 @@ type placement struct {
 // provisioned before its dependents' -- the tree-priority the box-deploy
 // decoupling asks for. The order is identical for every team (the topology is
 // too), so callers compute it once.
-func orderedPlacements(env *loader.Environment, containerNames map[string]bool, depth map[string]int) []placement {
+func orderedPlacements(env *loader.Environment, containerNames map[string]bool, depth, priority map[string]int) []placement {
 	var out []placement
 	for networkName, objs := range env.Networks {
 		for objectName, copies := range objs {
@@ -478,13 +643,16 @@ func orderedPlacements(env *loader.Environment, containerNames map[string]bool, 
 				kind = "container"
 			}
 			for _, cp := range copies {
-				out = append(out, placement{networkName, objectName, cp.As, kind, depth[objectName]})
+				out = append(out, placement{networkName, objectName, cp.As, kind, depth[objectName], priority[objectName]})
 			}
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].depth != out[j].depth {
 			return out[i].depth < out[j].depth
+		}
+		if out[i].priority != out[j].priority {
+			return out[i].priority > out[j].priority
 		}
 		if out[i].objectName != out[j].objectName {
 			return out[i].objectName < out[j].objectName
@@ -503,17 +671,28 @@ func orderedPlacements(env *loader.Environment, containerNames map[string]bool, 
 // merely come up is no longer enough -- a DC must be a configured DC); a
 // dependency that failed lets the dependent fail fast instead of waiting
 // forever.
-func teamDepReadiness(ctx context.Context, q *db.Queries, teamID pgtype.UUID) (finished, failed map[string]bool, err error) {
+func teamDepReadiness(ctx context.Context, q *db.Queries, teamID pgtype.UUID) (finished, failed, networkUp, networkFailed map[string]bool, err error) {
 	objs, err := q.ListDeployedObjectsByTeam(ctx, teamID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	finished = make(map[string]bool, len(objs))
 	failed = make(map[string]bool, len(objs))
+	// A host/container's first deploy waits for its network's subnet/bridge to
+	// exist (see reconcileCopy): networkUp[name] once the network's infrastructure
+	// is up, networkFailed[name] once its deploy terminally failed (so a host
+	// stops waiting and fails on its own instead of stranding forever).
+	networkUp = make(map[string]bool, len(objs))
+	networkFailed = make(map[string]bool, len(objs))
 	seen := make(map[string]bool, len(objs))
 	for _, o := range objs {
-		isFin := o.Status == "finished"
 		isFail := o.Status == "deploy_failed" || o.Status == "build_failed" || o.Status == "invalid"
+		if o.Kind == "network" {
+			networkUp[o.ObjectName] = infraUp(o.Status)
+			networkFailed[o.ObjectName] = isFail
+			continue
+		}
+		isFin := o.Status == "finished"
 		if !seen[o.ObjectName] {
 			seen[o.ObjectName] = true
 			finished[o.ObjectName] = isFin
@@ -523,7 +702,7 @@ func teamDepReadiness(ctx context.Context, q *db.Queries, teamID pgtype.UUID) (f
 			failed[o.ObjectName] = failed[o.ObjectName] || isFail
 		}
 	}
-	return finished, failed, nil
+	return finished, failed, networkUp, networkFailed, nil
 }
 
 // effectiveTags computes the tags stored on a deployed_object, cascading from

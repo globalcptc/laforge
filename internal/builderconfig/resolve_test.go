@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/globalcptc/laforge/internal/agentpki"
 	"github.com/globalcptc/laforge/internal/builder/fake"
 	"github.com/globalcptc/laforge/internal/builder/incus"
@@ -122,6 +124,49 @@ func TestResolveMicrocloudConstructsARealClient(t *testing.T) {
 	if ib.Client.OperationTimeout.Seconds() != 300 {
 		t.Errorf("OperationTimeout = %v, want 300s", ib.Client.OperationTimeout)
 	}
+	// Both runner builders and the API's base-image client must coordinate
+	// networking through Postgres, even when credentials came from files.
+	pool := &pgxpool.Pool{} // Resolution does not query it for file credentials.
+	resolved, err := Resolve(pool, row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := ResolveMicrocloudClient(pool, row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []*microcloud.Client{resolved.(*microcloud.Builder).Client, client} {
+		if lock, ok := c.NetworkLock.(microcloud.SQLNetworkLocker); !ok || lock.Pool != pool {
+			t.Fatalf("client did not receive shared SQL networking lock: %#v", c.NetworkLock)
+		}
+	}
+
+	// Verification uses the same default and explicit budget as deployment,
+	// even though it constructs its client through the shared endpoint path.
+	for _, seconds := range []int32{0, 120, 900} {
+		row.IncusOperationTimeoutSeconds = &seconds
+		if seconds == 0 {
+			row.IncusOperationTimeoutSeconds = nil
+		}
+		want := seconds
+		if want == 0 {
+			want = 600
+		}
+		resolved, err := Resolve(nil, row)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := resolved.(*microcloud.Builder).Client.OperationTimeout.Seconds(); got != float64(want) {
+			t.Errorf("deployment budget = %v, want %d", got, want)
+		}
+		hosts, err := hostEndpoints(nil, row)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := hosts[0].timeoutSeconds; got != int(want) {
+			t.Errorf("verification budget = %d, want %d", got, want)
+		}
+	}
 }
 
 // TestResolveIncusPoolRequiresAtLeastOneHost proves kind "incus" now
@@ -205,5 +250,42 @@ func TestResolveIncusPoolConstructsARealPool(t *testing.T) {
 	}
 	if _, ok := p.Images["ubuntu22"]; !ok {
 		t.Errorf("Pool.Images missing the shared ubuntu22 entry: %+v", p.Images)
+	}
+}
+
+func TestIncusBridgePlacementConfig(t *testing.T) {
+	ca, err := agentpki.GenerateCA("bridge-config-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	certPath, keyPath := filepath.Join(t.TempDir(), "client.crt"), filepath.Join(t.TempDir(), "client.key")
+	if err := os.WriteFile(certPath, ca.CertPEM, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(keyPath, ca.KeyPEM, 0600); err != nil {
+		t.Fatal(err)
+	}
+	serverCert := string(ca.CertPEM)
+	a := incus.HostConfig{APIURL: "https://host-a.invalid:8443", ClientCertPath: certPath, ClientKeyPath: keyPath, ServerCertPEM: serverCert, NetworkType: "bridge", StoragePool: "default"}
+	encoded, _ := json.Marshal([]incus.HostConfig{a})
+	row := db.BuilderConfig{Name: "bridges", Kind: "incus", IncusHosts: encoded, IncusOneTeamPerHost: true}
+	resolved, err := Resolve(nil, row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool := resolved.(*incuspool.Pool)
+	if !pool.OneTeamPerHost || pool.Hosts[0].Config.NetworkMode() != "bridge" || pool.Hosts[0].Config.OVNUplinkNetwork != "" {
+		t.Fatal("bridge placement config lost")
+	}
+	b := a
+	b.APIURL = "https://alias-for-host-a.invalid:8443"
+	row.IncusHosts, _ = json.Marshal([]incus.HostConfig{a, b})
+	if _, err := Resolve(nil, row); err == nil {
+		t.Fatal("same server certificate counted as two physical hosts")
+	}
+	b.NetworkType = "invalid"
+	row.IncusHosts, _ = json.Marshal([]incus.HostConfig{b})
+	if _, err := Resolve(nil, row); err == nil {
+		t.Fatal("unknown network type accepted")
 	}
 }

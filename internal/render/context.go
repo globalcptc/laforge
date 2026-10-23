@@ -83,6 +83,14 @@ type Context struct {
 	// know what to render. Not part of the template data.
 	Steps []loader.Step
 
+	// Secret is the build's password-generator secret (build.render_secret),
+	// set by callers rendering for a real build -- step materialization,
+	// scheduled dispatch, the Render tab. passphrase/wordchain/randompassword
+	// derive stable per-host values from it (see passwords.go); nil (laforge
+	// check/render, the LSP) falls back to a fixed preview secret. Not part of
+	// the template data.
+	Secret []byte
+
 	// Schedule is the resolved object's own schedule list -- a separate
 	// field from Steps, not nested inside it (see loader.Host.Schedule's
 	// own comment for why). Also not part of the template data; check.go

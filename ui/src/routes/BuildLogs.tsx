@@ -1,11 +1,43 @@
 import { useParams } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
-import { Radio, Search, ChevronRight } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { Radio, Search, ChevronRight, Download, Copy, Check } from 'lucide-react'
 import { useEvents, useLiveEvents } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import type { LFEvent } from '../api/types'
 import { EmptyState } from '../components/EmptyState'
-import { Badge, Select, cn } from '../ui'
+import { Badge, Button, Select, cn } from '../ui'
+
+// logsToText renders the full journal as a plain-text log for export: one line
+// per event (ISO timestamp, host-or-"build", kind, message), with any longer
+// payload detail (a step's command output / error) indented beneath it.
+function logsToText(events: LFEvent[]): string {
+  return events
+    .map((e) => {
+      const ts = new Date(e.created_at).toISOString()
+      const who = e.host ? (e.team_number != null ? `t${e.team_number}/${e.host}` : e.host) : 'build'
+      let line = `${ts}  ${who}  ${e.kind}  ${e.message}`
+      const detail = eventDetail(e.payload)
+      if (detail && detail !== e.message) {
+        line += '\n' + detail.split('\n').map((l) => '    ' + l).join('\n')
+      }
+      return line
+    })
+    .join('\n')
+}
+
+// downloadText triggers a browser download of text as a file -- no server round
+// trip, since the journal is already fully loaded in the page.
+function downloadText(filename: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
 
 // toneForKind colours an event's kind badge by what it IS, so the journal is
 // scannable by type/outcome: red for failures, green for completions, amber for
@@ -15,7 +47,7 @@ import { Badge, Select, cn } from '../ui'
 function toneForKind(kind: string): 'danger' | 'success' | 'warning' | 'info' | 'purple' | 'sky' | 'indigo' | 'ink' | 'neutral' {
   const k = kind.toLowerCase()
   if (k.includes('fail') || k.includes('error') || k.includes('invalid')) return 'danger'
-  if (k.includes('ignored') || k.includes('skip') || k.includes('note') || k.includes('warn')) return 'warning'
+  if (k.includes('ignored') || k.includes('retry') || k.includes('skip') || k.includes('note') || k.includes('warn')) return 'warning'
   if (k.includes('done') || k.includes('finish') || k.includes('complete') || k.includes('succeed') || k.includes('deployed') || k.includes('opened') || k.includes('configured') || k.includes('materialized')) return 'success'
   if (k.startsWith('access')) return 'purple'
   if (k.startsWith('network')) return 'sky'
@@ -25,15 +57,30 @@ function toneForKind(kind: string): 'danger' | 'success' | 'warning' | 'info' | 
   return 'neutral'
 }
 
-// eventDetail pulls the full text an event carries in its payload (step events
-// store the whole command output / error under `detail`, while the message is
-// only a short one-liner) so an expanded row can show the real error.
+// eventDetail extracts the meaningful extra text an event carries BEYOND its
+// one-line message, so a row is only expandable when there is genuinely more to
+// read. Three payload shapes occur in practice:
+//   - a non-empty `detail` string: step_failed/step_retry store the full command error
+//     there (step_started/step_done carry an empty one -> nothing to show);
+//   - a non-empty object: builder.* events carry the whole request (os, size,
+//     ports, cidr, external_name...) -> render it as aligned "key: value" lines,
+//     which is the real detail, NOT a repeat of the message;
+//   - an empty object ({}): task.*, *.configured, *.reconciled -> nothing.
+// Returning '' means "no detail": the caller renders a plain, non-expandable row.
 function eventDetail(payload: unknown): string {
-  if (payload && typeof payload === 'object' && 'detail' in payload) {
-    const d = (payload as { detail?: unknown }).detail
-    if (typeof d === 'string' && d.trim() !== '') return d
-  }
-  return ''
+  if (!payload || typeof payload !== 'object') return ''
+  const obj = payload as Record<string, unknown>
+  if (typeof obj.detail === 'string' && obj.detail.trim() !== '') return obj.detail.trim()
+  const lines = Object.keys(obj)
+    .filter((k) => k !== 'detail')
+    .map((k) => {
+      const v = obj[k]
+      if (v == null || v === '') return ''
+      const val = typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)
+      return `${k}: ${val}`
+    })
+    .filter(Boolean)
+  return lines.join('\n')
 }
 
 // "Build → Logs: the event journal as a hierarchy... Live over SSE while
@@ -48,10 +95,28 @@ export function BuildLogs() {
   const { buildId } = useParams({ from: '/repos/$repoId/builds/$buildId/logs' })
   const { data: history } = useEvents(buildId)
   const [live, setLive] = useState<LFEvent[]>([])
-  const { connected } = useLiveEvents(buildId, (ev) => setLive((prev) => [...prev, ev]))
+  // Batch incoming live events instead of a setState per event. A busy build
+  // streams events faster than React can repaint; appending one at a time meant
+  // a full re-render (and an O(n) recompute of all/kinds/shown) on every event --
+  // the main cause of the "page is slowing down" warning. Buffer in a ref and
+  // flush on a short interval, so N events become one re-render.
+  const liveBuf = useRef<LFEvent[]>([])
+  const { connected } = useLiveEvents(buildId, (ev) => {
+    liveBuf.current.push(ev)
+  })
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (liveBuf.current.length === 0) return
+      const batch = liveBuf.current
+      liveBuf.current = []
+      setLive((prev) => [...prev, ...batch])
+    }, 400)
+    return () => clearInterval(t)
+  }, [])
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [copied, setCopied] = useState(false)
   const fmt = useTimeFormat()
 
   function toggle(id: string) {
@@ -61,6 +126,33 @@ export function BuildLogs() {
       else next.add(id)
       return next
     })
+  }
+
+  // The complete journal for Export/Copy: the full history + live, PLUS any live
+  // events still buffered (not yet flushed into `all`), so a download never
+  // misses the last ~400ms of an actively-streaming build. Not the capped render,
+  // and not the search/kind filter -- always everything.
+  function fullLog(): LFEvent[] {
+    const seen = new Set(all.map((e) => e.id))
+    return [...all, ...liveBuf.current.filter((e) => !seen.has(e.id))]
+  }
+
+  // Export the whole journal (not the filtered view) as a timestamped .txt.
+  function exportLogs() {
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+    downloadText(`laforge-build-${buildId.slice(0, 8)}-logs-${stamp}.txt`, logsToText(fullLog()))
+  }
+
+  // Copy the whole journal to the clipboard, with a brief "Copied" confirmation.
+  async function copyLogs() {
+    try {
+      await navigator.clipboard.writeText(logsToText(fullLog()))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Clipboard blocked (insecure context / permission) -- fall back to export.
+      exportLogs()
+    }
   }
 
   const all = useMemo(() => {
@@ -77,14 +169,49 @@ export function BuildLogs() {
     return all.filter((e) => {
       if (kind && e.kind !== kind) return false
       if (!q) return true
-      return [e.message, e.kind, e.host ?? '', e.team_number != null ? `team ${e.team_number}` : '']
+      // Match the host both bare ("bff-dc-01") and as the team-qualified label
+      // the row actually shows ("t1/bff-dc-01") -- searching the displayed form
+      // returned nothing before, since no single field held the combined string.
+      const qualified = e.host && e.team_number != null ? `t${e.team_number}/${e.host}` : ''
+      return [e.message, e.kind, e.host ?? '', qualified, e.team_number != null ? `team ${e.team_number}` : '']
         .some((v) => v.toLowerCase().includes(q))
-    })
+    }).reverse() // newest first -- the journal reads latest -> oldest (filter() returns a fresh array, so reversing it never touches `all`)
   }, [all, query, kind])
 
+  // Virtualize the list: only the rows in (and near) the viewport are in the DOM,
+  // so the whole journal -- tens of thousands of events on a big DC build -- stays
+  // fully scrollable without locking the main thread. Rows are variable height
+  // (they expand on click), so the virtualizer measures each rendered row and
+  // re-measures on expand/collapse (measureElement's ResizeObserver).
+  const parentRef = useRef<HTMLDivElement>(null)
+  const rowVirtualizer = useVirtualizer({
+    count: shown.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 29, // a collapsed row (py-1.5 line + border); refined by measurement
+    overscan: 16,
+    getItemKey: (index) => shown[index].id,
+  })
+
+  // Tail-follow: the newest event is at the TOP now, so keep the top pinned as the
+  // build streams -- but only while the user is already at the top. If they've
+  // scrolled down to read older history, leave them there. atTopRef is updated on
+  // scroll (the last known position, before new rows pushed the content down).
+  const atTopRef = useRef(true)
+  function onScroll() {
+    const el = parentRef.current
+    if (!el) return
+    atTopRef.current = el.scrollTop < 60
+  }
+  useEffect(() => {
+    if (atTopRef.current && shown.length > 0) {
+      rowVirtualizer.scrollToIndex(0, { align: 'start' })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown.length])
+
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+    <div className="flex h-full flex-col">
+      <div className="sticky top-0 z-20 mb-3 flex shrink-0 flex-wrap items-center gap-2 bg-surface pb-3 pt-1">
         <div className="flex items-center gap-2 text-xs text-fg-muted">
           <Radio size={12} className={connected ? 'text-success' : 'text-fg-subtle'} />
           {connected ? 'Live' : 'Reconnecting…'}
@@ -107,6 +234,12 @@ export function BuildLogs() {
               </option>
             ))}
           </Select>
+          <Button variant="primary" size="sm" onClick={copyLogs} disabled={all.length === 0} title="Copy the full log to the clipboard">
+            {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy'}
+          </Button>
+          <Button variant="primary" size="sm" onClick={exportLogs} disabled={all.length === 0} title="Export the full log as a text file">
+            <Download size={13} /> Export
+          </Button>
         </div>
       </div>
 
@@ -115,20 +248,30 @@ export function BuildLogs() {
       ) : shown.length === 0 ? (
         <EmptyState icon={Search} title="No events match" hint="Clear the search or kind filter to see the full journal." />
       ) : (
-        <div className="flex flex-col font-mono text-xs">
-          {shown.map((ev) => {
-            const isOpen = expanded.has(ev.id)
-            const detail = eventDetail(ev.payload)
-            return (
-              <div key={ev.id} className="border-b border-border">
-                {/* Whole row is a toggle: click to expand and read the full
-                    message + payload detail (errors are longer than one line). */}
-                <button
-                  type="button"
-                  onClick={() => toggle(ev.id)}
-                  className="flex w-full items-center gap-3 py-1.5 text-left hover:bg-surface-hover"
-                >
-                  <ChevronRight size={12} className={cn('shrink-0 text-fg-subtle transition-transform', isOpen && 'rotate-90')} />
+        // The scroll container the virtualizer measures against. Only the rows in
+        // view are in the DOM; the sized inner div gives the scrollbar the full
+        // height so scrolling reaches every event.
+        <div ref={parentRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto font-mono text-xs">
+          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative', width: '100%' }}>
+            {rowVirtualizer.getVirtualItems().map((vi) => {
+              const ev = shown[vi.index]
+              const detail = eventDetail(ev.payload)
+              // Only rows that carry real extra detail (a step error, a builder
+              // request payload) are expandable. The majority -- step start/done,
+              // task lifecycle, access/network reconciles -- have no payload beyond
+              // their one-line message, so they render as a plain, non-clickable
+              // row (no chevron, nothing to expand into a pointless repeat).
+              const expandable = detail !== ''
+              const isOpen = expandable && expanded.has(ev.id)
+              // Shared leading cells (chevron slot, time, host, kind, message) so
+              // the clickable and plain variants line up pixel-for-pixel.
+              const lead = (
+                <>
+                  {expandable ? (
+                    <ChevronRight size={12} className={cn('shrink-0 text-fg-subtle transition-transform', isOpen && 'rotate-90')} />
+                  ) : (
+                    <span className="w-3 shrink-0" />
+                  )}
                   <span className="w-24 shrink-0 tabular-nums text-fg-muted">{fmt.time(ev.created_at)}</span>
                   {ev.host ? (
                     <span className="w-28 shrink-0 truncate text-fg-muted" title={ev.team_number != null ? `t${ev.team_number}/${ev.host}` : ev.host}>
@@ -141,21 +284,39 @@ export function BuildLogs() {
                   <Badge tone={toneForKind(ev.kind)} className="shrink-0">
                     {ev.kind}
                   </Badge>
-                  <span className={cn('min-w-0 flex-1 text-fg', !isOpen && 'truncate')}>{ev.message}</span>
-                </button>
-                {isOpen && (
-                  <div className="pb-2 pl-[9.75rem] pr-3 text-fg-muted">
-                    <div className="whitespace-pre-wrap break-words">{ev.message}</div>
-                    {detail && detail !== ev.message && (
-                      <pre className="mt-1 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-token border border-border bg-surface-sunken p-2 text-fg">
-                        {detail}
-                      </pre>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+                  <span className={cn('min-w-0 flex-1 text-fg', !isOpen && 'truncate')} title={ev.message}>{ev.message}</span>
+                </>
+              )
+              return (
+                <div
+                  key={vi.key}
+                  data-index={vi.index}
+                  ref={rowVirtualizer.measureElement}
+                  className="absolute left-0 top-0 w-full border-b border-border"
+                  style={{ transform: `translateY(${vi.start}px)` }}
+                >
+                  {expandable ? (
+                    <button
+                      type="button"
+                      onClick={() => toggle(ev.id)}
+                      className="flex w-full items-center gap-3 py-1.5 text-left hover:bg-surface-hover"
+                    >
+                      {lead}
+                    </button>
+                  ) : (
+                    <div className="flex w-full items-center gap-3 py-1.5">{lead}</div>
+                  )}
+                  {isOpen && (
+                    // Only the detail -- the message is already on the row above, so
+                    // we never repeat it here.
+                    <pre className="mb-2 ml-[9.75rem] mr-3 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-token border border-border bg-surface-sunken p-2 text-fg">
+                      {detail}
+                    </pre>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>

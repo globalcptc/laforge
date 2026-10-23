@@ -77,12 +77,27 @@ func attachAgentHealth(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 	out := make([]objectView, len(objs))
 	for i, o := range objs {
 		out[i] = objectView{DeployedObject: o}
+		if o.Kind == "network" {
+			continue // networks run no agent; they never carry agent health
+		}
 		if !infraUp(o.Status) {
 			continue // agent health only makes sense once the instance is up
 		}
 		sess, ok := byObject[o.ID.String()]
+		// A rebuilt host keeps its old session row; a heartbeat from before the
+		// redeploy says nothing about the new instance's agent.
+		if ok && o.DeployedAt.Valid && sess.LastHeartbeatAt.Time.Before(o.DeployedAt.Time) {
+			ok = false
+		}
 		if !ok {
-			out[i].Agent = &agentHealth{Status: "booting"}
+			// Still booting -- until the orchestrator's check-in watchdog
+			// flags the agent as overdue, at which point it's missing (and
+			// lands in the build's needs-attention list).
+			status := "booting"
+			if o.AgentCheckinOverdueAt.Valid {
+				status = "missing"
+			}
+			out[i].Agent = &agentHealth{Status: status}
 			continue
 		}
 		last := sess.LastHeartbeatAt.Time

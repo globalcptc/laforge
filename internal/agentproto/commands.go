@@ -23,6 +23,17 @@ const (
 	CmdDownload    = "download"
 	CmdUpload      = "upload"
 	CmdExtract     = "extract"
+	// CmdDisconnectSessions forcibly ends live interactive remote-access
+	// sessions on the host (RDP on Windows, SSH/VNC on Linux) WITHOUT touching
+	// the agent's own outbound connection to the gateway. The access reconciler
+	// fires this at a team on close: the network firewall only blocks NEW
+	// connections, but on a bridge the published port is a nat-proxy whose
+	// already-established conntrack (and the guest's egress replies riding
+	// Incus's global stateful bypass) keep existing sessions alive. The ACL
+	// can't scope statefulness or tear down a live flow, so the agent -- reached
+	// over the one egress path a closed team keeps -- is the only lever that
+	// reaches inside the guest to drop them.
+	CmdDisconnectSessions = "disconnect_sessions"
 )
 
 type ExecutePayload struct {
@@ -77,6 +88,17 @@ type ServicePayload struct {
 
 type RebootPayload struct {
 	DelaySec int `json:"delay_sec,omitempty"`
+}
+
+// DisconnectSessionsPayload carries the optional set of TCP ports whose
+// established inbound connections should also be reset, on top of the agent's
+// built-in default (Windows: log off every active rdp-tcp session; Linux: reset
+// established sockets on the usual remote-access ports). The access reconciler
+// passes the team's actual published ports so the reset is precise; an empty
+// list just uses the defaults. The agent never resets its own outbound gateway
+// connection -- it only acts on inbound/listening sides.
+type DisconnectSessionsPayload struct {
+	Ports []int `json:"ports,omitempty"`
 }
 
 // ValidateCheck is one check from a step's or script's `validate:` block.

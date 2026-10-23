@@ -12,7 +12,7 @@ import (
 func newTestHosts(n int) []*incus.Builder {
 	hosts := make([]*incus.Builder, n)
 	for i := range hosts {
-		hosts[i] = incus.New(&incus.Client{BaseURL: "https://unused.invalid"}, incus.Config{})
+		hosts[i] = incus.New(&incus.Client{BaseURL: "https://unused.invalid"}, incus.Config{NetworkType: "ovn"})
 	}
 	return hosts
 }
@@ -113,4 +113,32 @@ func indexOf(hosts []*incus.Builder, target *incus.Builder) int {
 		}
 	}
 	return -1
+}
+
+func TestOneTeamPerHostRejectsOverflow(t *testing.T) {
+	p := New(newTestHosts(2), nil)
+	p.OneTeamPerHost = true
+	for _, teams := range []int{1, 2} {
+		if err := p.ValidateTeamCount(teams); err != nil {
+			t.Fatalf("%d teams: %v", teams, err)
+		}
+	}
+	if err := p.ValidateTeamCount(3); err == nil {
+		t.Fatal("accepted more teams than hosts")
+	}
+	if _, err := p.hostForTeam("3"); err == nil {
+		t.Fatal("execution wrapped to the first host")
+	}
+}
+
+func TestBridgePlacementRejectsRepeatedSubnetsWithoutCheckbox(t *testing.T) {
+	hosts := newTestHosts(2)
+	hosts[0].Config.NetworkType = "bridge"
+	p := New(hosts, nil)
+	if err := p.ValidateTeamCount(2); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.ValidateTeamCount(3); err == nil {
+		t.Fatal("accepted repeated team subnets on native bridge host")
+	}
 }

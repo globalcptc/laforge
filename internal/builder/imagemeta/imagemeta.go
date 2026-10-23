@@ -23,8 +23,11 @@ import (
 
 // Entrypoint fetches imageRef's ENTRYPOINT+CMD from its registry and joins them
 // into a single shell command string -- what a container's supervising agent
-// should run. Returns an error for a reference this draft can't resolve (a
-// non-docker.io registry) or an image that declares no entrypoint/command.
+// runs via `sh -c`. Each argv element is shell-quoted (see ShellJoin) so an
+// argument with spaces or metacharacters (nginx's "daemon off;") survives the
+// shell's re-splitting as ONE argument. Returns an error for a reference this
+// draft can't resolve (a non-docker.io registry) or an image that declares no
+// entrypoint/command.
 func Entrypoint(ctx context.Context, imageRef string) (string, error) {
 	repo, tag := ParseDockerRef(imageRef)
 	if repo == "" {
@@ -92,7 +95,22 @@ func Entrypoint(ctx context.Context, imageRef string) (string, error) {
 	if len(parts) == 0 {
 		return "", fmt.Errorf("image %q declares no entrypoint or command -- set command: on the container", imageRef)
 	}
-	return strings.Join(parts, " "), nil
+	return ShellJoin(parts), nil
+}
+
+// ShellJoin turns an argv into one string safe to hand to `sh -c`: each element
+// is single-quoted (with any internal single quote escaped as '\''), so an
+// argument containing spaces or shell metacharacters stays a SINGLE argument
+// after the shell re-splits the string. A plain space-join does not: it turned
+// the nginx image's `["nginx","-g","daemon off;"]` into `nginx -g daemon off;`,
+// and nginx rejected the stray `off` ("invalid option"). Used for both the image
+// entrypoint above and a content-set command: (internal/builder/aws.fargate).
+func ShellJoin(args []string) string {
+	q := make([]string, len(args))
+	for i, a := range args {
+		q[i] = "'" + strings.ReplaceAll(a, "'", `'\''`) + "'"
+	}
+	return strings.Join(q, " ")
 }
 
 // ParseDockerRef splits a Docker Hub image ref into repo (library/-qualified for

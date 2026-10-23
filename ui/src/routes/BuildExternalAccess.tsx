@@ -1,8 +1,9 @@
 import { useParams } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Globe, Check, Copy } from 'lucide-react'
+import { Globe, Check, Copy, FileJson } from 'lucide-react'
 import { useExternalAccess } from '../api/hooks'
 import { EmptyState } from '../components/EmptyState'
+import { ScoringExportWizard } from '../components/ScoringExportWizard'
 import type { ExternalAccessEntry } from '../api/types'
 import { Badge, Button, Card, Spinner, Table, TableScroller, Td, Th } from '../ui'
 
@@ -15,6 +16,7 @@ import { Badge, Button, Card, Spinner, Table, TableScroller, Td, Th } from '../u
 export function BuildExternalAccess() {
   const { buildId } = useParams({ from: '/repos/$repoId/builds/$buildId/external-access' })
   const { data: entries, isLoading } = useExternalAccess(buildId)
+  const [exporting, setExporting] = useState(false)
 
   if (isLoading)
     return (
@@ -43,14 +45,22 @@ export function BuildExternalAccess() {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-fg-muted">
-        The address and port to connect to each host from outside the environment. Access follows each team's schedule — a closed team is
-        unreachable even while these endpoints are listed.
-      </p>
+      <div className="flex items-start gap-4">
+        <p className="flex-1 text-sm text-fg-muted">
+          The address and port to connect to each host from outside the environment. Access follows each team's schedule — a closed team
+          is unreachable even while these endpoints are listed.
+        </p>
+        <Button variant="brand" size="sm" onClick={() => setExporting(true)}>
+          <FileJson size={14} /> Export for Scoring
+        </Button>
+      </div>
+      <ScoringExportWizard buildId={buildId} open={exporting} onClose={() => setExporting(false)} />
       {teams.map((team) => (
-        <Card key={team} className="p-0">
-          <div className="border-b border-border px-4 py-2 text-sm font-semibold text-fg">Team {team}</div>
-          <TableScroller>
+        <Card key={team} className="overflow-hidden p-0">
+          <div className="bg-cptc-violet px-4 py-2 text-sm font-semibold text-cptc-violet-fg">Team {team}</div>
+          {/* contain={false}: this page scrolls as a whole, and a containing
+              scroller would swallow the wheel while the cursor is over a team. */}
+          <TableScroller contain={false}>
             <Table>
               <thead>
                 <tr>

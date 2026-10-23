@@ -189,6 +189,27 @@ pattern: a builder that doesn't need a field ignores it (the `fake` builder igno
 almost all of them). Follow that shape if you add one — make it advisory where you
 can, and never break the builders that don't consume it.
 
+### Deploy priority and phase timings
+
+- **`HostSpec.Priority` / `ContainerSpec.Priority`** is the object's weight on the
+  critical path: how many objects transitively `depends_on` it (0 = nothing waits
+  on it). The orchestrator stores it in the deploy task's payload, and the runner
+  leases higher priorities first, across every team. A builder that queues its own
+  creates should serve them in the same order. The Incus builder does this with a
+  per-host admission gate (`incus/admission.go`, configured by `builder_config.incus_host_max_concurrency`).
+  It is a priority queue, not a channel semaphore, because a channel's wake-up
+  order is unspecified, so a domain controller could stay stuck behind workstations.
+  The gate is keyed by host URL at package level because the runner resolves a
+  fresh `Builder` for every task, so a per-`Builder` semaphore would bound nothing.
+- **Phase timings.** The runner runs every task under `builder.WithPhaseTimer`. A
+  builder that wraps its slow stages in `builder.StartPhase(ctx, "create")` (or
+  calls `builder.RecordPhase`) gets those durations on the task's
+  `task.completed` / `task.retry` / `task.failed` event, so the host's event
+  timeline shows where a slow deploy went. The Incus builder records `queued`,
+  `config_drive`, `create` or `copy`, `configure_devices`, `agent_install` and `start`.
+  Recording without a timer is a no-op, so this is opt-in and needs no
+  interface change.
+
 ---
 
 ## 3. Deterministic naming — why it matters
@@ -326,6 +347,13 @@ the meta-lessons apply to any platform.
 - **Slow storage needs a longer operation timeout.** win2019 on Ceph exceeded a
   120s default; the create rode a 900s timeout to completion. Make the operation
   timeout configurable per builder.
+- **Don't create a whole team at once on one host.** In a 7-team Incus build (one
+  team per host, unbounded runner pool), ~22 VMs started creating on each host at
+  the same moment. A domain controller that deploys in 30 s uncontended took 7–28
+  minutes, and every Windows host in its team waited on it. Cap concurrent deploys per
+  physical host and admit `depends_on` roots first (see "Deploy priority" above).
+  Also check the storage driver: `dir` (and non-thin LVM) makes every instance a
+  full image copy. The Incus stats publisher warns when it sees one.
 - **Secure Boot off for lab VM images** — Ubuntu cloud images loop on "prohibited by
   secure boot policy" otherwise; these are throwaway hosts, so it buys nothing.
 

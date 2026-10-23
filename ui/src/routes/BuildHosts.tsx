@@ -1,16 +1,18 @@
 import { useParams } from '@tanstack/react-router'
-import { Fragment as FragmentGroup, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Box, CalendarClock, CheckCircle2, ChevronDown, Container, Hammer, Info, Network, Play, Power, Radar, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, type LucideIcon } from 'lucide-react'
-import { useAdHocTask, useBuild, useCreateScheduledTask, useDetectDrift, usePowerAction, useRebuild, useTopology } from '../api/hooks'
-import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel } from '../components/StatusBadge'
+import { Fragment as FragmentGroup, useEffect, useMemo, useRef, useState } from 'react'
+import { Box, CalendarClock, Check, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
+import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
+import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
 import { ObjectLogPanel } from '../components/ObjectLogPanel'
+import { EnvironmentBoard } from '../components/EnvironmentBoard'
+import { DependencyGraph } from '../components/DependencyGraph'
 import { TaskActionFields, buildTaskPayload, taskFormValid } from '../components/TaskActionForm'
 import { WhenField } from '../components/WhenField'
 import { Boxes } from 'lucide-react'
 import { ApiError } from '../api/client'
-import type { DeployedObject, DriftReport, ObjectKind, RebuildAffected, TopologyMember } from '../api/types'
-import { Badge, Button, cn, Label, Modal, Spinner, Table, TableScroller, Td, Th, useToast } from '../ui'
+import type { DeployedObject, ObjectKind, RebuildAffected, TopologyMember } from '../api/types'
+import { AnchoredPopover, Badge, Button, cn, Label, Modal, Spinner, Table, TableScroller, Td, Th, useToast } from '../ui'
 import { buildIsReadOnly } from '../lib/build'
 
 // Kind → icon + label, so a row states its type at a glance (feedback: "list
@@ -31,6 +33,48 @@ function KindBadge({ kind }: { kind: string }) {
     <Badge tone="neutral" className="rounded-full py-0.5">
       <Icon size={11} /> {m.label}
     </Badge>
+  )
+}
+
+// Canonical order for the team-row status bars -- the same lifecycle order
+// (and, via statusFillClass, the same colours) the Overview charts and host
+// badges use, with any unexpected status appended so nothing is dropped.
+const TEAM_BAR_ORDER: string[] = [...LIFECYCLE_STATES, 'destroyed', 'planned']
+
+// TeamNetworkBars renders one compact stacked status bar PER NETWORK on a team
+// header row: each network's hosts/containers split by their standard status,
+// in the same colours as the Overview "State by Team" bars. Deliberately tiny
+// (h-2 bars, 10px labels) so it sits inline on the existing team row without
+// making it any taller -- a glance-level "which network on which team is red."
+function TeamNetworkBars({ networks, className }: { networks: { name: string; hosts: DeployedObject[] }[]; className?: string }) {
+  const nets = networks.filter((n) => n.hosts.length > 0)
+  if (nets.length === 0) return null
+  return (
+    <div className={cn('flex flex-nowrap items-center gap-3', className)}>
+      {nets.map((net) => {
+        const counts = new Map<string, number>()
+        for (const h of net.hosts) counts.set(h.status, (counts.get(h.status) ?? 0) + 1)
+        const ordered = [...TEAM_BAR_ORDER.filter((s) => counts.has(s)), ...[...counts.keys()].filter((s) => !TEAM_BAR_ORDER.includes(s))]
+        const total = net.hosts.length
+        const legend = ordered.map((s) => `${statusLabel(s)}: ${counts.get(s)}`).join(' · ')
+        return (
+          <div key={net.name || '—'} className="flex shrink-0 items-center gap-1.5" title={`${net.name || 'no network'} — ${legend}`}>
+            <span className="max-w-[6rem] truncate text-[10px] font-medium text-fg-subtle">{net.name || 'no network'}</span>
+            <div className="flex h-2 w-16 shrink-0 overflow-hidden rounded-full bg-surface-sunken">
+              {ordered.map((s) => (
+                <div
+                  key={s}
+                  className={statusFillClass(s)}
+                  style={{ width: `${((counts.get(s) ?? 0) / total) * 100}%` }}
+                  title={`${statusLabel(s)}: ${counts.get(s)}`}
+                />
+              ))}
+            </div>
+            <span className="text-[10px] tabular-nums text-fg-subtle">{total}</span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -95,26 +139,70 @@ function InfraCell({ obj, onAction, onRebuild }: { obj: DeployedObject; onAction
   )
 }
 
-// FilterSelect is one "All X / <value>" dropdown for the Hosts toolbar
-// (Type / OS / State). Highlights its border when a value is active.
-function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
+// toggleSet returns a new Set with v added or removed -- how the multi-select
+// filters below flip a value on and off.
+function toggleSet(s: Set<string>, v: string): Set<string> {
+  const next = new Set(s)
+  next.has(v) ? next.delete(v) : next.add(v)
+  return next
+}
+
+// MultiFilter is one checkbox dropdown for the Hosts toolbar (Type / OS / State /
+// Tag). Each filter is multi-select: pick any number of values and a host matches
+// when its value is among those picked (OR within a filter, AND across filters).
+// The count badge and accent border show when a filter is narrowing the list.
+function MultiFilter({ label, selected, onToggle, onClear, options }: { label: string; selected: Set<string>; onToggle: (v: string) => void; onClear: () => void; options: [string, string][] }) {
+  const [open, setOpen] = useState(false)
+  const anchorRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      const t = e.target as Node
+      if (anchorRef.current?.contains(t) || panelRef.current?.contains(t)) return
+      setOpen(false)
+    }
+    window.addEventListener('mousedown', onDown)
+    return () => window.removeEventListener('mousedown', onDown)
+  }, [open])
+  const count = selected.size
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      aria-label={label}
-      className={cn(
-        'h-8 rounded-token border bg-surface-raised px-2 text-sm outline-none focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent-soft',
-        value ? 'border-accent text-fg' : 'border-border text-fg-muted',
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={label}
+        className={cn(
+          'flex h-8 items-center gap-1.5 rounded-token border bg-surface-raised px-2.5 text-sm outline-none focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent-soft',
+          count ? 'border-accent text-fg' : 'border-border text-fg-muted',
+        )}
+      >
+        {label}
+        {count > 0 && <span className="rounded-full bg-accent px-1.5 text-[11px] font-medium text-fg-inverted">{count}</span>}
+        <ChevronDown size={13} className={cn('text-fg-subtle transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <AnchoredPopover anchorRef={anchorRef} panelRef={panelRef} minWidth={180} maxHeight={300}>
+          <div className="py-1">
+            {count > 0 && (
+              <button type="button" onClick={onClear} className="flex w-full items-center px-2.5 py-1.5 text-left text-xs text-fg-muted hover:bg-surface-hover">
+                Clear {label.toLowerCase()}
+              </button>
+            )}
+            {options.map(([v, l]) => {
+              const on = selected.has(v)
+              return (
+                <button key={v} type="button" onClick={() => onToggle(v)} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm text-fg hover:bg-surface-hover">
+                  <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center rounded border', on ? 'border-accent bg-accent text-fg-inverted' : 'border-border')}>{on && <Check size={11} />}</span>
+                  <span className="truncate">{l}</span>
+                </button>
+              )
+            })}
+          </div>
+        </AnchoredPopover>
       )}
-    >
-      <option value="">All {label}</option>
-      {options.map(([v, l]) => (
-        <option key={v} value={v}>
-          {l}
-        </option>
-      ))}
-    </select>
+    </>
   )
 }
 
@@ -136,55 +224,54 @@ export function BuildHosts() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const adHoc = useAdHocTask(buildId)
   const scheduleTask = useCreateScheduledTask(buildId)
-  const detectDrift = useDetectDrift(buildId)
-  const toast = useToast()
   const [confirming, setConfirming] = useState<{ initialCommand: string; label: string } | null>(null)
   const [scheduling, setScheduling] = useState<{ initialCommand: string; label: string } | null>(null)
   const [powering, setPowering] = useState<'start' | 'stop' | 'reboot' | null>(null)
   // A single-instance power action from the Infra pill's hover controls,
   // confirmed in the same PowerDialog the bulk bar uses (one target here).
-  const [powerSingle, setPowerSingle] = useState<{ action: 'start' | 'stop' | 'reboot'; id: string; name: string } | null>(null)
+  const [powerSingle, setPowerSingle] = useState<{ action: 'start' | 'stop' | 'reboot'; id: string; name: string; team: number | null } | null>(null)
   // A forced rebuild (tear down + recreate) of one or more hosts plus their
   // dependents; confirmed in RebuildDialog, which previews the full blast radius.
-  const [rebuilding, setRebuilding] = useState<{ ids: string[]; names: string[] } | null>(null)
+  const [rebuilding, setRebuilding] = useState<{ ids: string[]; names: string[]; closedTeams: number[] } | null>(null)
   const [logPanelFor, setLogPanelFor] = useState<{ id: string; label: string; kind: ObjectKind; object?: DeployedObject; teamNumber?: number } | null>(null)
-  const [driftReport, setDriftReport] = useState<DriftReport | null>(null)
-  const [driftError, setDriftError] = useState<string | null>(null)
+  const [boardOpen, setBoardOpen] = useState(false)
+  const [graphOpen, setGraphOpen] = useState(false)
   const [filter, setFilter] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [osFilter, setOsFilter] = useState('')
-  const [stateFilter, setStateFilter] = useState('')
-  const [tagFilter, setTagFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set())
+  const [osFilter, setOsFilter] = useState<Set<string>>(new Set())
+  const [stateFilter, setStateFilter] = useState<Set<string>>(new Set())
+  const [tagFilter, setTagFilter] = useState<Set<string>>(new Set())
   const [collapsedTeams, setCollapsedTeams] = useState<Set<number>>(new Set())
   const [collapsedNets, setCollapsedNets] = useState<Set<string>>(new Set())
   const [legendOpen, setLegendOpen] = useState(false)
 
-  // Drift detection lives here, on the Hosts page, not in the build-wide
-  // header -- it's a question about *these hosts* ("does the hoster still
-  // have exactly what we deployed?"), so it belongs next to the host list
-  // it reports on rather than floating over Overview/Access/Logs too.
-  const driftable = build ? ['deploying', 'building', 'finished', 'failed'].includes(build.status) : false
-
-  async function onDetectDrift() {
-    setDriftError(null)
-    setDriftReport(null)
-    try {
-      const report = await detectDrift.mutateAsync()
-      setDriftReport(report)
-      const clean = report.orphaned.length === 0 && report.missing.length === 0
-      toast({
-        title: clean ? 'No drift detected' : 'Drift detected',
-        description: clean ? undefined : `${report.orphaned.length} orphaned, ${report.missing.length} missing`,
-        tone: clean ? 'success' : 'danger',
-      })
-    } catch (e) {
-      const message = e instanceof ApiError ? e.message : 'Detect drift failed'
-      setDriftError(message)
-      toast({ title: 'Detect drift failed', description: message, tone: 'danger', duration: 0 })
-    }
-  }
-
   const objects: DeployedObject[] = useMemo(() => build?.teams.flatMap((t) => t.objects) ?? [], [build])
+
+  // team_id -> team_number, so the power/rebuild confirmations can show which
+  // team each host belongs to (hostnames repeat across teams -- every team gets
+  // the same network -- so a bare name list is ambiguous about what's affected).
+  const teamNumberById = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const t of build?.teams ?? []) m.set(t.id, t.team_number)
+    return m
+  }, [build])
+
+  // team_id -> whether that team's access is currently closed. A closed team is
+  // firewalled down to the gateway (no general egress), so a rebuilt host can't
+  // fetch its agent/step downloads -- the rebuild will likely hang or fail. The
+  // rebuild confirmation warns when any target is on a closed team.
+  const closedTeamById = useMemo(() => {
+    const m = new Map<string, boolean>()
+    for (const t of build?.teams ?? []) m.set(t.id, t.access_state === 'closed')
+    return m
+  }, [build])
+  const closedTeamsForHosts = (hs: DeployedObject[]): number[] => {
+    const nums = new Set<number>()
+    for (const h of hs) {
+      if (closedTeamById.get(h.team_id)) nums.add(teamNumberById.get(h.team_id) ?? 0)
+    }
+    return [...nums].sort((a, b) => a - b)
+  }
 
   // Router doesn't remount this component when navigating between two
   // builds that hit the same route (only buildId's param value changes),
@@ -235,10 +322,10 @@ export function BuildHosts() {
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase()
     return hosts.filter((h) => {
-      if (typeFilter && h.kind !== typeFilter) return false
-      if (stateFilter && h.status !== stateFilter) return false
-      if (osFilter && hostOs(h) !== osFilter) return false
-      if (tagFilter && !hostTagList(h).includes(tagFilter)) return false
+      if (typeFilter.size && !typeFilter.has(h.kind)) return false
+      if (stateFilter.size && !stateFilter.has(h.status)) return false
+      if (osFilter.size && !osFilter.has(hostOs(h))) return false
+      if (tagFilter.size && !hostTagList(h).some((t) => tagFilter.has(t))) return false
       if (!q) return true
       const mem = memberByObjId.get(h.id)
       return [h.as_name ?? h.object_name, h.kind, h.network_name ?? '', h.status, h.agent?.agent_status ?? '', h.external_ref ?? '', hostOs(h), mem?.size ?? '', ...(mem?.depends_on ?? []), ...hostTagList(h)]
@@ -378,12 +465,12 @@ export function BuildHosts() {
       )}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          {driftable && (
-            <Button variant="secondary" size="sm" onClick={onDetectDrift} disabled={detectDrift.isPending}>
-              <Radar size={14} /> {detectDrift.isPending ? 'Detecting…' : 'Detect Drift'}
-            </Button>
-          )}
-          {driftError && <span className="text-xs text-danger">{driftError}</span>}
+          <Button variant="secondary" size="sm" onClick={() => setBoardOpen(true)} title="Open the full-screen status matrix for this build">
+            <LayoutGrid size={14} /> Matrix
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setGraphOpen(true)} title="Open the full-screen dependency graph for this build">
+            <Waypoints size={14} /> Graph
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setLegendOpen(true)}>
             <Info size={14} /> State Legend
           </Button>
@@ -398,10 +485,10 @@ export function BuildHosts() {
               className="h-8 w-48 rounded-token border border-border bg-surface-raised pl-7 pr-2 text-sm text-fg placeholder:text-fg-subtle outline-none focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent-soft"
             />
           </div>
-          <FilterSelect label="Type" value={typeFilter} onChange={setTypeFilter} options={[['host', 'Host'], ['container', 'Container']]} />
-          <FilterSelect label="OS" value={osFilter} onChange={setOsFilter} options={osOptions.map((o) => [o, o])} />
-          <FilterSelect label="State" value={stateFilter} onChange={setStateFilter} options={stateOptions.map((s) => [s, statusLabel(s)])} />
-          {tagOptions.length > 0 && <FilterSelect label="Tag" value={tagFilter} onChange={setTagFilter} options={tagOptions.map((t) => [t, t])} />}
+          <MultiFilter label="Type" selected={typeFilter} onToggle={(v) => setTypeFilter((p) => toggleSet(p, v))} onClear={() => setTypeFilter(new Set())} options={[['host', 'Host'], ['container', 'Container']]} />
+          <MultiFilter label="OS" selected={osFilter} onToggle={(v) => setOsFilter((p) => toggleSet(p, v))} onClear={() => setOsFilter(new Set())} options={osOptions.map((o) => [o, o])} />
+          <MultiFilter label="State" selected={stateFilter} onToggle={(v) => setStateFilter((p) => toggleSet(p, v))} onClear={() => setStateFilter(new Set())} options={stateOptions.map((s) => [s, statusLabel(s)])} />
+          {tagOptions.length > 0 && <MultiFilter label="Tag" selected={tagFilter} onToggle={(v) => setTagFilter((p) => toggleSet(p, v))} onClear={() => setTagFilter(new Set())} options={tagOptions.map((t) => [t, t])} />}
         </div>
       </div>
 
@@ -443,12 +530,17 @@ export function BuildHosts() {
                         )}
                       </Td>
                       <Td colSpan={7}>
-                        <button onClick={() => toggleTeamCollapse(team.teamNumber)} className="flex items-center gap-1.5 text-sm font-semibold text-fg">
-                          <ChevronDown size={14} className={cn('text-fg-subtle transition-transform', teamCollapsed && '-rotate-90')} />
-                          <Users size={14} className="text-fg-subtle" />
-                          Team {team.teamNumber}
-                          <span className="font-normal text-fg-subtle">({team.count})</span>
-                        </button>
+                        <div className="flex items-center gap-4">
+                          <button onClick={() => toggleTeamCollapse(team.teamNumber)} className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-fg">
+                            <ChevronDown size={14} className={cn('text-fg-subtle transition-transform', teamCollapsed && '-rotate-90')} />
+                            <Users size={14} className="text-fg-subtle" />
+                            Team {team.teamNumber}
+                            <span className="font-normal text-fg-subtle">({team.count})</span>
+                          </button>
+                          {/* Per-network status bars, standard statuses, inline so the row
+                              stays one line tall -- see TeamNetworkBars. */}
+                          <TeamNetworkBars networks={team.networks} className="ml-auto overflow-x-auto" />
+                        </div>
                       </Td>
                     </tr>
                     {!teamCollapsed &&
@@ -506,9 +598,12 @@ export function BuildHosts() {
                                             return (
                                               <button
                                                 key={k}
-                                                onClick={() => setTagFilter(tagFilter === tag ? '' : tag)}
+                                                onClick={() => setTagFilter((p) => toggleSet(p, tag))}
                                                 title={`Filter by ${tag}`}
-                                                className="rounded-token-sm bg-surface-sunken px-1.5 py-0.5 text-[10px] font-medium text-fg-muted hover:bg-surface-hover hover:text-fg"
+                                                className={cn(
+                                                  'rounded-token-sm px-1.5 py-0.5 text-[10px] font-medium',
+                                                  tagFilter.has(tag) ? 'bg-accent-soft text-accent-fg' : 'bg-surface-sunken text-fg-muted hover:bg-surface-hover hover:text-fg',
+                                                )}
                                               >
                                                 {k}={v}
                                               </button>
@@ -536,8 +631,8 @@ export function BuildHosts() {
                                     <Td>
                                       <InfraCell
                                         obj={h}
-                                        onAction={(action, obj) => setPowerSingle({ action, id: obj.id, name: obj.as_name ?? obj.object_name })}
-                                        onRebuild={readOnly ? undefined : (obj) => setRebuilding({ ids: [obj.id], names: [obj.as_name ?? obj.object_name] })}
+                                        onAction={(action, obj) => setPowerSingle({ action, id: obj.id, name: obj.as_name ?? obj.object_name, team: teamNumberById.get(obj.team_id) ?? null })}
+                                        onRebuild={readOnly ? undefined : (obj) => setRebuilding({ ids: [obj.id], names: [obj.as_name ?? obj.object_name], closedTeams: closedTeamsForHosts([obj]) })}
                                       />
                                     </Td>
                                     <Td>{h.agent ? <StatusBadge status={h.agent.agent_status} /> : <span className="text-fg-muted">—</span>}</Td>
@@ -564,7 +659,6 @@ export function BuildHosts() {
              independent of the guest agent. Distinct from the LaForge agent
              tasks on the right. */}
           <span className="flex items-center gap-1" title="Infrastructure power — acts on the VM/container at the hoster, even if its agent is down">
-            <Power size={13} className="text-fg-subtle" />
             <Button variant="secondary" size="icon" onClick={() => setPowering('start')} title="Start" aria-label="Start">
               <Play size={14} />
             </Button>
@@ -577,7 +671,7 @@ export function BuildHosts() {
             <Button
               variant="secondary"
               size="icon"
-              onClick={() => setRebuilding({ ids: selectedHosts.map((h) => h.id), names: selectedHosts.map((h) => h.as_name ?? h.object_name) })}
+              onClick={() => setRebuilding({ ids: selectedHosts.map((h) => h.id), names: selectedHosts.map((h) => h.as_name ?? h.object_name), closedTeams: closedTeamsForHosts(selectedHosts) })}
               title="Rebuild — tear down and recreate, cascading to dependents"
               aria-label="Rebuild"
             >
@@ -602,7 +696,7 @@ export function BuildHosts() {
           buildId={buildId}
           action={powering}
           targetIds={selectedHosts.map((h) => h.id)}
-          matched={selectedHosts.map((h) => h.as_name ?? h.object_name)}
+          matched={selectedHosts.map((h) => ({ name: h.as_name ?? h.object_name, team: teamNumberById.get(h.team_id) ?? null }))}
           onClose={() => setPowering(null)}
           onDone={() => {
             setPowering(null)
@@ -616,7 +710,7 @@ export function BuildHosts() {
           buildId={buildId}
           action={powerSingle.action}
           targetIds={[powerSingle.id]}
-          matched={[powerSingle.name]}
+          matched={[{ name: powerSingle.name, team: powerSingle.team }]}
           onClose={() => setPowerSingle(null)}
           onDone={() => setPowerSingle(null)}
         />
@@ -626,6 +720,7 @@ export function BuildHosts() {
         <RebuildDialog
           buildId={buildId}
           targetIds={rebuilding.ids}
+          closedTeams={rebuilding.closedTeams}
           onClose={() => setRebuilding(null)}
           onDone={() => {
             setRebuilding(null)
@@ -664,89 +759,8 @@ export function BuildHosts() {
 
       <StatusLegendDialog open={legendOpen} onClose={() => setLegendOpen(false)} />
 
-      <Modal
-        open={!!driftReport}
-        onClose={() => setDriftReport(null)}
-        title="Drift Report"
-        description="Builder.Inspect's real, live answer for this build's own builder, compared against what LaForge believes is deployed."
-      >
-        {driftReport && <DriftReportBody report={driftReport} />}
-      </Modal>
-    </div>
-  )
-}
-
-// Live drift for this build's hosts: what the hoster actually has, versus
-// what LaForge's records say it deployed. Moved here from the build-wide
-// header (see onDetectDrift's comment) so it reports right beside the host
-// list it's about.
-function DriftReportBody({ report }: { report: DriftReport }) {
-  if (report.orphaned.length === 0 && report.missing.length === 0) {
-    return (
-      <div className="flex items-center gap-2 rounded-token border border-success/30 bg-success-soft px-3 py-2 text-sm text-success">
-        <CheckCircle2 size={16} /> No drift -- {report.tracked} resource{report.tracked === 1 ? '' : 's'} match exactly what the hoster has.
-      </div>
-    )
-  }
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="text-xs text-fg-muted">{report.tracked} resource{report.tracked === 1 ? '' : 's'} confirmed matching.</div>
-
-      {report.missing.length > 0 && (
-        <div>
-          <div className="mb-1 flex items-center gap-1.5 text-sm font-medium text-danger">
-            <AlertTriangle size={14} /> Missing at the hoster ({report.missing.length})
-          </div>
-          <div className="mb-2 text-xs text-fg-muted">LaForge believes these are deployed, but the hoster no longer has them.</div>
-          <TableScroller contain={false}>
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Kind</Th>
-                  <Th>Name</Th>
-                  <Th>External ref</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.missing.map((o) => (
-                  <tr key={o.id}>
-                    <Td><Badge tone="neutral">{o.kind}</Badge></Td>
-                    <Td>{o.as_name ?? o.object_name}</Td>
-                    <Td className="font-mono text-xs text-fg-muted">{o.external_ref}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </TableScroller>
-        </div>
-      )}
-
-      {report.orphaned.length > 0 && (
-        <div>
-          <div className="mb-1 flex items-center gap-1.5 text-sm font-medium text-warning">
-            <AlertTriangle size={14} /> Orphaned at the hoster ({report.orphaned.length})
-          </div>
-          <div className="mb-2 text-xs text-fg-muted">The hoster has these, but LaForge has no record of them for this build.</div>
-          <TableScroller contain={false}>
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Kind</Th>
-                  <Th>External ref</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.orphaned.map((r) => (
-                  <tr key={r.external_ref}>
-                    <Td><Badge tone="neutral">{r.kind}</Badge></Td>
-                    <Td className="font-mono text-xs text-fg-muted">{r.external_ref}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </TableScroller>
-        </div>
-      )}
+      {boardOpen && buildId && <EnvironmentBoard repoId={repoId} buildId={buildId} onClose={() => setBoardOpen(false)} />}
+      {graphOpen && buildId && <DependencyGraph repoId={repoId} buildId={buildId} onClose={() => setGraphOpen(false)} />}
     </div>
   )
 }
@@ -770,7 +784,7 @@ function PowerDialog({
   buildId: string
   action: 'start' | 'stop' | 'reboot'
   targetIds: string[]
-  matched: string[]
+  matched: { name: string; team: number | null }[]
   onClose: () => void
   onDone: () => void
 }) {
@@ -848,7 +862,14 @@ function PowerDialog({
       )}
 
       <Label>Affects</Label>
-      <div className="mt-1 max-h-32 overflow-auto rounded-token border border-border bg-surface-sunken p-2 text-xs text-fg-muted">{matched.join(', ')}</div>
+      <div className="mt-1 max-h-32 overflow-auto rounded-token border border-border bg-surface-sunken p-2 text-xs text-fg-muted">
+        {matched.map((h, i) => (
+          <div key={`${h.name}-${i}`} className="flex items-center justify-between gap-2 py-0.5">
+            <span className="truncate">{h.name}</span>
+            {h.team !== null && <span className="shrink-0 text-fg-subtle">team {h.team}</span>}
+          </div>
+        ))}
+      </div>
     </Modal>
   )
 }
@@ -861,11 +882,16 @@ function PowerDialog({
 function RebuildDialog({
   buildId,
   targetIds,
+  closedTeams,
   onClose,
   onDone,
 }: {
   buildId: string
   targetIds: string[]
+  // Team numbers among the targets whose access is currently closed -- a rebuilt
+  // host on a closed team can't reach anything but the gateway, so its agent
+  // install and step downloads will likely fail. Surfaced as a warning.
+  closedTeams: number[]
   onClose: () => void
   onDone: () => void
 }) {
@@ -931,6 +957,17 @@ function RebuildDialog({
         <TriangleAlert size={13} className="mt-0.5 shrink-0" />
         <span>This destroys the instances at the hoster and recreates them. Anything changed on them since deploy is lost.</span>
       </div>
+
+      {closedTeams.length > 0 && (
+        <div className="mb-3 flex items-start gap-1.5 rounded-token border border-warning bg-warning-soft p-2 text-xs text-fg">
+          <TriangleAlert size={13} className="mt-0.5 shrink-0 text-warning" />
+          <span>
+            Access is <span className="font-medium">closed</span> for team{closedTeams.length > 1 ? 's' : ''} {closedTeams.join(', ')}. A
+            rebuilt host can only reach the gateway while access is closed, so its agent install and step downloads will likely fail — open
+            access for {closedTeams.length > 1 ? 'those teams' : 'that team'} before rebuilding, or expect the rebuild to hang.
+          </span>
+        </div>
+      )}
 
       <Label>
         Will rebuild

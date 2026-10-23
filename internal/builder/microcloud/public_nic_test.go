@@ -44,6 +44,26 @@ type publicTestServer struct {
 	networkIPv4 string
 }
 
+// allIngressState reports whether every ingress rule in the stored ACL has the
+// given state ("enabled"/"disabled") -- how the new access toggle shows up.
+func allIngressState(f *publicTestServer, aclName, want string) bool {
+	acl := f.acls[aclName]
+	if acl == nil {
+		return false
+	}
+	rules, _ := acl["ingress"].([]interface{})
+	if len(rules) == 0 {
+		return false
+	}
+	for _, r := range rules {
+		m, ok := r.(map[string]interface{})
+		if !ok || m["state"] != want {
+			return false
+		}
+	}
+	return true
+}
+
 func newPublicTestServer(t *testing.T) (*publicTestServer, *Builder, *memoryPublicAllocator) {
 	t.Helper()
 	f := &publicTestServer{instances: map[string]map[string]interface{}{}, acls: map[string]map[string]interface{}{}, networkIPv4: "none"}
@@ -69,6 +89,15 @@ func newPublicTestServer(t *testing.T) (*publicTestServer, *Builder, *memoryPubl
 				ip = f.networkIPv4
 			}
 			ok(map[string]interface{}{"type": "ovn", "status": "Created", "config": map[string]string{"ipv4.address": ip, "bridge.mtu": "1500"}})
+		case strings.HasPrefix(path, "/1.0/networks/") && r.Method == "PATCH":
+			ok(map[string]interface{}{}) // access egress toggle PATCHes network config; no-op store
+		case path == "/1.0/instances" && r.Method == "GET":
+			// recursion=1 list, as laforgeInstances uses for a named project.
+			list := make([]map[string]interface{}, 0, len(f.instances))
+			for _, inst := range f.instances {
+				list = append(list, inst)
+			}
+			ok(list)
 		case path == "/1.0/instances" && r.Method == "POST":
 			name := body["name"].(string)
 			if f.instances[name] != nil {
@@ -87,6 +116,14 @@ func newPublicTestServer(t *testing.T) (*publicTestServer, *Builder, *memoryPubl
 			ok(map[string]interface{}{})
 		case strings.HasPrefix(path, "/1.0/network-acls/"):
 			name := strings.TrimPrefix(path, "/1.0/network-acls/")
+			if r.Method == "GET" {
+				if f.acls[name] == nil {
+					fail(404, "not found")
+					return
+				}
+				ok(f.acls[name])
+				return
+			}
 			if r.Method == "PUT" {
 				f.acls[name] = body
 			}
@@ -154,7 +191,7 @@ func newPublicTestServer(t *testing.T) (*publicTestServer, *Builder, *memoryPubl
 	}))
 	t.Cleanup(srv.Close)
 	a := &memoryPublicAllocator{}
-	b := New(&Client{BaseURL: srv.URL, Project: "competition", HTTPClient: srv.Client(), OperationTimeout: time.Second}, Config{PublicAccess: testPublicConfig(), Images: map[string]ImageRef{"linux": {VM: true, Fingerprint: "linux"}, "win2019": {VM: true, Fingerprint: "windows"}}, Sizes: map[string]SizeSpec{"small": {CPU: "2", Memory: "4GiB"}}, StoragePool: "Cluster_A_Pool"})
+	b := New(&Client{BaseURL: srv.URL, Project: "competition", HTTPClient: srv.Client(), OperationTimeout: time.Second}, Config{PublicAccess: testPublicConfig(), Images: map[string]ImageRef{"linux": {VM: true, Fingerprint: "linux"}, "win2019": {VM: true, Fingerprint: "windows"}}, Sizes: map[string]SizeSpec{"small": {CPU: "2", Memory: "4GiB"}}, StoragePool: "Cluster_A_Pool", GatewayAddr: "10.0.0.1:8443"})
 	b.PublicAddresses = a
 	return f, b, a
 }
@@ -164,7 +201,7 @@ func TestPublicNICLinuxWindowsAndLifecycle(t *testing.T) {
 	ctx := context.Background()
 	ips := map[string]bool{}
 	for _, os := range []string{"linux", "win2019"} {
-		spec := builder.HostSpec{ExternalName: "same-team-" + os, Team: "1", OS: os, Size: "small", Network: "primary", Address: "172.16.0.10", CloudInitUserData: "test user data"}
+		spec := builder.HostSpec{ExternalName: "same-team-" + os, Team: "1", OS: os, Size: "small", Network: "primary", Address: "172.16.0.10", AgentDownloadURL: "http://api/agent-binary/x?token=t"}
 		name, err := b.DeployHostWithPublicPorts(ctx, spec, []string{"22", "3389"}, []string{"53"})
 		if err != nil {
 			t.Fatal(err)
@@ -211,33 +248,41 @@ func TestPublicNICLinuxWindowsAndLifecycle(t *testing.T) {
 		if _, err := b.DeployHostWithPublicPorts(ctx, spec, []string{"22"}, nil); err != nil {
 			t.Fatal(err)
 		}
-		if err := b.removeNIC(ctx, name); err != nil {
+		pub := publicACLName("competition", name)
+		// Close disables the public NIC's inbound allows (rules-only on the lfpub
+		// ACL) and must NOT touch the NIC device.
+		if err := b.CloseAccess(ctx, "1"); err != nil {
 			t.Fatal(err)
 		}
+		if !allIngressState(f, pub, "disabled") {
+			t.Fatalf("public ACL inbound not disabled on close: %v", f.acls[pub]["ingress"])
+		}
 		for _, d := range []string{"eth0", publicNICName} {
-			if f.instances[name]["devices"].(map[string]interface{})[d].(map[string]interface{})["type"] != "none" {
-				t.Fatalf("%s still open", d)
+			if f.instances[name]["devices"].(map[string]interface{})[d].(map[string]interface{})["type"] != "nic" {
+				t.Fatalf("%s was detached/changed on close -- close must not touch a NIC device", d)
 			}
 		}
+		// Reopen re-enables the inbound allows; the NIC device is unchanged.
+		if err := b.OpenAccess(ctx, "1"); err != nil {
+			t.Fatal(err)
+		}
+		if !allIngressState(f, pub, "enabled") {
+			t.Fatalf("public ACL inbound not re-enabled on open: %v", f.acls[pub]["ingress"])
+		}
+		if f.instances[name]["devices"].(map[string]interface{})[publicNICName].(map[string]interface{})["hwaddr"] != plan.Device["hwaddr"] {
+			t.Fatal("MAC changed across close/open")
+		}
+		// Public port add/remove via ConfigureExternalAccess still works.
 		endpoints, err := b.ConfigureExternalAccess(ctx, "1", []builder.ExternalHost{{ExternalRef: name, TCPPorts: []string{"22"}}})
 		if err != nil || len(endpoints) != 1 || endpoints[0].PublicAddress != plan.Address+":22" || endpoints[0].ExternalPort != "22" {
 			t.Fatalf("endpoints: %v, %v", endpoints, err)
-		}
-		if f.instances[name]["devices"].(map[string]interface{})[publicNICName].(map[string]interface{})["type"] != "none" {
-			t.Fatal("ACL reconcile reopened closed NIC")
 		}
 		endpoints, err = b.ConfigureExternalAccess(ctx, "1", []builder.ExternalHost{{ExternalRef: name}})
 		if err != nil || len(endpoints) != 0 {
 			t.Fatal("public removal failed", err)
 		}
-		if len(f.acls[publicACLName("competition", name)]["ingress"].([]interface{})) != 0 {
+		if len(f.acls[pub]["ingress"].([]interface{})) != 0 {
 			t.Fatal("removed public ports still allowed")
-		}
-		if err := b.restoreNIC(ctx, name); err != nil {
-			t.Fatal(err)
-		}
-		if f.instances[name]["devices"].(map[string]interface{})[publicNICName].(map[string]interface{})["hwaddr"] != plan.Device["hwaddr"] {
-			t.Fatal("MAC changed on reopen")
 		}
 		f.failDelete = true
 		if err := b.DestroyHost(ctx, "1", name); err == nil || a.released != 0 {
@@ -349,6 +394,14 @@ func TestPublicNICGuestRoutesDNSAndInheritedMTU(t *testing.T) {
 		t.Fatalf("NICs: %+v", guest)
 	}
 	pub := guest.Config[1]
+	// eth0 (the team network) must carry the operator-configured DNS -- the
+	// "DNS servers (optional)" value from the builder config -- not the team
+	// gateway, so the guest resolves the agent download URL on first boot.
+	// Regression guard: an earlier fix set eth0 to the gateway, which this
+	// environment's OVN gateway can't resolve external names through.
+	if len(guest.Config[0].Subnets[0].DNS) != 1 || guest.Config[0].Subnets[0].DNS[0] != "10.250.0.1" {
+		t.Fatalf("eth0 (primary) must use the configured DNS (10.250.0.1), got: %+v", guest.Config[0].Subnets[0])
+	}
 	if guest.Config[0].Subnets[0].Gateway != "" || pub.MTU != 1500 || pub.Subnets[0].Gateway != "10.250.0.1" || len(pub.Subnets[0].DNS) != 1 || pub.Subnets[0].DNS[0] != "10.250.0.1" {
 		t.Fatalf("routing/DNS/MTU: %+v", guest)
 	}
@@ -394,20 +447,21 @@ func TestPublicNICRebuildRetainsAddressAndClosedRetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := b.removeNIC(ctx, name); err != nil {
+	// Close disables the public NIC's inbound allows (rules-only, no device touch).
+	if err := b.CloseAccess(ctx, "1"); err != nil {
 		t.Fatal(err)
 	}
+	if !allIngressState(f, publicACLName("competition", name), "disabled") {
+		t.Fatalf("inbound not disabled on close: %v", f.acls[publicACLName("competition", name)]["ingress"])
+	}
+	// A redeploy retry still succeeds and keeps the reserved public address (a
+	// redeploy re-enabling the port allows is expected; the orchestrator
+	// re-closes on its next access pass).
 	if _, err := b.DeployHostWithPublicPorts(ctx, spec, []string{"22"}, nil); err != nil {
 		t.Fatal(err)
 	}
-	if f.instances[name]["devices"].(map[string]interface{})[publicNICName].(map[string]interface{})["type"] != "none" {
-		t.Fatal("retry reopened a closed NIC")
-	}
 	if err := b.ensureHostPortACL(ctx, "172.16.0.0/24", nil, builder.HostAccess{ExternalRef: name, TCPPorts: []string{"22"}}); err != nil {
 		t.Fatal(err)
-	}
-	if f.instances[name]["devices"].(map[string]interface{})["eth0"].(map[string]interface{})["type"] != "none" {
-		t.Fatal("network ACL update reopened primary NIC")
 	}
 	if err := b.DestroyHostForRebuild(ctx, "1", name); err != nil {
 		t.Fatal(err)

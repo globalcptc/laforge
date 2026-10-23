@@ -65,6 +65,8 @@ export interface ConfiguredBuild {
   competition_started: boolean
   current_content_revision_id: string | null
   created_at: string
+  /** Whether the current user has starred this configured build (favorites sort to the top). */
+  favorited?: boolean
 }
 
 export interface Build {
@@ -72,7 +74,7 @@ export interface Build {
   configured_build_id: string | null
   content_revision_id: string
   environment_name: string
-  status: 'planned' | 'deploying' | 'building' | 'finished' | 'failed' | 'tearing_down' | 'torn_down' | 'purged'
+  status: 'planned' | 'deploying' | 'building' | 'finished' | 'failed' | 'tearing_down' | 'torn_down' | 'purged' | 'discarded'
   created_at: string
   // Set when the orchestrator's last reconcile of this build failed for a
   // reason that isn't a content error -- most often a build/builder
@@ -85,6 +87,12 @@ export interface Build {
   commit_message?: string | null
   committed_at?: string | null
   auto_built?: boolean
+  // The ref (branch) of the build's commit, from its content_revision -- survives
+  // even if the configured build is gone. May be "refs/heads/<branch>" or null.
+  branch?: string | null
+  // Number of teams the build materialized; populated by the builds listing
+  // (GET /repos/{id}/builds), absent on endpoints returning a bare build.
+  team_count?: number
 }
 
 export interface Team {
@@ -110,6 +118,7 @@ export type ObjectStatus =
   | 'build_failed'
   | 'invalid'
   | 'destroying'
+  | 'destroy_failed'
   | 'destroyed'
 export type AgentStatus = 'booting' | 'healthy' | 'late' | 'missing'
 
@@ -138,9 +147,10 @@ export interface DeployedObject {
   power_state?: PowerState
   power_state_checked_at?: string | null
   agent?: AgentHealth
-  // Dependencies this object's steps are waiting on (its `depends_on` that
-  // haven't finished yet). Set while its steps are materialized but blocked;
-  // null/empty once released. Drives the "Dependency Blocked" state.
+  // What this object's next steps are waiting on: its `depends_on` that
+  // haven't finished yet, or -- once it has worked up to a step with a
+  // `wait_for:` -- that gate's targets ("bff-dc-01 · domain-ready"). Null/empty
+  // while it has steps it can run. Drives the "Dependency Blocked" state.
   blocked_on?: string[] | null
 }
 
@@ -361,22 +371,42 @@ export interface StepValidator {
 export interface StepStatus {
   step_index: number
   command: string
-  status: 'pending' | 'leased' | 'done' | 'failed'
+  status: 'pending' | 'leased' | 'done' | 'failed' | 'ignored' | 'blocked'
   attempts: number
   last_error?: string
   output?: string
+  /** Set on the first command of a step with `wait_for:` -- what it (and every step after it) waits on, e.g. "bff-dc-01 · domain-ready". */
+  wait_for?: string[]
+  /** The authored step's own `milestone:` name, which other hosts can wait on. */
+  milestone?: string
   // Which authored step this expanded command belongs to, so the sub-commands
   // of one step (write_file + execute + validate) group under one heading.
   group_index: number
   group_label?: string
   validators: StepValidator[]
+  /** When the agent started/finished this step (null until it does) -- for showing how long a step took. */
+  started_at?: string | null
+  finished_at?: string | null
 }
 
 // Builder-specific placement facts (label/value, varies by builder) plus the
-// environment root password, for finding/logging into a host by hand.
+// host's current passwords, for finding/logging into a host by hand.
 export interface ObjectInfra {
   placement: { label: string; value: string }[]
   password?: string
+  credentials?: HostCredential[]
+}
+
+// HostCredential is one account LaForge set a password for on a host (a
+// set_password / create_user step, or the automatic admin step). applied is
+// false until the agent has run that step -- the password shown is then the
+// one the host is about to get.
+export interface HostCredential {
+  username: string
+  password: string
+  applied: boolean
+  source: 'step' | 'environment'
+  admin: boolean
 }
 
 export interface RenderedStep {
@@ -385,6 +415,22 @@ export interface RenderedStep {
   script_name?: string
   rendered?: string
   raw: Record<string, unknown>
+}
+
+// CloudInitView is the first-boot configuration a host received before any
+// authored step ran -- the cloud-init / cloudbase-init / EC2Launch user-data
+// (and, on Incus/MicroCloud Windows, the config-drive meta-data) that installs
+// the agent. Mirrors internal/api.cloudInitView.
+export interface CloudInitView {
+  os: string
+  format: string // 'cloud-init' | 'cloudbase-init' | 'ec2launch'
+  delivery: string
+  user_data: string
+  meta_data?: string
+  note?: string
+  /** First-boot temporary admin password set by the user-data, usable until the agent runs its real set_password step. */
+  temp_password?: string
+  temp_username?: string
 }
 
 // ScheduledTask mirrors db.ScheduledTask (internal/db/scheduled_task.sql.go)
@@ -451,6 +497,27 @@ export interface ExternalAccessEntry {
   public_address: string
 }
 
+// ExternalAccessExportRow (GET /builds/{id}/external-access/export): one
+// endpoint plus how to log in -- the host's current admin account and password
+// (blank for containers). password_applied is false until the agent has run the
+// set_password step the password came from.
+export interface ExternalAccessExportRow {
+  team: number
+  host: string
+  ip: string
+  port: string
+  protocol: string
+  username: string
+  password: string
+  deployed_object_id: string
+  object_name: string
+  kind: string
+  internal_port: string
+  public_address: string
+  password_applied: boolean
+  password_source?: 'step' | 'environment'
+}
+
 // ObjectConfig (GET /builds/{id}/objects/{objectId}/config): one host/container's
 // full authored config from the build's content revision -- what the host info
 // panel shows beyond runtime state.
@@ -462,6 +529,8 @@ export interface ConfigFinding {
 
 export interface ObjectConfig {
   public_address: string
+  /** The instance's assigned internal IP (resolved from content). */
+  address?: string
   kind: string
   name: string
   os?: string
@@ -475,6 +544,8 @@ export interface ObjectConfig {
   vars?: Record<string, string>
   tags?: Record<string, string>
   depends_on?: string[]
+  /** Step-level waits on other hosts (`wait_for:`), e.g. "bff-dc-01 · domain-ready". */
+  waits_for?: string[]
   findings?: ConfigFinding[]
 }
 
@@ -501,6 +572,34 @@ export interface ScheduledTask {
   next_fire_at: string | null
   status: 'pending' | 'fired' | 'canceled'
   created_by: string | null
+  created_at: string
+  updated_at: string
+  // Enriched by ListScheduledTasksWithContextByBuild: the host this task targets
+  // and the team it belongs to, plus a rollup of the agent_task runs it spawned.
+  host_object_name: string | null
+  host_as_name: string | null
+  host_kind: string | null
+  team_number: number | null
+  run_total: number
+  run_failed: number
+  run_open: number
+  last_run_id: string | null
+  last_run_status: string
+  last_run_finished_at: string | null
+}
+
+// ScheduledTaskRun is one agent_task a scheduled task spawned (its console
+// output + status), from ListRunsForScheduledTask.
+export interface ScheduledTaskRun {
+  id: string
+  step_index: number
+  command: string
+  payload: unknown
+  status: string
+  output: string | null
+  last_error: string | null
+  started_at: string | null
+  finished_at: string | null
   created_at: string
   updated_at: string
 }
@@ -555,6 +654,7 @@ export interface IncusSizeSpec {
 // MicroCloud cluster has exactly one endpoint no matter how many members
 // it has (any one answers for the whole cluster).
 export interface IncusHostConfig {
+  network_type?: 'bridge' | 'ovn'
   credential_id?: string
   api_url: string
   client_cert_path: string
@@ -622,6 +722,19 @@ export interface MicrocloudPublicAccess {
   routes?: { to: string; via: string }[]
 }
 
+/** AWS only: account infrastructure. Empty fields fall back to the runner's AWS_* env vars. */
+export interface AwsConfig {
+  region?: string
+  ecs_cluster?: string
+  execution_role_arn?: string
+  log_group?: string
+  agent_init_image?: string
+  /** EC2 key pair associated with instances so a Windows box's admin password is retrievable via get-password-data. */
+  key_name?: string
+  /** AWS account id the credential belongs to, captured at connect. Display-only. */
+  account?: string
+}
+
 export interface BuilderConfig {
   id: string
   name: string
@@ -641,11 +754,22 @@ export interface BuilderConfig {
   incus_images: Record<string, IncusImageRef>
   incus_sizes: Record<string, IncusSizeSpec>
   incus_hosts: IncusHostConfig[]
+  incus_one_team_per_host?: boolean
   incus_credential_id: string | null
+  aws_credential_id?: string | null
   microcloud_public_access?: MicrocloudPublicAccess | null
+  /** MicroCloud only: the LXD cluster group every instance is created into ("default" = whole cluster). */
+  microcloud_cluster_group?: string
+  aws_config?: AwsConfig | null
   external_access_ip: string | null
   external_port_min: number | null
   external_port_max: number | null
+  /** User-chosen display color ("" = none, else a "#rrggbb" hex), shown as a pill wherever the builder name appears. */
+  color?: string
+  /** Cap on how many of this builder's tasks deploy at once (below the global runner pool); 0 = unlimited. */
+  max_concurrency?: number
+  /** Incus pools: cap on concurrent instance deploys on each host, critical-path first; 0 = unlimited. */
+  incus_host_max_concurrency?: number
   created_at: string
   updated_at: string
 }
@@ -665,11 +789,18 @@ export interface BuilderConfigRequest {
   incus_images?: Record<string, IncusImageRef>
   incus_sizes?: Record<string, IncusSizeSpec>
   incus_hosts?: IncusHostConfig[]
+  incus_one_team_per_host?: boolean
   incus_credential_id?: string
+  aws_credential_id?: string
   microcloud_public_access?: MicrocloudPublicAccess
+  microcloud_cluster_group?: string
+  aws_config?: AwsConfig
   external_access_ip?: string
   external_port_min?: number
   external_port_max?: number
+  color?: string
+  max_concurrency?: number
+  incus_host_max_concurrency?: number
 }
 
 // StoragePoolInfo/NetworkInfo/ImageInfo mirror internal/builder/incus's
@@ -682,6 +813,7 @@ export interface StoragePoolInfo {
 }
 
 export interface NetworkInfo {
+  config?: Record<string, string>
   name: string
   type: string // "physical" | "bridge" | "ovn" | ...
   managed: boolean
@@ -697,10 +829,15 @@ export interface ImageInfo {
     os: string
     release: string
     description: string
+    /** AMI creation date (ISO-8601), publisher, and availability state — AWS only; empty on the on-prem builders. */
+    created?: string
+    owner?: string
+    state?: string
   }
 }
 
 export interface Discovery {
+  native_bridge_supported?: boolean
   storage_pools: StoragePoolInfo[]
   /** Full details for a bounded number of networks (likely uplinks first). */
   networks: NetworkInfo[]
@@ -713,6 +850,13 @@ export interface Discovery {
   projects?: ProjectInfo[]
   /** Instance snapshots (in the builder's project) that can serve as templates. */
   snapshots?: SnapshotInfo[]
+  /** AWS only: the account's regions, and the chosen region's instance types.
+   *  (AMIs come back in `images`.) */
+  regions?: string[]
+  instance_types?: string[]
+  /** AWS only: latest Ubuntu 22.04 LTS x86_64 AMI in the chosen region -- the
+   *  one-click "Add compose-host" pre-fills it. Empty when unresolved. */
+  recommended_compose_ami?: string
 }
 
 // SnapshotInfo is one snapshot of an instance that could be a template --
@@ -800,6 +944,7 @@ export interface ListEnvironmentFilesResponse {
 export interface BuilderSummary {
   name: string
   kind: string
+  color?: string
 }
 
 // DriftResource mirrors internal/builder.Resource -- one thing
@@ -878,8 +1023,32 @@ export interface HomeData {
   active_builds: number
   totals: HomeCounts
   repositories: { id: string; github_owner: string; github_repo: string; builds: HomeBuild[] }[]
-  builders: { name: string; kind: string; active_builds: number; counts: HomeCounts }[]
+  builders: {
+    name: string
+    kind: string
+    color?: string
+    active_builds: number
+    teams: number
+    counts: HomeCounts
+    // Build-gating capacity signals from the latest collected metrics, worst-first
+    // (storage pools, node memory, AWS quotas). Empty when the builder has reported
+    // none yet (OpenStack, or before its first collection).
+    capacity?: HomeCapacity[]
+  }[]
   attention: AttentionItem[]
+}
+
+// HomeCapacity mirrors internal/api.homeCapacity: one build-gating signal. For an
+// AWS quota (max set) the UI shows used/max; for a percent-full series (disk,
+// memory, swap) max is absent and it shows just the percent.
+export interface HomeCapacity {
+  key: string
+  label: string
+  node?: string
+  pct: number
+  value: number
+  max?: number
+  unit: string
 }
 
 export interface AttentionItem {
@@ -889,4 +1058,67 @@ export interface AttentionItem {
   environment_name: string
   category: string
   reason: string
+}
+
+// Builder backend-health stats (GET /builder-configs/{name}/stats) -- see
+// docs/plans/builder-monitoring.md. Series are time-series for charts; gauges
+// are the latest usage-vs-limit for quota bars.
+export interface MetricPoint {
+  t: string
+  v: number
+}
+export interface MetricSeries {
+  key: string
+  label: string
+  node: string
+  unit: string
+  points: MetricPoint[]
+}
+export interface MetricGauge {
+  key: string
+  label: string
+  node: string
+  unit: string
+  value: number
+  max?: number
+}
+export interface BuilderStats {
+  series: MetricSeries[]
+  gauges: MetricGauge[]
+  warnings?: string[]
+}
+
+// Builder usage summary (GET /builder-configs/{name}/usage).
+export interface UsageBuild {
+  id: string
+  status: string
+  environment_name: string
+  created_at: string
+}
+export interface UsageResource {
+  kind: string
+  running: number
+  total: number
+}
+export interface UsagePublic {
+  public_address: string
+  protocol: string
+  external_port: string
+  object_name: string
+  as_name?: string | null
+  team_number: number
+  build_id: string
+}
+export interface BuilderUsage {
+  active_builds: UsageBuild[]
+  resources: UsageResource[]
+  public: UsagePublic[]
+}
+
+// BuildReadiness is the pre-deploy quota check for a build's builder. checked is
+// false when the builder has no quota check (every kind but AWS); warnings lists
+// the account limits this build would exceed. See GET /builds/{id}/readiness.
+export interface BuildReadiness {
+  checked: boolean
+  warnings: string[]
 }

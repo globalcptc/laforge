@@ -40,10 +40,11 @@ type StoragePoolInfo struct {
 }
 
 type NetworkInfo struct {
-	Name    string `json:"name"`
-	Type    string `json:"type"` // "physical", "bridge", "ovn", ...
-	Managed bool   `json:"managed"`
-	Status  string `json:"status"`
+	Config  map[string]string `json:"config,omitempty"`
+	Name    string            `json:"name"`
+	Type    string            `json:"type"` // "physical", "bridge", "ovn", ...
+	Managed bool              `json:"managed"`
+	Status  string            `json:"status"`
 }
 
 type ImageInfo struct {
@@ -55,13 +56,24 @@ type ImageInfo struct {
 		OS          string `json:"os"`
 		Release     string `json:"release"`
 		Description string `json:"description"`
+		// Created/Owner are populated by cloud builders (AWS) so the picker can
+		// show an AMI's age and who published it (self vs amazon/Canonical/…);
+		// the on-prem builders leave them empty.
+		Created string `json:"created,omitempty"`
+		Owner   string `json:"owner,omitempty"`
+		// State is the AMI's availability ("available", "deregistered", "pending",
+		// …) -- a resolved-by-id configured AMI that is no longer "available" would
+		// fail to launch, which the config page surfaces instead of hiding. AWS only.
+		State string `json:"state,omitempty"`
 	} `json:"properties"`
 }
 
 // Discovery is what a hoster reports it has -- the pickable resources. Never nil
 // slices in a value the API returns, so the wire is always a JSON array.
 type Discovery struct {
-	StoragePools []StoragePoolInfo `json:"storage_pools"`
+	// Nil means capability detection was unavailable or this is another builder kind.
+	NativeBridgeSupported *bool             `json:"native_bridge_supported,omitempty"`
+	StoragePools          []StoragePoolInfo `json:"storage_pools"`
 	// Networks are the server's own (the `default` project's), since uplink
 	// networks always live there whatever project instances go in -- with
 	// details for at most a bounded number of them, likely uplinks first: on a
@@ -81,6 +93,15 @@ type Discovery struct {
 	// Snapshots are instance snapshots in the same project as Images, which
 	// a builder can copy instances from instead of an image.
 	Snapshots []SnapshotInfo `json:"snapshots"`
+	// Regions and InstanceTypes are AWS-only: the account's regions and the
+	// chosen region's instance types, for the wizard's region dropdown and
+	// instance-type picker. Nil for every other kind. (AMIs reuse Images.)
+	Regions       []string `json:"regions"`
+	InstanceTypes []string `json:"instance_types"`
+	// RecommendedComposeAMI is AWS-only: the latest Amazon Linux 2023 x86_64 AMI
+	// in the chosen region, a Docker-capable default the wizard's one-click
+	// "Add compose-host" pre-fills. Empty when unresolved or another kind.
+	RecommendedComposeAMI string `json:"recommended_compose_ami,omitempty"`
 }
 
 // SnapshotInfo is one snapshot of an instance that could serve as a template.
@@ -121,6 +142,11 @@ type ProjectInfo struct {
 type OnboardRequest struct {
 	Token   string
 	Address string
+	// AWSAccessKeyID/AWSSecretAccessKey are the AWS builder's credential, entered
+	// in the wizard and validated here (an STS identity check) before being
+	// stored like any other builder credential. Other kinds ignore them.
+	AWSAccessKeyID     string
+	AWSSecretAccessKey string
 }
 
 // Connection is the credential material an onboarding produced, to be persisted
@@ -136,11 +162,27 @@ type Connection struct {
 	// Project scopes Rediscover's project-specific results (images) to an
 	// Incus/LXD project; "" is `default`. Not part of the stored credential.
 	Project string
+	// AWSAccessKeyID/AWSSecretAccessKey are the AWS builder's stored credential
+	// (the cert fields above stay empty for an AWS row).
+	AWSAccessKeyID     string
+	AWSSecretAccessKey string
+	// Region and ImageQuery scope AWS Rediscover (like Project scopes Incus):
+	// the region whose instance types / AMIs to list, and an optional AMI
+	// name-search term. Transient request parameters, not stored.
+	Region     string
+	ImageQuery string
+	// ImageIDs are specific AMI ids to resolve by id and include in the results,
+	// regardless of owner or search term -- so the image-configuration page can
+	// show the full details (name, publisher, arch, created, state) of an AMI
+	// that's already configured but wouldn't surface in the owned/searched list
+	// (an Amazon/Canonical/Marketplace image). Transient, not stored.
+	ImageIDs []string
 }
 
 // HasCredential reports whether this onboarding produced stored credential
-// material (true for trust-token kinds, false for env-credential clouds).
-func (c Connection) HasCredential() bool { return c.APIURL != "" }
+// material (a trust-token Incus/LXD credential or an AWS access key); false for
+// a kind that authenticates purely from the environment.
+func (c Connection) HasCredential() bool { return c.APIURL != "" || c.AWSAccessKeyID != "" }
 
 // Onboarding is a completed connect: what to store, plus what was discovered.
 type Onboarding struct {

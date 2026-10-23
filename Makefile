@@ -28,10 +28,11 @@ PLATFORMS := linux/amd64 linux/arm64 windows/amd64 darwin/amd64 darwin/arm64
 BINARIES := laforge laforge-lsp
 
 .DEFAULT_GOAL := help
-.PHONY: help release cli vsix checksums clean
+.PHONY: help release cli vsix checksums clean install
 
 help:
 	@echo "LaForge release build. Targets:"
+	@echo "  make install [VERSION=...]    build+install laforge + laforge-lsp from this tree onto your PATH"
 	@echo "  make release VERSION=vX.Y.Z   build binaries + .vsix + checksums into ./$(DIST)"
 	@echo "  make cli     VERSION=vX.Y.Z   cross-compile laforge + laforge-lsp for all platforms"
 	@echo "  make vsix                     build the VS Code extension .vsix"
@@ -39,6 +40,18 @@ help:
 	@echo "  make clean                    remove ./$(DIST)"
 	@echo ""
 	@echo "  VERSION defaults to 'dev'. Platforms: $(PLATFORMS)"
+
+# Local developer install: compile the CLI and language server from the CURRENT
+# source tree and drop them on your PATH, so `laforge check` / `laforge stats`
+# and the editor LSP run your working-tree code. `go install` rebuilds whenever
+# the source changed, so this always installs the latest -- if an old `laforge`
+# still runs afterward, a stale copy is earlier in your PATH than the directory
+# printed below (GOBIN, else $GOPATH/bin); remove it or reorder PATH.
+install:
+	go install -ldflags "-X main.version=$(VERSION)" ./cmd/laforge ./cmd/laforge-lsp
+	@dest="$$(go env GOBIN)"; [ -n "$$dest" ] || dest="$$(go env GOPATH)/bin"; \
+	  echo "installed laforge + laforge-lsp ($(VERSION)) to $$dest"; \
+	  echo "which laforge -> $$(command -v laforge || echo 'not on PATH')"
 
 release: cli vsix checksums
 	@echo "Release artifacts ready in ./$(DIST):"

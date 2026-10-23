@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/globalcptc/laforge/internal/builder"
@@ -18,6 +19,22 @@ import (
 	"github.com/globalcptc/laforge/internal/builder/microcloud"
 	"github.com/globalcptc/laforge/internal/db"
 )
+
+// splitCSVParam turns a comma-separated query value ("ami-1,ami-2") into a
+// trimmed, empty-free slice -- nil for an empty param.
+func splitCSVParam(v string) []string {
+	if strings.TrimSpace(v) == "" {
+		return nil
+	}
+	parts := strings.Split(v, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
 
 type connectBuilderRequest struct {
 	// Kind selects which builder type's onboarding to run. Historically this
@@ -30,6 +47,11 @@ type connectBuilderRequest struct {
 	// Address is optional: only needed when none of the addresses the token
 	// lists are reachable from LaForge (e.g. the host sits behind NAT).
 	Address string `json:"address,omitempty"`
+	// AWS access key, for kind "aws": validated (STS) and stored like any other
+	// builder credential. The UI sends them only on connect and never sees the
+	// secret back -- only the resulting credential id.
+	AWSAccessKeyID     string `json:"aws_access_key_id,omitempty"`
+	AWSSecretAccessKey string `json:"aws_secret_access_key,omitempty"`
 }
 
 type connectionView struct {
@@ -65,7 +87,10 @@ func (s *Server) handleConnectBuilder(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	result, err := onb.Onboard(r.Context(), builder.OnboardRequest{Token: req.Token, Address: req.Address})
+	result, err := onb.Onboard(r.Context(), builder.OnboardRequest{
+		Token: req.Token, Address: req.Address,
+		AWSAccessKeyID: req.AWSAccessKeyID, AWSSecretAccessKey: req.AWSSecretAccessKey,
+	})
 	if err != nil {
 		// Bad operator input (a malformed token) is a 400; a genuine failure to
 		// reach or enroll the hoster is statusUpstreamFailed (424, not 502 -- see json.go).
@@ -88,6 +113,7 @@ func (s *Server) handleConnectBuilder(w http.ResponseWriter, r *http.Request) {
 	cred, err := s.Queries.CreateBuilderCredential(r.Context(), db.CreateBuilderCredentialParams{
 		ApiUrl: conn.APIURL, ServerName: conn.ServerName, ServerFingerprint: conn.ServerFingerprint,
 		ServerCertPem: string(conn.ServerCertPEM), ClientCertPem: string(conn.ClientCertPEM), ClientKeyPem: string(conn.ClientKeyPEM),
+		AwsAccessKeyID: conn.AWSAccessKeyID, AwsSecretAccessKey: conn.AWSSecretAccessKey,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -129,8 +155,15 @@ func (s *Server) handleGetBuilderConnection(w http.ResponseWriter, r *http.Reque
 	disc, err := onb.Rediscover(r.Context(), builder.Connection{
 		APIURL: cred.ApiUrl, ServerName: cred.ServerName, ServerFingerprint: cred.ServerFingerprint,
 		ServerCertPEM: []byte(cred.ServerCertPem), ClientCertPEM: []byte(cred.ClientCertPem), ClientKeyPEM: []byte(cred.ClientKeyPem),
-		// ?project= scopes the images to the project the builder will use.
-		Project: r.URL.Query().Get("project"),
+		AWSAccessKeyID: cred.AwsAccessKeyID, AWSSecretAccessKey: cred.AwsSecretAccessKey,
+		// ?project= scopes Incus images to a project; ?region= / ?q= scope AWS
+		// discovery to a region and an AMI name-search term; ?image_ids= resolves
+		// specific already-configured AMIs by id so the config page shows their
+		// full details even when they aren't owned or searched.
+		Project:    r.URL.Query().Get("project"),
+		Region:     r.URL.Query().Get("region"),
+		ImageQuery: r.URL.Query().Get("q"),
+		ImageIDs:   splitCSVParam(r.URL.Query().Get("image_ids")),
 	})
 	if err != nil {
 		writeError(w, statusUpstreamFailed, err)

@@ -361,6 +361,16 @@ type stepView struct {
 	GroupIndex int             `json:"group_index"`
 	GroupLabel string          `json:"group_label,omitempty"`
 	Validators []validatorView `json:"validators"`
+	// When the agent first started this step and when it finished (nil until it
+	// does), so the UI can show how long each authored step took.
+	StartedAt  *time.Time `json:"started_at,omitempty"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	// WaitFor names what this step (the first command of an authored step
+	// with a `wait_for:`) waits on, e.g. "bff-dc-01 · domain-ready"; it and
+	// every step after it stay blocked until all of them are reached.
+	// Milestone is the authored step's own `milestone:` name.
+	WaitFor   []string `json:"wait_for,omitempty"`
+	Milestone string   `json:"milestone,omitempty"`
 }
 
 type validatorView struct {
@@ -408,6 +418,21 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 			StepIndex: t.StepIndex, Command: t.Command, Status: t.Status, Attempts: t.Attempts,
 			LastError: db.StrOrEmpty(t.LastError), Output: db.StrOrEmpty(t.Output), Validators: vs,
 			GroupIndex: int(t.StepIndex),
+		}
+		if len(t.WaitFor) > 0 {
+			var waits []loader.WaitFor
+			if json.Unmarshal(t.WaitFor, &waits) == nil {
+				for _, w := range waits {
+					v.WaitFor = append(v.WaitFor, w.Label())
+				}
+			}
+		}
+		v.Milestone = db.StrOrEmpty(t.Milestone)
+		if t.StartedAt.Valid {
+			v.StartedAt = &t.StartedAt.Time
+		}
+		if t.FinishedAt.Valid {
+			v.FinishedAt = &t.FinishedAt.Time
 		}
 		if idx := int(t.StepIndex); idx >= 0 && idx < len(groups) {
 			v.GroupIndex = groups[idx].group
@@ -534,11 +559,7 @@ func (s *Server) repoGithubToken(ctx context.Context, sess authSession, repo db.
 	if err != nil {
 		return "", err
 	}
-	jwt, err := ghclient.GenerateAppJWT(s.AppID, s.AppPrivateKey, time.Now())
-	if err != nil {
-		return "", fmt.Errorf("signing app jwt: %w", err)
-	}
-	tok, err := s.GH.CreateInstallationToken(ctx, jwt, inst.InstallationID)
+	tok, err := s.GH.InstallationToken(ctx, s.AppID, s.AppPrivateKey, inst.InstallationID)
 	if err != nil {
 		return "", fmt.Errorf("minting installation token: %w", err)
 	}

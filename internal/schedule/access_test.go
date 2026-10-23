@@ -91,3 +91,37 @@ func TestParseAccessWindows(t *testing.T) {
 		t.Error("garbage should parse to nil, not panic")
 	}
 }
+
+func TestOpenInWindowStartingAfter(t *testing.T) {
+	w := twoDayWindows(t) // [09:00,18:00) on 10/01, [09:00,17:00) on 10/02
+
+	cases := []struct {
+		name  string
+		now   string
+		after string
+		want  bool
+	}{
+		// The reported regression: a team opened early gets an override whose
+		// expiry is the NEXT BOUNDARY -- the coming window's OPEN edge. The
+		// override lapses exactly as the window opens (now == after == open), and
+		// this must read as a NEW window (reopen), not the trimmed one (stay
+		// closed). Before the fix the strict `.After` returned false here and the
+		// team was forced closed at the instant access began.
+		{"override end equals window open (opened early)", "2026-10-01T09:00:00Z", "2026-10-01T09:00:00Z", true},
+		{"mid first window, override end at its open", "2026-10-01T12:00:00Z", "2026-10-01T09:00:00Z", true},
+		// A reduce trims a window: `after` sits strictly inside it, so that
+		// window's open is strictly before `after` and stays excluded -- the
+		// reduced end still sticks (team stays closed for the rest of it).
+		{"reduce: inside trimmed window stays closed", "2026-10-01T16:00:00Z", "2026-10-01T15:00:00Z", false},
+		// ...but a genuinely later window (opening after the reduced end) reopens.
+		{"reduce: next day's window reopens", "2026-10-02T10:00:00Z", "2026-10-01T15:00:00Z", true},
+		// Not inside any window right now -> never "open".
+		{"in overnight gap", "2026-10-01T20:00:00Z", "2026-10-01T09:00:00Z", false},
+	}
+	for _, c := range cases {
+		got := OpenInWindowStartingAfter(w, mustTime(t, c.now), mustTime(t, c.after))
+		if got != c.want {
+			t.Errorf("%s: OpenInWindowStartingAfter(now=%s, after=%s) = %v, want %v", c.name, c.now, c.after, got, c.want)
+		}
+	}
+}

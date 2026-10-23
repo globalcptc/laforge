@@ -59,8 +59,23 @@ func ReconcileAccess(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUI
 		return fmt.Errorf("listing teams: %w", err)
 	}
 
+	// A build is still actively provisioning while it is deploying/building: its
+	// agents are fetching files and running steps, and a scheduled close cuts the
+	// egress those steps need (a download is a DIRECT agent GET, not
+	// gateway-proxied). A pre-competition "closed" window that overlaps the build
+	// would otherwise close teams mid-build -- the intermittent download failures
+	// this fixes. So hold every team OPEN until the build is fully built, and only
+	// then let the schedule close it.
+	building := build.Status == "deploying" || build.Status == "building"
+
 	for _, team := range teams {
 		want, enforce := desiredAccess(windows, team, now)
+
+		// Keep open through the build, EXCEPT when an operator has deliberately
+		// closed by hand (a live manual override wins even mid-build).
+		if enforce && want == "closed" && building && !activeOverride(team, now) {
+			want = "open"
+		}
 
 		// Drop a lapsed override so the team is driven purely by the schedule
 		// again -- but not too early for a lapsed OPEN override, which represents
@@ -79,12 +94,52 @@ func ReconcileAccess(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUI
 			}
 		}
 
-		if !enforce || team.AccessState == want {
+		teamStr := strconv.FormatInt(int64(team.TeamNumber), 10)
+
+		// The team's hoster state must exist and have settled before access is
+		// driven OR its label is trusted: instances deployed (something to
+		// open/close) and network/external-access configuration done (so a close
+		// captures and strips the public-port ACLs instead of racing them).
+		ready, err := teamHosterReady(ctx, q, buildID, team.ID, teamStr)
+		if err != nil {
+			return fmt.Errorf("team %d: checking hoster readiness: %w", team.TeamNumber, err)
+		}
+
+		// Keep the label honest -- it must show the REAL state, not an
+		// assumption. access_state defaults to 'closed', but a deployed team's
+		// instances come up OPEN (eth0 attached, public NAT in place) and stay
+		// that way until a close is actually applied. So once the team is
+		// hoster-ready and nothing has been explicitly applied yet, record the
+		// reality ('open'); thereafter the completed open/close task is the only
+		// writer. This is what makes the UI's access badge trustworthy and lets
+		// the reconciler simply compare the label to the desire below.
+		if ready {
+			applied, err := q.HasCompletedTeamAccessTask(ctx, db.HasCompletedTeamAccessTaskParams{
+				BuildID: buildID, Team: teamStr,
+			})
+			if err != nil {
+				return fmt.Errorf("team %d: checking applied access: %w", team.TeamNumber, err)
+			}
+			if !applied && team.AccessState != "open" {
+				if _, err := q.SetTeamAccessState(ctx, db.SetTeamAccessStateParams{ID: team.ID, AccessState: "open"}); err != nil {
+					return fmt.Errorf("team %d: recording deployed-open access state: %w", team.TeamNumber, err)
+				}
+				team.AccessState = "open"
+			}
+		}
+
+		if !enforce {
 			continue
+		}
+		if !ready {
+			continue // can't open/close a team whose hoster state isn't up yet
+		}
+		if team.AccessState == want {
+			continue // the (now-honest) label already matches the desire
 		}
 
 		present, err := q.HasOpenTeamAccessTask(ctx, db.HasOpenTeamAccessTaskParams{
-			BuildID: buildID, Team: strconv.FormatInt(int64(team.TeamNumber), 10),
+			BuildID: buildID, Team: teamStr,
 		})
 		if err != nil {
 			return fmt.Errorf("team %d: checking for open access task: %w", team.TeamNumber, err)
@@ -97,7 +152,7 @@ func ReconcileAccess(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUI
 		if want == "open" {
 			kind = "open_access"
 		}
-		payload, _ := json.Marshal(map[string]string{"team": strconv.FormatInt(int64(team.TeamNumber), 10)})
+		payload, _ := json.Marshal(map[string]string{"team": teamStr})
 		task, err := q.CreateTeamTask(ctx, db.CreateTeamTaskParams{BuildID: buildID, Kind: kind, Payload: payload})
 		if err != nil {
 			return fmt.Errorf("team %d: creating %s task: %w", team.TeamNumber, kind, err)
@@ -109,6 +164,52 @@ func ReconcileAccess(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUI
 		})
 	}
 	return nil
+}
+
+// activeOverride reports whether a team has a manual open/close override still
+// in effect (no expiry, or not yet reached) -- a deliberate operator action the
+// reconciler honors even while the build is still building.
+func activeOverride(team db.Team, now time.Time) bool {
+	return team.AccessOverrideState != "" &&
+		(!team.AccessOverrideUntil.Valid || now.Before(team.AccessOverrideUntil.Time))
+}
+
+// teamHosterReady reports whether a team's hoster state has materialized and
+// settled enough to open or close it: at least one host/container instance
+// actually exists (a non-empty external_ref), no object is still coming up
+// (pending/planned/creating/deploying/blocked), and no network- or
+// external-access configuration task is still in flight. Failed objects don't
+// block -- they'll never get an instance, and the team's live instances should
+// still be driven to the right access state (best-effort, like the builder's
+// per-instance pass). The settle check matters most for a close: it must run
+// after external access attaches the public-port ACLs so the close can capture
+// and strip them, rather than recording a NIC with none and being silently
+// re-opened by a later external-access pass.
+func teamHosterReady(ctx context.Context, q *db.Queries, buildID, teamID pgtype.UUID, teamStr string) (bool, error) {
+	objs, err := q.ListDeployedObjectsByTeam(ctx, teamID)
+	if err != nil {
+		return false, fmt.Errorf("listing team objects: %w", err)
+	}
+	haveInstance := false
+	for _, o := range objs {
+		switch o.Status {
+		case "pending", "planned", "creating", "deploying", "blocked":
+			return false, nil // still coming up; nothing settled to act on yet
+		}
+		if (o.Kind == "host" || o.Kind == "container") && o.ExternalRef != nil && *o.ExternalRef != "" {
+			haveInstance = true
+		}
+	}
+	if !haveInstance {
+		return false, nil
+	}
+	configInFlight, err := q.HasOpenConfigureAccessTask(ctx, db.HasOpenConfigureAccessTaskParams{
+		BuildID: buildID, Team: teamStr,
+	})
+	if err != nil {
+		return false, fmt.Errorf("checking configure-access tasks: %w", err)
+	}
+	return !configInFlight, nil
 }
 
 // desiredAccess is the pure decision the reconciler and the manual endpoint

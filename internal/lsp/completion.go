@@ -34,6 +34,16 @@ func Completion(w *Workspace, relPath, text string, pos protocol.Position) []pro
 		return scriptCompletion(content, script, text, pos)
 	}
 	if strings.HasSuffix(relPath, ".yaml") || strings.HasSuffix(relPath, ".yml") {
+		// Inside a `{{ }}` in a templated YAML value (set_password's password:,
+		// a run: command, write_file content): the template functions.
+		if insideTemplateExpr(runePrefix(lineAt(text, pos.Line), pos.Character)) {
+			return generatorCompletionItems()
+		}
+		// A value inside a step's wait_for: needs the loaded content (host
+		// names, their milestones), which the schema-only path below lacks.
+		if items, handled := waitForValueCompletion(content, text, pos); handled {
+			return items
+		}
 		return configCompletion(text, pos)
 	}
 	return nil
@@ -225,6 +235,10 @@ var flowKeyRE = regexp.MustCompile(`(?:^|,)\s*([A-Za-z_][A-Za-z0-9_]*)\s*:`)
 // fails to match at all, which stays "don't guess."
 var flowReadyRE = regexp.MustCompile(`(?:^|,)\s*([A-Za-z_][A-Za-z0-9_]*)?$`)
 
+// flowEnumValueRE is "the flow content so far ends in `key: partial-value`" --
+// where an enum-valued field's values are worth offering.
+var flowEnumValueRE = regexp.MustCompile(`(?:^|,)\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z0-9_-]*)$`)
+
 // flowFieldCompletion resolves `ports: { | }` and any step action's own
 // `key: { | }` (write_file, download, ...) to that key's real sub-fields.
 // The bool return is "this position was recognized as flow-style
@@ -238,11 +252,6 @@ func flowFieldCompletion(doc, prefix string) ([]protocol.CompletionItem, bool) {
 		return nil, false
 	}
 	key, flowSoFar := m[1], m[2]
-	readyMatch := flowReadyRE.FindStringSubmatch(flowSoFar)
-	if readyMatch == nil {
-		return nil, true // inside a real flow block, but mid-value -- don't guess
-	}
-	typed := readyMatch[1]
 	var fields []schemaField
 	var err error
 	switch key {
@@ -252,12 +261,36 @@ func flowFieldCompletion(doc, prefix string) ([]protocol.CompletionItem, bool) {
 		var ok bool
 		fields, ok, err = stepActionFields(key)
 		if err == nil && !ok {
+			// An object nested inside a step action (`generate: { | }`).
+			fields, ok, err = nestedStepObjectFields(key)
+		}
+		if err == nil && !ok {
 			return nil, false // not ports, and not a recognized step action either -- not our position to handle
 		}
 	}
 	if err != nil {
 		return nil, false
 	}
+	// The value of a key with a fixed set of values: `generate: { type: | }`.
+	if vm := flowEnumValueRE.FindStringSubmatch(flowSoFar); vm != nil {
+		for _, f := range fields {
+			if f.Name != vm[1] || len(f.Enum) == 0 {
+				continue
+			}
+			var items []protocol.CompletionItem
+			for _, e := range f.Enum {
+				if strings.HasPrefix(e, vm[2]) {
+					items = append(items, protocol.CompletionItem{Label: e, Kind: protocol.CompletionItemKindEnumMember, Detail: protocol.NewOptional(f.Description)})
+				}
+			}
+			return items, true
+		}
+	}
+	readyMatch := flowReadyRE.FindStringSubmatch(flowSoFar)
+	if readyMatch == nil {
+		return nil, true // inside a real flow block, but mid-value -- don't guess
+	}
+	typed := readyMatch[1]
 	present := map[string]bool{}
 	for _, fm := range flowKeyRE.FindAllStringSubmatch(flowSoFar, -1) {
 		present[fm[1]] = true
@@ -483,6 +516,32 @@ func scriptCompletion(content *loader.Content, script *loader.Script, text strin
 			InsertText: protocol.NewOptional(fmt.Sprintf(`people "%s"`, ps.Name)),
 			Kind:       protocol.CompletionItemKindFunction,
 			Detail:     protocol.NewOptional("columns: " + cols),
+		})
+	}
+	items = append(items, generatorCompletionItems()...)
+	return items
+}
+
+// templateFuncDocs documents the password generator template functions
+// (render/passwords.go) -- the one list completion and hover both read.
+var templateFuncDocs = []struct{ name, example, doc string }{
+	{"passphrase", "passphrase 3", "Generated password: capitalized 4-7 letter words and a 4-digit number, e.g. `Patch-Session-Query-4484`. Size is the word count (1-12)."},
+	{"wordchain", "wordchain 5", "Generated password: 3-5 letter words, each randomly capitalized, e.g. `fork-Brick-Spoon-Snail-test`. Size is the word count (1-12)."},
+	{"randompassword", "randompassword 16", "Generated password: random characters with at least one upper, lower, digit and symbol. Size is the length (8-128)."},
+}
+
+const templateFuncStability = "Stable for the build: the same host, size and label always give the same value, and match `generate:` on set_password/create_user. An optional label (`passphrase 3 \"svc\"`) picks another value; prefix it `team:` to share across the team's hosts, `build:` across every team."
+
+// generatorCompletionItems are the password generators as completion items.
+func generatorCompletionItems() []protocol.CompletionItem {
+	items := make([]protocol.CompletionItem, 0, len(templateFuncDocs))
+	for _, f := range templateFuncDocs {
+		items = append(items, protocol.CompletionItem{
+			Label:         f.example,
+			InsertText:    protocol.NewOptional(f.example),
+			Kind:          protocol.CompletionItemKindFunction,
+			Detail:        protocol.NewOptional(f.doc),
+			Documentation: &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: f.doc + "\n\n" + templateFuncStability},
 		})
 	}
 	return items

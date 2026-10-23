@@ -50,6 +50,10 @@ func main() {
 		err = runRender(os.Args[2:])
 	case "check":
 		err = runCheck(os.Args[2:])
+	case "stats":
+		err = runStats(os.Args[2:])
+	case "networks":
+		err = runNetworks(os.Args[2:])
 	case "convert":
 		err = runConvert(os.Args[2:])
 	case "login":
@@ -74,6 +78,8 @@ func main() {
 		err = runCertStatus(os.Args[2:])
 	case "access":
 		err = runAccess(os.Args[2:])
+	case "passwords":
+		err = runPasswords(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -117,11 +123,24 @@ func usage() {
 
   laforge render <script-source-path> --host <as> --team <n> [--environment <name>] [--repo <path>]
       Render one script's real source file against a resolved context and print it.
+      Generated passwords ({{ passphrase 3 }}, wordchain, randompassword) render
+      as stand-in values here -- a real build derives its own.
 
   laforge check [--repo <path>]
       Validate and render everything: every file against its schema, every
       cross-file reference, and every script against every host in every
       team. Exit code is non-zero if anything failed.
+
+  laforge stats [--environment <name>] [--repo <path>]
+      Profile what an environment deploys: hosts/containers counts, broken
+      down by os image, size and network, and how many are public -- per team
+      and in total. Defaults to every environment.
+
+  laforge networks [--environment <name>] [--repo <path>]
+      Print the networking layout as a tree: the environment cidr, each network
+      with its cidr, and under it every placed host/container with its last
+      octet and resolved address. Flags any network outside the environment
+      cidr. Defaults to every environment.
 
   laforge convert <old-hcl-repo> <new-repo-out>
       One-shot: convert an existing HCL content repository into the new
@@ -146,6 +165,10 @@ http://localhost:8080).
   laforge build lock <configured-build-id> <on|off>
       Configure a build (branch + environment file + builder config),
       inspect it, and toggle follow mode / the competition-started lock.
+  laforge build teardown <build-id> [--retry | --force]
+      Tear down a build's infrastructure. --retry resumes a teardown that
+      stopped on a permanent builder error (after fixing the builder);
+      --force marks a wedged teardown torn down with no hoster call (admin).
 
   laforge builders
       List every configured builder: name, kind, hoster URL, and image count.
@@ -187,6 +210,18 @@ http://localhost:8080).
       public address:port to connect to for its public: ports (e.g. RDP). With
       --csv or --json, export the full connection detail (team, host, IP, port,
       and the login username/password) for handing to teams.
+  laforge access --build <id> --scoring --season <s> --competition <c>
+                 [--team-offset <n>] [--exclude <host,...>] [--instructions-file <md>]
+      Export the scoring app's Team Connections import JSON (Admin -> Tools ->
+      Connections): per team, each public endpoint as ip:port with the host's
+      current admin login. --exclude leaves host names out of every team (e.g.
+      OutOfScope); --team-offset shifts team numbers. Same output as the
+      External Access page's Export for Scoring.
+
+  laforge passwords --build <id> [--team <n>] [--host <as>] [--csv | --json]
+      List every account LaForge set a password for on the build's hosts (the
+      admin account and every set_password / create_user, generated or
+      written), with whether its step has run on the box yet.
 
   laforge version
       Print the build version.
@@ -411,10 +446,29 @@ func loadOrExplain(repo string) (*loader.Content, error) {
 		return nil, err
 	}
 	if len(c.Errors) > 0 {
+		// When nothing parsed as content and every error is just "this YAML has
+		// no LaForge type header", the directory isn't a content repo at all --
+		// say that once instead of listing every stray file (you ran it in the
+		// wrong place, or a non-content repo).
+		allNoTypeHeader := true
+		for _, e := range c.Errors {
+			if !strings.HasPrefix(e.Message, "no type header found") {
+				allNoTypeHeader = false
+				break
+			}
+		}
+		if isEmptyContent(c) && allNoTypeHeader {
+			return nil, fmt.Errorf("%s doesn't look like a LaForge content repository -- no environment/network/host/container/script documents found. Run this inside a content repo (or pass --repo), and add a %s for any non-content YAML it should skip", repo, loader.IgnoreFile)
+		}
 		for _, e := range c.Errors {
 			fmt.Fprintf(os.Stderr, "%s: %s\n", e.File, e.Message)
 		}
 		return nil, fmt.Errorf("%d schema/reference error(s) in %s -- run `laforge check` for details", len(c.Errors), repo)
 	}
 	return c, nil
+}
+
+func isEmptyContent(c *loader.Content) bool {
+	return len(c.Environments) == 0 && len(c.Networks) == 0 && len(c.Hosts) == 0 &&
+		len(c.Containers) == 0 && len(c.Scripts) == 0 && len(c.People) == 0
 }

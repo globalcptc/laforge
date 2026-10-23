@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/ingest"
@@ -53,6 +55,15 @@ func (s *Server) handleCreateConfiguredBuild(w http.ResponseWriter, r *http.Requ
 		RepositoryID: repo.ID, Branch: req.Branch, EnvironmentPath: req.EnvironmentPath, BuilderConfigName: req.BuilderConfigName,
 	})
 	if err != nil {
+		// The (repository, branch, environment_path, builder) uniqueness -- a
+		// configured build already tracks this exact branch+environment+builder
+		// (the same branch+environment on a DIFFERENT builder is allowed). Report
+		// it as a clear conflict, not a raw 500/SQLSTATE.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			writeError(w, http.StatusConflict, fmt.Errorf("a configured build already exists for branch %q, environment %q, and builder %q in this repository", req.Branch, req.EnvironmentPath, req.BuilderConfigName))
+			return
+		}
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -161,8 +172,12 @@ func summarizeIssues(branch string, issues []ingest.ValidationIssue) string {
 
 // handleDeleteConfiguredBuild removes a configured build. Refused while it has
 // any live build (deploying/building/finished/tearing_down) so a config is never
-// detached from a running deployment -- tear those down first. Existing builds
-// survive as detached history (the FK is ON DELETE SET NULL).
+// detached from a running deployment -- tear those down first. Its planned
+// builds are discarded first (terminal 'discarded', migration 00063): with the
+// configured build gone they have no future, and left 'planned' they would be
+// detached rows the orchestrator kept reconciling forever (prod accumulated 107
+// of them). Every other build survives as detached history (the FK is ON
+// DELETE SET NULL).
 func (s *Server) handleDeleteConfiguredBuild(w http.ResponseWriter, r *http.Request) {
 	cb, repo, err := s.buildAndOwningRepo(r)
 	if err != nil {
@@ -182,6 +197,20 @@ func (s *Server) handleDeleteConfiguredBuild(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusConflict, errors.New("this configured build has live builds (deploying, building, finished, or tearing down) -- tear them down before removing it"))
 		return
 	}
+	discarded, err := s.Queries.DiscardPlannedBuildsForConfiguredBuild(r.Context(), cb.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	for _, b := range discarded {
+		if _, err := s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
+			BuildID: b.ID, Kind: "build.discarded",
+			Message: "planned build discarded: its configured build was removed",
+			Payload: []byte("{}"),
+		}); err != nil {
+			log.Printf("recording discard event for build %s: %v", b.ID, err)
+		}
+	}
 	if err := s.Queries.DeleteConfiguredBuild(r.Context(), cb.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -195,12 +224,50 @@ func (s *Server) handleListConfiguredBuilds(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusNotFound, err)
 		return
 	}
-	builds, err := s.Queries.ListConfiguredBuildsByRepository(r.Context(), repo.ID)
+	// Per-viewer favorites: flag each configured build the current user starred,
+	// so their list can float them to the top. A missing session just means no
+	// favorites (nil account id matches nothing).
+	var accountID pgtype.UUID
+	if sess, err := s.sessionFromRequest(r); err == nil {
+		accountID = sess.AccountID
+	}
+	builds, err := s.Queries.ListConfiguredBuildsByRepositoryForAccount(r.Context(), db.ListConfiguredBuildsByRepositoryForAccountParams{
+		RepositoryID: repo.ID, AccountID: accountID,
+	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, builds)
+}
+
+// handleSetConfiguredBuildFavorite stars (POST) or unstars (DELETE) a configured
+// build for the current user -- a per-viewer preference that floats their
+// starred branches to the top of the builds page. Requires only a session; the
+// favorite is scoped to the account, so it touches nothing another user sees.
+func (s *Server) handleSetConfiguredBuildFavorite(w http.ResponseWriter, r *http.Request) {
+	sess, err := s.sessionFromRequest(r)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	var cbID pgtype.UUID
+	if err := cbID.Scan(r.PathValue("id")); err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid configured build id"))
+		return
+	}
+	if r.Method == http.MethodDelete {
+		if err := s.Queries.RemoveConfiguredBuildFavorite(r.Context(), db.RemoveConfiguredBuildFavoriteParams{AccountID: sess.AccountID, ConfiguredBuildID: cbID}); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+	} else {
+		if err := s.Queries.AddConfiguredBuildFavorite(r.Context(), db.AddConfiguredBuildFavoriteParams{AccountID: sess.AccountID, ConfiguredBuildID: cbID}); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // buildAndOwningRepo resolves a configured_build id to the row plus its

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/globalcptc/laforge/internal/builder/incus"
+	"github.com/globalcptc/laforge/internal/builder/microcloud"
 	"github.com/globalcptc/laforge/internal/db"
 )
 
@@ -55,6 +57,12 @@ func VerifyImages(ctx context.Context, pool *pgxpool.Pool, row db.BuilderConfig)
 		client, err := h.ep.client()
 		if err != nil {
 			return fmt.Errorf("%s: %w", h.label, err)
+		}
+		// Reads here (snapshot checks, image listing) can be slow on a Ceph-backed
+		// cluster; give them the builder's configured budget instead of the 30s
+		// floor, matching how the builder itself is resolved.
+		if h.timeoutSeconds > 0 {
+			client.OperationTimeout = time.Duration(h.timeoutSeconds) * time.Second
 		}
 		for _, name := range snapshots {
 			ref := images[name]
@@ -103,6 +111,10 @@ func VerifyImages(ctx context.Context, pool *pgxpool.Pool, row db.BuilderConfig)
 type labeledEndpoint struct {
 	label string
 	ep    endpoint
+	// timeoutSeconds is the builder's configured operation budget, applied to the
+	// verify client so a slow cluster read (a snapshot check on Ceph-backed
+	// storage) gets the same budget a deploy would, not the 30s floor.
+	timeoutSeconds int
 }
 
 func hostEndpoints(pool *pgxpool.Pool, row db.BuilderConfig) ([]labeledEndpoint, error) {
@@ -120,7 +132,11 @@ func hostEndpoints(pool *pgxpool.Pool, row db.BuilderConfig) ([]labeledEndpoint,
 		}
 		// Images are per project when the project has features.images on.
 		ep.project = db.StrOrEmpty(row.IncusProject)
-		return []labeledEndpoint{{label: ep.apiURL, ep: ep}}, nil
+		timeout := int(microcloud.DefaultOperationTimeout / time.Second)
+		if row.IncusOperationTimeoutSeconds != nil && *row.IncusOperationTimeoutSeconds > 0 {
+			timeout = int(*row.IncusOperationTimeoutSeconds)
+		}
+		return []labeledEndpoint{{label: ep.apiURL, ep: ep, timeoutSeconds: timeout}}, nil
 	}
 	var hostConfigs []incus.HostConfig
 	if err := json.Unmarshal(row.IncusHosts, &hostConfigs); err != nil {
@@ -142,7 +158,7 @@ func hostEndpoints(pool *pgxpool.Pool, row db.BuilderConfig) ([]labeledEndpoint,
 		if err != nil {
 			return nil, fmt.Errorf("host %d: %w", i+1, err)
 		}
-		out = append(out, labeledEndpoint{label: fmt.Sprintf("host %d (%s)", i+1, ep.apiURL), ep: ep})
+		out = append(out, labeledEndpoint{label: fmt.Sprintf("host %d (%s)", i+1, ep.apiURL), ep: ep, timeoutSeconds: hc.OperationTimeoutSeconds})
 	}
 	return out, nil
 }

@@ -11,6 +11,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addConfiguredBuildFavorite = `-- name: AddConfiguredBuildFavorite :exec
+INSERT INTO configured_build_favorite (account_id, configured_build_id)
+VALUES ($1, $2) ON CONFLICT DO NOTHING
+`
+
+type AddConfiguredBuildFavoriteParams struct {
+	AccountID         pgtype.UUID `json:"account_id"`
+	ConfiguredBuildID pgtype.UUID `json:"configured_build_id"`
+}
+
+func (q *Queries) AddConfiguredBuildFavorite(ctx context.Context, arg AddConfiguredBuildFavoriteParams) error {
+	_, err := q.db.Exec(ctx, addConfiguredBuildFavorite, arg.AccountID, arg.ConfiguredBuildID)
+	return err
+}
+
 const configuredBuildHasLiveBuilds = `-- name: ConfiguredBuildHasLiveBuilds :one
 SELECT EXISTS (
     SELECT 1 FROM build
@@ -72,6 +87,7 @@ DELETE FROM configured_build WHERE id = $1
 
 // Removes the configured build. build.configured_build_id is ON DELETE SET NULL,
 // so existing builds are kept as detached history rather than cascade-deleted.
+// The API discards its planned builds first (DiscardPlannedBuildsForConfiguredBuild).
 func (q *Queries) DeleteConfiguredBuild(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteConfiguredBuild, id)
 	return err
@@ -173,6 +189,81 @@ func (q *Queries) ListConfiguredBuildsByRepositoryAndBranch(ctx context.Context,
 		return nil, err
 	}
 	return items, nil
+}
+
+const listConfiguredBuildsByRepositoryForAccount = `-- name: ListConfiguredBuildsByRepositoryForAccount :many
+SELECT cb.id, cb.repository_id, cb.branch, cb.environment_path, cb.builder_config_name, cb.competition_started, cb.current_content_revision_id, cb.created_at, cb.auto_deploy_enabled, (fav.account_id IS NOT NULL) AS favorited
+FROM configured_build cb
+LEFT JOIN configured_build_favorite fav
+  ON fav.configured_build_id = cb.id AND fav.account_id = $2
+WHERE cb.repository_id = $1
+ORDER BY favorited DESC, cb.created_at
+`
+
+type ListConfiguredBuildsByRepositoryForAccountParams struct {
+	RepositoryID pgtype.UUID `json:"repository_id"`
+	AccountID    pgtype.UUID `json:"account_id"`
+}
+
+type ListConfiguredBuildsByRepositoryForAccountRow struct {
+	ID                       pgtype.UUID        `json:"id"`
+	RepositoryID             pgtype.UUID        `json:"repository_id"`
+	Branch                   string             `json:"branch"`
+	EnvironmentPath          string             `json:"environment_path"`
+	BuilderConfigName        string             `json:"builder_config_name"`
+	CompetitionStarted       bool               `json:"competition_started"`
+	CurrentContentRevisionID pgtype.UUID        `json:"current_content_revision_id"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	AutoDeployEnabled        bool               `json:"auto_deploy_enabled"`
+	Favorited                interface{}        `json:"favorited"`
+}
+
+// Configured builds for a repo, each flagged whether THIS account has favorited
+// it; favorited rows sort first (then newest), so a user's starred branches lead
+// their list. Favorites are a per-viewer preference (configured_build_favorite).
+func (q *Queries) ListConfiguredBuildsByRepositoryForAccount(ctx context.Context, arg ListConfiguredBuildsByRepositoryForAccountParams) ([]ListConfiguredBuildsByRepositoryForAccountRow, error) {
+	rows, err := q.db.Query(ctx, listConfiguredBuildsByRepositoryForAccount, arg.RepositoryID, arg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListConfiguredBuildsByRepositoryForAccountRow
+	for rows.Next() {
+		var i ListConfiguredBuildsByRepositoryForAccountRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.RepositoryID,
+			&i.Branch,
+			&i.EnvironmentPath,
+			&i.BuilderConfigName,
+			&i.CompetitionStarted,
+			&i.CurrentContentRevisionID,
+			&i.CreatedAt,
+			&i.AutoDeployEnabled,
+			&i.Favorited,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const removeConfiguredBuildFavorite = `-- name: RemoveConfiguredBuildFavorite :exec
+DELETE FROM configured_build_favorite WHERE account_id = $1 AND configured_build_id = $2
+`
+
+type RemoveConfiguredBuildFavoriteParams struct {
+	AccountID         pgtype.UUID `json:"account_id"`
+	ConfiguredBuildID pgtype.UUID `json:"configured_build_id"`
+}
+
+func (q *Queries) RemoveConfiguredBuildFavorite(ctx context.Context, arg RemoveConfiguredBuildFavoriteParams) error {
+	_, err := q.db.Exec(ctx, removeConfiguredBuildFavorite, arg.AccountID, arg.ConfiguredBuildID)
+	return err
 }
 
 const setConfiguredBuildAutoDeploy = `-- name: SetConfiguredBuildAutoDeploy :one

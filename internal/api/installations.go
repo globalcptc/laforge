@@ -108,6 +108,53 @@ func (s *Server) handleListInstallations(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, views)
 }
 
+// handleSyncInstallations rediscovers this App's installations straight
+// from GitHub (GET /app/installations) and upserts them, healing a DB
+// left stale by a missed `installation` webhook. GitHub delivers the
+// one-time `created` event once and never resends it, so if this endpoint
+// wasn't reachable at install time the instance is otherwise stranded
+// with a dead (or absent) installation id and no recovery short of
+// editing the DB by hand -- exactly the outage this was built after. The
+// account-keyed upsert means a reinstall's new id lands on the existing
+// row, and AttachOwnerRepositoriesToInstallation repoints that account's
+// repositories onto it, so a single call fully reconciles.
+func (s *Server) handleSyncInstallations(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.requireInstanceAdmin(r.Context(), r); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	if s.AppID == "" || s.AppPrivateKey == nil {
+		writeError(w, http.StatusBadRequest, errors.New("no GitHub App configured (GITHUB_APP_ID / GITHUB_APP_PRIVATE_KEY_PATH), so there are no installations to sync"))
+		return
+	}
+	jwt, err := ghclient.GenerateAppJWT(s.AppID, s.AppPrivateKey, time.Now())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Errorf("signing app jwt: %w", err))
+		return
+	}
+	installs, err := s.GH.ListInstallations(r.Context(), jwt)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, fmt.Errorf("listing installations from GitHub: %w", err))
+		return
+	}
+	for _, in := range installs {
+		inst, err := s.Queries.UpsertGithubInstallation(r.Context(), db.UpsertGithubInstallationParams{
+			InstallationID: in.ID, AccountLogin: in.Account.Login, AccountType: in.Account.Type,
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if _, err := s.Queries.AttachOwnerRepositoriesToInstallation(r.Context(), db.AttachOwnerRepositoriesToInstallationParams{
+			InstallationID: inst.ID, GithubOwner: in.Account.Login,
+		}); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"installations_synced": len(installs)})
+}
+
 // handleListUnapprovedInstalledRepositories is "install on GitHub,
 // approve in LaForge"'s own list: every repository some installation
 // currently covers that has no matching `repository` row yet.

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/loader"
 	"github.com/globalcptc/laforge/internal/render"
 )
@@ -92,6 +93,13 @@ func (s *Server) handleRenderObject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx.PublicAddress = obj.PublicAddress
+	// The build's real secret, so generated passwords in a rendered script are
+	// the ones the agent got (the Render tab is read-gated like the credentials
+	// the host Info tab shows).
+	if ctx.Secret, err = db.RenderSecretForBuild(r.Context(), s.Queries, build.ID); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
 	steps := make([]renderedStep, 0, len(ctx.Steps))
 	for i, step := range ctx.Steps {
 		rs := renderedStep{Index: i, Action: step.ActionKey(), Raw: step}

@@ -3,8 +3,10 @@ package incus
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,11 +33,8 @@ func (b *Builder) externalPortRange() (min, max int) {
 	return min, max
 }
 
-// ConfigureExternalAccess realizes content `public:` ports on Incus/OVN by
-// adding a NAT proxy device to each instance: one of the cluster's external IPs
-// (Config.ExternalAccessIP, which may be several) listens on a per-(team,host,
-// port) external port and DNATs to the instance's own lab address:port -- the
-// "flagged open ports NAT'd in on external ports" model, automated.
+// ConfigureExternalAccess maps public ports to NAT proxy devices on running
+// instances. Native bridges make the Incus host the gateway required for NAT.
 //
 // Each team is assigned ONE external IP, round-robin by team number
 // (ips[(team-1) % len(ips)]). With at least as many IPs as teams every team
@@ -47,14 +46,10 @@ func (b *Builder) externalPortRange() (min, max int) {
 // an unchanged set yields the same IP and ports. With a single IP this is
 // exactly the previous per-team-window behaviour. PATCH merges devices by key,
 // so this is idempotent per instance.
-//
-// VERIFY ON CLUSTER: whether a NAT proxy device on an external IP behaves as
-// intended for OVN-networked instances (vs. an OVN network forward on the
-// uplink) is the one thing this dev environment can't exercise -- OVN has no
-// control plane here (see Builder's own doc comment). The allocation, recording
-// and surfacing are all exercised by the fake builder; this is the real-fabric
-// half to confirm live.
 func (b *Builder) ConfigureExternalAccess(ctx context.Context, team string, hosts []builder.ExternalHost) ([]builder.ExternalEndpoint, error) {
+	if b.Config.NetworkMode() != "bridge" {
+		return nil, fmt.Errorf("Incus NAT proxy forwarding requires native bridge networking; select bridge mode and rebuild the deployment")
+	}
 	if b.Config.ExternalAccessIP == "" {
 		return nil, fmt.Errorf("this builder has no external_access_ip configured -- set one before content can expose public: ports")
 	}
@@ -77,6 +72,23 @@ func (b *Builder) ConfigureExternalAccess(ctx context.Context, team string, host
 	// Stable order so the deterministic allocation is reproducible.
 	sort.Slice(hosts, func(i, j int) bool { return hosts[i].ExternalRef < hosts[j].ExternalRef })
 
+	// Verify every target before changing any proxy devices. A completed create
+	// operation or a saved external_ref does not prove that the VM has started.
+	for _, h := range hosts {
+		raw, err := b.Client.get(ctx, "/1.0/instances/"+url.PathEscape(h.ExternalRef)+"/state")
+		if err != nil {
+			return nil, fmt.Errorf("checking external-access target %s: %w", h.ExternalRef, err)
+		}
+		var state struct {
+			Status string `json:"status"`
+		}
+		if err := json.Unmarshal(raw, &state); err != nil {
+			return nil, err
+		}
+		if !strings.EqualFold(state.Status, "running") {
+			return nil, fmt.Errorf("%w: %s is %s", builder.ErrExternalAccessNotReady, h.ExternalRef, state.Status)
+		}
+	}
 	next := base
 	var out []builder.ExternalEndpoint
 	for _, h := range hosts {
@@ -112,6 +124,11 @@ func (b *Builder) ConfigureExternalAccess(ctx context.Context, team string, host
 		if len(devices) == 0 {
 			continue
 		}
+		if b.Config.NetworkMode() == "bridge" {
+			if err := b.ensurePublicPortACL(ctx, h); err != nil {
+				return nil, err
+			}
+		}
 		if _, err := b.Client.patch(ctx, "/1.0/instances/"+h.ExternalRef, map[string]interface{}{"devices": devices}); err != nil {
 			return out, fmt.Errorf("adding external-access proxy devices to %s: %w", h.ExternalRef, err)
 		}
@@ -144,7 +161,7 @@ const maxExternalIPs = 1024
 // parseExternalIPs turns the external_access_ip config into an ordered,
 // de-duplicated list of IPv4 addresses. It accepts a comma-separated list, an
 // inclusive dashed range ("192.0.2.10-192.0.2.20", or the short last-octet form
-// "192.0.2.10-20"), or any mix of the two. IPv6 is not supported -- the OVN
+// "192.0.2.10-20"), or any mix of the two. IPv6 is not supported -- the
 // proxy `listen` syntax this feeds is IPv4-only (no bracketed address). Order is
 // preserved so the per-team, round-robin IP assignment is stable.
 func parseExternalIPs(s string) ([]string, error) {

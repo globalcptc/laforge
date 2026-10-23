@@ -322,6 +322,37 @@ func TestBuilderConfigCreateAcceptsARealIncusPoolConfig(t *testing.T) {
 	if len(hosts) != 2 || hosts[0].OVNUplinkNetwork != "UPLINK-A" || hosts[1].OVNUplinkNetwork != "UPLINK-B" {
 		t.Fatalf("incus_hosts round-tripped incorrectly: %+v", hosts)
 	}
+
+	req.IncusHosts = req.IncusHosts[:1]
+	req.IncusHosts[0].NetworkType = "bridge"
+	req.IncusHosts[0].OVNUplinkNetwork = ""
+	req.IncusOneTeamPerHost = true
+	body, _ = json.Marshal(req)
+	update, _ := http.NewRequest(http.MethodPut, env.httpURL+"/builder-configs/test-real-incus-pool", bytes.NewReader(body))
+	resp, err = adminClient.Do(update)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("bridge update: %d", resp.StatusCode)
+	}
+	resp, err = adminClient.Get(env.httpURL + "/builder-configs/test-real-incus-pool")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var stored db.BuilderConfig
+	if err := json.NewDecoder(resp.Body).Decode(&stored); err != nil {
+		t.Fatal(err)
+	}
+	hosts = nil
+	if err := json.Unmarshal(stored.IncusHosts, &hosts); err != nil {
+		t.Fatal(err)
+	}
+	if !stored.IncusOneTeamPerHost || len(hosts) != 1 || hosts[0].NetworkType != "bridge" || hosts[0].OVNUplinkNetwork != "" {
+		t.Fatal("bridge configuration or placement policy was not persisted")
+	}
 }
 
 func TestPublicNICConfigIsMicrocloudOnly(t *testing.T) {

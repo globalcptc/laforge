@@ -14,12 +14,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	awsbuilder "github.com/globalcptc/laforge/internal/builder/aws"
 	"github.com/globalcptc/laforge/internal/builder/incus"
 	"github.com/globalcptc/laforge/internal/builder/microcloud"
 	"github.com/globalcptc/laforge/internal/builderconfig"
@@ -39,14 +40,24 @@ import (
 // FetchServerCertificateInsecure's own doc comment for how an admin
 // obtains it once, out of band).
 type builderConfigRequest struct {
+	IncusOneTeamPerHost    bool                           `json:"incus_one_team_per_host"`
 	MicrocloudPublicAccess *microcloud.PublicAccessConfig `json:"microcloud_public_access,omitempty"`
-	Kind                   string                         `json:"kind"`
-	IncusApiUrl            string                         `json:"incus_api_url,omitempty"`
-	IncusClientCertPath    string                         `json:"incus_client_cert_path,omitempty"`
-	IncusClientKeyPath     string                         `json:"incus_client_key_path,omitempty"`
-	IncusServerCertPem     string                         `json:"incus_server_cert_pem,omitempty"`
-	IncusOvnUplinkNetwork  string                         `json:"incus_ovn_uplink_network,omitempty"`
-	IncusStoragePool       string                         `json:"incus_storage_pool,omitempty"`
+	// MicrocloudClusterGroup is the LXD cluster group every instance is created
+	// into (MicroCloud only); LXD schedules across its members. Empty defaults to
+	// "default" (the whole cluster). LaForge never picks a specific member.
+	MicrocloudClusterGroup string `json:"microcloud_cluster_group,omitempty"`
+	// AwsConfig is kind "aws"'s account infrastructure (ECS cluster,
+	// task-execution role, log group, region, agent-init image, assign-public-IP).
+	// Empty fields fall back to the runner's AWS_* env vars. Ignored by every
+	// other kind.
+	AwsConfig             *awsbuilder.ConfigInput `json:"aws_config,omitempty"`
+	Kind                  string                  `json:"kind"`
+	IncusApiUrl           string                  `json:"incus_api_url,omitempty"`
+	IncusClientCertPath   string                  `json:"incus_client_cert_path,omitempty"`
+	IncusClientKeyPath    string                  `json:"incus_client_key_path,omitempty"`
+	IncusServerCertPem    string                  `json:"incus_server_cert_pem,omitempty"`
+	IncusOvnUplinkNetwork string                  `json:"incus_ovn_uplink_network,omitempty"`
+	IncusStoragePool      string                  `json:"incus_storage_pool,omitempty"`
 	// IncusProject is the LXD project a kind "microcloud" builder creates
 	// everything in; empty is `default`. Ignored by every other kind.
 	IncusProject                 string                    `json:"incus_project,omitempty"`
@@ -60,6 +71,9 @@ type builderConfigRequest struct {
 	// builder_probe.go's handleConnectBuilder) -- when set, the older
 	// incus_api_url/cert path/server cert fields are left empty.
 	IncusCredentialID string `json:"incus_credential_id,omitempty"`
+	// AwsCredentialID is kind "aws"'s enrolled credential (the access key stored
+	// by the connect step). Empty means the runner's ambient AWS chain.
+	AwsCredentialID string `json:"aws_credential_id,omitempty"`
 	// ExternalAccessIP + the port window realize content `public:` ports on a
 	// shared-IP builder (Incus/MicroCloud): the single external IP, and the
 	// range of external ports allocated on it. Empty IP = external access off.
@@ -67,6 +81,19 @@ type builderConfigRequest struct {
 	ExternalAccessIP string `json:"external_access_ip,omitempty"`
 	ExternalPortMin  int32  `json:"external_port_min,omitempty"`
 	ExternalPortMax  int32  `json:"external_port_max,omitempty"`
+	// Color is a user-chosen display color for the builder's name pill ("" = none,
+	// else a "#rrggbb" hex). See validate() for the format check.
+	Color string `json:"color,omitempty"`
+	// MaxConcurrency caps how many of THIS builder's tasks may deploy at once,
+	// below the global RUNNER_CONCURRENCY pool -- a knob to turn down a
+	// capacity-limited hoster (e.g. a MicroCloud cluster). 0 = unlimited.
+	// Enforced as a soft cap in the task-lease query, so it applies to any kind.
+	MaxConcurrency int32 `json:"max_concurrency,omitempty"`
+	// IncusHostMaxConcurrency caps how many instance deploys run at once on EACH
+	// host of a kind "incus" pool (where the contention is: one team's VMs all
+	// created on one host). Over the cap, deploys queue in the runner and are
+	// admitted critical-path first. 0 = unbounded. Incus pools only.
+	IncusHostMaxConcurrency int32 `json:"incus_host_max_concurrency,omitempty"`
 }
 
 // validate turns req into the columns CreateBuilderConfig/UpdateBuilderConfig
@@ -79,9 +106,33 @@ type builderConfigRequest struct {
 // it. Resolve's own "microcloud"/"incus" paths never dial the network --
 // they only parse and pin locally -- so this needs no live cluster to
 // validate.
+// validBuilderColor accepts an empty string (no color chosen) or a lowercase or
+// uppercase "#rrggbb" hex string. The UI's color picker only ever sends the
+// latter, but a config could be posted directly, so the format is checked here.
+func validBuilderColor(c string) bool {
+	if c == "" {
+		return true
+	}
+	if len(c) != 7 || c[0] != '#' {
+		return false
+	}
+	for _, r := range c[1:] {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
+
 func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderConfigParams, error) {
 	if req.Kind != "fake" && req.Kind != "incus" && req.Kind != "microcloud" && req.Kind != "aws" && req.Kind != "openstack" {
 		return db.CreateBuilderConfigParams{}, errors.New(`kind must be "fake", "incus", "microcloud", "aws", or "openstack"`)
+	}
+	if req.IncusOneTeamPerHost && req.Kind != "incus" {
+		return db.CreateBuilderConfigParams{}, errors.New("incus_one_team_per_host is only supported by the Incus builder")
+	}
+	if !validBuilderColor(req.Color) {
+		return db.CreateBuilderConfigParams{}, errors.New(`color must be empty or a "#rrggbb" hex string`)
 	}
 	var publicAccess []byte
 	if req.MicrocloudPublicAccess != nil {
@@ -92,6 +143,21 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 			return db.CreateBuilderConfigParams{}, err
 		}
 		publicAccess, _ = json.Marshal(req.MicrocloudPublicAccess)
+	}
+	clusterGroup := strings.TrimSpace(req.MicrocloudClusterGroup)
+	if clusterGroup != "" && req.Kind != "microcloud" {
+		return db.CreateBuilderConfigParams{}, errors.New("microcloud_cluster_group is only supported by the MicroCloud builder")
+	}
+	// The column is NOT NULL -- an unset group means the whole cluster, "default".
+	if clusterGroup == "" {
+		clusterGroup = "default"
+	}
+	var awsConfig []byte
+	if req.AwsConfig != nil {
+		if req.Kind != "aws" {
+			return db.CreateBuilderConfigParams{}, errors.New("aws_config is only supported by the AWS builder")
+		}
+		awsConfig, _ = json.Marshal(req.AwsConfig)
 	}
 	images, err := json.Marshal(req.IncusImages)
 	if err != nil {
@@ -114,9 +180,24 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 	if req.IncusHosts == nil {
 		hosts = []byte("[]")
 	}
+	// A negative cap is meaningless; treat it as 0 = unlimited. No upper clamp --
+	// a value above the global worker pool simply never binds.
+	maxConcurrency := req.MaxConcurrency
+	if maxConcurrency < 0 {
+		maxConcurrency = 0
+	}
+	incusHostMaxConcurrency := req.IncusHostMaxConcurrency
+	if incusHostMaxConcurrency < 0 {
+		incusHostMaxConcurrency = 0
+	}
+	if incusHostMaxConcurrency > 0 && req.Kind != "incus" {
+		return db.CreateBuilderConfigParams{}, errors.New("incus_host_max_concurrency is only supported by the Incus builder")
+	}
 	params := db.CreateBuilderConfigParams{
 		Kind:                   req.Kind,
+		IncusOneTeamPerHost:    req.IncusOneTeamPerHost,
 		MicrocloudPublicAccess: publicAccess,
+		AwsConfig:              awsConfig,
 		IncusApiUrl:            db.StrPtr(req.IncusApiUrl),
 		IncusClientCertPath:    db.StrPtr(req.IncusClientCertPath),
 		IncusClientKeyPath:     db.StrPtr(req.IncusClientKeyPath),
@@ -127,6 +208,10 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		IncusSizes:             sizes,
 		IncusHosts:             hosts,
 		ExternalAccessIp:       db.StrPtr(req.ExternalAccessIP),
+		Color:                  req.Color,
+		MicrocloudClusterGroup: clusterGroup,
+		MaxConcurrency:          maxConcurrency,
+		IncusHostMaxConcurrency: incusHostMaxConcurrency,
 	}
 	if req.Kind == "microcloud" && req.IncusProject != "default" {
 		params.IncusProject = db.StrPtr(req.IncusProject)
@@ -143,6 +228,14 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 	if req.IncusCredentialID != "" {
 		if err := params.IncusCredentialID.Scan(req.IncusCredentialID); err != nil {
 			return db.CreateBuilderConfigParams{}, fmt.Errorf("invalid incus_credential_id: %w", err)
+		}
+	}
+	if req.AwsCredentialID != "" {
+		if req.Kind != "aws" {
+			return db.CreateBuilderConfigParams{}, errors.New("aws_credential_id is only supported by the AWS builder")
+		}
+		if err := params.AwsCredentialID.Scan(req.AwsCredentialID); err != nil {
+			return db.CreateBuilderConfigParams{}, fmt.Errorf("invalid aws_credential_id: %w", err)
 		}
 	}
 
@@ -167,6 +260,7 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		IncusOperationTimeoutSeconds: params.IncusOperationTimeoutSeconds,
 		IncusImages:                  params.IncusImages, IncusSizes: params.IncusSizes,
 		IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
+		IncusOneTeamPerHost:    params.IncusOneTeamPerHost,
 		IncusProject:           params.IncusProject,
 		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
 	}); err != nil {
@@ -180,14 +274,17 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 // done at save time so a gap is caught by the admin, not by a failed
 // deploy mid-event.
 func (s *Server) verifyImages(r *http.Request, params db.CreateBuilderConfigParams) error {
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
-	defer cancel()
-	return builderconfig.VerifyImages(ctx, s.Pool, db.BuilderConfig{
+	// Each host client bounds its reads using the configured operation timeout.
+	// A fixed deadline around the whole catalog would truncate slow reads and
+	// make otherwise healthy hosts fail as the number of checks grows.
+	return builderconfig.VerifyImages(r.Context(), s.Pool, db.BuilderConfig{
 		Kind: params.Kind, IncusApiUrl: params.IncusApiUrl, IncusClientCertPath: params.IncusClientCertPath,
 		IncusClientKeyPath: params.IncusClientKeyPath, IncusServerCertPem: params.IncusServerCertPem,
 		IncusImages: params.IncusImages, IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
-		IncusProject:           params.IncusProject,
-		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
+		IncusOperationTimeoutSeconds: params.IncusOperationTimeoutSeconds,
+		IncusOneTeamPerHost:          params.IncusOneTeamPerHost,
+		IncusProject:                 params.IncusProject,
+		MicrocloudPublicAccess:       params.MicrocloudPublicAccess,
 	})
 }
 
@@ -242,8 +339,9 @@ func (s *Server) handleListBuilderConfigs(w http.ResponseWriter, r *http.Request
 // builderSummary is what anyone configuring a build needs to pick a
 // builder: its name and type, none of its connection details.
 type builderSummary struct {
-	Name string `json:"name"`
-	Kind string `json:"kind"`
+	Name  string `json:"name"`
+	Kind  string `json:"kind"`
+	Color string `json:"color,omitempty"`
 }
 
 // handleListBuilders lists every builder by name and type for any signed-in
@@ -261,7 +359,7 @@ func (s *Server) handleListBuilders(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]builderSummary, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, builderSummary{Name: row.Name, Kind: row.Kind})
+		out = append(out, builderSummary{Name: row.Name, Kind: row.Kind, Color: row.Color})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -347,10 +445,17 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		IncusOperationTimeoutSeconds: params.IncusOperationTimeoutSeconds,
 		IncusImages:                  params.IncusImages, IncusSizes: params.IncusSizes,
 		IncusHosts: params.IncusHosts, IncusCredentialID: params.IncusCredentialID,
-		ExternalAccessIp: params.ExternalAccessIp,
-		ExternalPortMin:  params.ExternalPortMin, ExternalPortMax: params.ExternalPortMax,
+		IncusOneTeamPerHost: params.IncusOneTeamPerHost,
+		ExternalAccessIp:    params.ExternalAccessIp,
+		ExternalPortMin:     params.ExternalPortMin, ExternalPortMax: params.ExternalPortMax,
 		IncusProject:           params.IncusProject,
 		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
+		AwsConfig:              params.AwsConfig,
+		AwsCredentialID:         params.AwsCredentialID,
+		Color:                   params.Color,
+		MicrocloudClusterGroup: params.MicrocloudClusterGroup,
+		MaxConcurrency:          params.MaxConcurrency,
+		IncusHostMaxConcurrency: params.IncusHostMaxConcurrency,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

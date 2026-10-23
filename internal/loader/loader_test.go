@@ -672,3 +672,60 @@ func TestComposeContainer(t *testing.T) {
 		t.Errorf("expected a pointer to .laforgeignore, got: %v", errorMessages(c))
 	}
 }
+
+// TestEnvironmentCIDRContainsNetworks covers the environment-level supernet
+// check: when an environment declares a cidr, every network it places must fit
+// inside it; an environment without a cidr is unconstrained.
+func TestEnvironmentCIDRContainsNetworks(t *testing.T) {
+	// A supernet that contains every placed network loads clean.
+	ok := writeRepo(t, map[string]string{
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"networks/dmz.yaml": "network:\n  name: dmz\n  cidr: 10.0.2.0/24\n",
+		"env.yaml":          "environment:\n  name: e\n  teams: 1\n  cidr: 10.0.0.0/16\n  networks:\n    lan: {}\n    dmz: {}\n",
+	})
+	if c, _ := loader.Load(ok); len(c.Errors) != 0 {
+		t.Fatalf("networks inside the environment cidr should load clean, got: %v", errorMessages(c))
+	}
+
+	// A network outside the supernet is flagged, naming that network.
+	bad := writeRepo(t, map[string]string{
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"networks/wan.yaml": "network:\n  name: wan\n  cidr: 192.168.0.0/24\n",
+		"env.yaml":          "environment:\n  name: e\n  teams: 1\n  cidr: 10.0.0.0/16\n  networks:\n    lan: {}\n    wan: {}\n",
+	})
+	c, _ := loader.Load(bad)
+	if !containsSubstring(errorMessages(c), `does not contain network "wan"`) {
+		t.Fatalf("a network outside the environment cidr must be flagged, got: %v", errorMessages(c))
+	}
+	// The in-range network must NOT be flagged.
+	if containsSubstring(errorMessages(c), `network "lan"`) {
+		t.Fatalf("the in-range network lan was wrongly flagged: %v", errorMessages(c))
+	}
+}
+
+// TestEnvironmentWithoutCIDRIsUnconstrained confirms the supernet check only
+// runs when a cidr is declared -- an environment spanning RFC1918 families is
+// fine for the on-prem builders, which ignore the field.
+func TestEnvironmentWithoutCIDRIsUnconstrained(t *testing.T) {
+	root := writeRepo(t, map[string]string{
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"networks/wan.yaml": "network:\n  name: wan\n  cidr: 192.168.0.0/24\n",
+		"env.yaml":          "environment:\n  name: e\n  teams: 1\n  networks:\n    lan: {}\n    wan: {}\n",
+	})
+	if c, _ := loader.Load(root); containsSubstring(errorMessages(c), "does not contain network") {
+		t.Fatalf("an environment with no cidr should not enforce containment, got: %v", errorMessages(c))
+	}
+}
+
+// TestEnvironmentCIDRMustParse catches a cidr that passes the schema's loose
+// pattern but is not a real CIDR (e.g. a /99 prefix).
+func TestEnvironmentCIDRMustParse(t *testing.T) {
+	root := writeRepo(t, map[string]string{
+		"networks/lan.yaml": "network:\n  name: lan\n  cidr: 10.0.1.0/24\n",
+		"env.yaml":          "environment:\n  name: e\n  teams: 1\n  cidr: 10.0.0.0/99\n  networks:\n    lan: {}\n",
+	})
+	c, _ := loader.Load(root)
+	if !containsSubstring(errorMessages(c), "is not a valid CIDR") {
+		t.Fatalf("an unparseable environment cidr must be flagged, got: %v", errorMessages(c))
+	}
+}

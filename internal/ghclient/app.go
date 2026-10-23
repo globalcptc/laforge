@@ -103,6 +103,13 @@ func (c *Client) DeleteInstallation(ctx context.Context, appJWT string, installa
 // authoritative credential internal/api/webhook.go's reconcile uses to
 // fetch a repository's real clone URL and metadata, instead of trusting
 // whatever a webhook payload claims.
+//
+// This mints a fresh token on every call. Prefer InstallationToken,
+// which caches: minting is rate-limited by GitHub (a secondary limit on
+// POST /app/installations/{id}/access_tokens) and the hot paths that
+// need a token -- the orchestrator's few-second reconcile and
+// scheduled-task dispatch loops -- would otherwise trip it within
+// seconds once more than a couple of builds exist.
 func (c *Client) CreateInstallationToken(ctx context.Context, appJWT string, installationID int64) (*InstallationToken, error) {
 	u := fmt.Sprintf("%s/app/installations/%d/access_tokens", c.APIBaseURL, installationID)
 	var out InstallationToken
@@ -110,4 +117,79 @@ func (c *Client) CreateInstallationToken(ctx context.Context, appJWT string, ins
 		return nil, err
 	}
 	return &out, nil
+}
+
+// Installation is one GitHub App installation as GET /app/installations
+// reports it: which account installed the App and the current numeric id.
+type Installation struct {
+	ID      int64 `json:"id"`
+	Account struct {
+		Login string `json:"login"`
+		Type  string `json:"type"`
+	} `json:"account"`
+	RepositorySelection string `json:"repository_selection"`
+}
+
+// ListInstallations lists every installation of this App, authenticated
+// with an app JWT. The authoritative way to rediscover installations
+// after a missed `installation` webhook -- GitHub sends the one-time
+// `created` event once and never resends it, so an endpoint that wasn't
+// reachable at install time would otherwise never learn the installation
+// exists. Used by the admin resync. Requests up to 100 in a single page
+// (far more than any real deployment has); pagination beyond that is a
+// deliberate non-goal.
+func (c *Client) ListInstallations(ctx context.Context, appJWT string) ([]Installation, error) {
+	u := fmt.Sprintf("%s/app/installations?per_page=100", c.APIBaseURL)
+	var out []Installation
+	if err := c.doJSON(ctx, http.MethodGet, u, appJWT, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// cachedInstallationToken is one installation's memoized access token;
+// see InstallationToken.
+type cachedInstallationToken struct {
+	token     string
+	expiresAt time.Time
+}
+
+// installationTokenExpiryMargin treats a token as spent this long before
+// its real expiry, so one handed out here never lapses mid-request from
+// clock drift or the gap between minting it and GitHub seeing it used.
+const installationTokenExpiryMargin = 5 * time.Minute
+
+// InstallationToken returns an installation access token for
+// installationID, reusing a previously minted one while it is still
+// comfortably valid and only exchanging a fresh app JWT for a new token
+// when the cache is empty or the cached one is near expiry. GitHub
+// issues these valid for an hour, so this collapses the orchestrator's
+// per-pass token needs (2s reconcile, 5s scheduled-task dispatch, per
+// build) down to at most one real mint per installation per ~hour --
+// which is what keeps those loops from tripping GitHub's secondary rate
+// limit on the mint endpoint. Every token-needing path should call this
+// rather than GenerateAppJWT + CreateInstallationToken directly.
+//
+// Concurrent callers for the same installation serialize on the mint
+// (the lock is held across the network call) so a burst of first-time
+// misses produces one mint, not one per caller.
+func (c *Client) InstallationToken(ctx context.Context, appID string, key *rsa.PrivateKey, installationID int64) (*InstallationToken, error) {
+	c.tokenMu.Lock()
+	defer c.tokenMu.Unlock()
+	if t, ok := c.tokens[installationID]; ok && time.Now().Before(t.expiresAt.Add(-installationTokenExpiryMargin)) {
+		return &InstallationToken{Token: t.token, ExpiresAt: t.expiresAt}, nil
+	}
+	jwt, err := GenerateAppJWT(appID, key, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("signing app jwt: %w", err)
+	}
+	tok, err := c.CreateInstallationToken(ctx, jwt, installationID)
+	if err != nil {
+		return nil, err
+	}
+	if c.tokens == nil {
+		c.tokens = make(map[int64]cachedInstallationToken)
+	}
+	c.tokens[installationID] = cachedInstallationToken{token: tok.Token, expiresAt: tok.ExpiresAt}
+	return tok, nil
 }

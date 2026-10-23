@@ -1,14 +1,15 @@
-import { Boxes, Cloud, FlaskConical, Server, type LucideIcon } from 'lucide-react'
+import { Boxes, Cloud, CloudCog, Container, FlaskConical, Server, type LucideIcon } from 'lucide-react'
 import { Badge, cn } from '../ui'
 
-// Builder kind -> icon + display name. One generic cloud/host icon per family;
-// the label is what distinguishes them. Shared by the Configured Builds header
-// pill and the build page's "infrastructure" pill.
+// Builder kind -> icon + display name. A distinct glyph per family (lucide has
+// no brand marks, so these are evocative generics); the label spells it out.
+// Shared by the Configured Builds header pill and the build page's
+// "infrastructure" pill. Keep in sync with BuilderPill's KIND_ICON.
 const BUILDER_KIND: Record<string, { icon: LucideIcon; label: string }> = {
   microcloud: { icon: Cloud, label: 'MicroCloud' },
   incus: { icon: Boxes, label: 'Incus' },
-  aws: { icon: Cloud, label: 'AWS' },
-  openstack: { icon: Server, label: 'OpenStack' },
+  aws: { icon: CloudCog, label: 'AWS' },
+  openstack: { icon: Container, label: 'OpenStack' },
   fake: { icon: FlaskConical, label: 'Fake' },
 }
 

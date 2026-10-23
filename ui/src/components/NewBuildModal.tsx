@@ -6,6 +6,7 @@ import { ApiError } from '../api/client'
 import type { EnvironmentFileInfo } from '../api/types'
 import { AnchoredPopover, Badge, Button, Input, Modal, Spinner, cn } from '../ui'
 import { KIND_LABEL, type Kind } from './builder-wizard/model'
+import { BuilderPill } from './BuilderPill'
 
 type CreateRequest = { branch: string; environment_path: string; builder_config_name: string }
 
@@ -164,8 +165,8 @@ export function NewBuildModal({
                 <PickCard key={b.name} selected={builderName === b.name} onSelect={() => setBuilderName(b.name)}>
                   <ServerCog size={16} className="mt-0.5 shrink-0 text-fg-muted" />
                   <div className="min-w-0">
-                    <div className="truncate font-medium text-fg">{b.name}</div>
-                    <div className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</div>
+                    <BuilderPill name={b.name} color={b.color} kind={b.kind} />
+                    <div className="mt-1 text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</div>
                   </div>
                 </PickCard>
               ))}

@@ -190,6 +190,7 @@ func mergeEnvironment(child, base Environment) Environment {
 	child.Schema = orInt(child.Schema, base.Schema)
 	child.Description = orString(child.Description, base.Description)
 	child.Teams = orInt(child.Teams, base.Teams)
+	child.CIDR = orString(child.CIDR, base.CIDR)
 	child.RootPass = orString(child.RootPass, base.RootPass)
 	child.Start = orString(child.Start, base.Start)
 	child.Stop = orString(child.Stop, base.Stop)

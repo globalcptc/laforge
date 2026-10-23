@@ -99,7 +99,9 @@ func BuildDockerBase(ctx context.Context, c *Client, src BaseImageSource, storag
 	}
 
 	log("Installing Docker and the compose plugin …")
-	_, out, err := c.execRecord(ctx, tempBuildInstance, builder.DockerBaseInstallScript)
+	// MicroCloud nodes' kernels are too old for overlay2 under nesting, so pin
+	// Docker to the vfs driver before it starts (see OldKernelStorageDriver).
+	_, out, err := c.execRecord(ctx, tempBuildInstance, builder.DockerBaseInstallScript(builder.OldKernelStorageDriver))
 	logLines(log, out)
 	if err != nil {
 		return "", fmt.Errorf("installing docker: %w", err)

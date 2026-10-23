@@ -12,16 +12,10 @@ type Config struct {
 	Images map[string]ImageRef
 	// Sizes maps a content `size` field to concrete resource limits.
 	Sizes map[string]SizeSpec
-	// OVNUplinkNetwork is the name of the physical/unmanaged network on
-	// the Incus cluster that OVN routes external traffic through --
-	// Canonical's own MicroCloud/OVN setup docs call this "UPLINK" by
-	// convention, but it's whatever the cluster operator named it when
-	// they ran `incus network create <name> --type=physical` (or bridge)
-	// during cluster bring-up, so it's a per-cluster builder config value,
-	// not a constant. Required: every DeployNetwork call creates an OVN
-	// logical network with this as its `network` (uplink) key. See
-	// Builder's own doc comment for why OVN, not a plain bridge, is what
-	// DeployNetwork uses.
+	// NetworkType selects native host-routed bridges or legacy OVN networks.
+	// Empty preserves old configurations with an OVN uplink; without one it uses bridges.
+	NetworkType string
+	// OVNUplinkNetwork is only used with OVN networking.
 	OVNUplinkNetwork string
 	// StoragePool is the Incus storage pool a host's root disk device is
 	// created on -- defaults to "default" (this package's own single-node
@@ -59,6 +53,21 @@ type Config struct {
 	// https://docker.io. A container's `image` is the alias within it
 	// (e.g. "nginx:alpine", "library/alpine:latest").
 	OCIRegistry string
+	// MaxConcurrentDeploys caps how many instance deploys (create/copy, config
+	// drive, first start) run on this Incus host at once; the rest queue and are
+	// admitted highest-priority first. 0 = unbounded. From builder_config
+	// incus_host_max_concurrency -- see admission.go.
+	MaxConcurrentDeploys int
+	// GatewayAddr is the host:port a deployed agent dials for heartbeats, tasks
+	// and the interactive shell relay -- the same value the runner bakes into
+	// every agent (GATEWAY_PUBLIC_ADDR). CloseAccess pins it as the ONLY
+	// external egress a closed team keeps: locking a closed instance's outbound
+	// to just the gateway preserves telemetry through the pre-competition window
+	// while denying a team any other outbound path (so a planted implant can't
+	// phone home). Resolved to an IP at close time and re-resolved each pass, so
+	// a gateway DNS change is picked up. Empty means close can't pin it and
+	// errors rather than silently cutting telemetry or leaving a team open.
+	GatewayAddr string
 }
 
 // ociRegistryOrDefault is deployOCIContainer's resolution of Config.OCIRegistry
@@ -103,7 +112,8 @@ type HostConfig struct {
 	ClientCertPath          string `json:"client_cert_path"`
 	ClientKeyPath           string `json:"client_key_path"`
 	ServerCertPEM           string `json:"server_cert_pem"`
-	OVNUplinkNetwork        string `json:"ovn_uplink_network"`
+	NetworkType             string `json:"network_type,omitempty"`
+	OVNUplinkNetwork        string `json:"ovn_uplink_network,omitempty"`
 	StoragePool             string `json:"storage_pool"`
 	OperationTimeoutSeconds int    `json:"operation_timeout_seconds,omitempty"`
 }
@@ -157,4 +167,15 @@ type SizeSpec struct {
 	// The image/size maps are shared columns across every builder kind, so
 	// this rides alongside CPU/Memory rather than in a separate column.
 	Type string `json:"type,omitempty"`
+}
+
+// NetworkMode resolves legacy configurations without silently migrating an existing deployment.
+func (c Config) NetworkMode() string {
+	if c.NetworkType != "" {
+		return c.NetworkType
+	}
+	if c.OVNUplinkNetwork != "" {
+		return "ovn"
+	}
+	return "bridge"
 }

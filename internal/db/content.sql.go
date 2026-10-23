@@ -118,10 +118,10 @@ const createEnvironment = `-- name: CreateEnvironment :one
 INSERT INTO environment (
   content_revision_id, path, name, schema_version, description, teams,
   root_password, start_at, stop_at, dns, access,
-  vars, tags, findings, extends, agent_debug, container_logs
+  vars, tags, findings, extends, agent_debug, container_logs, cidr
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
-) RETURNING id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+) RETURNING id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs, cidr
 `
 
 type CreateEnvironmentParams struct {
@@ -142,6 +142,7 @@ type CreateEnvironmentParams struct {
 	Extends           *string            `json:"extends"`
 	AgentDebug        bool               `json:"agent_debug"`
 	ContainerLogs     json.RawMessage    `json:"container_logs"`
+	Cidr              *string            `json:"cidr"`
 }
 
 func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (Environment, error) {
@@ -163,6 +164,7 @@ func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentPa
 		arg.Extends,
 		arg.AgentDebug,
 		arg.ContainerLogs,
+		arg.Cidr,
 	)
 	var i Environment
 	err := row.Scan(
@@ -184,6 +186,7 @@ func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentPa
 		&i.Extends,
 		&i.AgentDebug,
 		&i.ContainerLogs,
+		&i.Cidr,
 	)
 	return i, err
 }
@@ -444,6 +447,65 @@ func (q *Queries) CreateScript(ctx context.Context, arg CreateScriptParams) (Scr
 	return i, err
 }
 
+const deleteContainersByRevision = `-- name: DeleteContainersByRevision :exec
+DELETE FROM container WHERE content_revision_id = $1
+`
+
+func (q *Queries) DeleteContainersByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteContainersByRevision, contentRevisionID)
+	return err
+}
+
+const deleteEnvironmentsByRevision = `-- name: DeleteEnvironmentsByRevision :exec
+DELETE FROM environment WHERE content_revision_id = $1
+`
+
+func (q *Queries) DeleteEnvironmentsByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteEnvironmentsByRevision, contentRevisionID)
+	return err
+}
+
+const deleteHostsByRevision = `-- name: DeleteHostsByRevision :exec
+DELETE FROM host WHERE content_revision_id = $1
+`
+
+func (q *Queries) DeleteHostsByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteHostsByRevision, contentRevisionID)
+	return err
+}
+
+const deleteNetworksByRevision = `-- name: DeleteNetworksByRevision :exec
+
+DELETE FROM network WHERE content_revision_id = $1
+`
+
+// The six persisted-content child tables of a content_revision, deleted by
+// revision so re-validation (ingest.ValidateAndStore) can rebuild them to match
+// a changed verdict. person and placement are not listed: they cascade from
+// people_source and environment respectively (ON DELETE CASCADE).
+func (q *Queries) DeleteNetworksByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteNetworksByRevision, contentRevisionID)
+	return err
+}
+
+const deletePeopleSourcesByRevision = `-- name: DeletePeopleSourcesByRevision :exec
+DELETE FROM people_source WHERE content_revision_id = $1
+`
+
+func (q *Queries) DeletePeopleSourcesByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deletePeopleSourcesByRevision, contentRevisionID)
+	return err
+}
+
+const deleteScriptsByRevision = `-- name: DeleteScriptsByRevision :exec
+DELETE FROM script WHERE content_revision_id = $1
+`
+
+func (q *Queries) DeleteScriptsByRevision(ctx context.Context, contentRevisionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteScriptsByRevision, contentRevisionID)
+	return err
+}
+
 const getContainerByRevisionAndName = `-- name: GetContainerByRevisionAndName :one
 SELECT id, content_revision_id, path, name, image, size, ports, depends_on, steps, vars, tags, findings, people, extends, schedule FROM container WHERE content_revision_id = $1 AND name = $2
 `
@@ -549,7 +611,7 @@ func (q *Queries) GetEnvironmentAgentDebugForObject(ctx context.Context, id pgty
 }
 
 const getEnvironmentByRevisionAndName = `-- name: GetEnvironmentByRevisionAndName :one
-SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs FROM environment WHERE content_revision_id = $1 AND name = $2
+SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs, cidr FROM environment WHERE content_revision_id = $1 AND name = $2
 `
 
 type GetEnvironmentByRevisionAndNameParams struct {
@@ -579,12 +641,13 @@ func (q *Queries) GetEnvironmentByRevisionAndName(ctx context.Context, arg GetEn
 		&i.Extends,
 		&i.AgentDebug,
 		&i.ContainerLogs,
+		&i.Cidr,
 	)
 	return i, err
 }
 
 const getEnvironmentByRevisionAndPath = `-- name: GetEnvironmentByRevisionAndPath :one
-SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs FROM environment WHERE content_revision_id = $1 AND path = $2
+SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs, cidr FROM environment WHERE content_revision_id = $1 AND path = $2
 `
 
 type GetEnvironmentByRevisionAndPathParams struct {
@@ -619,6 +682,7 @@ func (q *Queries) GetEnvironmentByRevisionAndPath(ctx context.Context, arg GetEn
 		&i.Extends,
 		&i.AgentDebug,
 		&i.ContainerLogs,
+		&i.Cidr,
 	)
 	return i, err
 }
@@ -765,7 +829,7 @@ func (q *Queries) GetScriptByRevisionAndName(ctx context.Context, arg GetScriptB
 }
 
 const listEnvironmentsByRevision = `-- name: ListEnvironmentsByRevision :many
-SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs FROM environment WHERE content_revision_id = $1 ORDER BY name
+SELECT id, content_revision_id, path, name, schema_version, description, teams, root_password, start_at, stop_at, dns, access, vars, tags, findings, extends, agent_debug, container_logs, cidr FROM environment WHERE content_revision_id = $1 ORDER BY name
 `
 
 func (q *Queries) ListEnvironmentsByRevision(ctx context.Context, contentRevisionID pgtype.UUID) ([]Environment, error) {
@@ -796,6 +860,7 @@ func (q *Queries) ListEnvironmentsByRevision(ctx context.Context, contentRevisio
 			&i.Extends,
 			&i.AgentDebug,
 			&i.ContainerLogs,
+			&i.Cidr,
 		); err != nil {
 			return nil, err
 		}

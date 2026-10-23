@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -74,6 +73,13 @@ type installationRepositoriesPayload struct {
 	Action       string `json:"action"` // added | removed
 	Installation struct {
 		ID int64 `json:"id"`
+		// Carried in full on this event too, so a missed one-time
+		// `installation` created event can be bootstrapped from here
+		// rather than dropping the delivery -- see the handler.
+		Account struct {
+			Login string `json:"login"`
+			Type  string `json:"type"`
+		} `json:"account"`
 	} `json:"installation"`
 	RepositoriesAdded   []installationRepoRef `json:"repositories_added"`
 	RepositoriesRemoved []installationRepoRef `json:"repositories_removed"`
@@ -217,6 +223,16 @@ func (s *Server) handleInstallationEvent(w http.ResponseWriter, ctx context.Cont
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+		// Re-attach this account's tracked repositories to the (possibly
+		// freshly re-created) installation row, so a reinstall -- which
+		// lands here with a new installation_id -- doesn't leave them
+		// stranded on the old row or NULLed by a preceding uninstall.
+		if _, err := s.Queries.AttachOwnerRepositoriesToInstallation(ctx, db.AttachOwnerRepositoriesToInstallationParams{
+			InstallationID: inst.ID, GithubOwner: p.Installation.Account.Login,
+		}); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
 		if p.RepositorySelection == "all" {
 			// The payload's own Repositories array is empty by GitHub's
 			// design for an "all repositories" install -- the real list
@@ -281,14 +297,28 @@ func (s *Server) handleInstallationRepositoriesEvent(w http.ResponseWriter, ctx 
 		return
 	}
 	inst, err := s.Queries.GetGithubInstallationByInstallationID(ctx, p.Installation.ID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			// An installation_repositories event for an installation
-			// LaForge never recorded (e.g. its own "installation"
-			// event was missed) -- nothing to attach these to yet.
-			w.WriteHeader(http.StatusOK)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// An installation_repositories event for an installation LaForge
+		// never recorded -- almost always because the one-time
+		// `installation` created event was delivered before this endpoint
+		// was reachable and GitHub never resends it. This payload carries
+		// the full installation object, so bootstrap the row from it
+		// rather than dropping the delivery (which used to leave the
+		// instance permanently stranded with no installation on record).
+		inst, err = s.Queries.UpsertGithubInstallation(ctx, db.UpsertGithubInstallationParams{
+			InstallationID: p.Installation.ID, AccountLogin: p.Installation.Account.Login, AccountType: p.Installation.Account.Type,
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+		if _, err := s.Queries.AttachOwnerRepositoriesToInstallation(ctx, db.AttachOwnerRepositoriesToInstallationParams{
+			InstallationID: inst.ID, GithubOwner: p.Installation.Account.Login,
+		}); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+	} else if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -358,11 +388,7 @@ func authenticatedCloneURL(cloneURL, token string) (string, error) {
 
 func (s *Server) resolveCloneURL(ctx context.Context, owner, repoName string, installationID int64) (string, error) {
 	if installationID != 0 && s.AppID != "" && s.AppPrivateKey != nil {
-		jwt, err := ghclient.GenerateAppJWT(s.AppID, s.AppPrivateKey, time.Now())
-		if err != nil {
-			return "", fmt.Errorf("signing app jwt: %w", err)
-		}
-		tok, err := s.GH.CreateInstallationToken(ctx, jwt, installationID)
+		tok, err := s.GH.InstallationToken(ctx, s.AppID, s.AppPrivateKey, installationID)
 		if err != nil {
 			return "", fmt.Errorf("minting installation token: %w", err)
 		}
@@ -399,11 +425,7 @@ func (s *Server) listAllRepositoriesForInstallation(ctx context.Context, install
 	if s.AppID == "" || s.AppPrivateKey == nil {
 		return nil, fmt.Errorf("cannot list an \"all repositories\" installation's real repositories: no GitHub App configured")
 	}
-	jwt, err := ghclient.GenerateAppJWT(s.AppID, s.AppPrivateKey, time.Now())
-	if err != nil {
-		return nil, fmt.Errorf("signing app jwt: %w", err)
-	}
-	tok, err := s.GH.CreateInstallationToken(ctx, jwt, installationID)
+	tok, err := s.GH.InstallationToken(ctx, s.AppID, s.AppPrivateKey, installationID)
 	if err != nil {
 		return nil, fmt.Errorf("minting installation token: %w", err)
 	}
@@ -497,6 +519,10 @@ func (s *Server) reconcile(ctx context.Context, repo db.Repository, branch, ref 
 			log.Printf("webhook: %s@%s: auto-build for configured build %s failed: %v", slug, branch, cb.ID, err)
 			continue
 		}
+		// The new commit's build supersedes any older planned build of this
+		// configured build -- one planned build per configured build, not one
+		// per push forever (see discardSupersededPlanned).
+		s.discardSupersededPlanned(ctx, cb.ID, build)
 
 		if !cb.AutoDeployEnabled {
 			log.Printf("webhook: %s@%s: auto-built build %s; auto-deploy is OFF for this configured build, leaving it planned (click Deploy, or turn auto-deploy on)", slug, branch, build.ID)

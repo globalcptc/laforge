@@ -446,6 +446,12 @@ paths:
     get: { tags: [Builds], summary: Dashboard aggregates for the build., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
   /builds/{id}/topology:
     get: { tags: [Builds], summary: The build's resolved topology (teams, networks, members)., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/external-access:
+    get: { tags: [Builds], summary: "Every realized public endpoint in the build (team, host, protocol, internal port, public address:port).", parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/external-access/export:
+    get: { tags: [Builds], summary: "The public endpoints with each host's current admin login (username, password, password_applied) -- backs `laforge access --csv/--json/--scoring` and the UI's Export for Scoring.", parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
+  /builds/{id}/credentials:
+    get: { tags: [Builds], summary: "Every account LaForge set a password for on the build's hosts (team, host, username, password, applied, admin, source) -- backs `laforge passwords`.", parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
   /builds/{id}/artifacts:
     get: { tags: [Builds], summary: Artifacts captured for the build., parameters: [ { $ref: '#/components/parameters/BuildId' } ], responses: { '200': { description: OK } } }
   /builds/{id}/artifacts/purge:
@@ -462,7 +468,7 @@ paths:
   /builds/{id}/objects/{objectId}/render:
     get: { tags: [Objects], summary: What was rendered and delivered to the object., parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ], responses: { '200': { description: OK } } }
   /builds/{id}/objects/{objectId}/infra:
-    get: { tags: [Objects], summary: Builder placement for the object plus the root password for hand access., parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ], responses: { '200': { description: OK } } }
+    get: { tags: [Objects], summary: "Builder placement for the object plus its current passwords for hand access -- the admin password and every account a set_password/create_user step set (credentials: username, password, applied, admin).", parameters: [ { $ref: '#/components/parameters/BuildId' }, { $ref: '#/components/parameters/ObjectId' } ], responses: { '200': { description: OK } } }
   /builds/{id}/objects/{objectId}/config:
     get:
       tags: [Objects]

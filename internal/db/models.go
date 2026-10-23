@@ -41,6 +41,8 @@ type AgentHeartbeat struct {
 	DiskPct          *float64           `json:"disk_pct"`
 	NetRxBps         *float64           `json:"net_rx_bps"`
 	NetTxBps         *float64           `json:"net_tx_bps"`
+	BootAt           pgtype.Timestamptz `json:"boot_at"`
+	AgentStartedAt   pgtype.Timestamptz `json:"agent_started_at"`
 }
 
 type AgentSession struct {
@@ -49,6 +51,8 @@ type AgentSession struct {
 	CertFingerprint  string             `json:"cert_fingerprint"`
 	FirstSeenAt      pgtype.Timestamptz `json:"first_seen_at"`
 	LastHeartbeatAt  pgtype.Timestamptz `json:"last_heartbeat_at"`
+	BootAt           pgtype.Timestamptz `json:"boot_at"`
+	AgentStartedAt   pgtype.Timestamptz `json:"agent_started_at"`
 }
 
 type AgentTask struct {
@@ -66,6 +70,14 @@ type AgentTask struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 	IgnoreErrors     bool               `json:"ignore_errors"`
 	AdHoc            bool               `json:"ad_hoc"`
+	Reboots          bool               `json:"reboots"`
+	StartedAt        pgtype.Timestamptz `json:"started_at"`
+	FinishedAt       pgtype.Timestamptz `json:"finished_at"`
+	MaxAttempts      *int32             `json:"max_attempts"`
+	Milestone        *string            `json:"milestone"`
+	StepScript       *string            `json:"step_script"`
+	WaitFor          json.RawMessage    `json:"wait_for"`
+	ScheduledTaskID  pgtype.UUID        `json:"scheduled_task_id"`
 }
 
 type AttentionDismissal struct {
@@ -85,6 +97,13 @@ type Build struct {
 	AutoBuilt          bool               `json:"auto_built"`
 	ReconcileError     *string            `json:"reconcile_error"`
 	CreatedByAccountID pgtype.UUID        `json:"created_by_account_id"`
+	ResolvedRevisionID pgtype.UUID        `json:"resolved_revision_id"`
+}
+
+type BuildRenderSecret struct {
+	BuildID   pgtype.UUID        `json:"build_id"`
+	Secret    []byte             `json:"secret"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type BuilderConfig struct {
@@ -112,17 +131,26 @@ type BuilderConfig struct {
 	ExternalPortMax              *int32             `json:"external_port_max"`
 	IncusProject                 *string            `json:"incus_project"`
 	MicrocloudPublicAccess       json.RawMessage    `json:"microcloud_public_access"`
+	AwsConfig                    json.RawMessage    `json:"aws_config"`
+	AwsCredentialID              pgtype.UUID        `json:"aws_credential_id"`
+	IncusOneTeamPerHost          bool               `json:"incus_one_team_per_host"`
+	Color                        string             `json:"color"`
+	MaxConcurrency               int32              `json:"max_concurrency"`
+	MicrocloudClusterGroup       string             `json:"microcloud_cluster_group"`
+	IncusHostMaxConcurrency      int32              `json:"incus_host_max_concurrency"`
 }
 
 type BuilderCredential struct {
-	ID                pgtype.UUID        `json:"id"`
-	ApiUrl            string             `json:"api_url"`
-	ServerName        string             `json:"server_name"`
-	ServerFingerprint string             `json:"server_fingerprint"`
-	ServerCertPem     string             `json:"server_cert_pem"`
-	ClientCertPem     string             `json:"client_cert_pem"`
-	ClientKeyPem      string             `json:"client_key_pem"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	ID                 pgtype.UUID        `json:"id"`
+	ApiUrl             string             `json:"api_url"`
+	ServerName         string             `json:"server_name"`
+	ServerFingerprint  string             `json:"server_fingerprint"`
+	ServerCertPem      string             `json:"server_cert_pem"`
+	ClientCertPem      string             `json:"client_cert_pem"`
+	ClientKeyPem       string             `json:"client_key_pem"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	AwsAccessKeyID     string             `json:"aws_access_key_id"`
+	AwsSecretAccessKey string             `json:"aws_secret_access_key"`
 }
 
 type BuilderImageBuild struct {
@@ -145,6 +173,19 @@ type BuilderImageBuildLog struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type BuilderMetricSample struct {
+	ID              pgtype.UUID        `json:"id"`
+	BuilderConfigID pgtype.UUID        `json:"builder_config_id"`
+	Key             string             `json:"key"`
+	Label           string             `json:"label"`
+	Node            string             `json:"node"`
+	Kind            string             `json:"kind"`
+	Unit            string             `json:"unit"`
+	Value           float64            `json:"value"`
+	Max             *float64           `json:"max"`
+	SampledAt       pgtype.Timestamptz `json:"sampled_at"`
+}
+
 type ConfiguredBuild struct {
 	ID                       pgtype.UUID        `json:"id"`
 	RepositoryID             pgtype.UUID        `json:"repository_id"`
@@ -155,6 +196,12 @@ type ConfiguredBuild struct {
 	CurrentContentRevisionID pgtype.UUID        `json:"current_content_revision_id"`
 	CreatedAt                pgtype.Timestamptz `json:"created_at"`
 	AutoDeployEnabled        bool               `json:"auto_deploy_enabled"`
+}
+
+type ConfiguredBuildFavorite struct {
+	AccountID         pgtype.UUID        `json:"account_id"`
+	ConfiguredBuildID pgtype.UUID        `json:"configured_build_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 }
 
 type Container struct {
@@ -190,23 +237,26 @@ type ContentRevision struct {
 }
 
 type DeployedObject struct {
-	ID                  pgtype.UUID        `json:"id"`
-	TeamID              pgtype.UUID        `json:"team_id"`
-	Kind                string             `json:"kind"`
-	ObjectName          string             `json:"object_name"`
-	AsName              *string            `json:"as_name"`
-	NetworkName         *string            `json:"network_name"`
-	Fingerprint         string             `json:"fingerprint"`
-	Status              string             `json:"status"`
-	ExternalRef         *string            `json:"external_ref"`
-	LastError           *string            `json:"last_error"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	PowerState          string             `json:"power_state"`
-	PowerStateCheckedAt pgtype.Timestamptz `json:"power_state_checked_at"`
-	Tags                json.RawMessage    `json:"tags"`
-	StepsMaterializedAt pgtype.Timestamptz `json:"steps_materialized_at"`
-	BlockedOn           json.RawMessage    `json:"blocked_on"`
-	PublicAddress       string             `json:"public_address"`
+	ID                    pgtype.UUID        `json:"id"`
+	TeamID                pgtype.UUID        `json:"team_id"`
+	Kind                  string             `json:"kind"`
+	ObjectName            string             `json:"object_name"`
+	AsName                *string            `json:"as_name"`
+	NetworkName           *string            `json:"network_name"`
+	Fingerprint           string             `json:"fingerprint"`
+	Status                string             `json:"status"`
+	ExternalRef           *string            `json:"external_ref"`
+	LastError             *string            `json:"last_error"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	PowerState            string             `json:"power_state"`
+	PowerStateCheckedAt   pgtype.Timestamptz `json:"power_state_checked_at"`
+	Tags                  json.RawMessage    `json:"tags"`
+	StepsMaterializedAt   pgtype.Timestamptz `json:"steps_materialized_at"`
+	BlockedOn             json.RawMessage    `json:"blocked_on"`
+	PublicAddress         string             `json:"public_address"`
+	DeployedAt            pgtype.Timestamptz `json:"deployed_at"`
+	AgentPlatform         string             `json:"agent_platform"`
+	AgentCheckinOverdueAt pgtype.Timestamptz `json:"agent_checkin_overdue_at"`
 }
 
 type Environment struct {
@@ -228,6 +278,7 @@ type Environment struct {
 	Extends           *string            `json:"extends"`
 	AgentDebug        bool               `json:"agent_debug"`
 	ContainerLogs     json.RawMessage    `json:"container_logs"`
+	Cidr              *string            `json:"cidr"`
 }
 
 type Event struct {
@@ -468,6 +519,7 @@ type Task struct {
 	LastError        *string            `json:"last_error"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Permanent        bool               `json:"permanent"`
 }
 
 type Team struct {

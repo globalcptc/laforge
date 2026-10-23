@@ -32,6 +32,12 @@
           "minimum": 1,
           "description": "Number of teams. Every team gets an identical copy of the topology below -- nothing is ever templated per team."
         },
+        "cidr": {
+          "type": "string",
+          "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+          "description": "The overall address space for one team's topology -- the supernet every network must fit inside. Optional and builder-agnostic: the on-prem builders (Incus/MicroCloud) give each network its own bridge and ignore it. A cloud builder that puts a whole team in one VPC (AWS) uses this as the VPC CIDR and carves each network's subnet from it, so there a team's networks must all live within one range. When set, `laforge check` (and the editor LSP) verify every network this environment places fits within it.",
+          "example": "cidr: 10.0.0.0/16"
+        },
         "root_password": {
           "type": "string",
           "description": "A password stored in the clear on purpose -- content credentials exist to be found during the competition, not to be real secrets."

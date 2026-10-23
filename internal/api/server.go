@@ -174,10 +174,13 @@ func (s *Server) routes() {
 	mux.HandleFunc("POST /configured-builds/{id}/lock", s.handleSetLock)
 	mux.HandleFunc("POST /configured-builds/{id}/sync", s.handleSyncConfiguredBuild)
 	mux.HandleFunc("POST /configured-builds/{id}/builds", s.handleTriggerBuild)
+	mux.HandleFunc("POST /configured-builds/{id}/favorite", s.handleSetConfiguredBuildFavorite)
+	mux.HandleFunc("DELETE /configured-builds/{id}/favorite", s.handleSetConfiguredBuildFavorite)
 
 	mux.HandleFunc("GET /content-revisions/{id}/environments", s.handleListRevisionEnvironments)
 
 	mux.HandleFunc("GET /installations", s.handleListInstallations)
+	mux.HandleFunc("POST /installations/sync", s.handleSyncInstallations)
 	mux.HandleFunc("GET /installations/repositories", s.handleListUnapprovedInstalledRepositories)
 	mux.HandleFunc("POST /installations/repositories/approve", s.handleApproveInstalledRepository)
 	mux.HandleFunc("DELETE /installations/{id}", s.handleDeleteInstallation)
@@ -185,6 +188,8 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /builder-configs", s.handleListBuilderConfigs)
 	mux.HandleFunc("GET /builder-configs/{name}", s.handleGetBuilderConfig)
 	mux.HandleFunc("GET /builder-configs/{name}/available-images", s.handleListBuilderConfigImages)
+	mux.HandleFunc("GET /builder-configs/{name}/stats", s.handleGetBuilderConfigStats)
+	mux.HandleFunc("GET /builder-configs/{name}/usage", s.handleGetBuilderConfigUsage)
 	mux.HandleFunc("POST /builder-configs/{name}", s.handleCreateBuilderConfig)
 	mux.HandleFunc("PUT /builder-configs/{name}", s.handleUpdateBuilderConfig)
 	mux.HandleFunc("DELETE /builder-configs/{name}", s.handleDeleteBuilderConfig)
@@ -226,11 +231,21 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /builds/{id}", s.handleGetBuild)
 	mux.HandleFunc("POST /builds/{id}/deploy", s.handleDeployBuild)
 	mux.HandleFunc("POST /builds/{id}/teardown", s.handleTeardownBuild)
+	// A teardown that stopped on a permanent builder error: retry after fixing
+	// the builder (levelManage), or declare the build torn down without any
+	// hoster call (instance-admin-only; the infrastructure is already gone).
+	mux.HandleFunc("POST /builds/{id}/teardown/retry", s.handleRetryTeardown)
+	mux.HandleFunc("POST /builds/{id}/teardown/force", s.handleForceTornDown)
+	// Admin-only, buried "force remove from database" for a dead build whose real
+	// infrastructure is already gone (teardown can never complete). DB-only.
+	mux.HandleFunc("DELETE /builds/{id}", s.handleForceDeleteBuild)
 	mux.HandleFunc("GET /builds/{id}/drift", s.handleDetectDrift)
+	mux.HandleFunc("GET /builds/{id}/readiness", s.handleGetBuildReadiness)
 	mux.HandleFunc("GET /builds/{id}/objects", s.handleListDeployedObjects)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/events", s.handleListObjectEvents)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/heartbeats", s.handleListObjectHeartbeats)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/render", s.handleRenderObject)
+	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/cloud-init", s.handleObjectCloudInit)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/steps", s.handleListObjectSteps)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/infra", s.handleObjectInfra)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/config", s.handleObjectConfig)
@@ -243,6 +258,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("POST /builds/{id}/scheduled-tasks", s.handleCreateScheduledTask)
 	mux.HandleFunc("POST /builds/{id}/scheduled-tasks/preview", s.handlePreviewScheduledTask)
 	mux.HandleFunc("GET /builds/{id}/scheduled-tasks", s.handleListScheduledTasks)
+	mux.HandleFunc("GET /builds/{id}/scheduled-tasks/{taskId}/runs", s.handleListScheduledTaskRuns)
 	mux.HandleFunc("POST /builds/{id}/scheduled-tasks/{taskId}/cancel", s.handleCancelScheduledTask)
 	mux.HandleFunc("POST /builds/{id}/teams/{team}/access", s.handleSetTeamAccess)
 	mux.HandleFunc("GET /builds/{id}/findings", s.handleListFindings)
@@ -250,6 +266,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /builds/{id}/topology", s.handleGetTopology)
 	mux.HandleFunc("GET /builds/{id}/external-access", s.handleListExternalAccess)
 	mux.HandleFunc("GET /builds/{id}/external-access/export", s.handleExportExternalAccess)
+	mux.HandleFunc("GET /builds/{id}/credentials", s.handleListCredentials)
 	mux.HandleFunc("GET /builds/{id}/artifacts", s.handleGetArtifacts)
 	mux.HandleFunc("POST /builds/{id}/artifacts/purge", s.handlePurgeArtifacts)
 	mux.HandleFunc("GET /builds/{id}/upcoming", s.handleGetUpcoming)

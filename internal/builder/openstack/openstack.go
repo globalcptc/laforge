@@ -38,6 +38,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/subnets"
 
+	"github.com/globalcptc/laforge/internal/agentdelivery"
 	"github.com/globalcptc/laforge/internal/builder"
 )
 
@@ -196,8 +197,14 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 			displayKey:      spec.DisplayName,
 		},
 	}
-	if spec.CloudInitUserData != "" {
-		opts.UserData = []byte(spec.CloudInitUserData)
+	if spec.AgentDownloadURL != "" {
+		// Nova user-data is consumed by the image's cloud-init (Linux) or
+		// cloudbase-init (Windows), the same forms LaForge's OpenStack images ship.
+		if agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows {
+			opts.UserData = []byte(agentdelivery.WindowsCloudbaseUserData(spec.AgentDownloadURL, spec.TempAdminPassword))
+		} else {
+			opts.UserData = []byte(agentdelivery.LinuxUserData(spec.AgentDownloadURL, spec.TempAdminPassword))
+		}
 	}
 	srv, err := servers.Create(ctx, b.compute, opts, nil).Extract()
 	if err != nil {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link } from '@tanstack/react-router'
-import { ChevronDown, GitCommitHorizontal, Hammer, IterationCw, MousePointerClick, Plus, Rocket, Lock, Unlock, Trash2, RefreshCw } from 'lucide-react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { ChevronDown, GitCommitHorizontal, Hammer, IterationCw, MousePointerClick, Plus, Rocket, Lock, Unlock, Star, Trash2, RefreshCw } from 'lucide-react'
 import {
   useBuilderConfigs,
   useBuilds,
@@ -10,6 +10,7 @@ import {
   useSyncConfiguredBuild,
   useDeleteConfiguredBuild,
   useSetConfiguredBuildAutoDeploy,
+  useSetConfiguredBuildFavorite,
   useSetLock,
 } from '../api/hooks'
 import { ApiError } from '../api/client'
@@ -18,7 +19,7 @@ import { NewBuildModal } from './NewBuildModal'
 import { StatusBadge } from './StatusBadge'
 import type { Build, ConfiguredBuild } from '../api/types'
 import { Button, Card, CardHeader, cn, Spinner, Table, TableScroller, Td, Th } from '../ui'
-import { BuilderKindBadge } from './BuilderKindBadge'
+import { BuilderPill } from './BuilderPill'
 
 // Which branch cards are twisted open persists across navigation and
 // reloads (direct product feedback), keyed by the configured-build id
@@ -63,6 +64,7 @@ export function ConfiguredBuilds({ repoId }: { repoId: string }) {
   const { data: allBuilds } = useBuilds(repoId)
   const { data: builderConfigs } = useBuilderConfigs()
   const kindByName = useMemo(() => new Map((builderConfigs ?? []).map((bc) => [bc.name, bc.kind])), [builderConfigs])
+  const colorByName = useMemo(() => new Map((builderConfigs ?? []).map((bc) => [bc.name, bc.color ?? ''])), [builderConfigs])
   const create = useCreateConfiguredBuild(repoId)
   const [showForm, setShowForm] = useState(false)
 
@@ -130,7 +132,14 @@ export function ConfiguredBuilds({ repoId }: { repoId: string }) {
       {builds && builds.length > 0 && (
         <div className="flex flex-col gap-2 p-3 pt-0">
           {builds.map((cb) => (
-            <ConfiguredBuildRow key={cb.id} cb={cb} repoId={repoId} builds={byConfigured.get(cb.id) ?? []} builderKind={kindByName.get(cb.builder_config_name)} />
+            <ConfiguredBuildRow
+              key={cb.id}
+              cb={cb}
+              repoId={repoId}
+              builds={byConfigured.get(cb.id) ?? []}
+              builderKind={kindByName.get(cb.builder_config_name)}
+              builderColor={colorByName.get(cb.builder_config_name)}
+            />
           ))}
           {unassociated.length > 0 && <UnassociatedBuilds repoId={repoId} builds={unassociated} />}
         </div>
@@ -139,20 +148,36 @@ export function ConfiguredBuilds({ repoId }: { repoId: string }) {
   )
 }
 
-function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: ConfiguredBuild; repoId: string; builds: Build[]; builderKind?: string }) {
+function ConfiguredBuildRow({
+  cb,
+  repoId,
+  builds,
+  builderKind,
+  builderColor,
+}: {
+  cb: ConfiguredBuild
+  repoId: string
+  builds: Build[]
+  builderKind?: string
+  builderColor?: string
+}) {
   const fmt = useTimeFormat()
+  const navigate = useNavigate()
   const trigger = useTriggerBuild(repoId)
   const sync = useSyncConfiguredBuild(repoId)
   const remove = useDeleteConfiguredBuild(repoId)
   const setAutoDeploy = useSetConfiguredBuildAutoDeploy(repoId)
   const setLock = useSetLock(repoId)
+  const favorite = useSetConfiguredBuildFavorite(repoId)
 
   // A configured build can't be removed while any of its builds owns or is
   // acting on real infrastructure -- the same "live" set the server enforces.
   const hasLiveBuild = builds.some((b) => ['deploying', 'building', 'finished', 'tearing_down'].includes(b.status))
   const [error, setError] = useState<string | null>(null)
-  const [justBuilt, setJustBuilt] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(() => readExpandedIds().has(cb.id))
+  // Only the two most recent builds show by default; older ones collapse behind a
+  // "show older" row so a long branch history doesn't fill the page.
+  const [showOlder, setShowOlder] = useState(false)
 
   function toggleExpanded() {
     setExpanded((v) => {
@@ -173,7 +198,7 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
   }
 
   async function onRemove() {
-    if (!window.confirm(`Remove the configured build for ${cb.environment_path} on ${cb.branch}? Existing builds are kept as history.`)) return
+    if (!window.confirm(`Remove the configured build for ${cb.environment_path} on ${cb.branch}? Its planned builds are discarded; deployed builds are kept as history.`)) return
     setError(null)
     try {
       await remove.mutateAsync(cb.id)
@@ -186,7 +211,9 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
     setError(null)
     try {
       const build = await trigger.mutateAsync(cb.id)
-      setJustBuilt(build.id)
+      // Take the operator straight to the new build -- Build Now is a deliberate
+      // "I want to watch this deploy" action, so land on its page.
+      navigate({ to: '/repos/$repoId/builds/$buildId', params: { repoId, buildId: build.id } })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Build failed')
     }
@@ -214,6 +241,16 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
     <div className="overflow-hidden rounded-token border border-border">
       <div className="flex items-center gap-3 px-3 py-2.5">
         <button
+          onClick={() => favorite.mutate({ configuredBuildId: cb.id, favorited: !cb.favorited })}
+          disabled={favorite.isPending}
+          title={cb.favorited ? 'Unfavorite — remove from the top of your list' : 'Favorite — pin to the top of your list'}
+          aria-label={cb.favorited ? 'Unfavorite this build' : 'Favorite this build'}
+          aria-pressed={cb.favorited ?? false}
+          className="shrink-0 text-fg-subtle hover:text-warning disabled:opacity-40"
+        >
+          <Star size={15} className={cn(cb.favorited && 'fill-warning text-warning')} />
+        </button>
+        <button
           onClick={toggleExpanded}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
           aria-expanded={expanded}
@@ -226,10 +263,8 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
               {lastBuild ? <StatusBadge status={lastBuild.status} /> : <span className="text-xs italic text-fg-subtle">no builds yet</span>}
             </div>
             <div className="mt-0.5 flex items-center gap-1.5 text-xs text-fg-muted">
-              <span className="truncate">
-                {cb.environment_path} · {cb.builder_config_name}
-              </span>
-              <BuilderKindBadge kind={builderKind} name={cb.builder_config_name} />
+              <span className="truncate">{cb.environment_path}</span>
+              <BuilderPill name={cb.builder_config_name} color={builderColor} kind={builderKind} size="xs" />
             </div>
           </div>
         </button>
@@ -270,12 +305,8 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
         </button>
 
         <div className="shrink-0 text-right">
-          {justBuilt ? (
-            <Link to="/repos/$repoId/builds/$buildId" params={{ repoId, buildId: justBuilt }} className="text-xs font-medium text-accent hover:underline">
-              View build →
-            </Link>
-          ) : cb.current_content_revision_id ? (
-            <Button variant="coral" size="sm" onClick={onBuild} disabled={trigger.isPending}>
+          {cb.current_content_revision_id ? (
+            <Button variant="pink" size="sm" onClick={onBuild} disabled={trigger.isPending}>
               {trigger.isPending ? 'Building…' : 'Build Now'}
             </Button>
           ) : null}
@@ -300,7 +331,7 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
           title={
             hasLiveBuild
               ? 'Cannot remove: this build has live builds (deploying, building, finished, or tearing down). Tear them down first.'
-              : 'Remove this configured build. Existing builds are kept as history.'
+              : 'Remove this configured build. Its planned builds are discarded; deployed builds are kept as history.'
           }
           className="flex shrink-0 items-center rounded-token-sm border border-border p-1 text-fg-muted hover:border-danger hover:text-danger disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-fg-muted"
           aria-label="Remove configured build"
@@ -323,11 +354,12 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
                     <Th className="pl-4">Environment</Th>
                     <Th>Commit</Th>
                     <Th>State</Th>
+                    <Th>Teams</Th>
                     <Th className="pr-4">Created</Th>
                   </tr>
                 </thead>
                 <tbody>
-                  {builds.map((b) => (
+                  {(showOlder ? builds : builds.slice(0, 2)).map((b) => (
                     <tr key={b.id}>
                       <Td className="pl-4">
                         <span className="flex items-center gap-1.5">
@@ -364,9 +396,20 @@ function ConfiguredBuildRow({ cb, repoId, builds, builderKind }: { cb: Configure
                       <Td>
                         <StatusBadge status={b.status} />
                       </Td>
+                      <Td className="font-mono text-fg">{b.team_count ?? '—'}</Td>
                       <Td className="pr-4 text-fg-muted">{fmt.dateTime(b.created_at)}</Td>
                     </tr>
                   ))}
+                  {builds.length > 2 && (
+                    <tr>
+                      <Td colSpan={5} className="pl-4">
+                        <button onClick={() => setShowOlder((v) => !v)} className="flex items-center gap-1 text-xs text-accent hover:underline">
+                          <ChevronDown size={13} className={cn('transition-transform', showOlder && 'rotate-180')} />
+                          {showOlder ? 'Show fewer' : `Show ${builds.length - 2} older build${builds.length - 2 === 1 ? '' : 's'}`}
+                        </button>
+                      </Td>
+                    </tr>
+                  )}
                 </tbody>
               </Table>
             </TableScroller>
@@ -415,6 +458,7 @@ function buildStatusColor(status: Build['status']): string {
     case 'tearing_down':
     case 'torn_down':
     case 'purged':
+    case 'discarded':
     default:
       return 'bg-border-strong'
   }
@@ -423,6 +467,11 @@ function buildStatusColor(status: Build['status']): string {
 // Builds with no configured build behind them (older builds, or ones
 // triggered before the branch was configured) -- kept visible in their own
 // collapsible bucket rather than dropped.
+// shortBranch trims a `refs/heads/` prefix for display; '' when unknown.
+function shortBranch(ref?: string | null): string {
+  return ref ? ref.replace(/^refs\/heads\//, '') : ''
+}
+
 function UnassociatedBuilds({ builds, repoId }: { builds: Build[]; repoId: string }) {
   const fmt = useTimeFormat()
   const key = `unassociated:${repoId}`
@@ -445,7 +494,9 @@ function UnassociatedBuilds({ builds, repoId }: { builds: Build[]; repoId: strin
               <thead>
                 <tr>
                   <Th className="pl-4">Environment</Th>
+                  <Th>Branch</Th>
                   <Th>State</Th>
+                  <Th>Teams</Th>
                   <Th className="pr-4">Created</Th>
                 </tr>
               </thead>
@@ -457,9 +508,11 @@ function UnassociatedBuilds({ builds, repoId }: { builds: Build[]; repoId: strin
                         {b.environment_name}
                       </Link>
                     </Td>
+                    <Td className="font-mono text-xs text-fg-muted">{shortBranch(b.branch) || '—'}</Td>
                     <Td>
                       <StatusBadge status={b.status} />
                     </Td>
+                    <Td className="font-mono text-fg">{b.team_count ?? '—'}</Td>
                     <Td className="pr-4 text-fg-muted">{fmt.dateTime(b.created_at)}</Td>
                   </tr>
                 ))}

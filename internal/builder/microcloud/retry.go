@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"syscall"
 	"time"
@@ -108,7 +109,14 @@ type pendingOperationError struct {
 func (e *pendingOperationError) Error() string { return e.Err.Error() }
 func (e *pendingOperationError) Unwrap() error { return e.Err }
 
-func (b *Builder) createInstance(ctx context.Context, name string, body interface{}) error {
+func (b *Builder) createInstance(ctx context.Context, name string, body interface{}, target string) error {
+	// Cluster-group placement (see placement.go): target is "@<group>" so LXD
+	// schedules the instance within that group, or "" to let LXD schedule with no
+	// explicit target. LaForge never names a specific member.
+	path := "/1.0/instances"
+	if target != "" {
+		path += "?target=" + url.QueryEscape(target)
+	}
 	var pending *pendingOperationError
 	checkExisting := false
 	return b.retryInstanceStep(ctx, name, "creating", func() error {
@@ -132,7 +140,7 @@ func (b *Builder) createInstance(ctx context.Context, name string, body interfac
 				return err
 			}
 		}
-		_, err := b.Client.post(ctx, "/1.0/instances", body)
+		_, err := b.Client.post(ctx, path, body)
 		checkExisting = true
 		errors.As(err, &pending)
 		var apiErr *APIError

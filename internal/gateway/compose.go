@@ -22,8 +22,9 @@ const composeWaitSeconds = 600
 // installDockerScript installs Docker Engine with the compose plugin when the
 // machine doesn't have both already. A machine booted from the builder's docker
 // base image has them and skips straight past it; this is for an operator's own
-// compose-host image that doesn't. Docker's own convenience script covers
-// the Linux distributions LaForge images use.
+// compose-host image that doesn't. Docker's convenience script covers Debian/
+// Ubuntu/etc.; Amazon Linux (which rejects that script) gets a dedicated path,
+// since it's the AMI the AWS compose-host one-click recommends.
 const installDockerScript = `set -e
 if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
   echo "docker and the compose plugin are already installed"
@@ -34,6 +35,21 @@ fi
 if command -v docker >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update && apt-get install -y docker-compose-v2 && docker compose version && exit 0
+fi
+# Amazon Linux (AL2/AL2023): get.docker.com fails with "Unsupported distribution
+# 'amzn'", so install Docker from the distro's own repo and drop in the compose
+# v2 plugin (the amzn docker package doesn't bundle it). uname -m already matches
+# the compose release asset suffix (x86_64 / aarch64).
+if [ -r /etc/os-release ] && . /etc/os-release && [ "$ID" = "amzn" ]; then
+  dnf install -y docker
+  systemctl enable --now docker
+  if ! docker compose version >/dev/null 2>&1; then
+    mkdir -p /usr/libexec/docker/cli-plugins
+    curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)" -o /usr/libexec/docker/cli-plugins/docker-compose
+    chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+  fi
+  docker compose version
+  exit 0
 fi
 if command -v curl >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com -o /tmp/laforge-get-docker.sh
@@ -142,12 +158,28 @@ func dockerDaemonLogScript(cl *loader.ContainerLogs) string {
 		daemon["log-opts"] = cl.Options
 	}
 	b, _ := json.Marshal(daemon)
+	// The log fields WITHOUT their enclosing braces, so the shell can splice a
+	// preserved storage-driver in front of them into one JSON object.
+	inner := strings.TrimSuffix(strings.TrimPrefix(string(b), "{"), "}")
+	// Preserve any storage-driver already pinned in daemon.json before rewriting
+	// it for logs. On old MicroCloud hosts the docker base image pins
+	// storage-driver=vfs (overlay2's kernel support is missing); blindly
+	// overwriting daemon.json here and restarting Docker would bounce it back
+	// onto the default overlay2 and the daemon would fail to start. The sed reads
+	// our own simple daemon.json, so the match is reliable.
 	return fmt.Sprintf(`set -e
 mkdir -p /etc/docker
-cat > /etc/docker/daemon.json <<'LAFORGE_EOF'
-%s
-LAFORGE_EOF
-systemctl restart docker 2>/dev/null || service docker restart || true`, string(b))
+sd=""
+if [ -f /etc/docker/daemon.json ]; then
+  sd=$(sed -n 's/.*"storage-driver"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /etc/docker/daemon.json | head -n1)
+fi
+{
+  printf '{'
+  [ -n "$sd" ] && printf '"storage-driver":"%%s",' "$sd"
+  printf '%%s' '%s'
+  printf '}\n'
+} > /etc/docker/daemon.json
+systemctl restart docker 2>/dev/null || service docker restart || true`, inner)
 }
 
 func shellQuote(s string) string {

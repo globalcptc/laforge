@@ -11,6 +11,7 @@ package gateway
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/globalcptc/laforge/internal/agentproto"
@@ -35,6 +36,7 @@ type expandOptions struct {
 	// project as the Docker daemon default log driver on its host so every
 	// service inherits it (see expandCompose). Nil disables forwarding.
 	containerLogs *loader.ContainerLogs
+	renderSecret  []byte
 }
 
 // WithRegistryAuth supplies stored registry credentials, looked up by host
@@ -43,6 +45,15 @@ type expandOptions struct {
 // materializer passes it, so credentials never reach a preview.
 func WithRegistryAuth(lookup func(host string) (RegistryAuth, bool)) Option {
 	return func(o *expandOptions) { o.registryAuth = lookup }
+}
+
+// WithRenderSecret supplies the build's password-generator secret
+// (db.RenderSecretForBuild), so passphrase/wordchain/randompassword and a
+// step's `generate:` give this build's real, stable values. Without it a
+// fixed preview secret is used -- fine for a preview or check, never for
+// commands an agent will run.
+func WithRenderSecret(secret []byte) Option {
+	return func(o *expandOptions) { o.renderSecret = secret }
 }
 
 // WithPublicAddress supplies the deployed box's public NIC address to templates.
@@ -68,6 +79,33 @@ type PlannedCommand struct {
 	// `script:`'s own `ignore_errors:` field, carried onto the execute command
 	// that actually runs it.
 	IgnoreErrors bool
+	// Reboots marks a command (a `script:` with `reboots: true`) that reboots the
+	// host itself, so the agent never reports a result for it. Carried onto the
+	// agent_task so the gateway completes it when the agent reconnects after the
+	// reboot, instead of re-leasing and re-running it. See internal/gateway's
+	// get-task handler.
+	Reboots bool
+	// MaxAttempts is the script's `retries:` override as an attempt cap
+	// (retries + 1), carried onto the agent_task. nil = the gateway default.
+	MaxAttempts *int32
+	// Milestone and StepScript name the authored step this command came from --
+	// its `milestone:` and, for a `script:` step, the script -- on every command
+	// it expanded into, so another host's wait_for can tell when the step is
+	// done. WaitFor is the step's own `wait_for:`, set only on its FIRST
+	// command: that row is the gate the rest of the host's steps queue behind.
+	// ExpandSteps sets all three; ExpandOneStep leaves them zero.
+	Milestone  string
+	StepScript string
+	WaitFor    []loader.WaitFor
+}
+
+// scriptMaxAttempts converts a script's `retries:` into an attempt cap.
+func scriptMaxAttempts(retries *int) *int32 {
+	if retries == nil || *retries < 0 {
+		return nil
+	}
+	n := int32(*retries + 1)
+	return &n
 }
 
 // languageInterpreter maps a script's language to how the agent should
@@ -127,12 +165,50 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		opt(&options)
 	}
 	ctx.PublicAddress = options.publicAddress
+	ctx.Secret = options.renderSecret
 
 	var out []PlannedCommand
 	var notes []string
+
+	// Admin-password backstop: apply the environment's root_password to the host's
+	// built-in admin account (Administrator on Windows, root on Linux) over the
+	// agent's own authenticated channel. The cloudbase-init builders inject this
+	// at boot from the image; a cloud builder like AWS has no cloudbase-init, so
+	// without this its Windows boxes would show a UI password the box never got.
+	// Running it through the agent gives every builder the same working admin
+	// login -- a harmless idempotent re-set where cloudbase-init already did it,
+	// the sole mechanism where it didn't -- and keeps the password OFF the box's
+	// user-data/metadata, where its own users could read it. Host-only (a
+	// container has no such login) and only when root_password is set. First, so
+	// the credential is usable early; ignore_errors so this safety net never fails
+	// an otherwise-good host (the builder's break-glass access still applies).
+	// Unconditional because ExpandSteps is only the whole-host expansion the deploy
+	// materializer and the UI step view share -- one-off operator and scheduled
+	// commands go through ExpandOneStep (their own ad_hoc lane), so they never pick
+	// this up and never re-set the password.
+	groupOffset := 0
+	if ctx.ObjectKind == "host" {
+		if rp := environmentRootPassword(c, envName); rp != "" {
+			adminUser := "root"
+			// Same coarse rule as agentdelivery.PlatformFor: an OS whose name
+			// contains "win" is Windows, everything else Linux.
+			if strings.Contains(strings.ToLower(ctx.OS), "win") {
+				adminUser = "Administrator"
+			}
+			out = append(out, PlannedCommand{
+				Command:      agentproto.CmdSetPassword,
+				Payload:      agentproto.SetPasswordPayload{Username: adminUser, Password: rp},
+				IgnoreErrors: true,
+				Group:        0,
+				GroupLabel:   "Set admin password",
+			})
+			groupOffset = 1
+		}
+	}
+
 	// A compose container's project comes up first, as its own group, so the
 	// container's authored steps (and their validators) run against a live stack.
-	first := 0
+	first := groupOffset
 	if ctx.Compose != "" {
 		var o expandOptions
 		for _, opt := range opts {
@@ -152,9 +228,10 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		}
 		for k := range cmds {
 			cmds[k].GroupLabel = ComposeGroupLabel
+			cmds[k].Group = groupOffset
 		}
 		out = append(out, cmds...)
-		first = 1
+		first = groupOffset + 1
 	}
 	for i, step := range ctx.Steps {
 		cmds, ns, err := ExpandOneStep(repoRoot, c, ctx, i, step, opts...)
@@ -164,14 +241,32 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		// Stamp every command this authored step expanded into with the same
 		// group, so its sub-commands stay visually together under one heading.
 		label := StepGroupLabel(step)
+		script, _ := step["script"].(string)
 		for k := range cmds {
 			cmds[k].Group = first + i
 			cmds[k].GroupLabel = label
+			cmds[k].Milestone = step.Milestone()
+			cmds[k].StepScript = script
+		}
+		if len(cmds) > 0 {
+			cmds[0].WaitFor = step.WaitFor()
 		}
 		out = append(out, cmds...)
 		notes = append(notes, ns...)
 	}
 	return out, notes, nil
+}
+
+// environmentRootPassword returns the named environment's root_password, or ""
+// when the environment isn't found or sets none. Same lookup the compose block
+// uses for container_logs.
+func environmentRootPassword(c *loader.Content, envName string) string {
+	for i := range c.Environments {
+		if c.Environments[i].Name == envName {
+			return c.Environments[i].RootPass
+		}
+	}
+	return ""
 }
 
 // ComposeGroupLabel heads the commands that start a compose container's project.
@@ -276,7 +371,8 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 		// `args: ["--seed", "3"]`.
 		execArgs := append(append([]string{}, prefixArgs...), path)
 		execArgs = append(execArgs, script.Args...)
-		out = append(out, PlannedCommand{Command: agentproto.CmdExecute, IgnoreErrors: ignoreErrors, Payload: agentproto.ExecutePayload{
+		maxAttempts := scriptMaxAttempts(script.Retries)
+		out = append(out, PlannedCommand{Command: agentproto.CmdExecute, IgnoreErrors: ignoreErrors, Reboots: script.Reboots, MaxAttempts: maxAttempts, Payload: agentproto.ExecutePayload{
 			Command: interp, Args: execArgs, TimeoutSec: script.Timeout,
 		}})
 		// A script's OWN `validate:` block runs after its execution, on every
@@ -291,7 +387,7 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 			if err != nil {
 				return nil, nil, fmt.Errorf("step %d (script %s) validate: %w", i, name, err)
 			}
-			out = append(out, PlannedCommand{Command: agentproto.CmdValidate, IgnoreErrors: ignoreErrors, Payload: agentproto.ValidatePayload{Checks: checks}})
+			out = append(out, PlannedCommand{Command: agentproto.CmdValidate, IgnoreErrors: ignoreErrors, MaxAttempts: maxAttempts, Payload: agentproto.ValidatePayload{Checks: checks}})
 		}
 
 	case "run":
@@ -335,7 +431,7 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 		}})
 
 	case "create_user":
-		pw, err := renderedField(ctx, c, step, "create_user", "password")
+		pw, err := passwordField(ctx, c, step, "create_user")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -345,7 +441,7 @@ func ExpandOneStep(repoRoot string, c *loader.Content, ctx *render.Context, i in
 		}})
 
 	case "set_password":
-		pw, err := renderedField(ctx, c, step, "set_password", "password")
+		pw, err := passwordField(ctx, c, step, "set_password")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -468,6 +564,45 @@ func strSliceField(m map[string]interface{}, key string) []string {
 // `laforge check`, but returns the single rendered value ExpandSteps
 // actually needs to build a command payload rather than only collecting
 // errors.
+// passwordField is a create_user/set_password step's password: either its
+// `password:` (templated, so `{{ passphrase 3 }}` works there too) or its
+// `generate: {type, size, label}` -- sugar for the same generator, so
+// `generate: {type: passphrase, size: 3}` and `{{ passphrase 3 }}` on one host
+// are the same password (render.GeneratePassword).
+func passwordField(ctx *render.Context, c *loader.Content, step loader.Step, action string) (string, error) {
+	g := asMap(asMap(step[action])["generate"])
+	if g == nil {
+		return renderedField(ctx, c, step, action, "password")
+	}
+	size, ok := intValue(g["size"])
+	if !ok {
+		return "", fmt.Errorf("%s.generate.size must be a whole number", action)
+	}
+	pw, err := render.GeneratePassword(ctx, strField(g, "type"), size, strField(g, "label"))
+	if err != nil {
+		return "", fmt.Errorf("%s.generate: %w", action, err)
+	}
+	return pw, nil
+}
+
+// intValue reads a YAML/JSON number as an int (decoders hand back int or
+// float64 depending on the path), rejecting fractions.
+func intValue(v interface{}) (int, bool) {
+	switch n := v.(type) {
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	case uint64:
+		return int(n), true
+	case float64:
+		if n == float64(int(n)) {
+			return int(n), true
+		}
+	}
+	return 0, false
+}
+
 func renderedField(ctx *render.Context, c *loader.Content, step loader.Step, action, field string) (string, error) {
 	m := asMap(step[action])
 	raw, _ := m[field].(string)

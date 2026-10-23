@@ -24,6 +24,11 @@ import (
 // cross-network ingress. Idempotent. Mirrors incus; needs its own live smoke-test
 // against a real MicroCloud (the mechanics are Incus-verified with real packets).
 func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, networks []builder.NetworkAccess) error {
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	incusName := make(map[string]string, len(networks))
 	cidr := make(map[string]string, len(networks))
 	for _, na := range networks {
@@ -142,11 +147,29 @@ func nicIngressRules(sources []string, h builder.HostAccess) []map[string]interf
 
 // ensureACLObject creates or replaces (idempotently) a network-ACL object.
 func (b *Builder) ensureACLObject(ctx context.Context, name, description string, ingress []map[string]interface{}) error {
+	return b.ensureACLObjectFull(ctx, name, description, ingress, nil)
+}
+
+// ensureACLObjectFull is ensureACLObject with explicit egress rules too -- used
+// by CloseAccess, the one ACL that whitelists egress (gateway + intra-env) under
+// a NIC-level default-deny egress.
+func (b *Builder) ensureACLObjectFull(ctx context.Context, name, description string, ingress, egress []map[string]interface{}) error {
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+	if ingress == nil {
+		ingress = []map[string]interface{}{}
+	}
+	if egress == nil {
+		egress = []map[string]interface{}{}
+	}
 	acl := map[string]interface{}{
 		"name":        name,
 		"description": description,
 		"ingress":     ingress,
-		"egress":      []map[string]interface{}{},
+		"egress":      egress,
 		"config":      map[string]string{},
 	}
 	if _, err := b.Client.post(ctx, "/1.0/network-acls", acl); err != nil {
@@ -181,25 +204,9 @@ func (b *Builder) ensureHostPortACL(ctx context.Context, ownCIDR string, visible
 		if err != nil {
 			return fmt.Errorf("reading instance %s: %w", h.ExternalRef, err)
 		}
-		// A concurrent access-window task may have closed the NIC. Update the
-		// saved device, preserving the closed state and all other devices.
-		if raw, closed := full.Config[removedNICKey]; closed {
-			var saved savedNIC
-			if err := json.Unmarshal([]byte(raw), &saved); err != nil {
-				return err
-			}
-			if saved.Device == nil {
-				return fmt.Errorf("closed primary NIC has no saved device")
-			}
-			saved.Device["security.acls"] = name
-			saved.Instance = true
-			encoded, err := json.Marshal(saved)
-			if err != nil {
-				return err
-			}
-			_, err = b.Client.do(ctx, "PATCH", "/1.0/instances/"+h.ExternalRef, map[string]interface{}{"config": map[string]string{removedNICKey: string(encoded)}}, requestOptions{ifMatch: full.etag})
-			return err
-		}
+		// Access open/close no longer touches eth0 (it works at the network level
+		// and on the public NIC's ACL -- see access.go), so this only has to
+		// attach the host port ACL to eth0.
 		eth0 := map[string]interface{}{}
 		if raw, ok := full.Devices["eth0"]; ok {
 			if err := json.Unmarshal(raw, &eth0); err != nil {

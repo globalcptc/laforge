@@ -5,10 +5,14 @@ import type {
   AdHocResult,
   CertStatus,
   ExternalAccessEntry,
+  ExternalAccessExportRow,
   PowerActionResponse,
   RebuildResponse,
   AdHocTarget,
   AgentHeartbeat,
+  BuilderStats,
+  BuilderUsage,
+  BuildReadiness,
   Build,
   BuildDetail,
   BuilderConfig,
@@ -38,11 +42,13 @@ import type {
   Person,
   PublicConfig,
   RenderedStep,
+  CloudInitView,
   StepStatus,
   ObjectConfig,
   ObjectInfra,
   Repository,
   ScheduledTask,
+  ScheduledTaskRun,
   SchedulePreview,
   Task,
   Team,
@@ -100,6 +106,17 @@ export function useDismissAttention() {
         category: v.category,
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['home'] }),
+  })
+}
+
+// useExternalAccessExport is the credentialed export (endpoints plus each host's
+// current admin login) -- only fetched while something needs it (the scoring
+// export wizard), since it carries passwords.
+export function useExternalAccessExport(buildId: string | undefined, enabled: boolean) {
+  return useQuery<ExternalAccessExportRow[]>({
+    queryKey: ['external-access-export', buildId],
+    queryFn: () => api.get(`/builds/${buildId}/external-access/export`),
+    enabled: !!buildId && enabled,
   })
 }
 
@@ -175,6 +192,20 @@ export function useSetConfiguredBuildAutoDeploy(repoId: string) {
   return useMutation({
     mutationFn: ({ configuredBuildId, enabled }: { configuredBuildId: string; enabled: boolean }) =>
       api.post<ConfiguredBuild>(`/configured-builds/${configuredBuildId}/auto-deploy`, { enabled }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['configured-builds', repoId] }),
+  })
+}
+
+// Per-user favorite toggle for a configured build. favorited=true stars it
+// (POST), false unstars it (DELETE); the list refetches so favorites float to
+// the top (the server sorts favorited-first).
+export function useSetConfiguredBuildFavorite(repoId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ configuredBuildId, favorited }: { configuredBuildId: string; favorited: boolean }) =>
+      favorited
+        ? api.post<void>(`/configured-builds/${configuredBuildId}/favorite`)
+        : api.delete<void>(`/configured-builds/${configuredBuildId}/favorite`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['configured-builds', repoId] }),
   })
 }
@@ -257,6 +288,53 @@ export function useTeardownBuild(buildId: string) {
   return useMutation({
     mutationFn: () => api.post<Build>(`/builds/${buildId}/teardown`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['build', buildId] }),
+  })
+}
+
+// useRetryTeardown is the explicit retry for a teardown that stopped on a
+// permanent builder error (objects in destroy_failed, the build's
+// reconcile_error banner saying why): after fixing the builder, every stuck
+// object goes back to destroying and a fresh destroy is requested at once.
+// levelManage on the backend, like teardown itself.
+export function useRetryTeardown(buildId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<Build>(`/builds/${buildId}/teardown/retry`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['build', buildId] })
+      qc.invalidateQueries({ queryKey: ['objects', buildId] })
+    },
+  })
+}
+
+// useForceTornDown is the admin escape hatch for a teardown that cannot finish:
+// the build is declared torn_down and its remaining objects recorded destroyed
+// WITHOUT any hoster call. Instance-admin-only on the backend; the build row
+// and its history stay (unlike useForceDeleteBuild).
+export function useForceTornDown(buildId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post<Build>(`/builds/${buildId}/teardown/force`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['build', buildId] })
+      qc.invalidateQueries({ queryKey: ['objects', buildId] })
+    },
+  })
+}
+
+// useForceDeleteBuild is the admin "force remove from database" escape hatch for
+// a DEAD build (its real hosts were deleted out-of-band, so teardown can never
+// finish). It deletes the build + all runtime rows, cascade, and touches NO
+// hoster -- so it's instance-admin-only on the backend and buried behind a
+// type-to-confirm danger zone in the UI. Invalidates the repo's build list.
+export function useForceDeleteBuild(buildId: string, repoId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete<void>(`/builds/${buildId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['builds', repoId] })
+      qc.removeQueries({ queryKey: ['build', buildId] })
+    },
   })
 }
 
@@ -379,6 +457,19 @@ export function useObjectRender(buildId: string | undefined, objectId: string | 
   return useQuery<RenderedStep[]>({
     queryKey: ['object-render', buildId, objectId],
     queryFn: () => api.get(`/builds/${buildId}/objects/${objectId}/render`),
+    enabled: !!buildId && !!objectId && enabled,
+  })
+}
+
+// useObjectCloudInit is the companion to useObjectRender: the first-boot
+// cloud-init / cloudbase-init / EC2Launch user-data (and config-drive meta-data)
+// LaForge delivers before any step runs -- what you need when the agent hasn't
+// run and you're debugging why. Same server-side content resolve as render, so
+// it's gated behind the Render tab being open too.
+export function useObjectCloudInit(buildId: string | undefined, objectId: string | undefined, enabled: boolean) {
+  return useQuery<CloudInitView>({
+    queryKey: ['object-cloud-init', buildId, objectId],
+    queryFn: () => api.get(`/builds/${buildId}/objects/${objectId}/cloud-init`),
     enabled: !!buildId && !!objectId && enabled,
   })
 }
@@ -684,17 +775,27 @@ export function useCheckBuilderToken() {
 export function useConnectBuilder() {
   return useMutation({
     // kind selects the builder type's onboarding (the backend dispatches through
-    // the builder.Onboarder registry); trust-token kinds send a token.
-    mutationFn: (req: { kind: string; token: string; address?: string }) => api.post<BuilderConnection>('/builder-connections', req),
+    // the builder.Onboarder registry); trust-token kinds send a token, the AWS
+    // kind sends an access key (validated and stored server-side).
+    mutationFn: (req: { kind: string; token?: string; address?: string; aws_access_key_id?: string; aws_secret_access_key?: string }) =>
+      api.post<BuilderConnection>('/builder-connections', req),
   })
 }
 
 // builderConnectionPath is the re-discovery URL for a stored connection; project
 // (MicroCloud) scopes the images to the project the builder uses.
-export function builderConnectionPath(credentialId: string, kind?: string, project?: string): string {
+export function builderConnectionPath(
+  credentialId: string,
+  kind?: string,
+  project?: string,
+  opts?: { region?: string; imageQuery?: string; imageIds?: string[] },
+): string {
   const q = new URLSearchParams()
   if (kind) q.set('kind', kind)
   if (project) q.set('project', project)
+  if (opts?.region) q.set('region', opts.region)
+  if (opts?.imageQuery) q.set('q', opts.imageQuery)
+  if (opts?.imageIds?.length) q.set('image_ids', opts.imageIds.join(','))
   const qs = q.toString()
   return `/builder-connections/${credentialId}${qs ? `?${qs}` : ''}`
 }
@@ -855,6 +956,18 @@ export function useScheduledTasks(buildId: string | undefined) {
   })
 }
 
+// useScheduledTaskRuns fetches the agent_task runs a scheduled task spawned
+// (console output + status), for the per-team run modal. Enabled only while the
+// modal is open; polls while there's an in-flight run.
+export function useScheduledTaskRuns(buildId: string, taskId: string | null) {
+  return useQuery<ScheduledTaskRun[]>({
+    queryKey: ['scheduled-task-runs', buildId, taskId],
+    queryFn: () => api.get(`/builds/${buildId}/scheduled-tasks/${taskId}/runs`),
+    enabled: !!taskId,
+    refetchInterval: 5_000,
+  })
+}
+
 export function useCreateScheduledTask(buildId: string) {
   const qc = useQueryClient()
   return useMutation({
@@ -929,4 +1042,37 @@ export function useLiveEvents(buildId: string | undefined, onEvent?: (ev: LFEven
   }, [buildId])
 
   return { connected }
+}
+
+// Builder backend-health stats, polled a little faster than the 120s collector
+// writes so the page stays reasonably live. Disabled until a builder name is set.
+export function useBuilderStats(name: string | undefined) {
+  return useQuery<BuilderStats>({
+    queryKey: ['builder-stats', name],
+    queryFn: () => api.get(`/builder-configs/${encodeURIComponent(name ?? '')}/stats`),
+    enabled: !!name,
+    refetchInterval: 60_000,
+  })
+}
+
+// Builder usage summary (active builds, resource counts, public endpoints).
+export function useBuilderUsage(name: string | undefined) {
+  return useQuery<BuilderUsage>({
+    queryKey: ['builder-usage', name],
+    queryFn: () => api.get(`/builder-configs/${encodeURIComponent(name ?? '')}/usage`),
+    enabled: !!name,
+    refetchInterval: 30_000,
+  })
+}
+
+// Pre-deploy readiness: whether this build's demand would exceed its builder's
+// account quotas (AWS only; other kinds return checked=false). Advisory -- shown
+// next to Deploy, never blocks it. Fetched once; quotas don't move minute to
+// minute, so no refetch interval.
+export function useBuildReadiness(buildId: string | undefined, enabled = true) {
+  return useQuery<BuildReadiness>({
+    queryKey: ['build-readiness', buildId],
+    queryFn: () => api.get(`/builds/${buildId}/readiness`),
+    enabled: !!buildId && enabled,
+  })
 }

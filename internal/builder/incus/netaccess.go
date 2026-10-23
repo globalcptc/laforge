@@ -12,18 +12,8 @@ import (
 	"github.com/globalcptc/laforge/internal/builder"
 )
 
-// ConfigureNetworkAccess enforces a team's `visible_from` policy on Incus/OVN,
-// exactly as proven live: full-mesh peer the team's OVN networks so they route (peering only
-// within the team is the team-isolation boundary -- CIDRs are identical across
-// teams, so nothing else may be), then give each network an ACL that denies
-// cross-network ingress by default and allows ingress only from the CIDRs of the
-// networks in its VisibleFrom, further scoped to each host's declared `ports:` (a
-// host is reachable from an allowed sibling only on the TCP/UDP ports it lists; a
-// host with no ports on none). Same-network traffic and egress (internet, the
-// LaForge gateway) are unaffected -- verified: OVN's default-deny ingress does not
-// touch same-switch traffic, so the port firewall applies to cross-network
-// (routed) ingress; egress defaults to allow. Idempotent: peers and ACLs are
-// ensured, re-runs converge.
+// ConfigureNetworkAccess routes a team's networks (OVN peers or native host
+// routing) and attaches per-NIC ACLs for declared private ports and visible_from.
 func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, networks []builder.NetworkAccess) error {
 	// The real Incus names + CIDRs, keyed by the ExternalName the caller used.
 	incusName := make(map[string]string, len(networks))
@@ -35,13 +25,15 @@ func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, netwo
 
 	// 1. Full-mesh peering: every ordered pair, so both half-peers exist and the
 	//    peering completes (OVN needs a peer object on each side).
-	for _, a := range networks {
-		for _, bnet := range networks {
-			if a.ExternalName == bnet.ExternalName {
-				continue
-			}
-			if err := b.ensurePeer(ctx, incusName[a.ExternalName], incusName[bnet.ExternalName]); err != nil {
-				return fmt.Errorf("peering %s -> %s for team %s: %w", incusName[a.ExternalName], incusName[bnet.ExternalName], team, err)
+	if b.Config.NetworkMode() == "ovn" {
+		for _, a := range networks {
+			for _, bnet := range networks {
+				if a.ExternalName == bnet.ExternalName {
+					continue
+				}
+				if err := b.ensurePeer(ctx, incusName[a.ExternalName], incusName[bnet.ExternalName]); err != nil {
+					return fmt.Errorf("peering %s -> %s for team %s: %w", incusName[a.ExternalName], incusName[bnet.ExternalName], team, err)
+				}
 			}
 		}
 	}
@@ -93,13 +85,15 @@ func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, netwo
 // step ignores not-found, since teardown must converge even from a partial
 // state. Called by DestroyNetwork.
 func (b *Builder) teardownNetworkAccess(ctx context.Context, netIncusName string) {
-	// Delete every peer this network has.
-	if raw, err := b.Client.get(ctx, "/1.0/networks/"+netIncusName+"/peers"); err == nil {
-		var urls []string
-		if json.Unmarshal(raw, &urls) == nil {
-			for _, u := range urls {
-				// u is a URL like /1.0/networks/<net>/peers/<name>; delete it directly.
-				b.Client.delete(ctx, u)
+	// Native bridges route on the host and have no peer objects.
+	if b.Config.NetworkMode() == "ovn" {
+		if raw, err := b.Client.get(ctx, "/1.0/networks/"+netIncusName+"/peers"); err == nil {
+			var urls []string
+			if json.Unmarshal(raw, &urls) == nil {
+				for _, u := range urls {
+					// u is a URL like /1.0/networks/<net>/peers/<name>; delete it directly.
+					b.Client.delete(ctx, u)
+				}
 			}
 		}
 	}
@@ -165,11 +159,24 @@ func (b *Builder) ensurePeer(ctx context.Context, from, to string) error {
 // set where the ACL is attached). PUT is a full replace, so a changed policy
 // converges on re-run.
 func (b *Builder) ensureACLObject(ctx context.Context, name, description string, ingress []map[string]interface{}) error {
+	return b.ensureACLObjectFull(ctx, name, description, ingress, nil)
+}
+
+// ensureACLObjectFull is ensureACLObject with explicit egress rules too -- used
+// by CloseAccess, the one ACL that whitelists egress (gateway + intra-env) under
+// a NIC-level default-deny egress, where the other ACLs only ever allow ingress.
+func (b *Builder) ensureACLObjectFull(ctx context.Context, name, description string, ingress, egress []map[string]interface{}) error {
+	if ingress == nil {
+		ingress = []map[string]interface{}{}
+	}
+	if egress == nil {
+		egress = []map[string]interface{}{}
+	}
 	acl := map[string]interface{}{
 		"name":        name,
 		"description": description,
 		"ingress":     ingress,
-		"egress":      []map[string]interface{}{},
+		"egress":      egress,
 		"config":      map[string]string{},
 	}
 	if _, err := b.Client.post(ctx, "/1.0/network-acls", acl); err != nil {
@@ -213,27 +220,5 @@ func (b *Builder) ensureHostPortACL(ctx context.Context, ownCIDR string, visible
 	if err := b.ensureACLObject(ctx, name, "LaForge port firewall for "+h.ExternalRef, nicIngressRules(sources, h)); err != nil {
 		return err
 	}
-	// Attach at the instance's eth0 with a NIC-level default-deny ingress. GET
-	// the current instance-level eth0 device and merge the ACL keys in, so the
-	// network/ipv4.address config deployInstance set stays intact.
-	full, _, err := b.getInstancePut(ctx, h.ExternalRef)
-	if err != nil {
-		return fmt.Errorf("reading instance %s: %w", h.ExternalRef, err)
-	}
-	eth0 := map[string]interface{}{}
-	if raw, ok := full.Devices["eth0"]; ok {
-		if err := json.Unmarshal(raw, &eth0); err != nil {
-			return fmt.Errorf("decoding eth0 of %s: %w", h.ExternalRef, err)
-		}
-	}
-	if eth0["type"] == nil {
-		eth0["type"] = "nic"
-	}
-	eth0["security.acls"] = name
-	return retryOnBusy(ctx, func() error {
-		_, err := b.Client.patch(ctx, "/1.0/instances/"+h.ExternalRef, map[string]interface{}{
-			"devices": map[string]interface{}{"eth0": eth0},
-		})
-		return err
-	})
+	return b.attachNICACL(ctx, h.ExternalRef, name)
 }

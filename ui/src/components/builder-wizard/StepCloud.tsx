@@ -1,59 +1,58 @@
-import { Info, Plus, Trash2 } from 'lucide-react'
-import { Button, Input } from '../../ui'
-import type { ImageDraft, Kind, SizeDraft } from './model'
+import { useEffect, useRef, useState } from 'react'
+import { Check, Info, Plus, Trash2 } from 'lucide-react'
+import { Button, Input, Spinner } from '../../ui'
+import { api, ApiError } from '../../api/client'
+import { useConnectBuilder, builderConnectionPath } from '../../api/hooks'
+import { SearchSelect, type SearchOption } from '../SearchSelect'
+import type { AwsConfig, BuilderConnection, Discovery, ImageInfo } from '../../api/types'
+import type { ImageDraft, SizeDraft } from './model'
 
-// StepCloud configures a cloud builder (AWS/OpenStack). There is no host to
-// connect or place: credentials and region come from the runner's environment.
-// All the config here is two maps -- a LaForge `os` name to a cloud image id
-// (AMI / Glance), and a `size` name to a cloud instance type / flavor. They are
-// stored in the same shared image/size columns every builder kind uses.
+// The reserved builder-image name a compose container boots from -- mirrors
+// internal/builder.ComposeHostImage. On a cloud builder it maps to a
+// Docker-capable image (an AMI on AWS); there is no base image to build.
+const COMPOSE_HOST_IMAGE = 'compose-host'
+
+// StepCloud configures an OpenStack builder (the typed-id form): credentials and
+// region come from the runner environment, and the two maps are entered by hand
+// -- OpenStack has no stored credential to discover from yet. AWS uses the
+// discovery-driven StepCloud* steps below instead.
 export function StepCloud({
-  kind,
   images,
   sizes,
   onImages,
   onSizes,
 }: {
-  kind: Kind
   images: ImageDraft[]
   sizes: SizeDraft[]
   onImages: (images: ImageDraft[]) => void
   onSizes: (sizes: SizeDraft[]) => void
 }) {
-  const isAws = kind === 'aws'
-  const imageIdLabel = isAws ? 'AMI id' : 'Image id'
-  const imageIdPlaceholder = isAws ? 'ami-0abc123…' : 'Glance image id'
-  const sizeLabel = isAws ? 'Instance type' : 'Flavor'
-  const sizePlaceholder = isAws ? 't3.medium' : 'm1.medium'
-  const envHint = isAws
-    ? 'Credentials and region are read from the runner’s AWS environment (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_REGION, or an instance profile). Nothing secret is stored here.'
-    : 'Credentials and region are read from the runner’s OpenStack environment (OS_AUTH_URL / OS_USERNAME / OS_PASSWORD / OS_PROJECT_NAME / OS_REGION_NAME). Nothing secret is stored here.'
-
   function setImage(i: number, patch: Partial<ImageDraft>) {
     onImages(images.map((img, idx) => (idx === i ? { ...img, ...patch } : img)))
   }
   function setSize(i: number, patch: Partial<SizeDraft>) {
     onSizes(sizes.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
   }
-
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-start gap-2 rounded-token border border-border bg-surface-sunken px-3 py-2 text-xs text-fg-muted">
         <Info size={14} className="mt-0.5 shrink-0 text-fg-subtle" />
-        <span>{envHint}</span>
+        <span>
+          Credentials and region are read from the runner’s OpenStack environment (OS_AUTH_URL / OS_USERNAME /
+          OS_PASSWORD / OS_PROJECT_NAME / OS_REGION_NAME). Nothing secret is stored here.
+        </span>
       </div>
-
       <section>
         <div className="mb-1 text-sm font-medium text-fg">Images</div>
         <div className="mb-2 text-xs text-fg-muted">
-          Map each LaForge <code className="font-mono">os</code> name (as content uses it) to the cloud image to launch it from.
+          Map each LaForge <code className="font-mono">os</code> name to the Glance image id to launch it from.
         </div>
         <div className="flex flex-col gap-2">
           {images.map((img, i) => (
             <div key={i} className="flex items-center gap-2">
               <Input value={img.name} onChange={(e) => setImage(i, { name: e.target.value })} placeholder="ubuntu22" className="flex-1" />
               <span className="text-fg-subtle">→</span>
-              <Input value={img.fingerprint} onChange={(e) => setImage(i, { fingerprint: e.target.value })} placeholder={imageIdPlaceholder} className="flex-1 font-mono" aria-label={imageIdLabel} />
+              <Input value={img.fingerprint} onChange={(e) => setImage(i, { fingerprint: e.target.value })} placeholder="Glance image id" className="flex-1 font-mono" aria-label="Image id" />
               <Button variant="ghost" size="icon" onClick={() => onImages(images.filter((_, idx) => idx !== i))} aria-label="Remove image">
                 <Trash2 size={14} />
               </Button>
@@ -66,18 +65,17 @@ export function StepCloud({
           </div>
         </div>
       </section>
-
       <section>
         <div className="mb-1 text-sm font-medium text-fg">Sizes</div>
         <div className="mb-2 text-xs text-fg-muted">
-          Map each LaForge <code className="font-mono">size</code> name to a {sizeLabel.toLowerCase()}.
+          Map each LaForge <code className="font-mono">size</code> name to a flavor.
         </div>
         <div className="flex flex-col gap-2">
           {sizes.map((s, i) => (
             <div key={i} className="flex items-center gap-2">
               <Input value={s.name} onChange={(e) => setSize(i, { name: e.target.value })} placeholder="small" className="flex-1" />
               <span className="text-fg-subtle">→</span>
-              <Input value={s.type ?? ''} onChange={(e) => setSize(i, { type: e.target.value })} placeholder={sizePlaceholder} className="flex-1 font-mono" aria-label={sizeLabel} />
+              <Input value={s.type ?? ''} onChange={(e) => setSize(i, { type: e.target.value })} placeholder="m1.medium" className="flex-1 font-mono" aria-label="Flavor" />
               <Button variant="ghost" size="icon" onClick={() => onSizes(sizes.filter((_, idx) => idx !== i))} aria-label="Remove size">
                 <Trash2 size={14} />
               </Button>
@@ -90,6 +88,453 @@ export function StepCloud({
           </div>
         </div>
       </section>
+    </div>
+  )
+}
+
+// ---- AWS discovery-driven steps -----------------------------------------
+
+function infoBox(children: React.ReactNode) {
+  return (
+    <div className="flex items-start gap-2 rounded-token border border-border bg-surface-sunken px-3 py-2 text-xs text-fg-muted">
+      <Info size={14} className="mt-0.5 shrink-0 text-fg-subtle" />
+      <span>{children}</span>
+    </div>
+  )
+}
+
+// Field is a labelled input with a one-line explanation under it, so every AWS
+// setting says what it is and where to get it inline (not only in the doc).
+function Field({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1 text-xs text-fg-muted">
+      {label}
+      {children}
+      <span className="text-fg-subtle">{hint}</span>
+    </label>
+  )
+}
+
+// StepCloudConnect enrolls the AWS access key (validated + stored server-side;
+// the wizard keeps only the credential id). It must happen first -- every later
+// step discovers against this credential.
+export function StepCloudConnect({ credentialId, account, onConnected }: { credentialId?: string; account?: string; onConnected: (id: string | undefined, account?: string) => void }) {
+  const connect = useConnectBuilder()
+  const [keyId, setKeyId] = useState('')
+  const [secret, setSecret] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  // Pre-flight permission warnings from the connect response (the builder
+  // simulates its required IAM actions against the key and reports any missing).
+  const [warnings, setWarnings] = useState<string[]>([])
+
+  async function onConnect() {
+    setError(null)
+    try {
+      const conn = await connect.mutateAsync({ kind: 'aws', aws_access_key_id: keyId.trim(), aws_secret_access_key: secret.trim() })
+      setWarnings(conn.discovery?.warnings ?? [])
+      // credential.server_name carries the AWS account id (captured by STS at connect).
+      onConnected(conn.credential.id, conn.credential.server_name || undefined)
+      setKeyId('')
+      setSecret('')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Connecting failed')
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {infoBox(
+        <>
+          Enter an IAM access key LaForge authenticates as. It is validated and stored server-side; only its id is kept
+          in this form afterward. The exact IAM permissions (and a ready-to-deploy CloudFormation template) are in{' '}
+          <code className="font-mono">docs/builders/aws.md</code>.
+        </>,
+      )}
+      {credentialId ? (
+        <>
+          <div className="flex items-center justify-between gap-2 rounded-token border border-success/40 bg-success-soft px-3 py-2 text-xs">
+            <span className="flex items-center gap-2 text-fg">
+              <Check size={14} className="text-success" /> Access key connected and stored{account ? ` (account ${account})` : ''}.
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => onConnected(undefined, undefined)}>
+              Change
+            </Button>
+          </div>
+          {warnings.length > 0 && (
+            <div className="rounded-token border border-warning/40 bg-warning-soft px-3 py-2 text-xs text-fg">
+              <div className="mb-1 font-medium">Permission check</div>
+              {warnings.map((w) => (
+                <div key={w} className="text-fg-muted">{w}</div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1 text-xs text-fg-muted">
+            Access Key ID
+            <Input value={keyId} onChange={(e) => setKeyId(e.target.value)} placeholder="AKIA…" className="font-mono" />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-fg-muted">
+            Secret Access Key
+            <Input type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="••••••••••••••••" className="font-mono" />
+          </label>
+          {error && <div className="rounded-token border border-danger/40 bg-danger-soft px-3 py-2 text-xs text-fg">{error}</div>}
+          <div>
+            <Button variant="secondary" size="sm" onClick={onConnect} disabled={!keyId.trim() || !secret.trim() || connect.isPending}>
+              {connect.isPending ? 'Connecting…' : 'Connect'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// fetchDiscovery is the shared imperative rediscovery call (mirrors
+// StepPlacement's ProjectPicker.choose): one request, result stored by the caller.
+async function fetchDiscovery(credentialId: string, region?: string, imageQuery?: string, imageIds?: string[]): Promise<Discovery> {
+  const conn = await api.get<BuilderConnection>(builderConnectionPath(credentialId, 'aws', undefined, { region, imageQuery, imageIds }))
+  return conn.discovery
+}
+
+// amiMetaLine is the one-line AMI summary for the picker dropdown: publisher ·
+// architecture · platform · created date · description.
+function amiMetaLine(img: ImageInfo): string {
+  return [
+    img.properties.owner,
+    img.architecture,
+    img.properties.os,
+    img.properties.created ? `created ${img.properties.created.slice(0, 10)}` : '',
+    img.properties.description,
+  ]
+    .map((s) => (s ?? '').trim())
+    .filter(Boolean)
+    .join(' · ')
+}
+
+// AmiDetails is the full, at-rest view of a configured AMI, shown under its row
+// so you can see what it is without opening the dropdown or the AWS console. A
+// non-"available" state is called out in danger -- it won't launch.
+function AmiDetails({ img }: { img: ImageInfo }) {
+  const rows = ([
+    ['Name', img.aliases?.[0] ?? ''],
+    ['Publisher', img.properties.owner ?? ''],
+    ['Architecture', img.architecture ?? ''],
+    ['Platform', img.properties.os ?? ''],
+    ['Created', img.properties.created ? img.properties.created.slice(0, 10) : ''],
+    ['Description', img.properties.description ?? ''],
+  ] as Array<[string, string]>).filter(([, v]) => v !== '')
+  const bad = img.properties.state && img.properties.state !== 'available'
+  return (
+    <div className="ml-[calc(10rem+1.5rem)] rounded-token border border-border bg-surface-sunken px-3 py-2 text-xs">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+        {rows.map(([k, v]) => (
+          <div key={k} className="contents">
+            <dt className="text-fg-subtle">{k}</dt>
+            <dd className="min-w-0 break-words text-fg">{v}</dd>
+          </div>
+        ))}
+        {img.properties.state && (
+          <div className="contents">
+            <dt className="text-fg-subtle">State</dt>
+            <dd className={bad ? 'font-medium text-danger' : 'text-fg'}>
+              {img.properties.state}
+              {bad ? ' — this AMI is not available and will fail to launch' : ''}
+            </dd>
+          </div>
+        )}
+      </dl>
+    </div>
+  )
+}
+
+// StepCloudRegion picks the region (AMIs and instance types are region-scoped, so
+// it comes before them) and collects the AWS account infrastructure.
+export function StepCloudRegion({
+  credentialId,
+  awsConfig,
+  discovery,
+  onAwsConfig,
+  onDiscovery,
+  onRegionChange,
+}: {
+  credentialId?: string
+  awsConfig?: AwsConfig
+  discovery?: Discovery
+  onAwsConfig: (cfg: AwsConfig) => void
+  onDiscovery: (d: Discovery) => void
+  onRegionChange: () => void
+}) {
+  const aws = awsConfig ?? {}
+  const setAws = (patch: Partial<AwsConfig>) => onAwsConfig({ ...aws, ...patch })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Load discovery once on entry: scoped to the already-chosen region (editing an
+  // existing builder) so its instance types / AMIs are ready, else region-less to
+  // populate the region list. Skips if we already have regions in hand.
+  useEffect(() => {
+    if (!credentialId || (discovery?.regions && discovery.regions.length > 0)) return
+    let live = true
+    setLoading(true)
+    fetchDiscovery(credentialId, aws.region)
+      .then((d) => live && onDiscovery(d))
+      .catch((e) => live && setError(e instanceof ApiError ? e.message : 'Could not list regions'))
+      .finally(() => live && setLoading(false))
+    return () => {
+      live = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [credentialId])
+
+  async function chooseRegion(region: string) {
+    setAws({ region })
+    onRegionChange() // region-scoped picks (AMIs/types) no longer apply
+    if (!credentialId) return
+    setLoading(true)
+    setError(null)
+    try {
+      onDiscovery(await fetchDiscovery(credentialId, region))
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not read that region')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const regionOptions: SearchOption[] = (discovery?.regions ?? []).map((r) => ({ value: r, label: r }))
+
+  return (
+    <div className="flex flex-col gap-4">
+      {infoBox('Pick the region to deploy in. Instance types and AMIs are discovered for the region you choose, so set it before the next steps.')}
+      <section>
+        <div className="mb-1 text-sm font-medium text-fg">Region</div>
+        <div className="flex items-center gap-2">
+          <div className="max-w-sm flex-1">
+            <SearchSelect value={aws.region ?? ''} options={regionOptions} onChange={chooseRegion} placeholder="Choose a region" searchPlaceholder="Search regions…" />
+          </div>
+          {loading && <Spinner />}
+        </div>
+        <div className="mt-1 text-xs text-fg-subtle">Where this builder deploys. The AMIs and instance types in the next steps are discovered for the region you pick.</div>
+        {error && <div className="mt-2 text-xs text-danger">{error}</div>}
+      </section>
+
+      <section>
+        <div className="mb-1 text-sm font-medium text-fg">AWS Account</div>
+        <div className="mb-2 text-xs text-fg-muted">
+          The execution role is required to run containers; the rest have sane defaults. Full field-by-field guidance
+          (and the CloudFormation template that outputs the role ARN) is in <code className="font-mono">docs/builders/aws.md</code>.
+        </div>
+        <div className="flex flex-col gap-3">
+          <Field label="ECS Cluster" hint="The ECS cluster Fargate containers run in. You don't need to pre-create it — LaForge makes the named cluster on first container deploy (default: “default”). Set a dedicated name only to isolate from other ECS workloads. Only used for container: objects.">
+            <Input value={aws.ecs_cluster ?? ''} onChange={(e) => setAws({ ecs_cluster: e.target.value })} placeholder="default" className="font-mono" />
+          </Field>
+          <Field label="Task Execution Role ARN" hint="IAM role Fargate assumes to pull images and ship logs. Required for containers. It's the ExecutionRoleArn output of the aws-iam.yaml CloudFormation stack — paste it verbatim.">
+            <Input value={aws.execution_role_arn ?? ''} onChange={(e) => setAws({ execution_role_arn: e.target.value })} placeholder="arn:aws:iam::123456789012:role/laforge-runner-ecs-exec" className="font-mono" />
+          </Field>
+          <Field label="CloudWatch Log Group" hint="Where Fargate task logs go when an environment sets no container_logs of its own. LaForge ensure-creates it; leave blank to use the default (/laforge/fargate) so a crashing container is never a black box.">
+            <Input value={aws.log_group ?? ''} onChange={(e) => setAws({ log_group: e.target.value })} placeholder="/laforge/fargate (default)" className="font-mono" />
+          </Field>
+          <Field label="Agent Init Image" hint="Small public image a Fargate container runs once to download the agent. Default alpine:3.20 — change only if you can't pull from Docker Hub.">
+            <Input value={aws.agent_init_image ?? ''} onChange={(e) => setAws({ agent_init_image: e.target.value })} placeholder="alpine:3.20" className="font-mono" />
+          </Field>
+          <Field label="EC2 Key Pair" hint="Name of an existing EC2 key pair in this region, associated with every instance. It's how you retrieve a Windows box's Administrator password: aws ec2 get-password-data --priv-launch-key your-key.pem. Leave blank for no key pair — but then Windows passwords aren't recoverable. Deliberately not set via user-data, which a competitor on the box could read.">
+            <Input value={aws.key_name ?? ''} onChange={(e) => setAws({ key_name: e.target.value })} placeholder="laforge-cptc" className="font-mono" />
+          </Field>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+// StepCloudImages maps each `os` name to an AMI: owned AMIs are listed, and
+// typing searches the public catalogs for the region.
+export function StepCloudImages({
+  credentialId,
+  region,
+  images,
+  discovery,
+  onImages,
+  onDiscovery,
+}: {
+  credentialId?: string
+  region?: string
+  images: ImageDraft[]
+  discovery?: Discovery
+  onImages: (images: ImageDraft[]) => void
+  onDiscovery: (d: Discovery) => void
+}) {
+  const [searching, setSearching] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // The AMI ids already configured, so every discovery call resolves them by id
+  // (DescribeImages) and returns their full details -- otherwise a configured
+  // Amazon/Canonical/Marketplace AMI shows as a bare "ami-…" with nothing to
+  // identify it, which is the whole complaint.
+  const configuredAmiIds = images.map((img) => img.fingerprint).filter((f) => f.startsWith('ami-'))
+  const imagesById = new Map((discovery?.images ?? []).map((img) => [img.fingerprint, img]))
+
+  const amiOptions: SearchOption[] = (discovery?.images ?? []).map((img) => ({
+    value: img.fingerprint,
+    label: img.aliases?.[0] || img.fingerprint,
+    hint: img.fingerprint,
+    meta: amiMetaLine(img),
+  }))
+
+  async function search(q: string) {
+    if (!credentialId) return
+    setSearching(true)
+    setError(null)
+    try {
+      onDiscovery(await fetchDiscovery(credentialId, region, q, configuredAmiIds))
+    } catch (e) {
+      // Surface it -- a silent failure is exactly why "discovery isn't working"
+      // looked like nothing was happening.
+      setError(e instanceof ApiError ? e.message : 'Discovery request failed')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  // Load region-scoped discovery once on entry -- the editor can deep-link
+  // straight to this step (the "Images" edit button), skipping the region step
+  // where it's normally fetched. Always run (even when some images are already in
+  // hand) so the configured AMI ids get resolved to their full details.
+  const loadedRef = useRef(false)
+  useEffect(() => {
+    if (loadedRef.current || !credentialId || !region) return
+    loadedRef.current = true
+    void search('')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [credentialId, region])
+
+  function setImage(i: number, patch: Partial<ImageDraft>) {
+    onImages(images.map((img, idx) => (idx === i ? { ...img, ...patch } : img)))
+  }
+
+  // Compose containers run on an EC2 instance booted from a Docker-capable AMI
+  // mapped under the reserved name "compose-host" -- there's nothing to "build" on
+  // AWS (unlike the LXD builders' docker base image). Offer a one-click add.
+  const hasComposeHost = images.some((img) => img.name === COMPOSE_HOST_IMAGE)
+
+  // Why AMI details might be blank, said plainly instead of silently showing bare
+  // ids: no credential or region means discovery can't run; an error or a
+  // per-listing warning (an IAM gap on ec2:DescribeImages, say) means it ran but
+  // couldn't read them. Without this the page just looks like "discovery isn't working".
+  const blocker = !credentialId
+    ? 'No AWS credential is connected, so AMI details can’t be loaded. Connect one in the Config step.'
+    : !region
+      ? 'No region is set, so AMIs can’t be resolved (they’re region-scoped). Set a region in the Region step.'
+      : null
+  const warnings = discovery?.warnings ?? []
+
+  return (
+    <div className="flex flex-col gap-4">
+      {infoBox('Map each os name content uses to an AMI. Your own AMIs are listed; type a name (e.g. “ubuntu”, “Windows”, “kali”) to search Amazon, Canonical, Microsoft and Marketplace images for this region. Or paste an exact AMI id and pick “Use …” — handy for a Marketplace image (which may need you to accept its terms in the account first).')}
+      {infoBox(`Using compose containers? Click “Add compose-host” — it maps the reserved “${COMPOSE_HOST_IMAGE}” image to the latest Ubuntu 22.04 LTS AMI for this region (Docker is installed on first boot). Ubuntu on purpose: the compose host runs your content's own steps, so matching the rest of the environment's OS keeps those scripts working the same everywhere. Compose hosts boot an EC2 instance from it; there is no base image to build on AWS. You can swap in any other Docker-capable AMI.`)}
+      {blocker && (
+        <div className="rounded-token border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning">{blocker}</div>
+      )}
+      {error && (
+        <div className="rounded-token border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">Couldn’t load AMI details: {error}</div>
+      )}
+      {warnings.length > 0 && (
+        <div className="rounded-token border border-warning/30 bg-warning-soft px-3 py-2 text-xs text-warning">
+          <div className="font-medium">AWS reported:</div>
+          <ul className="mt-1 list-disc space-y-0.5 pl-4">{warnings.map((w, i) => <li key={i} className="break-words">{w}</li>)}</ul>
+        </div>
+      )}
+      <div className="flex flex-col gap-2">
+        {images.map((img, i) => {
+          const resolved = imagesById.get(img.fingerprint)
+          return (
+            <div key={i} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Input value={img.name} onChange={(e) => setImage(i, { name: e.target.value })} placeholder="ubuntu22" className="w-40" aria-label="os name" />
+                <span className="text-fg-subtle">→</span>
+                <div className="min-w-0 flex-1">
+                  <SearchSelect
+                    value={img.fingerprint}
+                    options={amiOptions}
+                    onChange={(v) => setImage(i, { fingerprint: v })}
+                    onSearch={search}
+                    loading={searching}
+                    allowCustom
+                    placeholder="Choose, search, or paste an AMI id"
+                    searchPlaceholder="Search by name, or paste ami-…"
+                    emptyLabel="No matches — type a name to search, or paste an AMI id"
+                  />
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => onImages(images.filter((_, idx) => idx !== i))} aria-label="Remove image">
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+              {/* Full details of the configured AMI, resolved live by id so you
+                  never need the AWS console to know what "ami-…" is. */}
+              {img.fingerprint.startsWith('ami-') && resolved && <AmiDetails img={resolved} />}
+              {img.fingerprint.startsWith('ami-') && !resolved && !searching && (
+                <div className="ml-[calc(10rem+1.5rem)] text-xs text-fg-subtle">
+                  Couldn’t resolve {img.fingerprint} in {region ?? 'this region'} — it may be deregistered, private to another account, or in a different region.
+                </div>
+              )}
+            </div>
+          )
+        })}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" size="sm" onClick={() => onImages([...images, { name: '', fingerprint: '', alias: '', vm: false, server: '' }])}>
+            <Plus size={14} /> Add image
+          </Button>
+          {!hasComposeHost && (
+            <Button
+              variant="secondary"
+              size="sm"
+              title={
+                discovery?.recommended_compose_ami
+                  ? `Maps compose-host to ${discovery.recommended_compose_ami} (latest Ubuntu 22.04 LTS)`
+                  : 'Adds a compose-host image row — pick a Docker-capable AMI'
+              }
+              onClick={() =>
+                onImages([...images, { name: COMPOSE_HOST_IMAGE, fingerprint: discovery?.recommended_compose_ami ?? '', alias: '', vm: false, server: '' }])
+              }
+            >
+              <Plus size={14} /> Add compose-host
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// StepCloudSizes maps each `size` name to an EC2 instance type from the region's
+// discovered list.
+export function StepCloudSizes({ sizes, discovery, onSizes }: { sizes: SizeDraft[]; discovery?: Discovery; onSizes: (sizes: SizeDraft[]) => void }) {
+  const typeOptions: SearchOption[] = (discovery?.instance_types ?? []).map((t) => ({ value: t, label: t }))
+  function setSize(i: number, patch: Partial<SizeDraft>) {
+    onSizes(sizes.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      {infoBox('Map each size name content uses to an EC2 instance type. The list is the instance types available in the region you chose.')}
+      <div className="flex flex-col gap-2">
+        {sizes.map((s, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input value={s.name} onChange={(e) => setSize(i, { name: e.target.value })} placeholder="small" className="w-40" aria-label="size name" />
+            <span className="text-fg-subtle">→</span>
+            <div className="min-w-0 flex-1">
+              <SearchSelect value={s.type ?? ''} options={typeOptions} onChange={(v) => setSize(i, { type: v })} placeholder="Choose an instance type" searchPlaceholder="Search instance types…" />
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => onSizes(sizes.filter((_, idx) => idx !== i))} aria-label="Remove size">
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        ))}
+        <div>
+          <Button variant="secondary" size="sm" onClick={() => onSizes([...sizes, { name: '', cpu: '', memory: '', type: '' }])}>
+            <Plus size={14} /> Add size
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

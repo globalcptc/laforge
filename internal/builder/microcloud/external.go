@@ -55,6 +55,11 @@ func (b *Builder) externalPortRange() (min, max int) {
 // and surfacing are all exercised by the fake builder; this is the real-fabric
 // half to confirm live.
 func (b *Builder) ConfigureExternalAccess(ctx context.Context, team string, hosts []builder.ExternalHost) ([]builder.ExternalEndpoint, error) {
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	if b.PublicNICEnabled() {
 		return b.configurePublicNICAccess(ctx, hosts)
 	}

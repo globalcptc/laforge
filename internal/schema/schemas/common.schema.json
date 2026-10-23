@@ -179,15 +179,27 @@
           }
         },
         "create_user": {
-          "type": "object", "description": "Creates a user on the host.", "example": "create_user: { name: dbadmin, password: \"{{ vars.db_pw }}\", groups: [sudo] }", "required": ["name", "password"], "additionalProperties": false,
+          "type": "object", "description": "Creates a user on the host. Give a password or generate one.", "example": "create_user: { name: dbadmin, password: \"{{ vars.db_pw }}\", groups: [sudo] }", "required": ["name"], "oneOf": [{ "required": ["password"] }, { "required": ["generate"] }], "additionalProperties": false,
           "properties": {
             "name": { "type": "string", "description": "Username to create.", "example": "name: dbadmin" }, "password": { "type": "string", "description": "Initial password.", "example": "password: \"{{ vars.db_pw }}\"" },
+            "generate": { "type": "object", "description": "Generate the password instead of writing one. Stable for the build: the same type, size and label on the same host always give the same password, and match the template function of the same name ({{ passphrase 3 }}). A label starting team: shares one value across the team's hosts; build: across every team.", "example": "generate: { type: passphrase, size: 3 }", "required": ["type", "size"], "additionalProperties": false,
+              "properties": {
+                "type": { "type": "string", "enum": ["passphrase", "wordchain", "random"], "description": "passphrase: capitalized 4-7 letter words and a 4-digit number (Patch-Session-Query-4484). wordchain: 3-5 letter words, randomly capitalized (fork-Brick-Spoon-Snail-test). random: random characters with upper, lower, digit and symbol.", "example": "type: passphrase" },
+                "size": { "type": "integer", "minimum": 1, "maximum": 128, "description": "Number of words (passphrase, wordchain: 1-12) or characters (random: 8-128).", "example": "size: 3" },
+                "label": { "type": "string", "description": "Picks a distinct password when one host needs several; prefix team: or build: to share it wider.", "example": "label: svc" }
+              } },
             "groups": { "type": "array", "description": "Groups to add the new user to.", "example": "groups: [sudo]", "items": { "type": "string" } }
           }
         },
         "set_password": {
-          "type": "object", "description": "Rotates an existing user's password -- separate from create_user so a later step can change it.", "example": "set_password: { name: Administrator, password: \"{{ vars.admin_pw }}\" }", "required": ["name", "password"], "additionalProperties": false,
-          "properties": { "name": { "type": "string", "description": "User whose password changes.", "example": "name: Administrator" }, "password": { "type": "string", "description": "New password.", "example": "password: \"{{ vars.admin_pw }}\"" } }
+          "type": "object", "description": "Rotates an existing user's password -- separate from create_user so a later step can change it. Give a password or generate one; LaForge records it and shows it in the host's Info tab.", "example": "set_password: { name: Administrator, generate: { type: passphrase, size: 3 } }", "required": ["name"], "oneOf": [{ "required": ["password"] }, { "required": ["generate"] }], "additionalProperties": false,
+          "properties": { "name": { "type": "string", "description": "User whose password changes.", "example": "name: Administrator" }, "password": { "type": "string", "description": "New password.", "example": "password: \"{{ vars.admin_pw }}\"" },
+            "generate": { "type": "object", "description": "Generate the password instead of writing one. Stable for the build: the same type, size and label on the same host always give the same password, and match the template function of the same name ({{ passphrase 3 }}). A label starting team: shares one value across the team's hosts; build: across every team.", "example": "generate: { type: passphrase, size: 3 }", "required": ["type", "size"], "additionalProperties": false,
+              "properties": {
+                "type": { "type": "string", "enum": ["passphrase", "wordchain", "random"], "description": "passphrase: capitalized 4-7 letter words and a 4-digit number (Patch-Session-Query-4484). wordchain: 3-5 letter words, randomly capitalized (fork-Brick-Spoon-Snail-test). random: random characters with upper, lower, digit and symbol.", "example": "type: passphrase" },
+                "size": { "type": "integer", "minimum": 1, "maximum": 128, "description": "Number of words (passphrase, wordchain: 1-12) or characters (random: 8-128).", "example": "size: 3" },
+                "label": { "type": "string", "description": "Picks a distinct password when one host needs several; prefix team: or build: to share it wider.", "example": "label: svc" }
+              } } }
         },
         "add_to_group": {
           "type": "object", "description": "Adds an existing user to a group.", "example": "add_to_group: { user: www-data, group: docker }", "required": ["user", "group"], "additionalProperties": false,
@@ -204,7 +216,34 @@
           "type": "object", "description": "Reboots the host. The agent reports success before rebooting, then re-registers once it's back.", "example": "reboot: {}", "additionalProperties": false,
           "properties": { "delay": { "type": "string", "description": "Optional delay before rebooting.", "example": "delay: \"30s\"" } }
         },
-        "validate": { "$ref": "#/$defs/validateList", "description": "Checks to run after this step.", "example": "validate:\n  - service_running: nginx\n  - port_listening: { port: 80 }" }
+        "validate": { "$ref": "#/$defs/validateList", "description": "Checks to run after this step.", "example": "validate:\n  - service_running: nginx\n  - port_listening: { port: 80 }" },
+        "wait_for": {
+          "description": "Hold this step, and every step after it, until another host reaches a milestone, a step, or the end of its steps. Steps before it run straight away. One entry, or a list (released when every entry is satisfied). With only `host`, waits until that host finishes all its steps.",
+          "example": "wait_for:\n  host: bff-dc-01\n  milestone: domain-ready",
+          "oneOf": [
+            {
+              "type": "object", "required": ["host"], "additionalProperties": false,
+              "not": { "required": ["milestone", "step"] },
+              "properties": {
+                "host": { "type": "string", "minLength": 1, "description": "The host or container to wait on, by object name -- always the copy in the same team (every copy, if it is placed more than once).", "example": "host: bff-dc-01" },
+                "milestone": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "description": "Wait until that host completes the step marked with this `milestone:`. Recommended over `step`.", "example": "milestone: domain-ready" },
+                "step": { "type": "string", "minLength": 1, "description": "Wait until that host has run the `script:` step with this script name. The script must appear exactly once in its steps.", "example": "step: win-domain-populate" },
+                "rebuild": { "type": "boolean", "description": "Whether rebuilding the target (with include dependents) also rebuilds this host. Default true.", "example": "rebuild: false" }
+              }
+            },
+            { "type": "array", "minItems": 1, "items": {
+                "type": "object", "required": ["host"], "additionalProperties": false,
+                "not": { "required": ["milestone", "step"] },
+                "properties": {
+                  "host": { "type": "string", "minLength": 1, "description": "The host or container to wait on, by object name -- always the copy in the same team (every copy, if it is placed more than once).", "example": "host: bff-dc-01" },
+                  "milestone": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "description": "Wait until that host completes the step marked with this `milestone:`. Recommended over `step`.", "example": "milestone: domain-ready" },
+                  "step": { "type": "string", "minLength": 1, "description": "Wait until that host has run the `script:` step with this script name. The script must appear exactly once in its steps.", "example": "step: win-domain-populate" },
+                  "rebuild": { "type": "boolean", "description": "Whether rebuilding the target (with include dependents) also rebuilds this host. Default true.", "example": "rebuild: false" }
+                }
+              } }
+          ]
+        },
+        "milestone": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$", "description": "Names this point in the host's steps so other hosts can `wait_for` it. Reached when this step and its validate checks complete. Unique within the host.", "example": "milestone: domain-ready" }
       },
       "oneOf": [
         { "required": ["script"] }, { "required": ["run"] }, { "required": ["download"] },
@@ -266,15 +305,27 @@
           }
         },
         "create_user": {
-          "type": "object", "description": "Creates a user on the host.", "example": "create_user: { name: dbadmin, password: \"{{ vars.db_pw }}\", groups: [sudo] }", "required": ["name", "password"], "additionalProperties": false,
+          "type": "object", "description": "Creates a user on the host. Give a password or generate one.", "example": "create_user: { name: dbadmin, password: \"{{ vars.db_pw }}\", groups: [sudo] }", "required": ["name"], "oneOf": [{ "required": ["password"] }, { "required": ["generate"] }], "additionalProperties": false,
           "properties": {
             "name": { "type": "string", "description": "Username to create.", "example": "name: dbadmin" }, "password": { "type": "string", "description": "Initial password.", "example": "password: \"{{ vars.db_pw }}\"" },
+            "generate": { "type": "object", "description": "Generate the password instead of writing one. Stable for the build: the same type, size and label on the same host always give the same password, and match the template function of the same name ({{ passphrase 3 }}). A label starting team: shares one value across the team's hosts; build: across every team.", "example": "generate: { type: passphrase, size: 3 }", "required": ["type", "size"], "additionalProperties": false,
+              "properties": {
+                "type": { "type": "string", "enum": ["passphrase", "wordchain", "random"], "description": "passphrase: capitalized 4-7 letter words and a 4-digit number (Patch-Session-Query-4484). wordchain: 3-5 letter words, randomly capitalized (fork-Brick-Spoon-Snail-test). random: random characters with upper, lower, digit and symbol.", "example": "type: passphrase" },
+                "size": { "type": "integer", "minimum": 1, "maximum": 128, "description": "Number of words (passphrase, wordchain: 1-12) or characters (random: 8-128).", "example": "size: 3" },
+                "label": { "type": "string", "description": "Picks a distinct password when one host needs several; prefix team: or build: to share it wider.", "example": "label: svc" }
+              } },
             "groups": { "type": "array", "description": "Groups to add the new user to.", "example": "groups: [sudo]", "items": { "type": "string" } }
           }
         },
         "set_password": {
-          "type": "object", "description": "Rotates an existing user's password -- separate from create_user so a later step can change it.", "example": "set_password: { name: Administrator, password: \"{{ vars.admin_pw }}\" }", "required": ["name", "password"], "additionalProperties": false,
-          "properties": { "name": { "type": "string", "description": "User whose password changes.", "example": "name: Administrator" }, "password": { "type": "string", "description": "New password.", "example": "password: \"{{ vars.admin_pw }}\"" } }
+          "type": "object", "description": "Rotates an existing user's password -- separate from create_user so a later step can change it. Give a password or generate one; LaForge records it and shows it in the host's Info tab.", "example": "set_password: { name: Administrator, generate: { type: passphrase, size: 3 } }", "required": ["name"], "oneOf": [{ "required": ["password"] }, { "required": ["generate"] }], "additionalProperties": false,
+          "properties": { "name": { "type": "string", "description": "User whose password changes.", "example": "name: Administrator" }, "password": { "type": "string", "description": "New password.", "example": "password: \"{{ vars.admin_pw }}\"" },
+            "generate": { "type": "object", "description": "Generate the password instead of writing one. Stable for the build: the same type, size and label on the same host always give the same password, and match the template function of the same name ({{ passphrase 3 }}). A label starting team: shares one value across the team's hosts; build: across every team.", "example": "generate: { type: passphrase, size: 3 }", "required": ["type", "size"], "additionalProperties": false,
+              "properties": {
+                "type": { "type": "string", "enum": ["passphrase", "wordchain", "random"], "description": "passphrase: capitalized 4-7 letter words and a 4-digit number (Patch-Session-Query-4484). wordchain: 3-5 letter words, randomly capitalized (fork-Brick-Spoon-Snail-test). random: random characters with upper, lower, digit and symbol.", "example": "type: passphrase" },
+                "size": { "type": "integer", "minimum": 1, "maximum": 128, "description": "Number of words (passphrase, wordchain: 1-12) or characters (random: 8-128).", "example": "size: 3" },
+                "label": { "type": "string", "description": "Picks a distinct password when one host needs several; prefix team: or build: to share it wider.", "example": "label: svc" }
+              } } }
         },
         "add_to_group": {
           "type": "object", "description": "Adds an existing user to a group.", "example": "add_to_group: { user: www-data, group: docker }", "required": ["user", "group"], "additionalProperties": false,

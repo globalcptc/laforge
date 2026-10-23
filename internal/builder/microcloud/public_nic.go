@@ -20,7 +20,6 @@ import (
 const publicNICName = "lf-public"
 const publicNICKey = "user.laforge_public_nic"
 const publicReadyKey = "user.laforge_public_ready"
-const publicClosedKey = "user.laforge_closed_public"
 
 type publicNICPlan struct {
 	ready         bool
@@ -40,7 +39,12 @@ func (b *Builder) DeployHostWithPublicPorts(ctx context.Context, spec builder.Ho
 	if !b.PublicNICEnabled() || len(tcp)+len(udp) == 0 {
 		return b.DeployHost(ctx, spec)
 	}
-	name := instanceName(spec.DisplayName, spec.ExternalName)
+	// Fail fast before preparePublicNIC creates anything if the project leaves no
+	// room for a valid instance name within the LXD socket-path limit (issue #63).
+	if err := validateInstanceNameBudget(b.Client.Project); err != nil {
+		return "", err
+	}
+	name := instanceName(spec.DisplayName, spec.ExternalName, b.Client.Project)
 	img, ok := b.Config.Images[spec.OS]
 	if !ok {
 		return "", fmt.Errorf("no image configured for os %q", spec.OS)
@@ -49,7 +53,7 @@ func (b *Builder) DeployHostWithPublicPorts(ctx context.Context, spec builder.Ho
 	if !ok {
 		return "", fmt.Errorf("no size configured for %q", spec.Size)
 	}
-	windows := spec.CloudInitViaISO || agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows
+	windows := agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows
 	if windows && !img.VM {
 		return name, fmt.Errorf("Windows public NIC requires a VM image")
 	}
@@ -70,7 +74,13 @@ func (b *Builder) DeployHostWithPublicPorts(ctx context.Context, spec builder.Ho
 	if img.VM {
 		instanceType = "virtual-machine"
 	}
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, spec.CloudInitUserData, windows, plan)
+	// Public hosts still get the first-boot temporary admin password, but not the
+	// embedded binary: the public-NIC path delivers config via LXD's own NoCloud
+	// drive (cloud-init:config), which LaForge doesn't own, so the agent binary
+	// can't be written onto it -- these hosts download it (the user-data's
+	// fallback path), same as before.
+	cloudInit, _ := agentUserData(spec.AgentDownloadURL, spec.OS, spec.TempAdminPassword)
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, cloudInit, windows, nil, "", plan)
 }
 
 func (b *Builder) publicProject() string {
@@ -219,7 +229,15 @@ func publicGuestNetwork(plan *publicNICPlan, primaryAddress string, primary neti
 	} else {
 		primarySubnet["gateway"] = primary.Addr().String()
 	}
+	// Both NICs get a resolver so the guest can resolve the agent download URL on
+	// first boot. Prefer the operator-configured public-NIC DNS ("DNS servers
+	// (optional)" in the builder config) -- a resolver the operator knows works --
+	// on BOTH interfaces, since the team network's own gateway dnsmasq does not
+	// necessarily forward/resolve external names (that assumption was the earlier
+	// bug: eth0 was set to the gateway and still couldn't resolve). Only when no
+	// DNS is configured do we fall back to the team gateway on the primary NIC.
 	if len(plan.Settings.DNS) > 0 {
+		primarySubnet["dns_nameservers"] = plan.Settings.DNS
 		publicSubnet["dns_nameservers"] = plan.Settings.DNS
 	} else {
 		primarySubnet["dns_nameservers"] = []string{primary.Addr().String()}

@@ -103,7 +103,7 @@ function HostConnectCard({
             it as-is, or connect again with a new token.
           </span>
         </div>
-        <TokenForm kind={kind} onConnected={(conn) => onChange({ ...host, credentialId: conn.credential.id, connection: conn, ...placementDefaults(conn) })} />
+        <TokenForm kind={kind} onConnected={(conn) => onChange({ ...host, credentialId: conn.credential.id, connection: conn, ...placementDefaults(conn, kind) })} />
       </div>
     )
   } else if (host.legacy) {
@@ -122,7 +122,7 @@ function HostConnectCard({
       </div>
     )
   } else {
-    body = <TokenForm kind={kind} onConnected={(conn) => onChange({ ...host, credentialId: conn.credential.id, connection: conn, ...placementDefaults(conn) })} />
+    body = <TokenForm kind={kind} onConnected={(conn) => onChange({ ...host, credentialId: conn.credential.id, connection: conn, ...placementDefaults(conn, kind) })} />
   }
 
   return (

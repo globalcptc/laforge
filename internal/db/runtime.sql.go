@@ -13,7 +13,7 @@ import (
 )
 
 const applyContentRevisionToBuild = `-- name: ApplyContentRevisionToBuild :one
-UPDATE build SET content_revision_id = $2, environment_name = $3 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id
+UPDATE build SET content_revision_id = $2, environment_name = $3 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id, resolved_revision_id
 `
 
 type ApplyContentRevisionToBuildParams struct {
@@ -41,8 +41,30 @@ func (q *Queries) ApplyContentRevisionToBuild(ctx context.Context, arg ApplyCont
 		&i.AutoBuilt,
 		&i.ReconcileError,
 		&i.CreatedByAccountID,
+		&i.ResolvedRevisionID,
 	)
 	return i, err
+}
+
+const cancelOpenTasksForBuild = `-- name: CancelOpenTasksForBuild :execrows
+UPDATE task SET status = 'failed', last_error = $2, updated_at = now()
+WHERE build_id = $1 AND status IN ('pending', 'leased')
+`
+
+type CancelOpenTasksForBuildParams struct {
+	BuildID   pgtype.UUID `json:"build_id"`
+	LastError *string     `json:"last_error"`
+}
+
+// Closes every pending/leased task of a build as failed with the given reason.
+// Used when a teardown is forced to torn_down: nothing should keep working on
+// a build the operator has declared gone.
+func (q *Queries) CancelOpenTasksForBuild(ctx context.Context, arg CancelOpenTasksForBuildParams) (int64, error) {
+	result, err := q.db.Exec(ctx, cancelOpenTasksForBuild, arg.BuildID, arg.LastError)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const clearTeamAccessOverride = `-- name: ClearTeamAccessOverride :exec
@@ -59,7 +81,7 @@ func (q *Queries) ClearTeamAccessOverride(ctx context.Context, id pgtype.UUID) e
 const completeTask = `-- name: CompleteTask :one
 UPDATE task SET status = 'done', last_error = NULL, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type CompleteTaskParams struct {
@@ -83,6 +105,7 @@ func (q *Queries) CompleteTask(ctx context.Context, arg CompleteTaskParams) (Tas
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -137,6 +160,25 @@ func (q *Queries) CountFakeHosterResourcesByRef(ctx context.Context, externalRef
 	return count, err
 }
 
+const countLeasableTasksForBuilder = `-- name: CountLeasableTasksForBuilder :one
+SELECT count(*) FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE coalesce(cb.builder_config_name, '') = $1
+  AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+`
+
+// How many leasable tasks (pending or expired-lease) one configured builder
+// still has across all its builds. A builder's pool uses this to know when its
+// queue is drained (0) so it can exit; the supervisor restarts it when work
+// reappears.
+func (q *Queries) CountLeasableTasksForBuilder(ctx context.Context, builderConfigName string) (int64, error) {
+	row := q.db.QueryRow(ctx, countLeasableTasksForBuilder, builderConfigName)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAgentStepEvent = `-- name: CreateAgentStepEvent :exec
 INSERT INTO event (build_id, deployed_object_id, kind, message, payload)
 VALUES ($1, $2, $3, $4, $5)
@@ -172,7 +214,7 @@ func (q *Queries) CreateAgentStepEvent(ctx context.Context, arg CreateAgentStepE
 const createBuild = `-- name: CreateBuild :one
 INSERT INTO build (configured_build_id, content_revision_id, environment_name, auto_built, created_by_account_id)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id
+RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id, resolved_revision_id
 `
 
 type CreateBuildParams struct {
@@ -202,6 +244,7 @@ func (q *Queries) CreateBuild(ctx context.Context, arg CreateBuildParams) (Build
 		&i.AutoBuilt,
 		&i.ReconcileError,
 		&i.CreatedByAccountID,
+		&i.ResolvedRevisionID,
 	)
 	return i, err
 }
@@ -286,7 +329,7 @@ INSERT INTO task (build_id, deployed_object_id, kind, payload)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (deployed_object_id) WHERE status IN ('pending', 'leased') AND deployed_object_id IS NOT NULL
 DO NOTHING
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type CreateTaskIfNoneOpenParams struct {
@@ -323,6 +366,7 @@ func (q *Queries) CreateTaskIfNoneOpen(ctx context.Context, arg CreateTaskIfNone
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -330,7 +374,7 @@ func (q *Queries) CreateTaskIfNoneOpen(ctx context.Context, arg CreateTaskIfNone
 const createTeamTask = `-- name: CreateTeamTask :one
 INSERT INTO task (build_id, deployed_object_id, kind, payload)
 VALUES ($1, NULL, $2, $3)
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type CreateTeamTaskParams struct {
@@ -359,6 +403,49 @@ func (q *Queries) CreateTeamTask(ctx context.Context, arg CreateTeamTaskParams) 
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
+	)
+	return i, err
+}
+
+const deferTask = `-- name: DeferTask :one
+UPDATE task SET status = 'leased', last_error = $3,
+    attempts = GREATEST(attempts - 1, 0),
+    lease_expires_at = now() + $4::interval, updated_at = now()
+WHERE id = $1 AND lease_owner = $2
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
+`
+
+type DeferTaskParams struct {
+	ID         pgtype.UUID     `json:"id"`
+	LeaseOwner *string         `json:"lease_owner"`
+	LastError  *string         `json:"last_error"`
+	Column4    pgtype.Interval `json:"column_4"`
+}
+
+// Waiting for VM startup is not a failed forwarding attempt.
+func (q *Queries) DeferTask(ctx context.Context, arg DeferTaskParams) (Task, error) {
+	row := q.db.QueryRow(ctx, deferTask,
+		arg.ID,
+		arg.LeaseOwner,
+		arg.LastError,
+		arg.Column4,
+	)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -408,11 +495,151 @@ func (q *Queries) DestroyFakeHosterResource(ctx context.Context, externalRef str
 	return i, err
 }
 
+const discardPlannedBuildsForConfiguredBuild = `-- name: DiscardPlannedBuildsForConfiguredBuild :many
+UPDATE build SET status = 'discarded'
+WHERE configured_build_id = $1 AND status = 'planned'
+RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id, resolved_revision_id
+`
+
+// The configured build is being removed: its planned builds (never deployed,
+// nothing at a hoster) have no future, so they go terminal as 'discarded'
+// rather than lingering as detached 'planned' rows that the orchestrator would
+// keep reconciling and that nobody could meaningfully deploy.
+func (q *Queries) DiscardPlannedBuildsForConfiguredBuild(ctx context.Context, configuredBuildID pgtype.UUID) ([]Build, error) {
+	rows, err := q.db.Query(ctx, discardPlannedBuildsForConfiguredBuild, configuredBuildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Build
+	for rows.Next() {
+		var i Build
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConfiguredBuildID,
+			&i.ContentRevisionID,
+			&i.EnvironmentName,
+			&i.Status,
+			&i.CreatedAt,
+			&i.AutoBuilt,
+			&i.ReconcileError,
+			&i.CreatedByAccountID,
+			&i.ResolvedRevisionID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const discardStalePlannedBuilds = `-- name: DiscardStalePlannedBuilds :many
+UPDATE build AS b SET status = 'discarded'
+WHERE b.status = 'planned'
+  AND (b.configured_build_id IS NULL
+       OR EXISTS (SELECT 1 FROM build AS n
+                  WHERE n.configured_build_id = b.configured_build_id
+                    AND n.status = 'planned'
+                    AND (n.created_at, n.id) > (b.created_at, b.id)))
+RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id, resolved_revision_id
+`
+
+// The sweep behind the two queries above, for rows that predate them: a planned
+// build is stale when its configured_build is gone (configured_build_id was set
+// NULL by the FK on delete) or when a newer planned build exists for the same
+// configured_build. Run by the orchestrator at startup and on its slow
+// housekeeping tick, so an upgraded instance heals its backlog without manual
+// SQL and a planned build never slips through the two write paths.
+func (q *Queries) DiscardStalePlannedBuilds(ctx context.Context) ([]Build, error) {
+	rows, err := q.db.Query(ctx, discardStalePlannedBuilds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Build
+	for rows.Next() {
+		var i Build
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConfiguredBuildID,
+			&i.ContentRevisionID,
+			&i.EnvironmentName,
+			&i.Status,
+			&i.CreatedAt,
+			&i.AutoBuilt,
+			&i.ReconcileError,
+			&i.CreatedByAccountID,
+			&i.ResolvedRevisionID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const discardSupersededPlannedBuilds = `-- name: DiscardSupersededPlannedBuilds :many
+UPDATE build SET status = 'discarded'
+WHERE configured_build_id = $1
+  AND status = 'planned'
+  AND id <> $2
+RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id, resolved_revision_id
+`
+
+type DiscardSupersededPlannedBuildsParams struct {
+	ConfiguredBuildID pgtype.UUID `json:"configured_build_id"`
+	KeepID            pgtype.UUID `json:"keep_id"`
+}
+
+// A newer planned build (keep_id) was just created for this configured build:
+// every OTHER planned build it has is now a superseded revision nobody will
+// deploy, so it goes terminal as 'discarded' (migration 00063). Keeps at most
+// one planned build per configured_build, which is what stops planned builds
+// accumulating one per push forever and each holding an orchestrator lane.
+// Only 'planned' rows are touched: anything deploying/building/finished is real
+// infrastructure and is handled by apply-in-place or teardown, never this.
+func (q *Queries) DiscardSupersededPlannedBuilds(ctx context.Context, arg DiscardSupersededPlannedBuildsParams) ([]Build, error) {
+	rows, err := q.db.Query(ctx, discardSupersededPlannedBuilds, arg.ConfiguredBuildID, arg.KeepID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Build
+	for rows.Next() {
+		var i Build
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConfiguredBuildID,
+			&i.ContentRevisionID,
+			&i.EnvironmentName,
+			&i.Status,
+			&i.CreatedAt,
+			&i.AutoBuilt,
+			&i.ReconcileError,
+			&i.CreatedByAccountID,
+			&i.ResolvedRevisionID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const ensureDeployedObject = `-- name: EnsureDeployedObject :one
 INSERT INTO deployed_object (team_id, kind, object_name, as_name, network_name, fingerprint)
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (team_id, kind, (COALESCE(as_name, object_name))) DO UPDATE SET team_id = EXCLUDED.team_id
-RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address
+RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
 `
 
 type EnsureDeployedObjectParams struct {
@@ -459,6 +686,9 @@ func (q *Queries) EnsureDeployedObject(ctx context.Context, arg EnsureDeployedOb
 		&i.StepsMaterializedAt,
 		&i.BlockedOn,
 		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
 	)
 	return i, err
 }
@@ -524,19 +754,29 @@ func (q *Queries) EnsureTeam(ctx context.Context, arg EnsureTeamParams) (Team, e
 }
 
 const failTask = `-- name: FailTask :one
-UPDATE task SET status = 'failed', last_error = $3, updated_at = now()
+UPDATE task SET status = 'failed', last_error = $3, permanent = $4, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type FailTaskParams struct {
 	ID         pgtype.UUID `json:"id"`
 	LeaseOwner *string     `json:"lease_owner"`
 	LastError  *string     `json:"last_error"`
+	Permanent  bool        `json:"permanent"`
 }
 
+// permanent records the runner's own classification of the failure
+// (builder.ErrPermanentConfig): a failure retrying cannot fix. The
+// orchestrator's teardown reads it back to stop re-queuing a destroy that can
+// never succeed (see ListLatestDestroyTasksByBuild).
 func (q *Queries) FailTask(ctx context.Context, arg FailTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, failTask, arg.ID, arg.LeaseOwner, arg.LastError)
+	row := q.db.QueryRow(ctx, failTask,
+		arg.ID,
+		arg.LeaseOwner,
+		arg.LastError,
+		arg.Permanent,
+	)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -551,12 +791,49 @@ func (q *Queries) FailTask(ctx context.Context, arg FailTaskParams) (Task, error
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
 
+const forceDeleteBuild = `-- name: ForceDeleteBuild :exec
+DELETE FROM build WHERE id = $1
+`
+
+// The admin "force remove from database" escape hatch for a build whose real
+// infrastructure is already gone (a volunteer deleted the hosts out from under
+// LaForge, so teardown can never complete and it's wedged in 'tearing_down').
+// Deletes the build row; every runtime row cascades (team -> deployed_object ->
+// agent_task/session/heartbeat/artifact/shell_session/external_access, plus
+// task, event, scheduled_task, attention_dismissal). The configured_build and
+// content_revision are left intact (build.configured_build_id is ON DELETE SET
+// NULL, and the revision is a parent, not a child). This touches NO hoster --
+// it is purely a database removal, which is why it is admin-only and buried.
+func (q *Queries) ForceDeleteBuild(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, forceDeleteBuild, id)
+	return err
+}
+
+const forceDestroyObjectsForBuild = `-- name: ForceDestroyObjectsForBuild :execrows
+UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), last_error = NULL, updated_at = now()
+WHERE status <> 'destroyed'
+  AND team_id IN (SELECT id FROM team WHERE build_id = $1)
+`
+
+// The operator's "declare it gone" escape hatch for a wedged teardown: every
+// object not yet destroyed is recorded as destroyed WITHOUT any hoster call
+// (same column resets as MarkDeployedObjectDestroyed). The caller is asserting
+// the real infrastructure is already gone or will be cleaned up by hand.
+func (q *Queries) ForceDestroyObjectsForBuild(ctx context.Context, buildID pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, forceDestroyObjectsForBuild, buildID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getBuild = `-- name: GetBuild :one
-SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id FROM build WHERE id = $1
+SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id, resolved_revision_id FROM build WHERE id = $1
 `
 
 func (q *Queries) GetBuild(ctx context.Context, id pgtype.UUID) (Build, error) {
@@ -572,6 +849,7 @@ func (q *Queries) GetBuild(ctx context.Context, id pgtype.UUID) (Build, error) {
 		&i.AutoBuilt,
 		&i.ReconcileError,
 		&i.CreatedByAccountID,
+		&i.ResolvedRevisionID,
 	)
 	return i, err
 }
@@ -618,7 +896,7 @@ func (q *Queries) GetBuildRepository(ctx context.Context, id pgtype.UUID) (Repos
 }
 
 const getDeployedObject = `-- name: GetDeployedObject :one
-SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address FROM deployed_object WHERE id = $1
+SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at FROM deployed_object WHERE id = $1
 `
 
 func (q *Queries) GetDeployedObject(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
@@ -642,6 +920,9 @@ func (q *Queries) GetDeployedObject(ctx context.Context, id pgtype.UUID) (Deploy
 		&i.StepsMaterializedAt,
 		&i.BlockedOn,
 		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
 	)
 	return i, err
 }
@@ -665,7 +946,7 @@ func (q *Queries) GetFakeHosterResource(ctx context.Context, externalRef string)
 }
 
 const getLiveDeployingBuildForConfiguredBuild = `-- name: GetLiveDeployingBuildForConfiguredBuild :one
-SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id FROM build
+SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id, resolved_revision_id FROM build
 WHERE configured_build_id = $1 AND status IN ('deploying', 'building', 'finished')
 ORDER BY created_at DESC
 LIMIT 1
@@ -692,6 +973,7 @@ func (q *Queries) GetLiveDeployingBuildForConfiguredBuild(ctx context.Context, c
 		&i.AutoBuilt,
 		&i.ReconcileError,
 		&i.CreatedByAccountID,
+		&i.ResolvedRevisionID,
 	)
 	return i, err
 }
@@ -733,7 +1015,7 @@ func (q *Queries) GetLogContextByDeployedObject(ctx context.Context, id pgtype.U
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at FROM task WHERE id = $1
+SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent FROM task WHERE id = $1
 `
 
 func (q *Queries) GetTask(ctx context.Context, id pgtype.UUID) (Task, error) {
@@ -752,6 +1034,7 @@ func (q *Queries) GetTask(ctx context.Context, id pgtype.UUID) (Task, error) {
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -797,6 +1080,35 @@ func (q *Queries) GetTeamByNumber(ctx context.Context, arg GetTeamByNumberParams
 	return i, err
 }
 
+const hasCompletedTeamAccessTask = `-- name: HasCompletedTeamAccessTask :one
+SELECT EXISTS (
+    SELECT 1 FROM task
+    WHERE build_id = $1
+      AND kind IN ('open_access', 'close_access')
+      AND status = 'done'
+      AND payload->>'team' = $2::text
+) AS present
+`
+
+type HasCompletedTeamAccessTaskParams struct {
+	BuildID pgtype.UUID `json:"build_id"`
+	Team    string      `json:"team"`
+}
+
+// Fix 1 (reconciler drives desired-vs-applied, not the stored label): a team's
+// access_state defaults to 'closed' before any builder call has run, but a
+// freshly deployed team's instances are actually OPEN (eth0 attached, public NAT
+// configured) -- the label is an assumption, not an applied fact. This reports
+// whether an open/close task has ever actually COMPLETED for the team, so the
+// reconciler can tell "converged to the label" apart from "never applied; reality
+// is open-by-deploy" and issue the real close once the team is up.
+func (q *Queries) HasCompletedTeamAccessTask(ctx context.Context, arg HasCompletedTeamAccessTaskParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasCompletedTeamAccessTask, arg.BuildID, arg.Team)
+	var present bool
+	err := row.Scan(&present)
+	return present, err
+}
+
 const hasConfigureExternalAccessTask = `-- name: HasConfigureExternalAccessTask :one
 SELECT EXISTS (
     SELECT 1 FROM task
@@ -814,10 +1126,9 @@ type HasConfigureExternalAccessTaskParams struct {
 }
 
 // Dedup for the external-access reconciler, exactly like network access above:
-// one configure_external_access task per (team, public-ports fingerprint), across
-// all statuses. A content change to a team's `public:` ports yields a new
-// fingerprint and a fresh task; an unchanged set never re-runs (the builder call
-// is idempotent).
+// one configure_external_access task per team and desired public ports/ready
+// instance identities, across all statuses. A new or replaced public instance
+// yields a fresh task even if content has not changed.
 func (q *Queries) HasConfigureExternalAccessTask(ctx context.Context, arg HasConfigureExternalAccessTaskParams) (bool, error) {
 	row := q.db.QueryRow(ctx, hasConfigureExternalAccessTask, arg.BuildID, arg.Team, arg.Fingerprint)
 	var present bool
@@ -832,6 +1143,7 @@ SELECT EXISTS (
       AND kind = 'configure_network_access'
       AND payload->>'team' = $2::text
       AND payload->>'fingerprint' = $3::text
+      AND status <> 'failed'
 ) AS present
 `
 
@@ -841,14 +1153,44 @@ type HasConfigureNetworkAccessTaskParams struct {
 	Fingerprint string      `json:"fingerprint"`
 }
 
-// Dedup for the network-access reconciler: exactly one configure_network_access
-// task per (team, desired-config fingerprint), across ALL statuses. The
-// fingerprint (a hash of the team's networks' names/CIDRs/visible_from) rides in
-// the payload, so a content change yields a new fingerprint and a fresh task,
-// while an unchanged config never re-runs regardless of the earlier task's
-// outcome -- the builder call is idempotent, so re-asserting adds no value.
+// Dedup for the network-access reconciler: one live configure_network_access task
+// per (team, desired-config fingerprint). The fingerprint hashes the team's
+// networks' names/CIDRs/visible_from PLUS its ready guests' instance references,
+// so a content change OR an instance replacement (a rebuilt guest gets a new ref)
+// yields a new fingerprint and a fresh task, while an unchanged config never
+// re-runs (the builder call is idempotent). A previously FAILED task does NOT
+// count, so an exhausted attempt is re-queued and converges rather than leaving
+// the policy permanently half-applied.
 func (q *Queries) HasConfigureNetworkAccessTask(ctx context.Context, arg HasConfigureNetworkAccessTaskParams) (bool, error) {
 	row := q.db.QueryRow(ctx, hasConfigureNetworkAccessTask, arg.BuildID, arg.Team, arg.Fingerprint)
+	var present bool
+	err := row.Scan(&present)
+	return present, err
+}
+
+const hasOpenConfigureAccessTask = `-- name: HasOpenConfigureAccessTask :one
+SELECT EXISTS (
+    SELECT 1 FROM task
+    WHERE build_id = $1
+      AND kind IN ('configure_network_access', 'configure_external_access')
+      AND status IN ('pending', 'leased')
+      AND payload->>'team' = $2::text
+) AS present
+`
+
+type HasOpenConfigureAccessTaskParams struct {
+	BuildID pgtype.UUID `json:"build_id"`
+	Team    string      `json:"team"`
+}
+
+// Fix 1 gate: is a team's network/external-access configuration still settling?
+// A close must run AFTER external access attaches its public-port ACLs (so the
+// close can capture and strip them); otherwise the close records a NIC with no
+// public ACL and a later external-access pass silently re-opens ingress on a
+// team the label calls closed. True while any configure_network_access or
+// configure_external_access task for the team is still pending or leased.
+func (q *Queries) HasOpenConfigureAccessTask(ctx context.Context, arg HasOpenConfigureAccessTaskParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasOpenConfigureAccessTask, arg.BuildID, arg.Team)
 	var present bool
 	err := row.Scan(&present)
 	return present, err
@@ -932,13 +1274,33 @@ UPDATE task
 SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
     attempts = attempts + 1, updated_at = now()
 WHERE id = (
-    SELECT id FROM task
-    WHERE status = 'pending' OR (status = 'leased' AND lease_expires_at < now())
-    ORDER BY created_at
-    FOR UPDATE SKIP LOCKED
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    LEFT JOIN builder_config bc ON bc.name = cb.builder_config_name
+    WHERE (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+      AND (
+        bc.max_concurrency IS NULL OR bc.max_concurrency = 0
+        OR (
+            SELECT count(*) FROM task it
+            JOIN build ib ON ib.id = it.build_id
+            JOIN configured_build icb ON icb.id = ib.configured_build_id
+            WHERE icb.builder_config_name = bc.name
+              AND it.status = 'leased' AND it.lease_expires_at >= now()
+        ) < bc.max_concurrency
+      )
+    -- Critical path first: a deploy task's payload carries its priority (how
+    -- many objects depends_on it; networks highest -- see the orchestrator's
+    -- deployTaskPayload), so every team's domain controller is leased ahead of
+    -- the workstations waiting on it, then oldest first. Guarded so a
+    -- non-numeric value can never break leasing.
+    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
+    FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type LeaseTaskParams struct {
@@ -949,6 +1311,15 @@ type LeaseTaskParams struct {
 // FOR UPDATE SKIP LOCKED claims either a pending task or one
 // whose lease has expired, atomically, so concurrent runners never block
 // each other or double-claim the same row.
+//
+// Per-builder concurrency cap: a candidate task is skipped while its
+// builder_config already has max_concurrency tasks leased-and-live (so a
+// capacity-limited hoster like MicroCloud can be turned down below the global
+// RUNNER_CONCURRENCY pool). max_concurrency = 0 means unlimited; tasks with no
+// builder_config (ad-hoc builds, or builds whose configured_build was cleared)
+// are never capped. The cap is a SOFT limit -- concurrent leasers each read the
+// in-flight count before committing, so it can transiently overshoot by the
+// number of simultaneous leasers, which is fine for a "don't overwhelm it" knob.
 func (q *Queries) LeaseTask(ctx context.Context, arg LeaseTaskParams) (Task, error) {
 	row := q.db.QueryRow(ctx, leaseTask, arg.LeaseOwner, arg.Column2)
 	var i Task
@@ -965,6 +1336,7 @@ func (q *Queries) LeaseTask(ctx context.Context, arg LeaseTaskParams) (Task, err
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -974,14 +1346,34 @@ UPDATE task
 SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
     attempts = attempts + 1, updated_at = now()
 WHERE id = (
-    SELECT t2.id FROM task t2
-    WHERE t2.build_id = $3
-      AND (t2.status = 'pending' OR (t2.status = 'leased' AND t2.lease_expires_at < now()))
-    ORDER BY t2.created_at
-    FOR UPDATE SKIP LOCKED
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    LEFT JOIN builder_config bc ON bc.name = cb.builder_config_name
+    WHERE t.build_id = $3
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+      AND (
+        bc.max_concurrency IS NULL OR bc.max_concurrency = 0
+        OR (
+            SELECT count(*) FROM task it
+            JOIN build ib ON ib.id = it.build_id
+            JOIN configured_build icb ON icb.id = ib.configured_build_id
+            WHERE icb.builder_config_name = bc.name
+              AND it.status = 'leased' AND it.lease_expires_at >= now()
+        ) < bc.max_concurrency
+      )
+    -- Critical path first: a deploy task's payload carries its priority (how
+    -- many objects depends_on it; networks highest -- see the orchestrator's
+    -- deployTaskPayload), so every team's domain controller is leased ahead of
+    -- the workstations waiting on it, then oldest first. Guarded so a
+    -- non-numeric value can never break leasing.
+    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
+    FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type LeaseTaskForBuildParams struct {
@@ -990,15 +1382,15 @@ type LeaseTaskForBuildParams struct {
 	BuildID    pgtype.UUID     `json:"build_id"`
 }
 
-// Identical to LeaseTask, scoped to one build. Production runners always
-// use LeaseTask (a real runner pool draws from every build's work, which
-// is the whole point of a shared pool) -- this exists for tests: several
-// packages' tests run concurrently against the same shared laforge_dev
-// database (Go parallelizes across packages by default), each reconciling
-// its own build under the same "lm-test" environment, and an unscoped
-// LeaseTask would let one test's runner lease and complete a *different*
-// test's task. Scoping by build_id is test isolation, not a product
-// feature -- see internal/chaos and internal/runner's tests.
+// LeaseTask scoped to ONE build. This is the production lease path for the
+// per-build-lane runner (each build's lane leases only its own tasks, so no
+// build's queue ever sits behind another's -- there is no cross-build FIFO).
+// It is ALSO what the tests use for isolation: several packages' tests run
+// concurrently against the same shared laforge_dev database, each driving its
+// own build, and scoping by build_id keeps one test's runner from completing
+// another's task. The per-builder max_concurrency cap is still enforced here --
+// it is a deliberate CROSS-build cap on a shared hoster, the one place two
+// builds on the same capped builder legitimately share a limit.
 func (q *Queries) LeaseTaskForBuild(ctx context.Context, arg LeaseTaskForBuildParams) (Task, error) {
 	row := q.db.QueryRow(ctx, leaseTaskForBuild, arg.LeaseOwner, arg.Column2, arg.BuildID)
 	var i Task
@@ -1015,12 +1407,73 @@ func (q *Queries) LeaseTaskForBuild(ctx context.Context, arg LeaseTaskForBuildPa
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
+	)
+	return i, err
+}
+
+const leaseTaskForBuilder = `-- name: LeaseTaskForBuilder :one
+UPDATE task
+SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
+    attempts = attempts + 1, updated_at = now()
+WHERE id = (
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    WHERE coalesce(cb.builder_config_name, '') = $3
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+    -- Critical path first: a deploy task's payload carries its priority (how
+    -- many objects depends_on it; networks highest -- see the orchestrator's
+    -- deployTaskPayload), so every team's domain controller is leased ahead of
+    -- the workstations waiting on it, then oldest first. Guarded so a
+    -- non-numeric value can never break leasing.
+    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
+    FOR UPDATE OF t SKIP LOCKED
+    LIMIT 1
+)
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
+`
+
+type LeaseTaskForBuilderParams struct {
+	LeaseOwner        *string         `json:"lease_owner"`
+	Column2           pgtype.Interval `json:"column_2"`
+	BuilderConfigName string          `json:"builder_config_name"`
+}
+
+// Lease the next leasable task that belongs to one CONFIGURED BUILDER (across
+// every build using it), oldest first. This is the production lease path: the
+// runner runs one worker pool PER configured builder, sized to that builder's
+// own concurrency limit (builder_config.max_concurrency), because concurrency is
+// a property of the hardware -- the cluster/account/host-pool -- not of a build.
+// All builds on a builder share its pool; different builders never contend. A
+// build with no configured_build (ad-hoc/fake) has builder key ” and its own
+// pool. There is NO cap subquery here -- the per-builder pool's size is the
+// limit, so the scheduler stays a dumb, fair lease.
+func (q *Queries) LeaseTaskForBuilder(ctx context.Context, arg LeaseTaskForBuilderParams) (Task, error) {
+	row := q.db.QueryRow(ctx, leaseTaskForBuilder, arg.LeaseOwner, arg.Column2, arg.BuilderConfigName)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
 
 const listActiveBuilds = `-- name: ListActiveBuilds :many
-SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error, build.created_by_account_id, content_revision.repository_id, content_revision.commit_sha,
+SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error, build.created_by_account_id, build.resolved_revision_id, content_revision.repository_id, content_revision.commit_sha,
        COALESCE(content_revision.ref, '')::text AS ref,
        COALESCE(configured_build.builder_config_name, '')::text AS builder_config_name
 FROM build
@@ -1040,6 +1493,7 @@ type ListActiveBuildsRow struct {
 	AutoBuilt          bool               `json:"auto_built"`
 	ReconcileError     *string            `json:"reconcile_error"`
 	CreatedByAccountID pgtype.UUID        `json:"created_by_account_id"`
+	ResolvedRevisionID pgtype.UUID        `json:"resolved_revision_id"`
 	RepositoryID       pgtype.UUID        `json:"repository_id"`
 	CommitSha          string             `json:"commit_sha"`
 	Ref                string             `json:"ref"`
@@ -1069,6 +1523,7 @@ func (q *Queries) ListActiveBuilds(ctx context.Context) ([]ListActiveBuildsRow, 
 			&i.AutoBuilt,
 			&i.ReconcileError,
 			&i.CreatedByAccountID,
+			&i.ResolvedRevisionID,
 			&i.RepositoryID,
 			&i.CommitSha,
 			&i.Ref,
@@ -1084,11 +1539,101 @@ func (q *Queries) ListActiveBuilds(ctx context.Context) ([]ListActiveBuildsRow, 
 	return items, nil
 }
 
+const listAgentCheckinWatchdogCandidates = `-- name: ListAgentCheckinWatchdogCandidates :many
+SELECT o.id, o.object_name, o.as_name, o.external_ref, o.agent_platform, o.deployed_at, t.team_number
+FROM deployed_object o
+JOIN team t ON t.id = o.team_id
+LEFT JOIN agent_session s ON s.deployed_object_id = o.id
+WHERE t.build_id = $1
+  AND o.status IN ('running', 'building')
+  AND o.agent_platform <> ''
+  AND o.deployed_at IS NOT NULL
+  AND o.agent_checkin_overdue_at IS NULL
+  AND (s.last_heartbeat_at IS NULL OR s.last_heartbeat_at < o.deployed_at)
+ORDER BY o.deployed_at
+`
+
+type ListAgentCheckinWatchdogCandidatesRow struct {
+	ID            pgtype.UUID        `json:"id"`
+	ObjectName    string             `json:"object_name"`
+	AsName        *string            `json:"as_name"`
+	ExternalRef   *string            `json:"external_ref"`
+	AgentPlatform string             `json:"agent_platform"`
+	DeployedAt    pgtype.Timestamptz `json:"deployed_at"`
+	TeamNumber    int32              `json:"team_number"`
+}
+
+// Hosts in this build whose agent has not checked in since they were deployed
+// and which the watchdog hasn't flagged yet. The caller applies the per-OS
+// deadline. "Checked in since deployed" compares the session's last heartbeat
+// with deployed_at, because a rebuilt host keeps its old agent_session row.
+func (q *Queries) ListAgentCheckinWatchdogCandidates(ctx context.Context, buildID pgtype.UUID) ([]ListAgentCheckinWatchdogCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listAgentCheckinWatchdogCandidates, buildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAgentCheckinWatchdogCandidatesRow
+	for rows.Next() {
+		var i ListAgentCheckinWatchdogCandidatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ObjectName,
+			&i.AsName,
+			&i.ExternalRef,
+			&i.AgentPlatform,
+			&i.DeployedAt,
+			&i.TeamNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBuildersWithLeasableTasks = `-- name: ListBuildersWithLeasableTasks :many
+SELECT DISTINCT coalesce(cb.builder_config_name, '') AS builder_config_name
+FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now())
+`
+
+// The distinct configured builders (by builder_config name; ” for builds with
+// no configured_build) that currently have at least one leasable task. The
+// runner's supervisor polls this to decide which builders need a worker pool
+// running -- cheap, and builders never couple to each other.
+func (q *Queries) ListBuildersWithLeasableTasks(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, listBuildersWithLeasableTasks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var builder_config_name string
+		if err := rows.Scan(&builder_config_name); err != nil {
+			return nil, err
+		}
+		items = append(items, builder_config_name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listBuildsByRepository = `-- name: ListBuildsByRepository :many
-SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error, build.created_by_account_id,
+SELECT build.id, build.configured_build_id, build.content_revision_id, build.environment_name, build.status, build.created_at, build.auto_built, build.reconcile_error, build.created_by_account_id, build.resolved_revision_id,
        content_revision.commit_sha,
        content_revision.commit_message,
-       content_revision.committed_at
+       content_revision.committed_at,
+       content_revision.ref AS branch,
+       (SELECT count(*) FROM team WHERE team.build_id = build.id) AS team_count
 FROM build
 JOIN content_revision ON content_revision.id = build.content_revision_id
 WHERE content_revision.repository_id = $1
@@ -1105,9 +1650,12 @@ type ListBuildsByRepositoryRow struct {
 	AutoBuilt          bool               `json:"auto_built"`
 	ReconcileError     *string            `json:"reconcile_error"`
 	CreatedByAccountID pgtype.UUID        `json:"created_by_account_id"`
+	ResolvedRevisionID pgtype.UUID        `json:"resolved_revision_id"`
 	CommitSha          string             `json:"commit_sha"`
 	CommitMessage      *string            `json:"commit_message"`
 	CommittedAt        pgtype.Timestamptz `json:"committed_at"`
+	Branch             *string            `json:"branch"`
+	TeamCount          int64              `json:"team_count"`
 }
 
 // "Every build of this repository" (Build → Builds) --
@@ -1133,9 +1681,12 @@ func (q *Queries) ListBuildsByRepository(ctx context.Context, repositoryID pgtyp
 			&i.AutoBuilt,
 			&i.ReconcileError,
 			&i.CreatedByAccountID,
+			&i.ResolvedRevisionID,
 			&i.CommitSha,
 			&i.CommitMessage,
 			&i.CommittedAt,
+			&i.Branch,
+			&i.TeamCount,
 		); err != nil {
 			return nil, err
 		}
@@ -1148,7 +1699,7 @@ func (q *Queries) ListBuildsByRepository(ctx context.Context, repositoryID pgtyp
 }
 
 const listBuildsByStatus = `-- name: ListBuildsByStatus :many
-SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id FROM build WHERE status = ANY($1::text[])
+SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id, resolved_revision_id FROM build WHERE status = ANY($1::text[])
 `
 
 func (q *Queries) ListBuildsByStatus(ctx context.Context, statuses []string) ([]Build, error) {
@@ -1170,6 +1721,7 @@ func (q *Queries) ListBuildsByStatus(ctx context.Context, statuses []string) ([]
 			&i.AutoBuilt,
 			&i.ReconcileError,
 			&i.CreatedByAccountID,
+			&i.ResolvedRevisionID,
 		); err != nil {
 			return nil, err
 		}
@@ -1182,7 +1734,7 @@ func (q *Queries) ListBuildsByStatus(ctx context.Context, statuses []string) ([]
 }
 
 const listDeployedObjectsByBuild = `-- name: ListDeployedObjectsByBuild :many
-SELECT deployed_object.id, deployed_object.team_id, deployed_object.kind, deployed_object.object_name, deployed_object.as_name, deployed_object.network_name, deployed_object.fingerprint, deployed_object.status, deployed_object.external_ref, deployed_object.last_error, deployed_object.updated_at, deployed_object.power_state, deployed_object.power_state_checked_at, deployed_object.tags, deployed_object.steps_materialized_at, deployed_object.blocked_on, deployed_object.public_address FROM deployed_object
+SELECT deployed_object.id, deployed_object.team_id, deployed_object.kind, deployed_object.object_name, deployed_object.as_name, deployed_object.network_name, deployed_object.fingerprint, deployed_object.status, deployed_object.external_ref, deployed_object.last_error, deployed_object.updated_at, deployed_object.power_state, deployed_object.power_state_checked_at, deployed_object.tags, deployed_object.steps_materialized_at, deployed_object.blocked_on, deployed_object.public_address, deployed_object.deployed_at, deployed_object.agent_platform, deployed_object.agent_checkin_overdue_at FROM deployed_object
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1
 `
@@ -1214,6 +1766,9 @@ func (q *Queries) ListDeployedObjectsByBuild(ctx context.Context, buildID pgtype
 			&i.StepsMaterializedAt,
 			&i.BlockedOn,
 			&i.PublicAddress,
+			&i.DeployedAt,
+			&i.AgentPlatform,
+			&i.AgentCheckinOverdueAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1226,7 +1781,7 @@ func (q *Queries) ListDeployedObjectsByBuild(ctx context.Context, buildID pgtype
 }
 
 const listDeployedObjectsByTeam = `-- name: ListDeployedObjectsByTeam :many
-SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address FROM deployed_object WHERE team_id = $1
+SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at FROM deployed_object WHERE team_id = $1
 `
 
 func (q *Queries) ListDeployedObjectsByTeam(ctx context.Context, teamID pgtype.UUID) ([]DeployedObject, error) {
@@ -1256,6 +1811,9 @@ func (q *Queries) ListDeployedObjectsByTeam(ctx context.Context, teamID pgtype.U
 			&i.StepsMaterializedAt,
 			&i.BlockedOn,
 			&i.PublicAddress,
+			&i.DeployedAt,
+			&i.AgentPlatform,
+			&i.AgentCheckinOverdueAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1577,8 +2135,75 @@ func (q *Queries) ListFakeHosterResources(ctx context.Context) ([]FakeHosterReso
 	return items, nil
 }
 
+const listLatestDestroyTasksByBuild = `-- name: ListLatestDestroyTasksByBuild :many
+SELECT DISTINCT ON (t.deployed_object_id) t.id, t.build_id, t.deployed_object_id, t.kind, t.payload, t.status, t.attempts, t.lease_owner, t.lease_expires_at, t.last_error, t.created_at, t.updated_at, t.permanent,
+    (SELECT count(*) FROM task f
+     WHERE f.deployed_object_id = t.deployed_object_id
+       AND f.kind LIKE 'destroy_%' AND f.status = 'failed')::int AS failed_count
+FROM task t
+WHERE t.build_id = $1 AND t.deployed_object_id IS NOT NULL AND t.kind LIKE 'destroy_%'
+ORDER BY t.deployed_object_id, t.created_at DESC
+`
+
+type ListLatestDestroyTasksByBuildRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	BuildID          pgtype.UUID        `json:"build_id"`
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	Kind             string             `json:"kind"`
+	Payload          json.RawMessage    `json:"payload"`
+	Status           string             `json:"status"`
+	Attempts         int32              `json:"attempts"`
+	LeaseOwner       *string            `json:"lease_owner"`
+	LeaseExpiresAt   pgtype.Timestamptz `json:"lease_expires_at"`
+	LastError        *string            `json:"last_error"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Permanent        bool               `json:"permanent"`
+	FailedCount      int32              `json:"failed_count"`
+}
+
+// The most recent destroy task per object of a build, with how many destroy
+// tasks for that object have failed so far -- what Teardown decides from: an
+// open task means a destroy is in flight (nothing to do), a failed permanent one
+// means stop (destroy_failed), a failed transient one is re-queued only once a
+// backoff scaled by failed_count has elapsed since it failed (updated_at).
+func (q *Queries) ListLatestDestroyTasksByBuild(ctx context.Context, buildID pgtype.UUID) ([]ListLatestDestroyTasksByBuildRow, error) {
+	rows, err := q.db.Query(ctx, listLatestDestroyTasksByBuild, buildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLatestDestroyTasksByBuildRow
+	for rows.Next() {
+		var i ListLatestDestroyTasksByBuildRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.BuildID,
+			&i.DeployedObjectID,
+			&i.Kind,
+			&i.Payload,
+			&i.Status,
+			&i.Attempts,
+			&i.LeaseOwner,
+			&i.LeaseExpiresAt,
+			&i.LastError,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Permanent,
+			&i.FailedCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTasksByBuild = `-- name: ListTasksByBuild :many
-SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at FROM task WHERE build_id = $1 ORDER BY created_at
+SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent FROM task WHERE build_id = $1 ORDER BY created_at
 `
 
 func (q *Queries) ListTasksByBuild(ctx context.Context, buildID pgtype.UUID) ([]Task, error) {
@@ -1603,6 +2228,7 @@ func (q *Queries) ListTasksByBuild(ctx context.Context, buildID pgtype.UUID) ([]
 			&i.LastError,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Permanent,
 		); err != nil {
 			return nil, err
 		}
@@ -1645,8 +2271,23 @@ func (q *Queries) ListTeamsByBuild(ctx context.Context, buildID pgtype.UUID) ([]
 	return items, nil
 }
 
+const markAgentCheckinOverdue = `-- name: MarkAgentCheckinOverdue :execrows
+UPDATE deployed_object SET agent_checkin_overdue_at = now()
+WHERE id = $1 AND agent_checkin_overdue_at IS NULL
+`
+
+// Flag one host as never-checked-in. Guarded so concurrent orchestrator
+// replicas flag (and emit the event for) a host only once per deploy.
+func (q *Queries) MarkAgentCheckinOverdue(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, markAgentCheckinOverdue, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const markDeployedObjectDeployFailed = `-- name: MarkDeployedObjectDeployFailed :one
-UPDATE deployed_object SET status = 'deploy_failed', last_error = $2, updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address
+UPDATE deployed_object SET status = 'deploy_failed', last_error = $2, updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
 `
 
 type MarkDeployedObjectDeployFailedParams struct {
@@ -1678,12 +2319,15 @@ func (q *Queries) MarkDeployedObjectDeployFailed(ctx context.Context, arg MarkDe
 		&i.StepsMaterializedAt,
 		&i.BlockedOn,
 		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
 	)
 	return i, err
 }
 
 const markDeployedObjectDeploying = `-- name: MarkDeployedObjectDeploying :one
-UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address
+UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
 `
 
 func (q *Queries) MarkDeployedObjectDeploying(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
@@ -1707,12 +2351,57 @@ func (q *Queries) MarkDeployedObjectDeploying(ctx context.Context, id pgtype.UUI
 		&i.StepsMaterializedAt,
 		&i.BlockedOn,
 		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
+	)
+	return i, err
+}
+
+const markDeployedObjectDestroyFailed = `-- name: MarkDeployedObjectDestroyFailed :one
+UPDATE deployed_object SET status = 'destroy_failed', last_error = $2, updated_at = now()
+WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+`
+
+type MarkDeployedObjectDestroyFailedParams struct {
+	ID        pgtype.UUID `json:"id"`
+	LastError *string     `json:"last_error"`
+}
+
+// The destroy-side twin of MarkDeployedObjectDeployFailed: the hoster could not
+// remove this object and the failure is permanent (builder configuration), so
+// Teardown stops re-queuing destroys for it. Terminal until an operator retries
+// the teardown (ResetDestroyFailedObjectsForBuild) or forces the build down.
+func (q *Queries) MarkDeployedObjectDestroyFailed(ctx context.Context, arg MarkDeployedObjectDestroyFailedParams) (DeployedObject, error) {
+	row := q.db.QueryRow(ctx, markDeployedObjectDestroyFailed, arg.ID, arg.LastError)
+	var i DeployedObject
+	err := row.Scan(
+		&i.ID,
+		&i.TeamID,
+		&i.Kind,
+		&i.ObjectName,
+		&i.AsName,
+		&i.NetworkName,
+		&i.Fingerprint,
+		&i.Status,
+		&i.ExternalRef,
+		&i.LastError,
+		&i.UpdatedAt,
+		&i.PowerState,
+		&i.PowerStateCheckedAt,
+		&i.Tags,
+		&i.StepsMaterializedAt,
+		&i.BlockedOn,
+		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
 	)
 	return i, err
 }
 
 const markDeployedObjectDestroyed = `-- name: MarkDeployedObjectDestroyed :one
-UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address
+UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
 `
 
 // The real terminal destroy outcome, for a build teardown
@@ -1748,12 +2437,15 @@ func (q *Queries) MarkDeployedObjectDestroyed(ctx context.Context, id pgtype.UUI
 		&i.StepsMaterializedAt,
 		&i.BlockedOn,
 		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
 	)
 	return i, err
 }
 
 const markDeployedObjectDestroying = `-- name: MarkDeployedObjectDestroying :one
-UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address
+UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
 `
 
 func (q *Queries) MarkDeployedObjectDestroying(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
@@ -1777,13 +2469,17 @@ func (q *Queries) MarkDeployedObjectDestroying(ctx context.Context, id pgtype.UU
 		&i.StepsMaterializedAt,
 		&i.BlockedOn,
 		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
 	)
 	return i, err
 }
 
 const markDeployedObjectRunning = `-- name: MarkDeployedObjectRunning :one
-UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, last_error = NULL, updated_at = now()
-WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address
+UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, last_error = NULL, updated_at = now(),
+    deployed_at = now(), agent_checkin_overdue_at = NULL
+WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
 `
 
 type MarkDeployedObjectRunningParams struct {
@@ -1796,6 +2492,8 @@ type MarkDeployedObjectRunningParams struct {
 // has not checked in yet and no authored step has run. The object-lifecycle
 // poll (internal/orchestrator/lifecycle.go) advances this to building ->
 // finished/build_failed/invalid from the real agent_task/validator rows.
+// deployed_at restarts the never-checked-in watchdog's clock, and a redeploy
+// clears any earlier overdue flag.
 func (q *Queries) MarkDeployedObjectRunning(ctx context.Context, arg MarkDeployedObjectRunningParams) (DeployedObject, error) {
 	row := q.db.QueryRow(ctx, markDeployedObjectRunning, arg.ID, arg.ExternalRef, arg.Fingerprint)
 	var i DeployedObject
@@ -1817,6 +2515,9 @@ func (q *Queries) MarkDeployedObjectRunning(ctx context.Context, arg MarkDeploye
 		&i.StepsMaterializedAt,
 		&i.BlockedOn,
 		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
 	)
 	return i, err
 }
@@ -1838,7 +2539,7 @@ func (q *Queries) MarkDeployedObjectStepsMaterialized(ctx context.Context, id pg
 
 const resetDeployedObjectForRedeploy = `-- name: ResetDeployedObjectForRedeploy :one
 UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', last_error = NULL, steps_materialized_at = NULL, updated_at = now()
-WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address
+WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
 `
 
 // Used after a destroy that happened only because the fingerprint changed
@@ -1868,15 +2569,69 @@ func (q *Queries) ResetDeployedObjectForRedeploy(ctx context.Context, id pgtype.
 		&i.StepsMaterializedAt,
 		&i.BlockedOn,
 		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
 	)
 	return i, err
+}
+
+const resetDestroyFailedObjectsForBuild = `-- name: ResetDestroyFailedObjectsForBuild :many
+UPDATE deployed_object SET status = 'destroying', last_error = NULL, updated_at = now()
+WHERE status = 'destroy_failed'
+  AND team_id IN (SELECT id FROM team WHERE build_id = $1)
+RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+`
+
+// The explicit operator retry after fixing the builder: every destroy_failed
+// object of the build goes back to 'destroying' so a fresh terminal destroy can
+// be requested for it.
+func (q *Queries) ResetDestroyFailedObjectsForBuild(ctx context.Context, buildID pgtype.UUID) ([]DeployedObject, error) {
+	rows, err := q.db.Query(ctx, resetDestroyFailedObjectsForBuild, buildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DeployedObject
+	for rows.Next() {
+		var i DeployedObject
+		if err := rows.Scan(
+			&i.ID,
+			&i.TeamID,
+			&i.Kind,
+			&i.ObjectName,
+			&i.AsName,
+			&i.NetworkName,
+			&i.Fingerprint,
+			&i.Status,
+			&i.ExternalRef,
+			&i.LastError,
+			&i.UpdatedAt,
+			&i.PowerState,
+			&i.PowerStateCheckedAt,
+			&i.Tags,
+			&i.StepsMaterializedAt,
+			&i.BlockedOn,
+			&i.PublicAddress,
+			&i.DeployedAt,
+			&i.AgentPlatform,
+			&i.AgentCheckinOverdueAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const retryTask = `-- name: RetryTask :one
 UPDATE task SET status = 'leased', last_error = $3,
     lease_expires_at = now() + $4::interval, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
-RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
 `
 
 type RetryTaskParams struct {
@@ -1917,6 +2672,7 @@ func (q *Queries) RetryTask(ctx context.Context, arg RetryTaskParams) (Task, err
 		&i.LastError,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Permanent,
 	)
 	return i, err
 }
@@ -1937,8 +2693,25 @@ func (q *Queries) SetBuildReconcileError(ctx context.Context, arg SetBuildReconc
 	return err
 }
 
+const setBuildResolvedRevision = `-- name: SetBuildResolvedRevision :exec
+UPDATE build SET resolved_revision_id = $2 WHERE id = $1
+`
+
+type SetBuildResolvedRevisionParams struct {
+	ID                 pgtype.UUID `json:"id"`
+	ResolvedRevisionID pgtype.UUID `json:"resolved_revision_id"`
+}
+
+// Records the content revision the orchestrator last emitted a build.resolved
+// event for, so that event fires once per resolve (the first resolve, and again
+// only when the content revision changes) rather than on every reconcile tick.
+func (q *Queries) SetBuildResolvedRevision(ctx context.Context, arg SetBuildResolvedRevisionParams) error {
+	_, err := q.db.Exec(ctx, setBuildResolvedRevision, arg.ID, arg.ResolvedRevisionID)
+	return err
+}
+
 const setBuildStatus = `-- name: SetBuildStatus :one
-UPDATE build SET status = $2 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id
+UPDATE build SET status = $2 WHERE id = $1 RETURNING id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id, resolved_revision_id
 `
 
 type SetBuildStatusParams struct {
@@ -1959,8 +2732,25 @@ func (q *Queries) SetBuildStatus(ctx context.Context, arg SetBuildStatusParams) 
 		&i.AutoBuilt,
 		&i.ReconcileError,
 		&i.CreatedByAccountID,
+		&i.ResolvedRevisionID,
 	)
 	return i, err
+}
+
+const setDeployedObjectAgentPlatform = `-- name: SetDeployedObjectAgentPlatform :exec
+UPDATE deployed_object SET agent_platform = $2 WHERE id = $1
+`
+
+type SetDeployedObjectAgentPlatformParams struct {
+	ID            pgtype.UUID `json:"id"`
+	AgentPlatform string      `json:"agent_platform"`
+}
+
+// Which agent binary the runner delivered to this host. Marks the object as one
+// whose agent is expected to check in, and picks its watchdog deadline.
+func (q *Queries) SetDeployedObjectAgentPlatform(ctx context.Context, arg SetDeployedObjectAgentPlatformParams) error {
+	_, err := q.db.Exec(ctx, setDeployedObjectAgentPlatform, arg.ID, arg.AgentPlatform)
+	return err
 }
 
 const setDeployedObjectBlockedOn = `-- name: SetDeployedObjectBlockedOn :exec
@@ -2170,4 +2960,32 @@ func (q *Queries) SetTeamAccessState(ctx context.Context, arg SetTeamAccessState
 		&i.AccessOverrideState,
 	)
 	return i, err
+}
+
+const supersedeTeamAccessTasks = `-- name: SupersedeTeamAccessTasks :execrows
+UPDATE task SET status = 'failed', last_error = 'superseded by a newer team access change', updated_at = now()
+WHERE build_id = $1
+  AND kind IN ('open_access', 'close_access')
+  AND status = 'pending'
+  AND payload->>'team' = $2::text
+`
+
+type SupersedeTeamAccessTasksParams struct {
+	BuildID pgtype.UUID `json:"build_id"`
+	Team    string      `json:"team"`
+}
+
+// Fix 3 (serialize manual access changes): a fresh manual open/close for a team
+// cancels any still-PENDING access task for that same team (either direction), so
+// a flurry of operator clicks collapses to just the newest intent instead of
+// queuing a tug-of-war the runner then executes one stale step at a time. A task
+// already 'leased' is mid-execution against the builder and is left to finish;
+// the newest task runs after it and wins, so the team lands in the last-requested
+// state regardless of ordering.
+func (q *Queries) SupersedeTeamAccessTasks(ctx context.Context, arg SupersedeTeamAccessTasksParams) (int64, error) {
+	result, err := q.db.Exec(ctx, supersedeTeamAccessTasks, arg.BuildID, arg.Team)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

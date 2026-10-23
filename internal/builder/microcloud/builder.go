@@ -13,9 +13,25 @@ import (
 	"strings"
 	"time"
 
+	"github.com/globalcptc/laforge/internal/agentdelivery"
 	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/render"
 )
+
+// agentUserData renders the agent-install user-data for an instance from the
+// neutral download URL, choosing the format this image consumes: cloud-init for
+// Linux, cloudbase-init for Windows. viaISO is true for Windows, where
+// cloudbase-init can't read the lxd socket so the user-data is delivered as a
+// NoCloud config-drive ISO. An empty url (agent delivery off) yields nothing.
+func agentUserData(url, os, tempPass string) (userData string, viaISO bool) {
+	if url == "" {
+		return "", false
+	}
+	if agentdelivery.PlatformFor(os) == agentdelivery.Windows {
+		return agentdelivery.WindowsCloudbaseUserData(url, tempPass), true
+	}
+	return agentdelivery.LinuxUserData(url, tempPass), false
+}
 
 // Builder implements internal/builder.Builder against one real Incus
 // server. Team isolation is network-level: every NetworkSpec becomes its
@@ -95,6 +111,50 @@ func shortName(externalName string) string {
 	return "lf-" + hex.EncodeToString(sum[:])[:12]
 }
 
+// LXD socket-path budget. When LXD starts a VM it opens a Unix control socket at
+//
+//	<lxdLogsDir><project>_<instance>/qemu.monitor
+//
+// and Go's Linux Unix-socket address buffer (sun_path) is 108 bytes INCLUDING a
+// trailing NUL, so that whole path must be <= 107 bytes or the connect fails with
+// a bare "invalid argument" (EINVAL) -- long after the instance name passed the
+// 63-char instance limit. MicroCloud is always the LXD snap, so its runtime logs
+// live under the snap's common dir. We budget the generated instance name against
+// this so a long project + long placement name can't produce a VM that passes
+// creation but can never start. See issue #63.
+const (
+	lxdSnapLogsDir    = "/var/snap/lxd/common/lxd/logs/"
+	qemuMonitorSuffix = "/qemu.monitor"
+	unixSocketPathMax = 107             // 108-byte sun_path minus the trailing NUL
+	minInstanceName   = len("lf-") + 12 // shortName is always "lf-"+12 hex = 15 bytes
+)
+
+// maxInstanceNameLen is the longest instance name that keeps the qemu-monitor
+// socket path within the Unix-socket limit for this project, also honoring the
+// 63-char cap the derived cidata volume ("<name>-cidata") needs. Can go negative
+// for an absurdly long project; validateInstanceNameBudget catches that.
+func maxInstanceNameLen(project string) int {
+	socketCap := unixSocketPathMax - len(lxdSnapLogsDir) - len(project) - len("_") - len(qemuMonitorSuffix)
+	cidataCap := 63 - len("-cidata")
+	if socketCap < cidataCap {
+		return socketCap
+	}
+	return cidataCap
+}
+
+// validateInstanceNameBudget rejects, before any resource is created, a project
+// so long that not even the minimal hashed instance name fits the socket path --
+// a permanent configuration error (retrying can't shorten the project), reported
+// with the computed length and the limit so the operator can act.
+func validateInstanceNameBudget(project string) error {
+	if maxInstanceNameLen(project) < minInstanceName {
+		minPath := len(lxdSnapLogsDir) + len(project) + len("_") + minInstanceName + len(qemuMonitorSuffix)
+		return fmt.Errorf("%w: LXD project %q (%d chars) leaves no room for a valid instance name: even the shortest %d-char name yields a %d-byte VM socket path, over the %d-byte limit. Use a shorter project name.",
+			builder.ErrPermanentConfig, project, len(project), minInstanceName, minPath, unixSocketPathMax)
+	}
+	return nil
+}
+
 // instanceName is shortName's readable counterpart for hosts and
 // containers (not networks, which are stuck with the 15-char cap and so
 // keep the pure hash): "lf-<branch>-t<team>-<host>-<6 hex>". The hex
@@ -102,16 +162,24 @@ func shortName(externalName string) string {
 // deterministic (idempotent adopt-on-retry recomputes the exact same name)
 // and collision-free across two live builds of the same branch+host on one
 // hoster, which the readable part alone can't guarantee. Falls back to
-// shortName when there's no display hint at all. Capped so the derived
-// cidata volume name ("<name>-cidata") still fits Incus's 63-char limit.
-func instanceName(displayName, externalName string) string {
+// shortName when there's no display hint at all. Capped to fit BOTH the
+// cidata volume's 63-char limit AND the full qemu-monitor socket path for
+// project (see maxInstanceNameLen), so the generated name can never be a VM
+// that creates fine but can't start.
+func instanceName(displayName, externalName, project string) string {
 	base := sanitizeName(displayName)
 	if base == "" {
 		return shortName(externalName)
 	}
 	sum := sha256.Sum256([]byte(externalName))
 	suffix := hex.EncodeToString(sum[:])[:6]
-	const maxBase = 48 // 63 - len("-cidata") - len("-<6 hex>"), rounded down
+	maxBase := maxInstanceNameLen(project) - len("-") - len(suffix)
+	if maxBase < len("lf-") {
+		// No room for a readable base once the project eats the budget; the pure
+		// hash (15 bytes) is the shortest deterministic name. A project too long
+		// for even that is rejected up front by validateInstanceNameBudget.
+		return shortName(externalName)
+	}
 	if len(base) > maxBase {
 		base = strings.TrimRight(base[:maxBase], "-")
 	}
@@ -189,6 +257,11 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	if err != nil {
 		return "", fmt.Errorf("computing gateway address for %s: %w", spec.CIDR, err)
 	}
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return name, err
+	}
+	defer release()
 	// Adopt-if-present, by an explicit existence check rather than relying on the
 	// create call's error shape. On a CLUSTERED LXD (a real MicroCloud), re-POSTing
 	// an OVN network that already exists does NOT return a clean 409 -- it returns
@@ -196,7 +269,7 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	// path, which AlreadyExists() can't recognize. Found live against the 4-node
 	// cluster: without this pre-check the second (retried) DeployNetwork of an
 	// existing network errored instead of adopting, breaking the "ensure" contract.
-	if exists, err := b.networkExists(ctx, name); err != nil {
+	if exists, err := b.networkExists(ctx, name, bridgeAddr); err != nil {
 		return name, fmt.Errorf("checking whether network %s exists: %w", name, err)
 	} else if exists {
 		return name, nil // adopt
@@ -217,37 +290,42 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 	if err != nil {
 		var apiErr *APIError
 		if errors.As(err, &apiErr) && apiErr.AlreadyExists() {
-			if exists, readErr := b.networkExists(ctx, name); readErr == nil && exists {
+			if exists, readErr := b.networkExists(ctx, name, bridgeAddr); readErr != nil {
+				return name, fmt.Errorf("validating existing network %s: %w", name, readErr)
+			} else if exists {
 				return name, nil
 			}
 		}
 		slog.ErrorContext(ctx, "MicroCloud primary network creation failed", "project", b.Client.Project, "network", name, "error", err)
 		return name, fmt.Errorf("creating network %s (from %s): %w", name, spec.ExternalName, err)
 	}
+	if exists, err := b.networkExists(ctx, name, bridgeAddr); err != nil {
+		return name, fmt.Errorf("validating created network %s: %w", name, err)
+	} else if !exists {
+		return name, fmt.Errorf("created network %s is missing on read-back", name)
+	}
 	slog.InfoContext(ctx, "MicroCloud primary OVN network created", "project", b.Client.Project, "network", name)
 	return name, nil
 }
 
 // networkExists reports whether a managed network of this exact name is already
-// present, via GET /1.0/networks/<name> (404 -> false). Used by DeployNetwork to
-// adopt idempotently on a clustered LXD, where a duplicate create doesn't surface
-// as a recognizable "already exists" error.
-func (b *Builder) networkExists(ctx context.Context, name string) (bool, error) {
+// present and has a valid, unique uplink allocation (404 -> false). Both new
+// networks and adoption paths must pass the same check before a network task
+// can finish and release dependent guests. Call with the networking lock held.
+func (b *Builder) networkExists(ctx context.Context, name, gateway string) (bool, error) {
 	raw, err := b.Client.get(ctx, "/1.0/networks/"+name)
 	if err == nil {
-		var state struct {
-			Status string `json:"status"`
-		}
+		var state allocatedNetwork
 		if err := json.Unmarshal(raw, &state); err != nil {
 			return false, err
 		}
-		if state.Status != "" && state.Status != "Created" {
-			return false, fmt.Errorf("network %s exists in state %s; cluster network creation must finish successfully before deploying boxes", name, state.Status)
+		if err := b.validateNetworkAllocation(ctx, name, gateway, state); err != nil {
+			return false, err
 		}
 		return true, nil
 	}
 	var apiErr *APIError
-	if errors.As(err, &apiErr) && apiErr.NotFound() {
+	if errors.As(err, &apiErr) && apiErr.HTTPStatus == 404 {
 		return false, nil
 	}
 	return false, err
@@ -278,11 +356,16 @@ func bridgeAddressCIDR(cidr string) (string, error) {
 }
 
 func (b *Builder) DestroyNetwork(ctx context.Context, team, externalRef string) error {
+	ctx, release, err := b.Client.lockNetworking(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	// Tear down the visible_from fabric (peers + ACL) first -- a peered OVN
 	// network can't be deleted, nor an attached ACL. Best-effort. See
 	// netaccess.go and the incus builder's identical teardown.
 	b.teardownNetworkAccess(ctx, externalRef)
-	_, err := b.Client.delete(ctx, "/1.0/networks/"+externalRef)
+	_, err = b.Client.delete(ctx, "/1.0/networks/"+externalRef)
 	if err != nil {
 		var apiErr *APIError
 		if errors.As(err, &apiErr) && apiErr.NotFound() {
@@ -306,7 +389,24 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 	if img.VM {
 		instanceType = "virtual-machine"
 	}
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, spec.CloudInitUserData, spec.CloudInitViaISO)
+	win := agentdelivery.PlatformFor(spec.OS) == agentdelivery.Windows
+	cloudInit, _ := agentUserData(spec.AgentDownloadURL, spec.OS, spec.TempAdminPassword)
+	// Embed-first: write the patched agent onto the custom config-drive ISO so
+	// the user-data copies it locally (download URL stays as fallback). Windows
+	// always takes the ISO path; Linux switches to it only when embedding. (The
+	// public-NIC path uses LXD's own config drive, which we don't own, so those
+	// hosts stay download-only -- see DeployHostWithPublicPorts.)
+	var agentBinary []byte
+	agentFile := ""
+	if len(spec.AgentBinary) > 0 {
+		agentBinary = spec.AgentBinary
+		agentFile = agentdelivery.LinuxAgentFile
+		if win {
+			agentFile = agentdelivery.WindowsAgentFile
+		}
+	}
+	viaISO := win || len(agentBinary) > 0
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, instanceType, img, size, spec.DiskGB, false, cloudInit, viaISO, agentBinary, agentFile)
 }
 
 // DeployContainer runs a LaForge `container:` as a nested Docker container. LXD
@@ -339,7 +439,7 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 	base := ImageRef{Fingerprint: b.Config.DockerBaseFingerprint}
 	// No cloud-init on the Docker host: it needs no agent of its own. The docker
 	// base image already brings dockerd up on boot.
-	name, err := b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", base, size, 0, true, "", false)
+	name, err := b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", base, size, 0, true, "", false, nil, "")
 	if err != nil {
 		return name, err
 	}
@@ -366,7 +466,10 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 	if !ok {
 		return "", fmt.Errorf("no size configured for %q", spec.Size)
 	}
-	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Fingerprint: b.Config.DockerBaseFingerprint}, size, spec.DiskGB, true, spec.CloudInitUserData, false)
+	// A compose host is always this Linux docker-base container, so its agent is
+	// delivered by cloud-init (never the Windows ISO path).
+	cloudInit, _ := agentUserData(spec.AgentDownloadURL, "linux", "")
+	return b.deployInstance(ctx, spec.ExternalName, spec.DisplayName, spec.Team, spec.Network, spec.NetworkDisplayName, spec.Address, "container", ImageRef{Fingerprint: b.Config.DockerBaseFingerprint}, size, spec.DiskGB, true, cloudInit, false, nil, "")
 }
 
 // teamConfigKey is the Incus instance config key OpenAccess/CloseAccess
@@ -377,8 +480,11 @@ func (b *Builder) deployComposeHost(ctx context.Context, spec builder.ContainerS
 // see shortName's own doc comment).
 const teamConfigKey = "user.laforge_team"
 
-func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool, publicPlans ...*publicNICPlan) (string, error) {
-	name := instanceName(displayName, externalName)
+func (b *Builder) deployInstance(ctx context.Context, externalName, displayName, team, network, networkDisplayName, address, instanceType string, img ImageRef, size SizeSpec, diskGB int, nesting bool, cloudInit string, cloudInitViaISO bool, agentBinary []byte, agentFile string, publicPlans ...*publicNICPlan) (string, error) {
+	if err := validateInstanceNameBudget(b.Client.Project); err != nil {
+		return "", err
+	}
+	name := instanceName(displayName, externalName, b.Client.Project)
 	slog.InfoContext(ctx, "MicroCloud deploying instance", "project", b.Client.Project, "instance", name, "external_name", externalName, "team", team, "instance_type", instanceType, "snapshot", img.IsSnapshot())
 
 	var public *publicNICPlan
@@ -479,10 +585,10 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	}
 
 	if cloudInit != "" && cloudInitViaISO && public == nil {
-		// Windows: cloudbase-init can't read the socket, so the user-data
-		// is delivered as a NoCloud config-drive ISO attached to the
+		// Windows (and embedding Linux): the user-data, and the agent binary
+		// itself when embedded, ride a NoCloud config-drive ISO attached to the
 		// instance (imported as a custom volume first -- see configdrive.go).
-		iso, err := buildCidataISO(name, cloudInit)
+		iso, err := buildCidataISO(name, cloudInit, agentBinary, agentFile)
 		if err != nil {
 			return name, fmt.Errorf("building config drive for %s: %w", name, err)
 		}
@@ -557,8 +663,17 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 			return name, err
 		}
 	}
-	err := b.createInstance(ctx, name, request)
-	if err != nil {
+	if err := b.createInstance(ctx, name, request, b.clusterTarget(ctx)); err != nil {
+		// A copy whose requested root disk is smaller than the source snapshot's
+		// block volume fails here with "Block volumes cannot be shrunk" -- a
+		// configuration mismatch retrying can't fix (and preflight catches when
+		// the source size is readable; this guards the sources whose size it
+		// couldn't determine). Mark it permanent so the runner stops retrying,
+		// and point at the fix.
+		if diskGB > 0 && img.IsSnapshot() && isShrinkError(err) {
+			return name, fmt.Errorf("%w: host disk %dGB is smaller than the %s source it copies from, whose block volume cannot be shrunk; raise this host's disk: to at least the source's size: %w",
+				builder.ErrPermanentConfig, diskGB, externalName, err)
+		}
 		// Keep the deterministic ref for cleanup even if creation is uncertain.
 		return name, fmt.Errorf("creating instance from %s: %w", externalName, err)
 	}
@@ -581,6 +696,16 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		return name, err
 	}
 	return name, nil
+}
+
+// ConsoleLog reads the instance's console log through LXD's
+// GET /1.0/instances/<name>/console (a raw body, not the JSON envelope).
+func (b *Builder) ConsoleLog(ctx context.Context, team, externalRef string, maxBytes int) (string, error) {
+	data, err := b.Client.getRaw(ctx, "/1.0/instances/"+externalRef+"/console")
+	if err != nil {
+		return "", fmt.Errorf("reading console log of %s: %w", externalRef, err)
+	}
+	return builder.TailBytes(data, maxBytes), nil
 }
 
 // PowerAction maps LaForge's start/stop/reboot onto Incus's own instance
@@ -641,7 +766,7 @@ func (b *Builder) DestroyHostForDeployment(ctx context.Context, team, externalRe
 // HostReference resolves the same name as DeployHost when a rebuild reset has
 // already cleared external_ref. Only this builder exposes this optional hook.
 func (b *Builder) HostReference(externalName, displayName string) string {
-	return instanceName(displayName, externalName)
+	return instanceName(displayName, externalName, b.Client.Project)
 }
 
 type destroyOptions struct {
@@ -788,99 +913,14 @@ func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 	return out, nil
 }
 
-// OpenAccess and CloseAccess are the required, behavioural operations:
-// "closing a team must block all external ingress and terminate
-// established connections, not merely stop new ones." This
-// implementation removes (CloseAccess) or re-adds (OpenAccess) every
-// team-tagged instance's `eth0` network device entirely, rather than
-// e.g. an iptables rule -- verified against a live daemon
-// (builder_test.go) to be the mechanism that actually satisfies the
-// "terminate established connections" requirement: removing the device
-// tears down the interface itself, which drops any connection using it,
-// not just future ones. The device's own config (which network, what
-// IP) is remembered so OpenAccess restores the exact same attachment,
-// matching "port reservations survive" for the equivalent network-level
-// case.
-func (b *Builder) CloseAccess(ctx context.Context, team string) error {
-	return b.forEachTeamInstance(ctx, team, func(name string, inst mcInstance) error {
-		return b.removeNIC(ctx, name)
-	})
-}
+// Team access open/close lives in access.go. Like the Incus builder it no
+// longer detaches eth0 (which cut agent telemetry and tore the host off its
+// NATs) -- it firewalls the NICs that stay attached. See access.go.
 
-func (b *Builder) OpenAccess(ctx context.Context, team string) error {
-	return b.forEachTeamInstance(ctx, team, func(name string, inst mcInstance) error {
-		return b.restoreNIC(ctx, name)
-	})
-}
-
-func (b *Builder) forEachTeamInstance(ctx context.Context, team string, fn func(name string, inst mcInstance) error) error {
-	instances, err := b.ourInstances(ctx)
-	if err != nil {
-		return err
-	}
-	for _, inst := range instances {
-		if inst.Config[teamConfigKey] != team {
-			continue
-		}
-		if err := fn(inst.Name, inst); err != nil {
-			return fmt.Errorf("instance %s: %w", inst.Name, err)
-		}
-	}
-	return nil
-}
-
-// removedNICKey stashes what CloseAccess needs to undo, as JSON, in a
-// user.* config key on the instance itself -- so OpenAccess can restore
-// exactly what was there, without this builder needing any durable state
-// of its own beyond what's already on the instance. Incus config values
-// are opaque strings from its own point of view, so this is a legitimate,
-// real place to keep it.
-//
-// What gets saved had to change after testing against a live daemon: a
-// deployInstance-created instance never sets eth0 at the instance level
-// at all (see deployInstance -- devices only carries "root", and only
-// when DiskGB > 0). eth0 comes entirely from Incus's "default" profile,
-// confirmed live -- GET .../instances/<name> returns an empty top-level
-// "devices" and eth0 only inside "expanded_devices". Checking the
-// top-level "devices" field for eth0 (an earlier version of this code)
-// silently found nothing and treated every real instance as "already
-// closed," which is exactly the kind of bug the plan's "close really
-// closes... every builder passes this before it is considered done"
-// verification rule exists to catch. The fix: read expanded_devices for
-// the real, in-effect NIC config, and disable it with an instance-level
-// override of type "none" -- Incus's own documented mechanism for
-// switching off a profile-provided device per instance, since an
-// instance can't delete a device that belongs to its profile, only mask
-// it. Restoring removes that override so the profile's device resumes,
-// which also correctly handles the (untested-live, but symmetric) case
-// of an instance that had its own instance-level eth0 to begin with --
-// same save/restore shape either way, the JSON payload just says which.
-const removedNICKey = "user.laforge_closed_eth0"
-
-type savedNIC struct {
-	// Instance is true when eth0 was defined directly on the instance
-	// (not via a profile) -- restoreNIC puts Device back verbatim.
-	// False means eth0 only ever existed via a profile, and restoring
-	// means removing the "none" override so the profile's device takes
-	// effect again, not writing anything back.
-	Instance bool                   `json:"instance"`
-	Device   map[string]interface{} `json:"device,omitempty"`
-}
-
-// instancePut is the full body Incus's PUT .../instances/<name> requires --
-// verified live: PUT replaces the whole resource, so omitting a field
-// (this code's first attempt sent only config+devices) resets it, and an
-// empty Profiles wipes every profile-provided device, not just eth0 --
-// surfaced live as "Invalid expanded devices: Failed detecting root disk
-// device: No root device could be found" on an instance that never had
-// its own root device, only the default profile's. PATCH, by contrast,
-// merges config and devices key by key (also verified live) and needs no
-// other field -- so this builder uses PATCH wherever a merge is enough
-// (removeNIC only ever adds keys) and full PUT only where a key must be
-// deleted outright (restoreNIC clearing removedNICKey, or removing an
-// eth0 override so a profile's own device takes back over -- PATCHing a
-// device to null was tried live and rejected: "Missing device type in
-// config").
+// instancePut is the full body Incus/LXD's PUT .../instances/<name> requires --
+// PUT replaces the whole resource, PATCH merges key by key. getInstancePut reads
+// it (plus the in-effect expanded_devices) for callers that need a host's real
+// NIC/network config, e.g. teamNetworks and ensureHostPortACL.
 type instancePut struct {
 	etag         string
 	Architecture string                     `json:"architecture"`
@@ -942,85 +982,6 @@ func retryOnBusy(ctx context.Context, fn func() error) error {
 		}
 	}
 	return lastErr
-}
-
-func (b *Builder) removeNIC(ctx context.Context, name string) error {
-	return retryOnBusy(ctx, func() error {
-		full, expanded, err := b.getInstancePut(ctx, name)
-		if err != nil {
-			return err
-		}
-		config := map[string]string{}
-		devices := map[string]interface{}{}
-		for device, key := range map[string]string{"eth0": removedNICKey, publicNICName: publicClosedKey} {
-			if _, closed := full.Config[key]; closed {
-				continue
-			}
-			effective, exists := expanded[device]
-			if !exists {
-				continue
-			}
-			saved := savedNIC{}
-			if raw, ok := full.Devices[device]; ok {
-				saved.Instance = true
-				if err := json.Unmarshal(raw, &saved.Device); err != nil {
-					return err
-				}
-			} else if m, ok := effective.(map[string]interface{}); ok {
-				saved.Device = m
-			}
-			if saved.Device["type"] != "nic" {
-				continue
-			}
-			raw, err := json.Marshal(saved)
-			if err != nil {
-				return err
-			}
-			config[key] = string(raw)
-			devices[device] = map[string]string{"type": "none"}
-		}
-		if len(devices) == 0 {
-			return nil
-		}
-		_, err = b.Client.do(ctx, "PATCH", "/1.0/instances/"+name, map[string]interface{}{"config": config, "devices": devices}, requestOptions{ifMatch: full.etag})
-		return err
-	})
-}
-
-func (b *Builder) restoreNIC(ctx context.Context, name string) error {
-	return retryOnBusy(ctx, func() error {
-		full, _, err := b.getInstancePut(ctx, name)
-		if err != nil {
-			return err
-		}
-		changed := false
-		for device, key := range map[string]string{"eth0": removedNICKey, publicNICName: publicClosedKey} {
-			raw, closed := full.Config[key]
-			if !closed {
-				continue
-			}
-			var saved savedNIC
-			if err := json.Unmarshal([]byte(raw), &saved); err != nil {
-				return fmt.Errorf("decoding saved NIC state: %w", err)
-			}
-			if saved.Instance {
-				raw, err := json.Marshal(saved.Device)
-				if err != nil {
-					return err
-				}
-				full.Devices[device] = raw
-			} else {
-				delete(full.Devices, device)
-			}
-			delete(full.Config, key)
-			changed = true
-		}
-		if !changed {
-			return nil
-		}
-		_, err = b.Client.do(ctx, "PUT", "/1.0/instances/"+name, full, requestOptions{ifMatch: full.etag})
-		return err
-	})
 }
 
 // HasWorkingEth0 reports whether name's own eth0 (as Incus's

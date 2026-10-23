@@ -24,13 +24,36 @@ SET valid = $2, validation_errors = $3, validated_at = now()
 WHERE id = $1
 RETURNING *;
 
+-- The six persisted-content child tables of a content_revision, deleted by
+-- revision so re-validation (ingest.ValidateAndStore) can rebuild them to match
+-- a changed verdict. person and placement are not listed: they cascade from
+-- people_source and environment respectively (ON DELETE CASCADE).
+
+-- name: DeleteNetworksByRevision :exec
+DELETE FROM network WHERE content_revision_id = $1;
+
+-- name: DeleteHostsByRevision :exec
+DELETE FROM host WHERE content_revision_id = $1;
+
+-- name: DeleteContainersByRevision :exec
+DELETE FROM container WHERE content_revision_id = $1;
+
+-- name: DeleteScriptsByRevision :exec
+DELETE FROM script WHERE content_revision_id = $1;
+
+-- name: DeletePeopleSourcesByRevision :exec
+DELETE FROM people_source WHERE content_revision_id = $1;
+
+-- name: DeleteEnvironmentsByRevision :exec
+DELETE FROM environment WHERE content_revision_id = $1;
+
 -- name: CreateEnvironment :one
 INSERT INTO environment (
   content_revision_id, path, name, schema_version, description, teams,
   root_password, start_at, stop_at, dns, access,
-  vars, tags, findings, extends, agent_debug, container_logs
+  vars, tags, findings, extends, agent_debug, container_logs, cidr
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
 ) RETURNING *;
 
 -- name: GetEnvironmentContainerLogsForObject :one

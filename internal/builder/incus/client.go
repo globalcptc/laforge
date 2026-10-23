@@ -181,6 +181,12 @@ func (e *APIError) AlreadyExists() bool {
 	return strings.Contains(e.Message, "already exists")
 }
 
+// VolumeInUse is Incus's refusal to delete a volume still referenced by an
+// instance or profile, including a stopped VM's attached config drive.
+func (e *APIError) VolumeInUse() bool {
+	return strings.Contains(strings.ToLower(e.Message), "storage volume is still in use")
+}
+
 func (e *APIError) NotFound() bool {
 	return e.HTTPStatus == http.StatusNotFound || strings.Contains(strings.ToLower(e.Message), "not found")
 }
@@ -220,6 +226,39 @@ func (e *APIError) Busy() bool {
 func (c *Client) get(ctx context.Context, path string) (json.RawMessage, error) {
 	return c.do(ctx, http.MethodGet, path, nil)
 }
+// getRaw does a GET and returns the untouched response body, for endpoints that
+// don't speak the LXD JSON envelope -- notably /1.0/metrics, which is OpenMetrics
+// text. The normal do()/get() path would fail trying to json.Unmarshal it.
+func (c *Client) getRaw(ctx context.Context, path string) ([]byte, error) {
+	reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+	defer cancel()
+	u := c.BaseURL + path
+	if c.Project != "" {
+		sep := "?"
+		if strings.Contains(path, "?") {
+			sep = "&"
+		}
+		u += sep + "project=" + url.QueryEscape(c.Project)
+	}
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("GET %s: %w", u, err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GET %s: HTTP %d", u, resp.StatusCode)
+	}
+	return data, nil
+}
+
 func (c *Client) post(ctx context.Context, path string, body interface{}) (json.RawMessage, error) {
 	return c.do(ctx, http.MethodPost, path, body)
 }
@@ -260,16 +299,33 @@ func (c *Client) exec(ctx context.Context, instance string, command ...string) (
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body interface{}) (json.RawMessage, error) {
+	return c.doWithHeaders(ctx, method, path, body, nil, nil)
+}
+
+func (c *Client) doWithHeaders(ctx context.Context, method, path string, body interface{}, headers http.Header, responseHeaders *http.Header) (json.RawMessage, error) {
 	// reqCtx, not a reassigned ctx: waitForOperation below needs the
 	// ORIGINAL, undecorated ctx this function was called with, not this
 	// request's own short-lived deadline -- a child context can never
 	// outlive its parent's, so passing reqCtx into waitForOperation would
 	// silently cap its own, much longer c.OperationTimeout+10s deadline
-	// back down to requestTimeout (30s) regardless of what
-	// OperationTimeout is configured to. Found exactly this way, live,
-	// against a real MicroCloud/Ceph cluster -- see NewClient's own doc
-	// comment on this same class of bug.
-	reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+	// back down regardless of what OperationTimeout is configured to. Found
+	// exactly this way, live, against a real MicroCloud/Ceph cluster -- see
+	// NewClient's own doc comment on this same class of bug.
+	//
+	// The submission deadline is max(requestTimeout, OperationTimeout), not a
+	// fixed requestTimeout: a SYNCHRONOUS call (a read like SnapshotExists /
+	// ListImages, or a synchronous mutation) IS the whole request, so a slow
+	// cluster read must get the configured budget rather than dying at 30s --
+	// exactly the "checking snapshot …: context deadline exceeded" the image
+	// config page hit against a Ceph-backed cluster. An async op still returns
+	// its operation handle quickly here and then waits on the original ctx, so
+	// the longer submission deadline only helps reads and never shortens a wait.
+	// This matches the MicroCloud client's do(), which already does this.
+	timeout := requestTimeout
+	if c.OperationTimeout > timeout {
+		timeout = c.OperationTimeout
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	u := c.BaseURL + path
 	if c.Project != "" {
@@ -296,11 +352,17 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 		req.Header.Set("Content-Type", "application/json")
 	}
 
+	for key, values := range headers {
+		req.Header[key] = values
+	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("%s %s: %w", method, u, err)
 	}
 	defer resp.Body.Close()
+	if responseHeaders != nil {
+		*responseHeaders = resp.Header.Clone()
+	}
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -343,6 +405,26 @@ type operationResult struct {
 	Err        string `json:"err"`
 }
 
+// operationPendingError retains the operation URL so config-drive recovery
+// can resume waiting instead of racing a second mutation against the first.
+type operationPendingError struct {
+	Path    string
+	Status  string
+	Timeout time.Duration
+	Cause   error
+}
+
+func (e *operationPendingError) Error() string {
+	return fmt.Sprintf("operation %s is unconfirmed (%s, wait limit %s): %v", e.Path, e.Status, e.Timeout, e.Unwrap())
+}
+
+func (e *operationPendingError) Unwrap() error {
+	if e.Cause != nil {
+		return e.Cause
+	}
+	return context.DeadlineExceeded
+}
+
 // waitForOperation blocks on a real async Incus operation and returns
 // its own result once it reaches a terminal state. Found live, not
 // assumed: this used to only check the outer sync/async envelope's own
@@ -368,19 +450,22 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 	// this can't just be c.HTTPClient's own Timeout field.
 	ctx, cancel := context.WithTimeout(ctx, c.OperationTimeout+10*time.Second)
 	defer cancel()
-	u := fmt.Sprintf("%s%s/wait?timeout=%d", c.BaseURL, opPath, int(c.OperationTimeout.Seconds()))
+	u, err := c.operationWaitURL(opPath)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("waiting for operation %s: %w", opPath, err)
+		return nil, &operationPendingError{Path: opPath, Status: "unknown", Timeout: c.OperationTimeout, Cause: err}
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, &operationPendingError{Path: opPath, Status: "unknown", Timeout: c.OperationTimeout, Cause: err}
 	}
 	var ar apiResponse
 	if err := json.Unmarshal(data, &ar); err != nil {
@@ -403,9 +488,34 @@ func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawM
 		}
 		return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: op.StatusCode, Message: msg}
 	}
+	// /wait returns the operation's current state when its server-side
+	// timeout expires. HTTP 200 with status 103 still means "Running";
+	// continuing here can race an unfinished stop/delete with an ISO import.
+	if op.StatusCode >= 100 && op.StatusCode < 200 {
+		return nil, &operationPendingError{Path: opPath, Status: op.Status, Timeout: c.OperationTimeout}
+	}
+	if op.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("operation %s returned unexpected status %d (%s)", opPath, op.StatusCode, op.Status)
+	}
 	return ar.Metadata, nil
 }
 
 func pemEncodeCert(der []byte) []byte {
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+}
+
+// Build operation wait URLs without losing project/target query parameters.
+func (c *Client) operationWaitURL(opPath string) (string, error) {
+	u, err := url.Parse(opPath)
+	if err != nil {
+		return "", err
+	}
+	u.Path = strings.TrimSuffix(u.Path, "/") + "/wait"
+	query := u.Query()
+	query.Set("timeout", fmt.Sprint(max(1, int(c.OperationTimeout.Seconds()))))
+	if query.Get("project") == "" && c.Project != "" {
+		query.Set("project", c.Project)
+	}
+	u.RawQuery = query.Encode()
+	return c.BaseURL + u.RequestURI(), nil
 }

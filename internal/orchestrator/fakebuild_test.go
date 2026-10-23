@@ -17,6 +17,26 @@ import (
 // point: loop (create deploy tasks, then execute them, bringing objects up)
 // until no object is still pending or deploying. Boxes deploy ahead of their
 // dependencies now, so this typically converges in a single pass.
+// reconcileWithNetworksUp reconciles, brings every network up (as a completed
+// DeployNetwork would -- a host/container's first deploy waits for its network's
+// subnet/bridge to exist), then reconciles again so the box deploy tasks are
+// created. For tests that assert on the full set of deploy tasks from one logical
+// deploy without running the fake builder pass by pass.
+func reconcileWithNetworksUp(t *testing.T, ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID) {
+	t.Helper()
+	if err := Reconcile(ctx, pool, repoRoot, buildID, nil); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if _, err := pool.Exec(ctx,
+		"UPDATE deployed_object SET status='running' WHERE kind='network' AND team_id IN (SELECT id FROM team WHERE build_id=$1)",
+		buildID); err != nil {
+		t.Fatalf("marking networks up: %v", err)
+	}
+	if err := Reconcile(ctx, pool, repoRoot, buildID, nil); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+}
+
 func deployToConvergence(t *testing.T, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID) {
 	t.Helper()
 	ctx := context.Background()
@@ -27,7 +47,7 @@ func deployToConvergence(t *testing.T, pool *pgxpool.Pool, repoRoot string, buil
 		BuildID: &buildID,
 	}
 	for pass := 0; pass < 10; pass++ {
-		if err := Reconcile(ctx, pool, repoRoot, buildID); err != nil {
+		if err := Reconcile(ctx, pool, repoRoot, buildID, nil); err != nil {
 			t.Fatalf("Reconcile (pass %d): %v", pass, err)
 		}
 		for {

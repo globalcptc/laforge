@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -12,6 +13,24 @@ import (
 	"github.com/globalcptc/laforge/internal/builderconfig"
 	"github.com/globalcptc/laforge/internal/db"
 )
+
+// builderConfigNameForBuild returns the builder_config name a build deploys to,
+// for grouping builds by builder (so a shared Inspect is done once per builder,
+// not once per build).
+func builderConfigNameForBuild(ctx context.Context, q *db.Queries, buildID pgtype.UUID) (string, error) {
+	build, err := q.GetBuild(ctx, buildID)
+	if err != nil {
+		return "", fmt.Errorf("loading build: %w", err)
+	}
+	if !build.ConfiguredBuildID.Valid {
+		return "", errors.New("this build has no configured_build, so there's no builder to resolve")
+	}
+	cb, err := q.GetConfiguredBuild(ctx, build.ConfiguredBuildID)
+	if err != nil {
+		return "", fmt.Errorf("loading configured build: %w", err)
+	}
+	return cb.BuilderConfigName, nil
+}
 
 // resolveBuilderForBuild resolves a build's own builder through the same
 // build -> configured_build -> builder_config chain DetectDrift and
@@ -59,11 +78,71 @@ func PollInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.
 	if err != nil {
 		return fmt.Errorf("inspecting hoster: %w", err)
 	}
-	stateByRef := make(map[string]string, len(resources))
-	for _, r := range resources {
-		stateByRef[r.ExternalRef] = r.State
-	}
+	return applyInstanceStates(ctx, pool, buildID, inspectStateMap(resources))
+}
 
+// PollInstanceStatesForBuilds refreshes power states for many builds while doing
+// Inspect ONCE per builder, not once per build: a builder's Inspect returns all
+// of its managed resources (across every build on it), so for N builds sharing a
+// builder it's one hoster scan, not N. Best-effort per build/builder -- a resolve
+// or Inspect failure is logged and that builder's builds are skipped this pass.
+func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildIDs []pgtype.UUID) {
+	q := db.New(pool)
+	type cached struct {
+		stateByRef map[string]string
+		ok         bool
+	}
+	byBuilder := map[string]cached{}
+	for _, id := range buildIDs {
+		name, err := builderConfigNameForBuild(ctx, q, id)
+		if err != nil {
+			continue // no builder to resolve (e.g. a planned build with no configured_build)
+		}
+		c, seen := byBuilder[name]
+		if !seen {
+			c = inspectBuilder(ctx, pool, id, name)
+			byBuilder[name] = c
+		}
+		if !c.ok {
+			continue
+		}
+		if err := applyInstanceStates(ctx, pool, id, c.stateByRef); err != nil {
+			log.Printf("recording power states for build %s: %v", id.String(), err)
+		}
+	}
+}
+
+func inspectBuilder(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, name string) (c struct {
+	stateByRef map[string]string
+	ok         bool
+}) {
+	bldr, err := resolveBuilderForBuild(ctx, pool, buildID)
+	if err != nil {
+		log.Printf("resolving builder %q: %v", name, err)
+		return c
+	}
+	resources, err := bldr.Inspect(ctx)
+	if err != nil {
+		log.Printf("inspecting builder %q: %v", name, err)
+		return c
+	}
+	c.stateByRef = inspectStateMap(resources)
+	c.ok = true
+	return c
+}
+
+func inspectStateMap(resources []builder.Resource) map[string]string {
+	m := make(map[string]string, len(resources))
+	for _, r := range resources {
+		m[r.ExternalRef] = r.State
+	}
+	return m
+}
+
+// applyInstanceStates records each host/container's power state from a builder's
+// already-fetched resource map (ref -> state). An object whose ref the hoster no
+// longer lists is "missing".
+func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, stateByRef map[string]string) error {
 	q := db.New(pool)
 	objs, err := q.ListDeployedObjectsByBuild(ctx, buildID)
 	if err != nil {

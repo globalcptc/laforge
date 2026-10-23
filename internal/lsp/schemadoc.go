@@ -129,9 +129,9 @@ func schemaFieldsForKind(kind schema.Kind) ([]schemaField, error) {
 // made of the same per-action data stepListItemCompletion/
 // scheduleListItemCompletion's own snippets already come from
 // (common.schema.json's stepItem/scheduleItem properties), not a
-// second, separately-maintained copy. validate and when are excluded:
-// modifiers/metadata a step or schedule entry carries, never an action
-// kind on their own.
+// second, separately-maintained copy. validate, when, wait_for and
+// milestone are excluded: modifiers/metadata a step or schedule entry
+// carries, never an action kind on their own.
 func attachActionOptions(fields []schemaField) error {
 	for i := range fields {
 		var actions []schemaField
@@ -149,7 +149,7 @@ func attachActionOptions(fields []schemaField) error {
 		}
 		opts := make([]schemaFieldOption, 0, len(actions))
 		for _, a := range actions {
-			if a.Name == "validate" || a.Name == "when" {
+			if a.Name == "validate" || a.Name == "when" || a.Name == "wait_for" || a.Name == "milestone" {
 				continue
 			}
 			opts = append(opts, schemaFieldOption{Name: a.Name, Description: a.Description, Example: a.Example})
@@ -247,6 +247,28 @@ func stepActionFields(action string) ([]schemaField, bool, error) {
 		return nil, false, nil
 	}
 	return fieldsFromProperties(actionDef.Properties), true, nil
+}
+
+// nestedStepObjectFields resolves an object nested one level inside a step
+// action -- set_password's / create_user's `generate: { type, size, label }`
+// -- by its key. Found by name across every step action; the shapes that
+// share a name (generate) are identical, so the first match is the answer.
+func nestedStepObjectFields(key string) ([]schemaField, bool, error) {
+	def, err := commonDef("stepItem")
+	if err != nil {
+		return nil, false, err
+	}
+	actions := make([]string, 0, len(def.Properties))
+	for a := range def.Properties {
+		actions = append(actions, a)
+	}
+	sort.Strings(actions)
+	for _, a := range actions {
+		if nested, ok := def.Properties[a].Properties[key]; ok && len(nested.Properties) > 0 {
+			return fieldsFromProperties(nested.Properties), true, nil
+		}
+	}
+	return nil, false, nil
 }
 
 // scheduleActionFields is scheduleActionKeys' own per-action sub-fields,

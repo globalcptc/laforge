@@ -2,10 +2,11 @@ import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { AlertTriangle, Boxes, ChevronRight, FolderGit2, GitCommit, Network, Server, ServerCog, Users, X } from 'lucide-react'
 import { useDismissAttention, useHome, useMe } from '../api/hooks'
-import type { AttentionItem, HomeBuild, HomeCounts, HomeData } from '../api/types'
+import type { AttentionItem, HomeBuild, HomeCapacity, HomeCounts, HomeData } from '../api/types'
 import { AccessCountdown } from '../components/AccessCountdown'
 import { EmptyState } from '../components/EmptyState'
 import { StatusBadge } from '../components/StatusBadge'
+import { BuilderPill } from '../components/BuilderPill'
 import { KIND_LABEL, type Kind } from '../components/builder-wizard/model'
 import { Button, Card, PageHeader, Spinner, cn } from '../ui'
 
@@ -123,55 +124,119 @@ function AttentionRow({ item }: { item: AttentionItem }) {
   )
 }
 
+const fmtNum = (n: number) => (Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1))
+
+// CapacityCell is one build-gating signal, kept small enough that a builder's
+// two heaviest signals sit in their own fixed columns: a short label, a thin
+// bar and the value. The node (and the full label) live in the tooltip; the
+// builder page has the full set.
+function CapacityCell({ sig, className }: { sig: HomeCapacity | undefined; className?: string }) {
+  if (!sig) return <span className={className} />
+  const pct = Math.min(100, Math.max(0, sig.pct))
+  const tone = sig.pct >= 90 ? 'bg-danger' : sig.pct >= 75 ? 'bg-warning' : 'bg-accent'
+  const title = sig.node ? `${sig.label} · ${sig.node}` : sig.label
+  const value = sig.max != null ? `${fmtNum(sig.value)}/${fmtNum(sig.max)}` : `${sig.pct.toFixed(0)}%`
+  return (
+    <div className={cn('flex items-center gap-1.5 whitespace-nowrap text-[11px]', className)} title={`${title}: ${value}`}>
+      <span className="hidden w-20 truncate text-fg-muted @2xl:block">{sig.label}</span>
+      <div className="h-1 w-10 shrink-0 overflow-hidden rounded-full bg-surface-sunken">
+        <div className={cn('h-full rounded-full', tone)} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-12 text-right font-mono tabular-nums text-fg">{value}</span>
+    </div>
+  )
+}
+
+// The usage table's columns: builder, its two heaviest signals, the counts and
+// a chevron. Every row is a subgrid of this one grid, so each column lines up
+// across builders. Columns drop off as the CARD narrows -- container queries,
+// not viewport breakpoints, since the sidebar eats into the page -- so a row
+// never wraps: the second signal and labels, then the counts, then
+// containers/networks.
+const USAGE_COLS =
+  'grid-cols-[minmax(max-content,1fr)_auto_auto] @2xl:grid-cols-[minmax(max-content,1fr)_auto_auto_auto] @4xl:grid-cols-[minmax(max-content,1fr)_auto_auto_repeat(3,auto)_auto] @5xl:grid-cols-[minmax(max-content,1fr)_auto_auto_repeat(5,auto)_auto]'
+// Builds carries extra left padding so the counts read as their own group,
+// apart from the capacity columns.
+const COUNT_COLS: { label: string; className: string; value: (b: HomeData['builders'][number]) => number }[] = [
+  { label: 'Builds', className: 'hidden pl-8 @4xl:block', value: (b) => b.active_builds },
+  { label: 'Teams', className: 'hidden @4xl:block', value: (b) => b.teams },
+  { label: 'Hosts', className: 'hidden @4xl:block', value: (b) => b.counts.hosts },
+  { label: 'Containers', className: 'hidden @5xl:block', value: (b) => b.counts.containers },
+  { label: 'Networks', className: 'hidden @5xl:block', value: (b) => b.counts.networks },
+]
+
 function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builders']; buildersInUse: number }) {
   const { data: me } = useMe()
-  const maxHosts = Math.max(1, ...builders.map((b) => b.counts.hosts + b.counts.containers))
+  const rowClass = 'col-span-full grid grid-cols-subgrid items-center gap-x-5 px-4 py-2'
   return (
     <Card>
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <div className="flex items-center gap-2 text-sm font-semibold text-fg">
-          <ServerCog size={14} className="text-fg-muted" /> Infrastructure usage
+          <ServerCog size={14} className="text-fg-muted" /> Infrastructure Usage
         </div>
         <span className="text-xs text-fg-muted">
           {buildersInUse} of {builders.length} in use
         </span>
       </div>
-      <div className="divide-y divide-border">
-        {builders.map((b) => {
-          const machines = b.counts.hosts + b.counts.containers
-          const name = me?.is_instance_admin ? (
-            <Link to="/admin/infrastructure/$name" params={{ name: b.name }} className="font-medium text-fg hover:text-accent">
-              {b.name}
-            </Link>
-          ) : (
-            <span className="font-medium text-fg">{b.name}</span>
-          )
-          return (
-            <div key={b.name} className="grid grid-cols-[minmax(0,12rem)_1fr_auto] items-center gap-4 px-4 py-2.5 text-sm">
-              <div className="min-w-0">
-                <div className="truncate">{name}</div>
-                <div className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</div>
+      <div className="@container">
+        <div className={cn('grid', USAGE_COLS)}>
+          <div className={cn(rowClass, 'border-b border-border py-1.5 text-[11px] text-fg-subtle')}>
+            <span>Builder</span>
+            <span className="@2xl:col-span-2">Top Capacity</span>
+            {COUNT_COLS.map((c) => (
+              <span key={c.label} className={cn('text-right', c.className)}>
+                {c.label}
+              </span>
+            ))}
+            <span />
+          </div>
+          {builders.map((b, i) => {
+            // The two heaviest-used signals; the rest are on the builder page.
+            const topTwo = [...(b.capacity ?? [])].sort((a, z) => z.pct - a.pct).slice(0, 2)
+            const cells = (
+              <>
+                <div className="flex items-center gap-2 whitespace-nowrap">
+                  <BuilderPill name={b.name} color={b.color} kind={b.kind} />
+                  <span className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</span>
+                </div>
+                {topTwo.length > 0 ? (
+                  <>
+                    <CapacityCell sig={topTwo[0]} />
+                    <CapacityCell sig={topTwo[1]} className="hidden @2xl:flex" />
+                  </>
+                ) : (
+                  <span className="whitespace-nowrap text-[11px] text-fg-subtle @2xl:col-span-2">No metrics yet</span>
+                )}
+                {COUNT_COLS.map((c) => (
+                  <span
+                    key={c.label}
+                    className={cn('text-right font-mono text-xs tabular-nums text-fg', c.className)}
+                  >
+                    {c.value(b)}
+                  </span>
+                ))}
+                {me?.is_instance_admin ? <ChevronRight size={14} className="text-fg-subtle" /> : <span />}
+              </>
+            )
+            const border = i > 0 ? 'border-t border-border' : ''
+            // The whole row opens the builder page for admins (the only ones who
+            // can see it); for everyone else it's a plain row.
+            return me?.is_instance_admin ? (
+              <Link
+                key={b.name}
+                to="/admin/infrastructure/$name"
+                params={{ name: b.name }}
+                className={cn(rowClass, border, 'hover:bg-surface-hover')}
+              >
+                {cells}
+              </Link>
+            ) : (
+              <div key={b.name} className={cn(rowClass, border)}>
+                {cells}
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-surface-sunken" title={`${machines} machines`}>
-                <div className="h-full rounded-full bg-accent" style={{ width: `${(machines / maxHosts) * 100}%` }} />
-              </div>
-              <div className="flex gap-4 text-xs text-fg-muted">
-                <span>
-                  <span className="font-medium text-fg">{b.active_builds}</span> builds
-                </span>
-                <span>
-                  <span className="font-medium text-fg">{b.counts.hosts}</span> hosts
-                </span>
-                <span>
-                  <span className="font-medium text-fg">{b.counts.containers}</span> containers
-                </span>
-                <span>
-                  <span className="font-medium text-fg">{b.counts.networks}</span> networks
-                </span>
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     </Card>
   )

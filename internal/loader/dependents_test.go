@@ -74,3 +74,23 @@ func TestDependentsDiamond(t *testing.T) {
 		t.Errorf("Dependents([base]) = %v, want %v", got, want)
 	}
 }
+
+func TestDependentCounts(t *testing.T) {
+	// The DC every Windows box waits on outranks a standalone root that nothing
+	// waits on -- the distinction DependencyDepth (both depth 0) can't make.
+	c := &Content{
+		Hosts: []Host{
+			{Name: "dc"},
+			{Name: "ws1", DependsOn: []string{"dc"}},
+			{Name: "ws2", DependsOn: []string{"dc"}},
+			{Name: "vdi", DependsOn: []string{"ws1"}},
+			{Name: "lonely"},
+		},
+		Containers: []Container{{Name: "web", DependsOn: []string{"dc"}}},
+	}
+	got := c.DependentCounts()
+	want := map[string]int{"dc": 4, "ws1": 1, "ws2": 0, "vdi": 0, "lonely": 0, "web": 0}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("DependentCounts() = %v, want %v", got, want)
+	}
+}

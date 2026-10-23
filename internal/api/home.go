@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/loader"
 )
@@ -73,8 +74,34 @@ type homeRepository struct {
 type homeBuilder struct {
 	Name         string     `json:"name"`
 	Kind         string     `json:"kind"`
+	Color        string     `json:"color,omitempty"`
 	ActiveBuilds int        `json:"active_builds"`
-	Counts       homeCounts `json:"counts"`
+	// Teams is the total number of teams across this builder's active builds --
+	// the real "how many competitors is this hoster carrying" figure, bigger than
+	// the build count (one build can hold many teams).
+	Teams  int        `json:"teams"`
+	Counts homeCounts `json:"counts"`
+	// Capacity is every build-gating signal this builder reported in its latest
+	// metrics, worst-first: each AWS quota as used/limit, and each Incus/MicroCloud
+	// storage pool and node's memory as a percent-full. Empty when the builder has
+	// reported no capacity metrics yet (OpenStack, or before its first collection).
+	// This replaces the old single abstract "utilization" bar: naming the exact
+	// pool/node/quota and its real numbers is what makes it actionable.
+	Capacity []homeCapacity `json:"capacity,omitempty"`
+}
+
+// homeCapacity is one build-gating signal: a storage pool, a node's memory, or
+// an AWS quota. Pct is the 0-100 fill. For an AWS quota (a gauge) Value/Max hold
+// the raw used/limit so the UI can show "5 / 10"; for a percent-full series
+// (disk, memory, swap) Max is nil and the UI shows just the percent.
+type homeCapacity struct {
+	Key   string   `json:"key"`
+	Label string   `json:"label"`
+	Node  string   `json:"node,omitempty"`
+	Pct   float64  `json:"pct"`
+	Value float64  `json:"value"`
+	Max   *float64 `json:"max,omitempty"`
+	Unit  string   `json:"unit"`
 }
 
 // Attention categories: the stable key a person's "close this item" dismissal
@@ -195,6 +222,7 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 				builders[hb.BuilderConfigName] = bl
 			}
 			bl.ActiveBuilds++
+			bl.Teams += hb.Teams
 			bl.Counts.add(hb.Counts)
 		}
 
@@ -238,9 +266,25 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 	for _, c := range configs {
 		if bl := builders[c.Name]; bl != nil {
 			bl.Kind = c.Kind
+			bl.Color = c.Color
 		} else if admin {
-			builders[c.Name] = &homeBuilder{Name: c.Name, Kind: c.Kind}
+			builders[c.Name] = &homeBuilder{Name: c.Name, Kind: c.Kind, Color: c.Color}
 		}
+	}
+	// Capacity signals from each builder's latest collected metrics (recent
+	// window so it reflects now, not a stale peak). Best-effort: a builder with no
+	// samples (OpenStack, or pre-first-collection) just gets no capacity list.
+	utilCutoff := pgtype.Timestamptz{Time: time.Now().Add(-10 * time.Minute), Valid: true}
+	for _, c := range configs {
+		bl := builders[c.Name]
+		if bl == nil {
+			continue
+		}
+		samples, err := s.Queries.ListBuilderMetricSamples(ctx, db.ListBuilderMetricSamplesParams{BuilderConfigID: c.ID, SampledAt: utilCutoff})
+		if err != nil {
+			continue
+		}
+		bl.Capacity = builderCapacity(samples)
 	}
 	for _, bl := range builders {
 		view.Builders = append(view.Builders, *bl)
@@ -252,6 +296,55 @@ func (s *Server) handleGetHome(w http.ResponseWriter, r *http.Request) {
 		return view.Builders[i].Name < view.Builders[j].Name
 	})
 	writeJSON(w, http.StatusOK, view)
+}
+
+// builderCapacity decodes a builder's recent metric samples into its build-gating
+// signals, AGGREGATED to one row per metric and worst-first: every quota
+// usage/limit for AWS (gauges with a Max) and memory/disk/swap percent-full for
+// Incus/MicroCloud (the "%"-unit time-series). The home pane is an overview, so a
+// per-node metric collapses to its cluster PEAK (the node nearest its wall is what
+// gates building -- averaging would hide a full disk); the per-node breakdown
+// lives on the builder page. A quota gauge is already builder-wide. Other metrics
+// (latency, load, throughput counters, counts) have no ceiling and are skipped.
+// Samples arrive oldest-first, so the last seen per (key,node) is the latest.
+// Returns an empty slice when nothing capacity-bearing was reported.
+func builderCapacity(samples []db.ListBuilderMetricSamplesRow) []homeCapacity {
+	type gk struct{ key, node string }
+	latest := make(map[gk]db.ListBuilderMetricSamplesRow, len(samples))
+	for _, s := range samples {
+		latest[gk{s.Key, s.Node}] = s
+	}
+	// Collapse per-node samples to one aggregate per metric key, keeping the
+	// highest percentage seen (the peak node / tightest quota).
+	byKey := make(map[string]homeCapacity, len(latest))
+	for _, s := range latest {
+		c := homeCapacity{Key: s.Key, Label: s.Label, Value: s.Value, Unit: s.Unit}
+		switch {
+		case s.Kind == builder.MetricGauge && s.Max != nil && *s.Max > 0:
+			c.Pct = s.Value / *s.Max * 100
+			c.Max = s.Max
+		case s.Unit == "%": // a percent-full time-series (memory, disk, swap)
+			c.Pct = s.Value
+		default:
+			continue // not a capacity signal
+		}
+		if cur, ok := byKey[s.Key]; !ok || c.Pct > cur.Pct {
+			byKey[s.Key] = c
+		}
+	}
+	out := make([]homeCapacity, 0, len(byKey))
+	for _, c := range byKey {
+		out = append(out, c)
+	}
+	// Worst-first so the UI shows the tightest constraints and truncates the rest;
+	// ties break on a stable key order for a deterministic response.
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Pct != out[j].Pct {
+			return out[i].Pct > out[j].Pct
+		}
+		return out[i].Key < out[j].Key
+	})
+	return out
 }
 
 // homeBuild is one active build's card: its teams, what it has deployed

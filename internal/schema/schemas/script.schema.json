@@ -45,6 +45,16 @@
           "type": "boolean",
           "description": "If true, a non-zero exit from this script warns instead of failing the whole build."
         },
+        "retries": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many times a failed run of this script is retried before the step fails (default 2). Use 0 for a long, deterministic script such as a wait loop, which would only fail the same way again. A step that hits its `timeout` is never retried.",
+          "example": "retries: 0"
+        },
+        "reboots": {
+          "type": "boolean",
+          "description": "If true, this script reboots the host itself (e.g. dcpromo). The agent won't report a result (the reboot kills it), so LaForge treats the agent reconnecting afterward as the step completing, instead of re-running the script on an already-changed box."
+        },
         "tags": {
           "$ref": "common.json#/$defs/tagsMap",
           "description": "Labels for searching, grouping, and ad-hoc targeting. Flow to every host/container running this script.",

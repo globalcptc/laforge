@@ -67,14 +67,25 @@ func main() {
 	if workers < 1 {
 		workers = 1
 	}
+	// Production uses PER-BUILD LANES: one lane per build, each leasing only its
+	// own tasks, so no build's work ever sits behind another's in a shared FIFO
+	// pool (the cross-build stall that made a new build wait minutes on an
+	// unrelated one). The legacy shared worker pool stays only for the
+	// test-isolation / crash-injection flags -- chaos always sets -build-id. In
+	// lane mode, -concurrency / RUNNER_CONCURRENCY is the PER-BUILD parallelism.
+	legacyMode := *buildID != "" || *maxTasks > 0 || *crashAfterLease >= 0
 
 	ctx := context.Background()
-	// Size the pool to the worker count (+ headroom for the per-task heartbeat
-	// loops and result-recording queries): each worker only holds a connection
-	// briefly (the multi-minute deploy is an HTTP call to the hoster, no DB
-	// connection held), but N workers querying at once must not starve the
-	// default max(4, NumCPU) pool. Postgres's own max_connections is the ceiling.
-	q, pool, err := db.OpenWithMaxConns(ctx, *dbURL, int32(workers+8))
+	// Pool sizing. A worker/task holds a connection only briefly (the multi-minute
+	// deploy is an HTTP call to the hoster, no DB connection held), so a modest
+	// pool serves far more concurrent tasks than its size. Legacy: workers+8. Lane
+	// mode: one generous pool shared by every build's lane (RUNNER_MAX_CONNS);
+	// Postgres's own max_connections is the ceiling.
+	poolConns := int32(workers + 8)
+	if !legacyMode {
+		poolConns = int32(envIntDefault("RUNNER_MAX_CONNS", 50))
+	}
+	q, pool, err := db.OpenWithMaxConns(ctx, *dbURL, poolConns)
 	if err != nil {
 		log.Fatalf("connecting to database: %v", err)
 	}
@@ -145,6 +156,19 @@ func main() {
 		}
 	}
 
+	if !legacyMode {
+		// PRODUCTION: one worker pool PER CONFIGURED BUILDER. Concurrency is a
+		// property of the hardware -- the cluster/account/host-pool -- not of a
+		// build, so each builder gets its own pool sized to its own concurrency
+		// limit (builder_config.max_concurrency; 0 = unbounded). All builds on a
+		// builder share its pool; different builders never contend. The only shared
+		// resource is Postgres (RUNNER_MAX_CONNS), and task DB holds are brief.
+		// Runs until the process is killed.
+		log.Printf("[%s] per-builder worker pools (pool %d conns; per-builder concurrency from builder_config.max_concurrency, 0 = unbounded)", *id, poolConns)
+		runBuilderPools(ctx, r, *id, *pollInterval)
+		return
+	}
+
 	if workers > 1 {
 		log.Printf("[%s] running %d workers (parallel task execution)", *id, workers)
 	}
@@ -209,6 +233,144 @@ func main() {
 		}(i)
 	}
 	wg.Wait()
+}
+
+// runBuilderPools is the production runner loop: a supervisor that keeps one
+// worker pool per CONFIGURED BUILDER that has leasable work. Each pool leases and
+// executes only its own builder's tasks (across every build using that builder),
+// up to that builder's own concurrency limit -- concurrency is a property of the
+// hardware (the cluster/account/host-pool), not of a build. Builders never
+// contend; builds on the same builder share its pool. New builders are picked up
+// on the next poll; a pool exits once its builder's queue is drained and is
+// restarted when work reappears. Never returns.
+func runBuilderPools(ctx context.Context, r *runner.Runner, id string, pollInterval time.Duration) {
+	q := db.New(r.Pool)
+	type poolHandle struct{}
+	var mu sync.Mutex
+	pools := map[string]*poolHandle{}
+
+	for {
+		names, err := q.ListBuildersWithLeasableTasks(ctx)
+		if err != nil {
+			log.Printf("[%s] listing builders with work: %v", id, err)
+			time.Sleep(pollInterval)
+			continue
+		}
+		mu.Lock()
+		for _, name := range names {
+			if _, running := pools[name]; running {
+				continue
+			}
+			limit := builderConcurrency(ctx, q, name)
+			h := &poolHandle{}
+			pools[name] = h
+			builderName := name
+			go func() {
+				runBuilderPool(ctx, r, id, builderName, pollInterval, limit)
+				mu.Lock()
+				if pools[builderName] == h { // don't delete a newer pool for the same builder
+					delete(pools, builderName)
+				}
+				mu.Unlock()
+			}()
+		}
+		mu.Unlock()
+		time.Sleep(pollInterval)
+	}
+}
+
+// builderConcurrency is a configured builder's own concurrency limit
+// (builder_config.max_concurrency). 0 = unbounded (the default -- e.g. AWS, which
+// scales; the hoster and Postgres are the only real limits). A build with no
+// configured_build (ad-hoc/fake, builder key "") or an unknown builder is
+// unbounded too.
+func builderConcurrency(ctx context.Context, q *db.Queries, builderConfigName string) int {
+	if builderConfigName == "" {
+		return 0
+	}
+	bc, err := q.GetBuilderConfigByName(ctx, builderConfigName)
+	if err != nil {
+		return 0
+	}
+	return int(bc.MaxConcurrency)
+}
+
+// runBuilderPool drains one configured builder's task queue, running up to
+// `limit` tasks in parallel (limit <= 0 = unbounded). It leases only this
+// builder's tasks, so it is fully independent of every other builder. Exits when
+// the builder has no leasable tasks left AND nothing is in flight; the
+// supervisor restarts it when work reappears. Exits promptly on context
+// cancellation (shutdown).
+func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName string, pollInterval time.Duration, limit int) {
+	q := db.New(r.Pool)
+	var sem chan struct{}
+	if limit > 0 {
+		sem = make(chan struct{}, limit)
+	}
+	var inFlight int64
+	var wg sync.WaitGroup
+	defer wg.Wait() // never leave tasks running past the pool
+
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+		task, err := r.LeaseOneForBuilder(ctx, builderConfigName)
+		if err != nil {
+			log.Printf("[%s] builder %q lease error: %v", id, builderConfigName, err)
+			if sleepCtx(ctx, pollInterval) {
+				return
+			}
+			continue
+		}
+		if task != nil {
+			log.Printf("LEASED %s kind=%s attempt=%d", task.ID, task.Kind, task.Attempts)
+			if sem != nil {
+				sem <- struct{}{}
+			}
+			wg.Add(1)
+			atomic.AddInt64(&inFlight, 1)
+			t := *task
+			go func() {
+				defer wg.Done()
+				defer atomic.AddInt64(&inFlight, -1)
+				if sem != nil {
+					defer func() { <-sem }()
+				}
+				if err := r.ExecuteAndRecord(ctx, t); err != nil {
+					log.Printf("[%s] task %s error: %v", id, t.ID, err)
+				}
+			}()
+			continue
+		}
+		// Nothing leased: the builder's queue is drained for now.
+		pending, err := q.CountLeasableTasksForBuilder(ctx, builderConfigName)
+		if err != nil {
+			if sleepCtx(ctx, pollInterval) {
+				return
+			}
+			continue
+		}
+		if pending == 0 && atomic.LoadInt64(&inFlight) == 0 {
+			return // queue drained, nothing in flight -- this builder's pool is idle
+		}
+		if sleepCtx(ctx, pollInterval) {
+			return
+		}
+	}
+}
+
+// sleepCtx sleeps for d, returning true if ctx was cancelled first (so callers
+// can exit promptly on shutdown instead of after a full poll interval).
+func sleepCtx(ctx context.Context, d time.Duration) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return true
+	case <-t.C:
+		return false
+	}
 }
 
 // closeOnce closes ch if it isn't already closed -- several workers may reach

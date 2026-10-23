@@ -13,9 +13,10 @@ import (
 )
 
 const completeAgentTask = `-- name: CompleteAgentTask :one
-UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now()
+UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now(),
+    finished_at = now()
 WHERE id = $1
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts, milestone, step_script, wait_for, scheduled_task_id
 `
 
 type CompleteAgentTaskParams struct {
@@ -41,15 +42,87 @@ func (q *Queries) CompleteAgentTask(ctx context.Context, arg CompleteAgentTaskPa
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.MaxAttempts,
+		&i.Milestone,
+		&i.StepScript,
+		&i.WaitFor,
+		&i.ScheduledTaskID,
 	)
 	return i, err
 }
 
+const completeLeasedRebootsTaskForHost = `-- name: CompleteLeasedRebootsTaskForHost :one
+UPDATE agent_task SET status = 'done', last_error = NULL, updated_at = now()
+WHERE deployed_object_id = $1 AND reboots = true AND status = 'leased'
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts, milestone, step_script, wait_for, scheduled_task_id
+`
+
+// The reboot-aware completion: a `reboots: true` step reboots the host, which
+// kills the agent before it can report a result, so the step stays 'leased'. The
+// agent only ever asks for a new task (get-task) when it has nothing in flight --
+// so a get-task arriving while a reboots step is still 'leased' means the box
+// rebooted and the agent is back. That reconnect IS the step's completion: mark
+// it done here (instead of letting the lease expire and re-running the script on
+// an already-changed box). Returns the row so get-task can log a step event; no
+// row (ErrNoRows) when there's no leased reboots step, the normal case.
+func (q *Queries) CompleteLeasedRebootsTaskForHost(ctx context.Context, deployedObjectID pgtype.UUID) (AgentTask, error) {
+	row := q.db.QueryRow(ctx, completeLeasedRebootsTaskForHost, deployedObjectID)
+	var i AgentTask
+	err := row.Scan(
+		&i.ID,
+		&i.DeployedObjectID,
+		&i.StepIndex,
+		&i.Command,
+		&i.Payload,
+		&i.Status,
+		&i.LeaseExpiresAt,
+		&i.Attempts,
+		&i.Output,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IgnoreErrors,
+		&i.AdHoc,
+		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.MaxAttempts,
+		&i.Milestone,
+		&i.StepScript,
+		&i.WaitFor,
+		&i.ScheduledTaskID,
+	)
+	return i, err
+}
+
+const countOpenAuthoredStepsBelowIndex = `-- name: CountOpenAuthoredStepsBelowIndex :one
+SELECT count(*)::bigint FROM agent_task
+WHERE deployed_object_id = $1 AND NOT ad_hoc AND step_index < $2::integer
+  AND status NOT IN ('done', 'ignored')
+`
+
+type CountOpenAuthoredStepsBelowIndexParams struct {
+	DeployedObjectID pgtype.UUID `json:"deployed_object_id"`
+	Below            int32       `json:"below"`
+}
+
+// How many authored steps before a gate are still unfinished -- zero means the
+// host has worked up to the gate and is now actually waiting on it.
+func (q *Queries) CountOpenAuthoredStepsBelowIndex(ctx context.Context, arg CountOpenAuthoredStepsBelowIndexParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countOpenAuthoredStepsBelowIndex, arg.DeployedObjectID, arg.Below)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createAdHocAgentTask = `-- name: CreateAdHocAgentTask :one
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, ad_hoc)
-VALUES ($1, $2, $3, $4, $5, true)
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, ad_hoc, scheduled_task_id)
+VALUES ($1, $2, $3, $4, $5, true, $6)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts, milestone, step_script, wait_for, scheduled_task_id
 `
 
 type CreateAdHocAgentTaskParams struct {
@@ -58,6 +131,7 @@ type CreateAdHocAgentTaskParams struct {
 	Command          string          `json:"command"`
 	Payload          json.RawMessage `json:"payload"`
 	IgnoreErrors     bool            `json:"ignore_errors"`
+	ScheduledTaskID  pgtype.UUID     `json:"scheduled_task_id"`
 }
 
 // Operator-dispatched tasks (immediate `run` and scheduled dispatch). ad_hoc =
@@ -71,6 +145,7 @@ func (q *Queries) CreateAdHocAgentTask(ctx context.Context, arg CreateAdHocAgent
 		arg.Command,
 		arg.Payload,
 		arg.IgnoreErrors,
+		arg.ScheduledTaskID,
 	)
 	var i AgentTask
 	err := row.Scan(
@@ -88,6 +163,14 @@ func (q *Queries) CreateAdHocAgentTask(ctx context.Context, arg CreateAdHocAgent
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.MaxAttempts,
+		&i.Milestone,
+		&i.StepScript,
+		&i.WaitFor,
+		&i.ScheduledTaskID,
 	)
 	return i, err
 }
@@ -107,7 +190,11 @@ type CreateAgentArtifactParams struct {
 }
 
 // Upsert: an object's deploy task can be retried, and re-delivering just
-// replaces the (regenerable) binary and token.
+// replaces the (regenerable) binary -- but KEEPS the token the caller passes.
+// A retry must reuse the object's existing token (see GetAgentArtifactTokenByObject
+// in deliverAgent): the instance baked that token into its immutable user-data on
+// the first attempt, so rotating it here would strand the running box on a token
+// the DB no longer has, and every agent download would 404.
 func (q *Queries) CreateAgentArtifact(ctx context.Context, arg CreateAgentArtifactParams) error {
 	_, err := q.db.Exec(ctx, createAgentArtifact,
 		arg.DeployedObjectID,
@@ -119,20 +206,22 @@ func (q *Queries) CreateAgentArtifact(ctx context.Context, arg CreateAgentArtifa
 }
 
 const createAgentHeartbeat = `-- name: CreateAgentHeartbeat :exec
-INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps, boot_at, agent_started_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 `
 
 type CreateAgentHeartbeatParams struct {
-	DeployedObjectID pgtype.UUID `json:"deployed_object_id"`
-	CertFingerprint  string      `json:"cert_fingerprint"`
-	RemoteAddr       *string     `json:"remote_addr"`
-	NextPollMs       *int32      `json:"next_poll_ms"`
-	CpuPct           *float64    `json:"cpu_pct"`
-	MemPct           *float64    `json:"mem_pct"`
-	DiskPct          *float64    `json:"disk_pct"`
-	NetRxBps         *float64    `json:"net_rx_bps"`
-	NetTxBps         *float64    `json:"net_tx_bps"`
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	CertFingerprint  string             `json:"cert_fingerprint"`
+	RemoteAddr       *string            `json:"remote_addr"`
+	NextPollMs       *int32             `json:"next_poll_ms"`
+	CpuPct           *float64           `json:"cpu_pct"`
+	MemPct           *float64           `json:"mem_pct"`
+	DiskPct          *float64           `json:"disk_pct"`
+	NetRxBps         *float64           `json:"net_rx_bps"`
+	NetTxBps         *float64           `json:"net_tx_bps"`
+	BootAt           pgtype.Timestamptz `json:"boot_at"`
+	AgentStartedAt   pgtype.Timestamptz `json:"agent_started_at"`
 }
 
 // The append-only counterpart to UpsertAgentSession -- called alongside
@@ -157,19 +246,22 @@ func (q *Queries) CreateAgentHeartbeat(ctx context.Context, arg CreateAgentHeart
 		arg.DiskPct,
 		arg.NetRxBps,
 		arg.NetTxBps,
+		arg.BootAt,
+		arg.AgentStartedAt,
 	)
 	return err
 }
 
 const createAgentTask = `-- name: CreateAgentTask :one
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, status)
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status, max_attempts, milestone, step_script, wait_for)
 VALUES (
   $1, $2, $3,
-  $4, $5,
-  COALESCE(NULLIF($6::text, ''), 'pending')
+  $4, $5, $6,
+  COALESCE(NULLIF($7::text, ''), 'pending'),
+  $8, $9, $10, $11
 )
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts, milestone, step_script, wait_for, scheduled_task_id
 `
 
 type CreateAgentTaskParams struct {
@@ -178,7 +270,12 @@ type CreateAgentTaskParams struct {
 	Command          string          `json:"command"`
 	Payload          json.RawMessage `json:"payload"`
 	IgnoreErrors     bool            `json:"ignore_errors"`
+	Reboots          bool            `json:"reboots"`
 	Status           string          `json:"status"`
+	MaxAttempts      *int32          `json:"max_attempts"`
+	Milestone        *string         `json:"milestone"`
+	StepScript       *string         `json:"step_script"`
+	WaitFor          json.RawMessage `json:"wait_for"`
 }
 
 // Authored deploy steps. status is 'pending' normally, or 'blocked' when the
@@ -186,7 +283,11 @@ type CreateAgentTaskParams struct {
 // counted as open but never leased, and is flipped to 'pending' by
 // UnblockAgentTasksForObject once the dependency finishes. ad_hoc defaults false
 // (strict ordered, failure-blocking lane); operator commands use
-// CreateAdHocAgentTask instead.
+// CreateAdHocAgentTask instead. max_attempts is the script's `retries:`
+// override (retries + 1); NULL leaves the gateway default. milestone/
+// step_script name the authored step the row came from (what another
+// host's wait_for can target); wait_for is set only on the first row of a
+// step that itself waits (see migration 00068).
 func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams) (AgentTask, error) {
 	row := q.db.QueryRow(ctx, createAgentTask,
 		arg.DeployedObjectID,
@@ -194,7 +295,12 @@ func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams
 		arg.Command,
 		arg.Payload,
 		arg.IgnoreErrors,
+		arg.Reboots,
 		arg.Status,
+		arg.MaxAttempts,
+		arg.Milestone,
+		arg.StepScript,
+		arg.WaitFor,
 	)
 	var i AgentTask
 	err := row.Scan(
@@ -212,6 +318,14 @@ func (q *Queries) CreateAgentTask(ctx context.Context, arg CreateAgentTaskParams
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.MaxAttempts,
+		&i.Milestone,
+		&i.StepScript,
+		&i.WaitFor,
+		&i.ScheduledTaskID,
 	)
 	return i, err
 }
@@ -289,9 +403,10 @@ func (q *Queries) DeleteAgentTasksForObject(ctx context.Context, deployedObjectI
 }
 
 const failAgentTask = `-- name: FailAgentTask :one
-UPDATE agent_task SET status = $2, last_error = $3, updated_at = now()
+UPDATE agent_task SET status = $2, last_error = $3, updated_at = now(),
+    finished_at = CASE WHEN $2 IN ('failed', 'ignored') THEN now() ELSE finished_at END
 WHERE id = $1
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts, milestone, step_script, wait_for, scheduled_task_id
 `
 
 type FailAgentTaskParams struct {
@@ -300,6 +415,12 @@ type FailAgentTaskParams struct {
 	LastError *string     `json:"last_error"`
 }
 
+// $2 is 'pending' for a retryable transient (still under MaxAttempts), or the
+// terminal 'failed'/'ignored'. Stamp finished_at ONLY on a terminal status, so a
+// step that's still retrying keeps showing as running (started_at set, no
+// finished_at) rather than frozen at an intermediate attempt. started_at is
+// preserved across retries (set once, on the first lease), so the step's total
+// duration spans all its attempts.
 func (q *Queries) FailAgentTask(ctx context.Context, arg FailAgentTaskParams) (AgentTask, error) {
 	row := q.db.QueryRow(ctx, failAgentTask, arg.ID, arg.Status, arg.LastError)
 	var i AgentTask
@@ -318,6 +439,14 @@ func (q *Queries) FailAgentTask(ctx context.Context, arg FailAgentTaskParams) (A
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.MaxAttempts,
+		&i.Milestone,
+		&i.StepScript,
+		&i.WaitFor,
+		&i.ScheduledTaskID,
 	)
 	return i, err
 }
@@ -342,8 +471,48 @@ func (q *Queries) GetAgentArtifactByToken(ctx context.Context, token string) (Ge
 	return i, err
 }
 
+const getAgentArtifactTokenByObject = `-- name: GetAgentArtifactTokenByObject :one
+SELECT token FROM agent_artifact WHERE deployed_object_id = $1
+`
+
+// The object's current download token, so a retried delivery reuses it instead
+// of rotating it (the instance's user-data baked the first attempt's token and
+// can't be changed after launch).
+func (q *Queries) GetAgentArtifactTokenByObject(ctx context.Context, deployedObjectID pgtype.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getAgentArtifactTokenByObject, deployedObjectID)
+	var token string
+	err := row.Scan(&token)
+	return token, err
+}
+
+const getAgentCheckinContext = `-- name: GetAgentCheckinContext :one
+SELECT o.deployed_at, o.agent_checkin_overdue_at, s.last_heartbeat_at
+FROM deployed_object o
+LEFT JOIN agent_session s ON s.deployed_object_id = o.id
+WHERE o.id = $1
+`
+
+type GetAgentCheckinContextRow struct {
+	DeployedAt            pgtype.Timestamptz `json:"deployed_at"`
+	AgentCheckinOverdueAt pgtype.Timestamptz `json:"agent_checkin_overdue_at"`
+	LastHeartbeatAt       pgtype.Timestamptz `json:"last_heartbeat_at"`
+}
+
+// What the gateway needs, before recording a heartbeat, to tell whether this
+// is the agent's FIRST check-in since the object was (re)deployed: the deploy
+// time, the previous heartbeat (NULL when the agent has never checked in), and
+// whether the never-checked-in watchdog already flagged it. A rebuilt host
+// keeps its old agent_session row, so "first" means "no heartbeat since
+// deployed_at", not "no session row".
+func (q *Queries) GetAgentCheckinContext(ctx context.Context, id pgtype.UUID) (GetAgentCheckinContextRow, error) {
+	row := q.db.QueryRow(ctx, getAgentCheckinContext, id)
+	var i GetAgentCheckinContextRow
+	err := row.Scan(&i.DeployedAt, &i.AgentCheckinOverdueAt, &i.LastHeartbeatAt)
+	return i, err
+}
+
 const getAgentSessionByDeployedObject = `-- name: GetAgentSessionByDeployedObject :one
-SELECT id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at FROM agent_session WHERE deployed_object_id = $1
+SELECT id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at, boot_at, agent_started_at FROM agent_session WHERE deployed_object_id = $1
 `
 
 func (q *Queries) GetAgentSessionByDeployedObject(ctx context.Context, deployedObjectID pgtype.UUID) (AgentSession, error) {
@@ -355,12 +524,14 @@ func (q *Queries) GetAgentSessionByDeployedObject(ctx context.Context, deployedO
 		&i.CertFingerprint,
 		&i.FirstSeenAt,
 		&i.LastHeartbeatAt,
+		&i.BootAt,
+		&i.AgentStartedAt,
 	)
 	return i, err
 }
 
 const getAgentTask = `-- name: GetAgentTask :one
-SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc FROM agent_task WHERE id = $1
+SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts, milestone, step_script, wait_for, scheduled_task_id FROM agent_task WHERE id = $1
 `
 
 func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, error) {
@@ -381,12 +552,20 @@ func (q *Queries) GetAgentTask(ctx context.Context, id pgtype.UUID) (AgentTask, 
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.MaxAttempts,
+		&i.Milestone,
+		&i.StepScript,
+		&i.WaitFor,
+		&i.ScheduledTaskID,
 	)
 	return i, err
 }
 
 const listAgentHeartbeatsByBuild = `-- name: ListAgentHeartbeatsByBuild :many
-SELECT agent_heartbeat.id, agent_heartbeat.deployed_object_id, agent_heartbeat.cert_fingerprint, agent_heartbeat.remote_addr, agent_heartbeat.next_poll_ms, agent_heartbeat.created_at, agent_heartbeat.cpu_pct, agent_heartbeat.mem_pct, agent_heartbeat.disk_pct, agent_heartbeat.net_rx_bps, agent_heartbeat.net_tx_bps FROM agent_heartbeat
+SELECT agent_heartbeat.id, agent_heartbeat.deployed_object_id, agent_heartbeat.cert_fingerprint, agent_heartbeat.remote_addr, agent_heartbeat.next_poll_ms, agent_heartbeat.created_at, agent_heartbeat.cpu_pct, agent_heartbeat.mem_pct, agent_heartbeat.disk_pct, agent_heartbeat.net_rx_bps, agent_heartbeat.net_tx_bps, agent_heartbeat.boot_at, agent_heartbeat.agent_started_at FROM agent_heartbeat
 JOIN deployed_object ON deployed_object.id = agent_heartbeat.deployed_object_id
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1
@@ -418,6 +597,8 @@ func (q *Queries) ListAgentHeartbeatsByBuild(ctx context.Context, buildID pgtype
 			&i.DiskPct,
 			&i.NetRxBps,
 			&i.NetTxBps,
+			&i.BootAt,
+			&i.AgentStartedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -430,7 +611,7 @@ func (q *Queries) ListAgentHeartbeatsByBuild(ctx context.Context, buildID pgtype
 }
 
 const listAgentHeartbeatsByObject = `-- name: ListAgentHeartbeatsByObject :many
-SELECT id, deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, created_at, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps FROM agent_heartbeat WHERE deployed_object_id = $1 ORDER BY created_at DESC LIMIT $2
+SELECT id, deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, created_at, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps, boot_at, agent_started_at FROM agent_heartbeat WHERE deployed_object_id = $1 ORDER BY created_at DESC LIMIT $2
 `
 
 type ListAgentHeartbeatsByObjectParams struct {
@@ -464,6 +645,8 @@ func (q *Queries) ListAgentHeartbeatsByObject(ctx context.Context, arg ListAgent
 			&i.DiskPct,
 			&i.NetRxBps,
 			&i.NetTxBps,
+			&i.BootAt,
+			&i.AgentStartedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -476,7 +659,7 @@ func (q *Queries) ListAgentHeartbeatsByObject(ctx context.Context, arg ListAgent
 }
 
 const listAgentSessions = `-- name: ListAgentSessions :many
-SELECT id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at FROM agent_session ORDER BY last_heartbeat_at DESC
+SELECT id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at, boot_at, agent_started_at FROM agent_session ORDER BY last_heartbeat_at DESC
 `
 
 func (q *Queries) ListAgentSessions(ctx context.Context) ([]AgentSession, error) {
@@ -494,6 +677,8 @@ func (q *Queries) ListAgentSessions(ctx context.Context) ([]AgentSession, error)
 			&i.CertFingerprint,
 			&i.FirstSeenAt,
 			&i.LastHeartbeatAt,
+			&i.BootAt,
+			&i.AgentStartedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -506,7 +691,7 @@ func (q *Queries) ListAgentSessions(ctx context.Context) ([]AgentSession, error)
 }
 
 const listAgentSessionsByBuild = `-- name: ListAgentSessionsByBuild :many
-SELECT agent_session.id, agent_session.deployed_object_id, agent_session.cert_fingerprint, agent_session.first_seen_at, agent_session.last_heartbeat_at FROM agent_session
+SELECT agent_session.id, agent_session.deployed_object_id, agent_session.cert_fingerprint, agent_session.first_seen_at, agent_session.last_heartbeat_at, agent_session.boot_at, agent_session.agent_started_at FROM agent_session
 JOIN deployed_object ON deployed_object.id = agent_session.deployed_object_id
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1
@@ -532,6 +717,8 @@ func (q *Queries) ListAgentSessionsByBuild(ctx context.Context, buildID pgtype.U
 			&i.CertFingerprint,
 			&i.FirstSeenAt,
 			&i.LastHeartbeatAt,
+			&i.BootAt,
+			&i.AgentStartedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -544,7 +731,7 @@ func (q *Queries) ListAgentSessionsByBuild(ctx context.Context, buildID pgtype.U
 }
 
 const listAgentTasksByHost = `-- name: ListAgentTasksByHost :many
-SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc FROM agent_task WHERE deployed_object_id = $1 ORDER BY step_index
+SELECT id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts, milestone, step_script, wait_for, scheduled_task_id FROM agent_task WHERE deployed_object_id = $1 ORDER BY step_index
 `
 
 func (q *Queries) ListAgentTasksByHost(ctx context.Context, deployedObjectID pgtype.UUID) ([]AgentTask, error) {
@@ -571,6 +758,105 @@ func (q *Queries) ListAgentTasksByHost(ctx context.Context, deployedObjectID pgt
 			&i.UpdatedAt,
 			&i.IgnoreErrors,
 			&i.AdHoc,
+			&i.Reboots,
+			&i.StartedAt,
+			&i.FinishedAt,
+			&i.MaxAttempts,
+			&i.Milestone,
+			&i.StepScript,
+			&i.WaitFor,
+			&i.ScheduledTaskID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBlockedStepGatesForObject = `-- name: ListBlockedStepGatesForObject :many
+SELECT step_index, wait_for FROM agent_task
+WHERE deployed_object_id = $1 AND status = 'blocked' AND wait_for IS NOT NULL
+ORDER BY step_index
+`
+
+type ListBlockedStepGatesForObjectRow struct {
+	StepIndex int32           `json:"step_index"`
+	WaitFor   json.RawMessage `json:"wait_for"`
+}
+
+// The step-level gates an object is still held at, in step order: each row is
+// the first command of an authored step with a wait_for, not yet released.
+func (q *Queries) ListBlockedStepGatesForObject(ctx context.Context, deployedObjectID pgtype.UUID) ([]ListBlockedStepGatesForObjectRow, error) {
+	rows, err := q.db.Query(ctx, listBlockedStepGatesForObject, deployedObjectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBlockedStepGatesForObjectRow
+	for rows.Next() {
+		var i ListBlockedStepGatesForObjectRow
+		if err := rows.Scan(&i.StepIndex, &i.WaitFor); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCredentialStepsByBuild = `-- name: ListCredentialStepsByBuild :many
+SELECT a.deployed_object_id, a.command, a.step_index, a.status, a.ad_hoc, a.finished_at,
+       (a.payload->>'username')::text AS username,
+       (a.payload->>'password')::text AS password
+FROM agent_task a
+JOIN deployed_object o ON o.id = a.deployed_object_id
+JOIN team t ON t.id = o.team_id
+WHERE t.build_id = $1
+  AND a.command IN ('set_password', 'create_user')
+  AND coalesce(a.payload->>'username', '') <> ''
+  AND coalesce(a.payload->>'password', '') <> ''
+`
+
+type ListCredentialStepsByBuildRow struct {
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	Command          string             `json:"command"`
+	StepIndex        int32              `json:"step_index"`
+	Status           string             `json:"status"`
+	AdHoc            bool               `json:"ad_hoc"`
+	FinishedAt       pgtype.Timestamptz `json:"finished_at"`
+	Username         string             `json:"username"`
+	Password         string             `json:"password"`
+}
+
+// Every step in a build that sets an account's password -- set_password and
+// create_user, authored, auto-inserted ("Set admin password") or ad-hoc.
+// currentCredentials (internal/api) folds these into each host's CURRENT
+// password per account: the last one the agent actually applied, else the next
+// one planned.
+func (q *Queries) ListCredentialStepsByBuild(ctx context.Context, buildID pgtype.UUID) ([]ListCredentialStepsByBuildRow, error) {
+	rows, err := q.db.Query(ctx, listCredentialStepsByBuild, buildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCredentialStepsByBuildRow
+	for rows.Next() {
+		var i ListCredentialStepsByBuildRow
+		if err := rows.Scan(
+			&i.DeployedObjectID,
+			&i.Command,
+			&i.StepIndex,
+			&i.Status,
+			&i.AdHoc,
+			&i.FinishedAt,
+			&i.Username,
+			&i.Password,
 		); err != nil {
 			return nil, err
 		}
@@ -650,6 +936,61 @@ func (q *Queries) ListObjectsWithFailedValidatorByBuild(ctx context.Context, bui
 	return items, nil
 }
 
+const listStepGateProgressByTeam = `-- name: ListStepGateProgressByTeam :many
+SELECT deployed_object.id AS deployed_object_id, deployed_object.object_name,
+       agent_task.milestone, agent_task.step_script,
+       count(*)::bigint AS total,
+       count(*) FILTER (WHERE agent_task.status IN ('done', 'ignored'))::bigint AS reached,
+       count(*) FILTER (WHERE agent_task.status = 'failed')::bigint AS failed
+FROM agent_task
+JOIN deployed_object ON deployed_object.id = agent_task.deployed_object_id
+WHERE deployed_object.team_id = $1 AND NOT agent_task.ad_hoc
+  AND (agent_task.milestone IS NOT NULL OR agent_task.step_script IS NOT NULL)
+GROUP BY deployed_object.id, deployed_object.object_name, agent_task.milestone, agent_task.step_script
+`
+
+type ListStepGateProgressByTeamRow struct {
+	DeployedObjectID pgtype.UUID `json:"deployed_object_id"`
+	ObjectName       string      `json:"object_name"`
+	Milestone        *string     `json:"milestone"`
+	StepScript       *string     `json:"step_script"`
+	Total            int64       `json:"total"`
+	Reached          int64       `json:"reached"`
+	Failed           int64       `json:"failed"`
+}
+
+// Where every host/container in a team stands on each of its milestone/script
+// points: per deployed object and point, how many of its rows exist and how
+// many are reached (done/ignored) or failed. A wait_for on the same team is
+// satisfied once every copy of its target has all rows of the point reached.
+func (q *Queries) ListStepGateProgressByTeam(ctx context.Context, teamID pgtype.UUID) ([]ListStepGateProgressByTeamRow, error) {
+	rows, err := q.db.Query(ctx, listStepGateProgressByTeam, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListStepGateProgressByTeamRow
+	for rows.Next() {
+		var i ListStepGateProgressByTeamRow
+		if err := rows.Scan(
+			&i.DeployedObjectID,
+			&i.ObjectName,
+			&i.Milestone,
+			&i.StepScript,
+			&i.Total,
+			&i.Reached,
+			&i.Failed,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listValidatorResultsByTask = `-- name: ListValidatorResultsByTask :many
 SELECT id, agent_task_id, kind, args, passed, message, created_at FROM validator_result WHERE agent_task_id = $1 ORDER BY created_at
 `
@@ -685,7 +1026,8 @@ func (q *Queries) ListValidatorResultsByTask(ctx context.Context, agentTaskID pg
 const nextAgentTaskForHost = `-- name: NextAgentTaskForHost :one
 UPDATE agent_task
 SET status = 'leased', lease_expires_at = now() + $2::interval,
-    attempts = attempts + 1, updated_at = now()
+    attempts = attempts + 1, updated_at = now(),
+    started_at = coalesce(started_at, now())
 WHERE id = (
     SELECT t.id FROM agent_task t
     WHERE t.deployed_object_id = $1
@@ -703,7 +1045,7 @@ WHERE id = (
     LIMIT 1
 )
 AND (status = 'pending' OR (status = 'leased' AND lease_expires_at < now()))
-RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc
+RETURNING id, deployed_object_id, step_index, command, payload, status, lease_expires_at, attempts, output, last_error, created_at, updated_at, ignore_errors, ad_hoc, reboots, started_at, finished_at, max_attempts, milestone, step_script, wait_for, scheduled_task_id
 `
 
 type NextAgentTaskForHostParams struct {
@@ -757,6 +1099,14 @@ func (q *Queries) NextAgentTaskForHost(ctx context.Context, arg NextAgentTaskFor
 		&i.UpdatedAt,
 		&i.IgnoreErrors,
 		&i.AdHoc,
+		&i.Reboots,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.MaxAttempts,
+		&i.Milestone,
+		&i.StepScript,
+		&i.WaitFor,
+		&i.ScheduledTaskID,
 	)
 	return i, err
 }
@@ -806,6 +1156,66 @@ func (q *Queries) RecordValidatorResult(ctx context.Context, arg RecordValidator
 		arg.Passed,
 		arg.Message,
 	)
+	return err
+}
+
+const renewAgentTaskLease = `-- name: RenewAgentTaskLease :execrows
+UPDATE agent_task SET lease_expires_at = now() + $1::interval, updated_at = now()
+WHERE id = $2 AND deployed_object_id = $3 AND status = 'leased'
+`
+
+type RenewAgentTaskLeaseParams struct {
+	Lease            pgtype.Interval `json:"lease"`
+	ID               pgtype.UUID     `json:"id"`
+	DeployedObjectID pgtype.UUID     `json:"deployed_object_id"`
+}
+
+// Heartbeat-driven lease renewal. The agent names the task it is still running
+// on every heartbeat; extending that task's lease keeps a long step (anything
+// past one lease, 60s by default) from expiring and being leased AGAIN, which
+// ran the same script twice at once after a reconnect. Scoped to the agent's
+// own object and to a task that is still 'leased', so a stale or forged id
+// changes nothing.
+func (q *Queries) RenewAgentTaskLease(ctx context.Context, arg RenewAgentTaskLeaseParams) (int64, error) {
+	result, err := q.db.Exec(ctx, renewAgentTaskLease, arg.Lease, arg.ID, arg.DeployedObjectID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const stampRebootDurationsForHost = `-- name: StampRebootDurationsForHost :exec
+UPDATE agent_task r
+SET finished_at = nxt.started_at, updated_at = now()
+FROM (
+  SELECT r2.id AS reboot_id,
+         (SELECT n.started_at FROM agent_task n
+            WHERE n.deployed_object_id = r2.deployed_object_id
+              AND n.step_index > r2.step_index
+              AND n.started_at IS NOT NULL
+            ORDER BY n.step_index
+            LIMIT 1) AS started_at
+  FROM agent_task r2
+  WHERE r2.deployed_object_id = $1 AND r2.reboots = true AND r2.status = 'done'
+) nxt
+WHERE r.id = nxt.reboot_id
+  AND nxt.started_at IS NOT NULL
+  AND (r.finished_at IS NULL OR r.finished_at < nxt.started_at)
+`
+
+// Make a reboot step's duration cover the WHOLE reboot. The agent acks a reboot
+// 'done' BEFORE rebooting (durable completion -- see CompleteLeasedRebootsTaskForHost
+// and the agent's reboot branch), so its finished_at lands at the ack (~seconds)
+// and the real downtime (shutdown + boot + agent reconnect) hides in the gap
+// before the next step is leased. Pull that gap in: set the reboot step's
+// finished_at to the next step that actually started (its started_at IS the
+// reconnect moment, since steps lease strictly in order and the next one can't
+// start until the agent is back). Keyed on a fixed timestamp, not now(), so it's
+// idempotent and converges -- safe to run on every get-task. Only ever EXTENDS
+// (finished_at < next start), never shrinks, and a reboot with no later started
+// step (last step, or next step blocked/failed) keeps its ack-time finish.
+func (q *Queries) StampRebootDurationsForHost(ctx context.Context, deployedObjectID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, stampRebootDurationsForHost, deployedObjectID)
 	return err
 }
 
@@ -926,6 +1336,24 @@ func (q *Queries) SummarizeAgentTasksByObjectForBuild(ctx context.Context, build
 	return items, nil
 }
 
+const unblockAgentTasksBelowIndex = `-- name: UnblockAgentTasksBelowIndex :exec
+UPDATE agent_task SET status = 'pending', updated_at = now()
+WHERE deployed_object_id = $1 AND status = 'blocked' AND step_index < $2::integer
+`
+
+type UnblockAgentTasksBelowIndexParams struct {
+	DeployedObjectID pgtype.UUID `json:"deployed_object_id"`
+	Below            int32       `json:"below"`
+}
+
+// Release an object's blocked steps that sit below its first still-unsatisfied
+// step-level gate (wait_for): the gate row and everything after it stay
+// blocked; the steps before it become leasable in order.
+func (q *Queries) UnblockAgentTasksBelowIndex(ctx context.Context, arg UnblockAgentTasksBelowIndexParams) error {
+	_, err := q.db.Exec(ctx, unblockAgentTasksBelowIndex, arg.DeployedObjectID, arg.Below)
+	return err
+}
+
 const unblockAgentTasksForObject = `-- name: UnblockAgentTasksForObject :exec
 UPDATE agent_task SET status = 'pending', updated_at = now()
 WHERE deployed_object_id = $1 AND status = 'blocked'
@@ -939,25 +1367,35 @@ func (q *Queries) UnblockAgentTasksForObject(ctx context.Context, deployedObject
 }
 
 const upsertAgentSession = `-- name: UpsertAgentSession :one
-INSERT INTO agent_session (deployed_object_id, cert_fingerprint)
-VALUES ($1, $2)
+INSERT INTO agent_session (deployed_object_id, cert_fingerprint, boot_at, agent_started_at)
+VALUES ($1, $2, $3, $4)
 ON CONFLICT (deployed_object_id) DO UPDATE
-    SET cert_fingerprint = EXCLUDED.cert_fingerprint, last_heartbeat_at = now()
-RETURNING id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at
+    SET cert_fingerprint = EXCLUDED.cert_fingerprint, last_heartbeat_at = now(),
+        boot_at = COALESCE(EXCLUDED.boot_at, agent_session.boot_at),
+        agent_started_at = COALESCE(EXCLUDED.agent_started_at, agent_session.agent_started_at)
+RETURNING id, deployed_object_id, cert_fingerprint, first_seen_at, last_heartbeat_at, boot_at, agent_started_at
 `
 
 type UpsertAgentSessionParams struct {
-	DeployedObjectID pgtype.UUID `json:"deployed_object_id"`
-	CertFingerprint  string      `json:"cert_fingerprint"`
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	CertFingerprint  string             `json:"cert_fingerprint"`
+	BootAt           pgtype.Timestamptz `json:"boot_at"`
+	AgentStartedAt   pgtype.Timestamptz `json:"agent_started_at"`
 }
 
 // First heartbeat creates the row; every later one just bumps
 // last_heartbeat_at (and cert_fingerprint, in case a host was ever
 // re-provisioned with a new identity -- shouldn't happen mid-build, but
 // recording the fingerprint that's actually presenting is more honest
-// than assuming it never changes).
+// than assuming it never changes). boot_at/agent_started_at are the agent's
+// latest boot report; a heartbeat without one (an older agent) keeps the last.
 func (q *Queries) UpsertAgentSession(ctx context.Context, arg UpsertAgentSessionParams) (AgentSession, error) {
-	row := q.db.QueryRow(ctx, upsertAgentSession, arg.DeployedObjectID, arg.CertFingerprint)
+	row := q.db.QueryRow(ctx, upsertAgentSession,
+		arg.DeployedObjectID,
+		arg.CertFingerprint,
+		arg.BootAt,
+		arg.AgentStartedAt,
+	)
 	var i AgentSession
 	err := row.Scan(
 		&i.ID,
@@ -965,6 +1403,8 @@ func (q *Queries) UpsertAgentSession(ctx context.Context, arg UpsertAgentSession
 		&i.CertFingerprint,
 		&i.FirstSeenAt,
 		&i.LastHeartbeatAt,
+		&i.BootAt,
+		&i.AgentStartedAt,
 	)
 	return i, err
 }

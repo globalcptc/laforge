@@ -9,10 +9,28 @@ SELECT * FROM build WHERE id = $1;
 -- name: SetBuildStatus :one
 UPDATE build SET status = $2 WHERE id = $1 RETURNING *;
 
+-- name: ForceDeleteBuild :exec
+-- The admin "force remove from database" escape hatch for a build whose real
+-- infrastructure is already gone (a volunteer deleted the hosts out from under
+-- LaForge, so teardown can never complete and it's wedged in 'tearing_down').
+-- Deletes the build row; every runtime row cascades (team -> deployed_object ->
+-- agent_task/session/heartbeat/artifact/shell_session/external_access, plus
+-- task, event, scheduled_task, attention_dismissal). The configured_build and
+-- content_revision are left intact (build.configured_build_id is ON DELETE SET
+-- NULL, and the revision is a parent, not a child). This touches NO hoster --
+-- it is purely a database removal, which is why it is admin-only and buried.
+DELETE FROM build WHERE id = $1;
+
 -- name: SetBuildReconcileError :exec
 -- The last reconcile outcome for a build: the error text when reconcile failed
 -- (e.g. build/builder incompatibility), or NULL to clear it after a success.
 UPDATE build SET reconcile_error = $2 WHERE id = $1;
+
+-- name: SetBuildResolvedRevision :exec
+-- Records the content revision the orchestrator last emitted a build.resolved
+-- event for, so that event fires once per resolve (the first resolve, and again
+-- only when the content revision changes) rather than on every reconcile tick.
+UPDATE build SET resolved_revision_id = $2 WHERE id = $1;
 
 -- name: ApplyContentRevisionToBuild :one
 -- handleApplyUpcoming's own mechanism: reuses an existing build's own
@@ -48,7 +66,9 @@ LIMIT 1;
 SELECT build.*,
        content_revision.commit_sha,
        content_revision.commit_message,
-       content_revision.committed_at
+       content_revision.committed_at,
+       content_revision.ref AS branch,
+       (SELECT count(*) FROM team WHERE team.build_id = build.id) AS team_count
 FROM build
 JOIN content_revision ON content_revision.id = build.content_revision_id
 WHERE content_revision.repository_id = $1
@@ -123,33 +143,80 @@ SELECT EXISTS (
       AND payload->>'team' = @team::text
 ) AS present;
 
+-- name: HasCompletedTeamAccessTask :one
+-- Fix 1 (reconciler drives desired-vs-applied, not the stored label): a team's
+-- access_state defaults to 'closed' before any builder call has run, but a
+-- freshly deployed team's instances are actually OPEN (eth0 attached, public NAT
+-- configured) -- the label is an assumption, not an applied fact. This reports
+-- whether an open/close task has ever actually COMPLETED for the team, so the
+-- reconciler can tell "converged to the label" apart from "never applied; reality
+-- is open-by-deploy" and issue the real close once the team is up.
+SELECT EXISTS (
+    SELECT 1 FROM task
+    WHERE build_id = @build_id
+      AND kind IN ('open_access', 'close_access')
+      AND status = 'done'
+      AND payload->>'team' = @team::text
+) AS present;
+
+-- name: SupersedeTeamAccessTasks :execrows
+-- Fix 3 (serialize manual access changes): a fresh manual open/close for a team
+-- cancels any still-PENDING access task for that same team (either direction), so
+-- a flurry of operator clicks collapses to just the newest intent instead of
+-- queuing a tug-of-war the runner then executes one stale step at a time. A task
+-- already 'leased' is mid-execution against the builder and is left to finish;
+-- the newest task runs after it and wins, so the team lands in the last-requested
+-- state regardless of ordering.
+UPDATE task SET status = 'failed', last_error = 'superseded by a newer team access change', updated_at = now()
+WHERE build_id = @build_id
+  AND kind IN ('open_access', 'close_access')
+  AND status = 'pending'
+  AND payload->>'team' = @team::text;
+
 -- name: HasConfigureNetworkAccessTask :one
--- Dedup for the network-access reconciler: exactly one configure_network_access
--- task per (team, desired-config fingerprint), across ALL statuses. The
--- fingerprint (a hash of the team's networks' names/CIDRs/visible_from) rides in
--- the payload, so a content change yields a new fingerprint and a fresh task,
--- while an unchanged config never re-runs regardless of the earlier task's
--- outcome -- the builder call is idempotent, so re-asserting adds no value.
+-- Dedup for the network-access reconciler: one live configure_network_access task
+-- per (team, desired-config fingerprint). The fingerprint hashes the team's
+-- networks' names/CIDRs/visible_from PLUS its ready guests' instance references,
+-- so a content change OR an instance replacement (a rebuilt guest gets a new ref)
+-- yields a new fingerprint and a fresh task, while an unchanged config never
+-- re-runs (the builder call is idempotent). A previously FAILED task does NOT
+-- count, so an exhausted attempt is re-queued and converges rather than leaving
+-- the policy permanently half-applied.
 SELECT EXISTS (
     SELECT 1 FROM task
     WHERE build_id = @build_id
       AND kind = 'configure_network_access'
       AND payload->>'team' = @team::text
       AND payload->>'fingerprint' = @fingerprint::text
+      AND status <> 'failed'
 ) AS present;
 
 -- name: HasConfigureExternalAccessTask :one
 -- Dedup for the external-access reconciler, exactly like network access above:
--- one configure_external_access task per (team, public-ports fingerprint), across
--- all statuses. A content change to a team's `public:` ports yields a new
--- fingerprint and a fresh task; an unchanged set never re-runs (the builder call
--- is idempotent).
+-- one configure_external_access task per team and desired public ports/ready
+-- instance identities, across all statuses. A new or replaced public instance
+-- yields a fresh task even if content has not changed.
 SELECT EXISTS (
     SELECT 1 FROM task
     WHERE build_id = @build_id
       AND kind = 'configure_external_access'
       AND payload->>'team' = @team::text
       AND payload->>'fingerprint' = @fingerprint::text
+) AS present;
+
+-- name: HasOpenConfigureAccessTask :one
+-- Fix 1 gate: is a team's network/external-access configuration still settling?
+-- A close must run AFTER external access attaches its public-port ACLs (so the
+-- close can capture and strip them); otherwise the close records a NIC with no
+-- public ACL and a later external-access pass silently re-opens ingress on a
+-- team the label calls closed. True while any configure_network_access or
+-- configure_external_access task for the team is still pending or leased.
+SELECT EXISTS (
+    SELECT 1 FROM task
+    WHERE build_id = @build_id
+      AND kind IN ('configure_network_access', 'configure_external_access')
+      AND status IN ('pending', 'leased')
+      AND payload->>'team' = @team::text
 ) AS present;
 
 -- name: EnsureDeployedObject :one
@@ -190,8 +257,39 @@ UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $
 -- has not checked in yet and no authored step has run. The object-lifecycle
 -- poll (internal/orchestrator/lifecycle.go) advances this to building ->
 -- finished/build_failed/invalid from the real agent_task/validator rows.
-UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, last_error = NULL, updated_at = now()
+-- deployed_at restarts the never-checked-in watchdog's clock, and a redeploy
+-- clears any earlier overdue flag.
+UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, last_error = NULL, updated_at = now(),
+    deployed_at = now(), agent_checkin_overdue_at = NULL
 WHERE id = $1 RETURNING *;
+
+-- name: SetDeployedObjectAgentPlatform :exec
+-- Which agent binary the runner delivered to this host. Marks the object as one
+-- whose agent is expected to check in, and picks its watchdog deadline.
+UPDATE deployed_object SET agent_platform = $2 WHERE id = $1;
+
+-- name: ListAgentCheckinWatchdogCandidates :many
+-- Hosts in this build whose agent has not checked in since they were deployed
+-- and which the watchdog hasn't flagged yet. The caller applies the per-OS
+-- deadline. "Checked in since deployed" compares the session's last heartbeat
+-- with deployed_at, because a rebuilt host keeps its old agent_session row.
+SELECT o.id, o.object_name, o.as_name, o.external_ref, o.agent_platform, o.deployed_at, t.team_number
+FROM deployed_object o
+JOIN team t ON t.id = o.team_id
+LEFT JOIN agent_session s ON s.deployed_object_id = o.id
+WHERE t.build_id = $1
+  AND o.status IN ('running', 'building')
+  AND o.agent_platform <> ''
+  AND o.deployed_at IS NOT NULL
+  AND o.agent_checkin_overdue_at IS NULL
+  AND (s.last_heartbeat_at IS NULL OR s.last_heartbeat_at < o.deployed_at)
+ORDER BY o.deployed_at;
+
+-- name: MarkAgentCheckinOverdue :execrows
+-- Flag one host as never-checked-in. Guarded so concurrent orchestrator
+-- replicas flag (and emit the event for) a host only once per deploy.
+UPDATE deployed_object SET agent_checkin_overdue_at = now()
+WHERE id = $1 AND agent_checkin_overdue_at IS NULL;
 
 -- name: MarkDeployedObjectDeployFailed :one
 -- The hoster couldn't create the instance -- an infrastructure failure,
@@ -275,6 +373,32 @@ UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = 
 -- "Infra: Running" next to a "Destroyed" lifecycle badge.
 UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING *;
 
+-- name: MarkDeployedObjectDestroyFailed :one
+-- The destroy-side twin of MarkDeployedObjectDeployFailed: the hoster could not
+-- remove this object and the failure is permanent (builder configuration), so
+-- Teardown stops re-queuing destroys for it. Terminal until an operator retries
+-- the teardown (ResetDestroyFailedObjectsForBuild) or forces the build down.
+UPDATE deployed_object SET status = 'destroy_failed', last_error = $2, updated_at = now()
+WHERE id = $1 RETURNING *;
+
+-- name: ResetDestroyFailedObjectsForBuild :many
+-- The explicit operator retry after fixing the builder: every destroy_failed
+-- object of the build goes back to 'destroying' so a fresh terminal destroy can
+-- be requested for it.
+UPDATE deployed_object SET status = 'destroying', last_error = NULL, updated_at = now()
+WHERE status = 'destroy_failed'
+  AND team_id IN (SELECT id FROM team WHERE build_id = $1)
+RETURNING *;
+
+-- name: ForceDestroyObjectsForBuild :execrows
+-- The operator's "declare it gone" escape hatch for a wedged teardown: every
+-- object not yet destroyed is recorded as destroyed WITHOUT any hoster call
+-- (same column resets as MarkDeployedObjectDestroyed). The caller is asserting
+-- the real infrastructure is already gone or will be cleaned up by hand.
+UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), last_error = NULL, updated_at = now()
+WHERE status <> 'destroyed'
+  AND team_id IN (SELECT id FROM team WHERE build_id = $1);
+
 -- name: ResetDeployedObjectForRedeploy :one
 -- Used after a destroy that happened only because the fingerprint changed
 -- ("rebuild means recreate"): back to pending, cleared external_ref/
@@ -317,40 +441,143 @@ RETURNING *;
 -- FOR UPDATE SKIP LOCKED claims either a pending task or one
 -- whose lease has expired, atomically, so concurrent runners never block
 -- each other or double-claim the same row.
+--
+-- Per-builder concurrency cap: a candidate task is skipped while its
+-- builder_config already has max_concurrency tasks leased-and-live (so a
+-- capacity-limited hoster like MicroCloud can be turned down below the global
+-- RUNNER_CONCURRENCY pool). max_concurrency = 0 means unlimited; tasks with no
+-- builder_config (ad-hoc builds, or builds whose configured_build was cleared)
+-- are never capped. The cap is a SOFT limit -- concurrent leasers each read the
+-- in-flight count before committing, so it can transiently overshoot by the
+-- number of simultaneous leasers, which is fine for a "don't overwhelm it" knob.
 UPDATE task
 SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
     attempts = attempts + 1, updated_at = now()
 WHERE id = (
-    SELECT id FROM task
-    WHERE status = 'pending' OR (status = 'leased' AND lease_expires_at < now())
-    ORDER BY created_at
-    FOR UPDATE SKIP LOCKED
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    LEFT JOIN builder_config bc ON bc.name = cb.builder_config_name
+    WHERE (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+      AND (
+        bc.max_concurrency IS NULL OR bc.max_concurrency = 0
+        OR (
+            SELECT count(*) FROM task it
+            JOIN build ib ON ib.id = it.build_id
+            JOIN configured_build icb ON icb.id = ib.configured_build_id
+            WHERE icb.builder_config_name = bc.name
+              AND it.status = 'leased' AND it.lease_expires_at >= now()
+        ) < bc.max_concurrency
+      )
+    -- Critical path first: a deploy task's payload carries its priority (how
+    -- many objects depends_on it; networks highest -- see the orchestrator's
+    -- deployTaskPayload), so every team's domain controller is leased ahead of
+    -- the workstations waiting on it, then oldest first. Guarded so a
+    -- non-numeric value can never break leasing.
+    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
+    FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
 RETURNING *;
 
 -- name: LeaseTaskForBuild :one
--- Identical to LeaseTask, scoped to one build. Production runners always
--- use LeaseTask (a real runner pool draws from every build's work, which
--- is the whole point of a shared pool) -- this exists for tests: several
--- packages' tests run concurrently against the same shared laforge_dev
--- database (Go parallelizes across packages by default), each reconciling
--- its own build under the same "lm-test" environment, and an unscoped
--- LeaseTask would let one test's runner lease and complete a *different*
--- test's task. Scoping by build_id is test isolation, not a product
--- feature -- see internal/chaos and internal/runner's tests.
+-- LeaseTask scoped to ONE build. This is the production lease path for the
+-- per-build-lane runner (each build's lane leases only its own tasks, so no
+-- build's queue ever sits behind another's -- there is no cross-build FIFO).
+-- It is ALSO what the tests use for isolation: several packages' tests run
+-- concurrently against the same shared laforge_dev database, each driving its
+-- own build, and scoping by build_id keeps one test's runner from completing
+-- another's task. The per-builder max_concurrency cap is still enforced here --
+-- it is a deliberate CROSS-build cap on a shared hoster, the one place two
+-- builds on the same capped builder legitimately share a limit.
 UPDATE task
 SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
     attempts = attempts + 1, updated_at = now()
 WHERE id = (
-    SELECT t2.id FROM task t2
-    WHERE t2.build_id = $3
-      AND (t2.status = 'pending' OR (t2.status = 'leased' AND t2.lease_expires_at < now()))
-    ORDER BY t2.created_at
-    FOR UPDATE SKIP LOCKED
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    LEFT JOIN builder_config bc ON bc.name = cb.builder_config_name
+    WHERE t.build_id = $3
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+      AND (
+        bc.max_concurrency IS NULL OR bc.max_concurrency = 0
+        OR (
+            SELECT count(*) FROM task it
+            JOIN build ib ON ib.id = it.build_id
+            JOIN configured_build icb ON icb.id = ib.configured_build_id
+            WHERE icb.builder_config_name = bc.name
+              AND it.status = 'leased' AND it.lease_expires_at >= now()
+        ) < bc.max_concurrency
+      )
+    -- Critical path first: a deploy task's payload carries its priority (how
+    -- many objects depends_on it; networks highest -- see the orchestrator's
+    -- deployTaskPayload), so every team's domain controller is leased ahead of
+    -- the workstations waiting on it, then oldest first. Guarded so a
+    -- non-numeric value can never break leasing.
+    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
+    FOR UPDATE OF t SKIP LOCKED
     LIMIT 1
 )
 RETURNING *;
+
+-- name: LeaseTaskForBuilder :one
+-- Lease the next leasable task that belongs to one CONFIGURED BUILDER (across
+-- every build using it), oldest first. This is the production lease path: the
+-- runner runs one worker pool PER configured builder, sized to that builder's
+-- own concurrency limit (builder_config.max_concurrency), because concurrency is
+-- a property of the hardware -- the cluster/account/host-pool -- not of a build.
+-- All builds on a builder share its pool; different builders never contend. A
+-- build with no configured_build (ad-hoc/fake) has builder key '' and its own
+-- pool. There is NO cap subquery here -- the per-builder pool's size is the
+-- limit, so the scheduler stays a dumb, fair lease.
+UPDATE task
+SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
+    attempts = attempts + 1, updated_at = now()
+WHERE id = (
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    WHERE coalesce(cb.builder_config_name, '') = $3
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+    -- Critical path first: a deploy task's payload carries its priority (how
+    -- many objects depends_on it; networks highest -- see the orchestrator's
+    -- deployTaskPayload), so every team's domain controller is leased ahead of
+    -- the workstations waiting on it, then oldest first. Guarded so a
+    -- non-numeric value can never break leasing.
+    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
+    FOR UPDATE OF t SKIP LOCKED
+    LIMIT 1
+)
+RETURNING *;
+
+-- name: ListBuildersWithLeasableTasks :many
+-- The distinct configured builders (by builder_config name; '' for builds with
+-- no configured_build) that currently have at least one leasable task. The
+-- runner's supervisor polls this to decide which builders need a worker pool
+-- running -- cheap, and builders never couple to each other.
+SELECT DISTINCT coalesce(cb.builder_config_name, '') AS builder_config_name
+FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now());
+
+-- name: CountLeasableTasksForBuilder :one
+-- How many leasable tasks (pending or expired-lease) one configured builder
+-- still has across all its builds. A builder's pool uses this to know when its
+-- queue is drained (0) so it can exit; the supervisor restarts it when work
+-- reappears.
+SELECT count(*) FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE coalesce(cb.builder_config_name, '') = $1
+  AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()));
 
 -- name: HeartbeatTask :execrows
 -- Zero rows affected means the lease was already reclaimed out from under
@@ -379,10 +606,43 @@ UPDATE task SET status = 'leased', last_error = $3,
 WHERE id = $1 AND lease_owner = $2
 RETURNING *;
 
--- name: FailTask :one
-UPDATE task SET status = 'failed', last_error = $3, updated_at = now()
+-- name: DeferTask :one
+-- Waiting for VM startup is not a failed forwarding attempt.
+UPDATE task SET status = 'leased', last_error = $3,
+    attempts = GREATEST(attempts - 1, 0),
+    lease_expires_at = now() + $4::interval, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
 RETURNING *;
+
+-- name: FailTask :one
+-- permanent records the runner's own classification of the failure
+-- (builder.ErrPermanentConfig): a failure retrying cannot fix. The
+-- orchestrator's teardown reads it back to stop re-queuing a destroy that can
+-- never succeed (see ListLatestDestroyTasksByBuild).
+UPDATE task SET status = 'failed', last_error = $3, permanent = $4, updated_at = now()
+WHERE id = $1 AND lease_owner = $2
+RETURNING *;
+
+-- name: ListLatestDestroyTasksByBuild :many
+-- The most recent destroy task per object of a build, with how many destroy
+-- tasks for that object have failed so far -- what Teardown decides from: an
+-- open task means a destroy is in flight (nothing to do), a failed permanent one
+-- means stop (destroy_failed), a failed transient one is re-queued only once a
+-- backoff scaled by failed_count has elapsed since it failed (updated_at).
+SELECT DISTINCT ON (t.deployed_object_id) t.*,
+    (SELECT count(*) FROM task f
+     WHERE f.deployed_object_id = t.deployed_object_id
+       AND f.kind LIKE 'destroy_%' AND f.status = 'failed')::int AS failed_count
+FROM task t
+WHERE t.build_id = $1 AND t.deployed_object_id IS NOT NULL AND t.kind LIKE 'destroy_%'
+ORDER BY t.deployed_object_id, t.created_at DESC;
+
+-- name: CancelOpenTasksForBuild :execrows
+-- Closes every pending/leased task of a build as failed with the given reason.
+-- Used when a teardown is forced to torn_down: nothing should keep working on
+-- a build the operator has declared gone.
+UPDATE task SET status = 'failed', last_error = $2, updated_at = now()
+WHERE build_id = $1 AND status IN ('pending', 'leased');
 
 -- name: GetTask :one
 SELECT * FROM task WHERE id = $1;
@@ -572,3 +832,42 @@ GROUP BY team.build_id, agent_task.status;
 
 -- name: SetDeployedObjectPublicAddress :exec
 UPDATE deployed_object SET public_address = $2, updated_at = now() WHERE id = $1;
+
+-- name: DiscardSupersededPlannedBuilds :many
+-- A newer planned build (keep_id) was just created for this configured build:
+-- every OTHER planned build it has is now a superseded revision nobody will
+-- deploy, so it goes terminal as 'discarded' (migration 00063). Keeps at most
+-- one planned build per configured_build, which is what stops planned builds
+-- accumulating one per push forever and each holding an orchestrator lane.
+-- Only 'planned' rows are touched: anything deploying/building/finished is real
+-- infrastructure and is handled by apply-in-place or teardown, never this.
+UPDATE build SET status = 'discarded'
+WHERE configured_build_id = sqlc.arg(configured_build_id)
+  AND status = 'planned'
+  AND id <> sqlc.arg(keep_id)
+RETURNING *;
+
+-- name: DiscardPlannedBuildsForConfiguredBuild :many
+-- The configured build is being removed: its planned builds (never deployed,
+-- nothing at a hoster) have no future, so they go terminal as 'discarded'
+-- rather than lingering as detached 'planned' rows that the orchestrator would
+-- keep reconciling and that nobody could meaningfully deploy.
+UPDATE build SET status = 'discarded'
+WHERE configured_build_id = $1 AND status = 'planned'
+RETURNING *;
+
+-- name: DiscardStalePlannedBuilds :many
+-- The sweep behind the two queries above, for rows that predate them: a planned
+-- build is stale when its configured_build is gone (configured_build_id was set
+-- NULL by the FK on delete) or when a newer planned build exists for the same
+-- configured_build. Run by the orchestrator at startup and on its slow
+-- housekeeping tick, so an upgraded instance heals its backlog without manual
+-- SQL and a planned build never slips through the two write paths.
+UPDATE build AS b SET status = 'discarded'
+WHERE b.status = 'planned'
+  AND (b.configured_build_id IS NULL
+       OR EXISTS (SELECT 1 FROM build AS n
+                  WHERE n.configured_build_id = b.configured_build_id
+                    AND n.status = 'planned'
+                    AND (n.created_at, n.id) > (b.created_at, b.id)))
+RETURNING *;

@@ -1,15 +1,29 @@
 -- name: UpsertGithubInstallation :one
--- Fired by the `installation` webhook event ("created"/"unsuspend") --
--- an ON CONFLICT update so a re-delivered event (GitHub retries) or a
--- reinstall after a prior uninstall converges instead of erroring.
+-- Keyed on account_login, NOT installation_id: a GitHub App is installed
+-- at most once per account, so a reinstall (which gets a brand-new
+-- installation_id) must update the existing row IN PLACE -- keeping its
+-- uuid stable so every repository still pointing at it keeps working --
+-- rather than inserting a second, competing row. Also converges a
+-- re-delivered event. Migration 00050 adds the UNIQUE(account_login) this
+-- conflict target needs.
 INSERT INTO github_installation (installation_id, account_login, account_type)
 VALUES ($1, $2, $3)
-ON CONFLICT (installation_id) DO UPDATE SET
-    account_login = EXCLUDED.account_login,
+ON CONFLICT (account_login) DO UPDATE SET
+    installation_id = EXCLUDED.installation_id,
     account_type = EXCLUDED.account_type,
     suspended = false,
     updated_at = now()
 RETURNING *;
+
+-- name: AttachOwnerRepositoriesToInstallation :execrows
+-- Point every tracked repository owned by this account at this
+-- installation row. Run on (re)install and on resync so a repository is
+-- never left stranded on a dead installation row (or NULL after an
+-- uninstall event) once the account's live installation is known. Only
+-- repoints EXISTING repository rows -- it never creates them, so it
+-- doesn't bypass the explicit admin-approval path that owns row creation.
+UPDATE repository SET installation_id = $1
+WHERE github_owner = $2 AND installation_id IS DISTINCT FROM $1;
 
 -- name: SetGithubInstallationSuspended :one
 UPDATE github_installation SET suspended = $2, updated_at = now() WHERE installation_id = $1 RETURNING *;

@@ -2,6 +2,9 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -64,6 +67,67 @@ func TestIgnoreErrorsStepIsToleratedAndDoesNotBlock(t *testing.T) {
 	}
 	if next.ID != step1.ID.String() {
 		t.Fatalf("next task = %s, want step1 %s", next.ID, step1.ID)
+	}
+}
+
+// TestRebootsStepCompletesOnReconnectInsteadOfReRunning proves the reboot-aware
+// completion over the real protocol: a `reboots: true` step (dcpromo) reboots the
+// box, so the agent never reports a result and the step stays 'leased'. When the
+// agent comes back and asks for work, the gateway must COMPLETE that step (the
+// reconnect is the completion) and serve the next one -- NOT re-lease and re-run
+// it, which would hit "already domain joined". Without the feature the second
+// get-task returns nil (step 0 still leased), wedging the host.
+func TestRebootsStepCompletesOnReconnectInsteadOfReRunning(t *testing.T) {
+	adminPool := openAdminPool(t)
+	host := seedDeployedHost(t, adminPool)
+	adminQ := db.New(adminPool)
+	ctx := context.Background()
+
+	step0, err := adminQ.CreateAgentTask(ctx, db.CreateAgentTaskParams{
+		DeployedObjectID: host.deployedObjectID, StepIndex: 0, Command: "execute",
+		Payload: []byte(`{"command":"dcpromo"}`), Reboots: true,
+	})
+	if err != nil {
+		t.Fatalf("CreateAgentTask step0 (reboots): %v", err)
+	}
+	step1, err := adminQ.CreateAgentTask(ctx, db.CreateAgentTaskParams{
+		DeployedObjectID: host.deployedObjectID, StepIndex: 1, Command: "write_file",
+		Payload: []byte(`{"path":"/tmp/after","content":"ran"}`),
+	})
+	if err != nil {
+		t.Fatalf("CreateAgentTask step1: %v", err)
+	}
+
+	addr, ca, _ := startTestGateway(t)
+	client := dialTestAgent(t, addr, ca, host.deployedObjectID.String())
+	defer client.conn.Close()
+	client.heartbeat(t)
+
+	// First get-task leases the reboots step. The agent runs it; the box reboots
+	// and the agent never reports -- the step is left 'leased'.
+	task := client.getTask(t)
+	if task == nil || task.ID != step0.ID.String() {
+		t.Fatalf("first get-task = %+v, want reboots step0 %s", task, step0.ID)
+	}
+
+	// The agent reconnects after the reboot and asks for work. That reconnect
+	// completes the reboots step and serves step1 -- it must NOT re-offer step0.
+	next := client.getTask(t)
+	if next == nil {
+		t.Fatal("after reconnect, get-task returned nil -- the reboots step must auto-complete, not stay leased")
+	}
+	if next.ID == step0.ID.String() {
+		t.Fatal("after reconnect, get-task re-offered the reboots step -- it must complete it, not re-run it")
+	}
+	if next.ID != step1.ID.String() {
+		t.Fatalf("after reconnect, get-task = %s, want step1 %s", next.ID, step1.ID)
+	}
+	got, err := adminQ.GetAgentTask(ctx, step0.ID)
+	if err != nil {
+		t.Fatalf("GetAgentTask step0: %v", err)
+	}
+	if got.Status != "done" {
+		t.Fatalf("reboots step0 status = %q, want done (the reconnect completed it)", got.Status)
 	}
 }
 
@@ -160,27 +224,33 @@ func TestGatewayEndToEnd(t *testing.T) {
 	// this same real restricted laforge_gateway connection, readable
 	// back through the same per-object query the API's own
 	// ListEventsByDeployedObject uses.
-	events, err := adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID)
+	events, err := stepEvents(adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID))
 	if err != nil {
 		t.Fatalf("ListEventsByDeployedObject: %v", err)
 	}
-	if len(events) != 1 {
-		t.Fatalf("events after step 0 done = %d, want 1", len(events))
+	// Each step logs its START (when leased/handed to the agent) and its
+	// OUTCOME, so a host's event timeline shows the whole bring-up.
+	if len(events) != 2 {
+		t.Fatalf("events after step 0 done = %d, want 2 (step_started + step_done)", len(events))
 	}
-	if events[0].Kind != "step_done" {
-		t.Fatalf("event kind = %q, want step_done", events[0].Kind)
+	if events[0].Kind != "step_started" || events[0].Message != "step 0 (write_file) started: a" {
+		t.Fatalf("event[0] = %q/%q, want step_started/%q", events[0].Kind, events[0].Message, "step 0 (write_file) started: a")
 	}
-	if events[0].Message != "step 0 (write_file) done" {
-		t.Fatalf("event message = %q, want %q", events[0].Message, "step 0 (write_file) done")
+	done := events[1]
+	if done.Kind != "step_done" {
+		t.Fatalf("event kind = %q, want step_done", done.Kind)
 	}
-	if events[0].BuildID != host.buildID {
-		t.Fatalf("event build_id = %v, want %v", events[0].BuildID, host.buildID)
+	if done.Message != "step 0 (write_file) done: a" {
+		t.Fatalf("event message = %q, want %q", done.Message, "step 0 (write_file) done: a")
 	}
-	if !events[0].DeployedObjectID.Valid || events[0].DeployedObjectID != host.deployedObjectID {
-		t.Fatalf("event deployed_object_id = %v, want %v", events[0].DeployedObjectID, host.deployedObjectID)
+	if done.BuildID != host.buildID {
+		t.Fatalf("event build_id = %v, want %v", done.BuildID, host.buildID)
 	}
-	if events[0].TaskID.Valid {
-		t.Fatalf("event task_id = %v, want NULL (no orchestrator task owns a step event -- see migrations/00009)", events[0].TaskID)
+	if !done.DeployedObjectID.Valid || done.DeployedObjectID != host.deployedObjectID {
+		t.Fatalf("event deployed_object_id = %v, want %v", done.DeployedObjectID, host.deployedObjectID)
+	}
+	if done.TaskID.Valid {
+		t.Fatalf("event task_id = %v, want NULL (no orchestrator task owns a step event -- see migrations/00009)", done.TaskID)
 	}
 
 	task3 := client.getTask(t)
@@ -196,15 +266,20 @@ func TestGatewayEndToEnd(t *testing.T) {
 		t.Fatal("report-status(done) for step 1 returned OK=false")
 	}
 
-	events, err = adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID)
+	events, err = stepEvents(adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID))
 	if err != nil {
 		t.Fatalf("ListEventsByDeployedObject (after step 1): %v", err)
 	}
-	if len(events) != 2 {
-		t.Fatalf("events after both steps done = %d, want 2", len(events))
+	// Two steps, each with a start + done event: [s0 started, s0 done, s1
+	// started, s1 done].
+	if len(events) != 4 {
+		t.Fatalf("events after both steps done = %d, want 4 (start+done per step)", len(events))
 	}
-	if events[1].Message != "step 1 (execute) done" {
-		t.Fatalf("second event message = %q, want %q", events[1].Message, "step 1 (execute) done")
+	if events[2].Message != "step 1 (execute) started: a" {
+		t.Fatalf("event[2] message = %q, want %q", events[2].Message, "step 1 (execute) started: a")
+	}
+	if events[3].Message != "step 1 (execute) done: a" {
+		t.Fatalf("event[3] message = %q, want %q", events[3].Message, "step 1 (execute) done: a")
 	}
 
 	task4 := client.getTask(t)
@@ -251,30 +326,43 @@ func TestGatewayRetryThenFailCap(t *testing.T) {
 		if err != nil {
 			t.Fatalf("attempt %d: GetAgentTask: %v", attempt, err)
 		}
-		events, err := adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID)
+		events, err := stepEvents(adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID))
 		if err != nil {
 			t.Fatalf("attempt %d: ListEventsByDeployedObject: %v", attempt, err)
 		}
+		// Every get-task that hands out the step logs a step_started, and
+		// every failed attempt logs its outcome: step_retry (carrying the
+		// attempt and the error) under the cap, step_failed once terminal --
+		// so after attempt N there are exactly 2N events, retries included.
+		if len(events) != 2*attempt {
+			t.Fatalf("attempt %d: %d event(s), want %d (a step_started + an outcome per attempt)", attempt, len(events), 2*attempt)
+		}
+		last := events[len(events)-1]
 		if attempt < MaxAttempts {
 			if dbTask.Status != "pending" {
 				t.Fatalf("attempt %d: status = %q, want pending (still under MaxAttempts=%d)", attempt, dbTask.Status, MaxAttempts)
 			}
-			// A transient retry under the cap is exactly the "internal
-			// retry noise" logStepEvent's own doc comment says not to
-			// log -- matching deploy/destroy lifecycle events, which
-			// only fire on a real state transition.
-			if len(events) != 0 {
-				t.Fatalf("attempt %d: %d event(s) logged for a retry under MaxAttempts, want 0", attempt, len(events))
+			wantMsg := fmt.Sprintf("step 0 (execute) failed on attempt %d/%d, retrying: /bin/false", attempt, MaxAttempts)
+			if last.Kind != "step_retry" || last.Message != wantMsg {
+				t.Fatalf("attempt %d: event = %q/%q, want step_retry/%q", attempt, last.Kind, last.Message, wantMsg)
+			}
+			var p struct {
+				Detail      string `json:"detail"`
+				Attempt     int    `json:"attempt"`
+				MaxAttempts int    `json:"max_attempts"`
+			}
+			if err := json.Unmarshal(last.Payload, &p); err != nil {
+				t.Fatalf("attempt %d: decoding step_retry payload %s: %v", attempt, last.Payload, err)
+			}
+			if p.Detail != "exit status 1" || p.Attempt != attempt || p.MaxAttempts != MaxAttempts {
+				t.Fatalf("attempt %d: step_retry payload = %+v, want detail %q attempt %d max %d", attempt, p, "exit status 1", attempt, MaxAttempts)
 			}
 		} else {
 			if dbTask.Status != "failed" {
 				t.Fatalf("attempt %d: status = %q, want failed (reached MaxAttempts=%d)", attempt, dbTask.Status, MaxAttempts)
 			}
-			if len(events) != 1 {
-				t.Fatalf("attempt %d: %d event(s) logged after the terminal failure, want exactly 1", attempt, len(events))
-			}
-			if events[0].Kind != "step_failed" {
-				t.Fatalf("terminal event kind = %q, want step_failed", events[0].Kind)
+			if last.Kind != "step_failed" {
+				t.Fatalf("terminal event kind = %q, want step_failed", last.Kind)
 			}
 		}
 	}
@@ -283,6 +371,71 @@ func TestGatewayRetryThenFailCap(t *testing.T) {
 	task := client.getTask(t)
 	if task != nil {
 		t.Fatalf("get-task after the task reached MaxAttempts and failed = %+v, want nil", task)
+	}
+}
+
+// TestGatewayRetryThenSucceedKeepsTheError is the visibility half of retries:
+// a step that fails once and then succeeds must leave its first attempt's
+// error in the host's timeline (a step_retry event), even though the success
+// clears agent_task.last_error -- and the step_done says which attempt won.
+// This is the shape that hid a script bug failing every Windows host's first
+// attempt: nothing recorded the failure once the retry passed.
+func TestGatewayRetryThenSucceedKeepsTheError(t *testing.T) {
+	adminPool := openAdminPool(t)
+	host := seedDeployedHost(t, adminPool)
+	adminQ := db.New(adminPool)
+	ctx := context.Background()
+
+	if _, err := adminQ.CreateAgentTask(ctx, db.CreateAgentTaskParams{
+		DeployedObjectID: host.deployedObjectID, StepIndex: 0, Command: "execute", Payload: []byte(`{"command":"/bin/flaky"}`),
+	}); err != nil {
+		t.Fatalf("CreateAgentTask: %v", err)
+	}
+
+	addr, ca, _ := startTestGateway(t)
+	client := dialTestAgent(t, addr, ca, host.deployedObjectID.String())
+	defer client.conn.Close()
+	client.heartbeat(t)
+
+	task := client.getTask(t)
+	if task == nil {
+		t.Fatal("get-task returned nil, want step 0")
+	}
+	if resp := client.reportStatus(t, task.ID, "failed", "", "Join-Domain: The specified domain does not exist"); !resp.OK {
+		t.Fatal("report-status(failed) returned OK=false")
+	}
+	task = client.getTask(t)
+	if task == nil {
+		t.Fatal("get-task after a retryable failure returned nil, want step 0 again")
+	}
+	if resp := client.reportStatus(t, task.ID, "done", "joined", ""); !resp.OK {
+		t.Fatal("report-status(done) returned OK=false")
+	}
+
+	events, err := stepEvents(adminQ.ListEventsByDeployedObject(ctx, host.deployedObjectID))
+	if err != nil {
+		t.Fatalf("ListEventsByDeployedObject: %v", err)
+	}
+	var kinds []string
+	for _, e := range events {
+		kinds = append(kinds, e.Kind)
+	}
+	want := []string{"step_started", "step_retry", "step_started", "step_done"}
+	if fmt.Sprint(kinds) != fmt.Sprint(want) {
+		t.Fatalf("event kinds = %v, want %v", kinds, want)
+	}
+	var p struct {
+		Detail  string `json:"detail"`
+		Attempt int    `json:"attempt"`
+	}
+	if err := json.Unmarshal(events[1].Payload, &p); err != nil {
+		t.Fatalf("decoding step_retry payload: %v", err)
+	}
+	if p.Detail != "Join-Domain: The specified domain does not exist" || p.Attempt != 1 {
+		t.Fatalf("step_retry payload = %+v, want the first attempt's error at attempt 1", p)
+	}
+	if got, wantMsg := events[3].Message, "step 0 (execute) done on attempt 2: /bin/flaky"; got != wantMsg {
+		t.Fatalf("step_done message = %q, want %q", got, wantMsg)
 	}
 }
 
@@ -336,4 +489,16 @@ func TestGatewayReclaimsExpiredLease(t *testing.T) {
 	if dbTask.Attempts != 2 {
 		t.Fatalf("attempts = %d, want 2 (leased once by the dead agent, once more on reclaim)", dbTask.Attempts)
 	}
+}
+
+// stepEvents keeps only step_* events, so these step-journal assertions aren't
+// thrown off by the host's other timeline entries (agent_checked_in).
+func stepEvents(events []db.Event, err error) ([]db.Event, error) {
+	var out []db.Event
+	for _, e := range events {
+		if strings.HasPrefix(e.Kind, "step_") {
+			out = append(out, e)
+		}
+	}
+	return out, err
 }

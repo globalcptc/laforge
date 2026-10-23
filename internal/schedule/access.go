@@ -55,14 +55,26 @@ func CurrentWindowClose(windows []AccessWindow, now time.Time) (time.Time, bool)
 }
 
 // OpenInWindowStartingAfter reports whether now falls inside a window whose OPEN
-// edge is strictly after `after`. Once a manually-set access end (`after`, from
-// an extend/reduce override) has passed, this is how the reconciler tells a
+// edge is at or after `after`. Once a manually-set access end (`after`, from an
+// extend/reduce override) has passed, this is how the reconciler tells a
 // genuinely NEW window that has since opened (reopen) from still being inside
 // the window that end cut short (stay closed). Without it, shortening a window's
 // end wouldn't stick: the schedule would re-open the very window just trimmed.
+//
+// The edge is at-or-after, not strictly-after, on purpose. A plain manual OPEN
+// override (not an extend/reduce) records its expiry as the schedule's NEXT
+// BOUNDARY -- and when a team is opened early, that next boundary IS the coming
+// window's open edge. So the override lapses at the exact instant the window
+// opens, with `after` == that window's Open. A strict `.After` would fail to
+// see the window as new (its open equals `after`, not after it) and force the
+// team CLOSED at the very moment access was supposed to begin. Equality means
+// that window counts as the new one and the team follows the schedule open. A
+// reduce's `after` is a point strictly INSIDE its window (open < after < close),
+// so the trimmed window's open is still strictly before `after` and remains
+// excluded -- a reduced end still sticks.
 func OpenInWindowStartingAfter(windows []AccessWindow, now, after time.Time) bool {
 	for _, w := range windows {
-		if w.Open.After(after) && !now.Before(w.Open) && now.Before(w.Close) {
+		if !w.Open.Before(after) && !now.Before(w.Open) && now.Before(w.Close) {
 			return true
 		}
 	}

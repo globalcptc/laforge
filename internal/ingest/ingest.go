@@ -1,6 +1,7 @@
 package ingest
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -84,21 +85,31 @@ func ValidateAndStore(ctx context.Context, pool *pgxpool.Pool, repoID pgtype.UUI
 	}
 	valid := len(issues) == 0
 
-	// Idempotent adopt: the same commit ingested twice -- a webhook re-delivery,
-	// or an on-demand ingest (configured-build create/sync, internal/api) followed
-	// by the push webhook -- must return the EXISTING revision rather than fail on
-	// the (repository_id, commit_sha) unique key. A SHA uniquely identifies its
-	// content, so the existing row is authoritative; its stored `valid` reflects
-	// whether content was actually persisted for it.
-	if existing, err := db.New(pool).GetContentRevisionByRepoAndSHA(ctx, db.GetContentRevisionByRepoAndSHAParams{
-		RepositoryID: repoID, CommitSha: commitSHA,
-	}); err == nil {
-		return &Result{Revision: existing, Valid: existing.Valid, Issues: issues}, nil
-	}
-
 	issuesJSON, err := jsonField(issues, "[]")
 	if err != nil {
 		return nil, fmt.Errorf("encoding validation issues: %w", err)
+	}
+
+	// Idempotent adopt, WITH re-validation. The same commit ingested twice -- a
+	// webhook re-delivery, or an on-demand ingest (configured-build create/sync)
+	// followed by the push webhook -- normally returns the existing row: a SHA's
+	// CONTENT is immutable. But the VALIDATOR (schema + loader) can change between
+	// deploys, so a commit's STORED verdict can be stale -- a commit that failed
+	// under an old schema may now pass (exactly what deploying a schema fix is
+	// meant to unblock), and vice-versa. When the freshly-computed verdict
+	// disagrees with what's stored, re-record it and rebuild the persisted child
+	// content to match, instead of serving the stale pass/fail forever.
+	if existing, err := db.New(pool).GetContentRevisionByRepoAndSHA(ctx, db.GetContentRevisionByRepoAndSHAParams{
+		RepositoryID: repoID, CommitSha: commitSHA,
+	}); err == nil {
+		if existing.Valid == valid && bytes.Equal(existing.ValidationErrors, issuesJSON) {
+			return &Result{Revision: existing, Valid: existing.Valid, Issues: issues}, nil
+		}
+		updated, err := revalidateExisting(ctx, pool, existing.ID, valid, issuesJSON, c)
+		if err != nil {
+			return nil, err
+		}
+		return &Result{Revision: updated, Valid: valid, Issues: issues}, nil
 	}
 
 	tx, err := pool.Begin(ctx)
@@ -138,6 +149,60 @@ func ValidateAndStore(ctx context.Context, pool *pgxpool.Pool, repoID pgtype.UUI
 	}
 
 	return &Result{Revision: rev, Valid: valid, Issues: issues}, nil
+}
+
+// revalidateExisting re-records an already-stored revision's verdict when the
+// validator changed under it (see ValidateAndStore's idempotent-adopt comment).
+// It updates valid/validation_errors in place -- never deleting and recreating
+// the revision, whose id other rows (build, configured_build) reference -- and
+// rebuilds the persisted child content to match: cleared when now invalid,
+// (re)persisted when now valid. All in one transaction.
+func revalidateExisting(ctx context.Context, pool *pgxpool.Pool, revID pgtype.UUID, valid bool, issuesJSON []byte, c *loader.Content) (db.ContentRevision, error) {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return db.ContentRevision{}, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) // no-op once Commit succeeds
+	q := db.New(tx)
+
+	rev, err := q.SetContentRevisionValidation(ctx, db.SetContentRevisionValidationParams{
+		ID: revID, Valid: valid, ValidationErrors: issuesJSON,
+	})
+	if err != nil {
+		return db.ContentRevision{}, fmt.Errorf("re-recording validation result: %w", err)
+	}
+	if err := clearPersistedContent(ctx, q, revID); err != nil {
+		return db.ContentRevision{}, err
+	}
+	if valid {
+		if err := persistContent(ctx, q, revID, c); err != nil {
+			return db.ContentRevision{}, fmt.Errorf("persisting content: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return db.ContentRevision{}, fmt.Errorf("committing transaction: %w", err)
+	}
+	return rev, nil
+}
+
+// clearPersistedContent removes every persisted child of a revision so it can be
+// rebuilt to match a changed verdict. Only the six direct children are deleted;
+// person and placement cascade from people_source and environment.
+func clearPersistedContent(ctx context.Context, q *db.Queries, revID pgtype.UUID) error {
+	deletes := []func(context.Context, pgtype.UUID) error{
+		q.DeleteNetworksByRevision,
+		q.DeleteHostsByRevision,
+		q.DeleteContainersByRevision,
+		q.DeleteScriptsByRevision,
+		q.DeletePeopleSourcesByRevision,
+		q.DeleteEnvironmentsByRevision,
+	}
+	for _, del := range deletes {
+		if err := del(ctx, revID); err != nil {
+			return fmt.Errorf("clearing persisted content: %w", err)
+		}
+	}
+	return nil
 }
 
 func persistContent(ctx context.Context, q *db.Queries, revID pgtype.UUID, c *loader.Content) error {
@@ -308,6 +373,7 @@ func persistContent(ctx context.Context, q *db.Queries, revID pgtype.UUID, c *lo
 			StartAt:      timestamptzOrZero(e.Start), StopAt: timestamptzOrZero(e.Stop),
 			Dns: dnsJSON, Access: access, Vars: vars, Tags: tags, Findings: findings, Extends: strPtrOrNil(e.Extends),
 			AgentDebug: e.AgentDebug, ContainerLogs: containerLogsJSON,
+			Cidr: strPtrOrNil(e.CIDR),
 		})
 		if err != nil {
 			return fmt.Errorf("environment %q: %w", e.Name, err)

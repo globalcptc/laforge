@@ -47,7 +47,7 @@ func TestDiffUpcomingDetectsChangedAndRemoved(t *testing.T) {
 	q := db.New(pool)
 	build := newTestBuild(t, pool, "diff-upcoming-changed-removed")
 
-	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID); err != nil {
+	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 

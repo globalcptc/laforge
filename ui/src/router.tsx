@@ -14,10 +14,12 @@ import { BuildLogs } from './routes/BuildLogs'
 import { BuildFindings } from './routes/BuildFindings'
 import { BuildSchedule } from './routes/BuildSchedule'
 import { BuildArtifacts } from './routes/BuildArtifacts'
+import { BuildAdmin } from './routes/BuildAdmin'
 import { RepoPeople } from './routes/RepoPeople'
 import { RepoAccess } from './routes/RepoAccess'
 import { InstalledRepositories } from './routes/InstalledRepositories'
 import { BuilderConfigs } from './routes/BuilderConfigs'
+import { BuilderInfo } from './routes/BuilderInfo'
 import { InstanceAdmins } from './routes/InstanceAdmins'
 import { BuilderWizard } from './routes/BuilderWizard'
 import { useMe } from './api/hooks'
@@ -105,6 +107,7 @@ const buildTopologyRoute = createRoute({
   },
 })
 const buildArtifactsRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'artifacts', component: BuildArtifacts })
+const buildAdminRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'admin', component: BuildAdmin })
 // Per-host interactive shell -- reached from a host's "Open terminal" action,
 // not a build-level tab, since a shell is always about one specific host.
 const buildTerminalRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'hosts/$objectId/terminal', component: BuildTerminal })
@@ -159,9 +162,24 @@ const newBuilderRoute = createRoute({
   ),
 })
 
-const editBuilderRoute = createRoute({
+const builderInfoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/infrastructure/$name',
+  component: () => (
+    <RequireAuth>
+      <BuilderInfo />
+    </RequireAuth>
+  ),
+})
+
+const editBuilderRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/infrastructure/$name/edit',
+  // ?section=config|images|sizes lets the builder info page's edit buttons jump
+  // the wizard straight to that part of the config.
+  validateSearch: (s: Record<string, unknown>): { section?: string } => ({
+    section: typeof s.section === 'string' ? s.section : undefined,
+  }),
   component: () => (
     <RequireAuth>
       <BuilderWizard />
@@ -189,9 +207,10 @@ const routeTree = rootRoute.addChildren([
   instanceAdminsRoute,
   builderConfigsRoute,
   newBuilderRoute,
+  builderInfoRoute,
   editBuilderRoute,
   repoAccessRoute,
-  buildLayoutRoute.addChildren([buildIndexRoute, buildHostsRoute, buildAccessRoute, buildExternalAccessRoute, buildLogsRoute, buildFindingsRoute, buildScheduleRoute, buildTopologyRoute, buildArtifactsRoute, buildTerminalRoute]),
+  buildLayoutRoute.addChildren([buildIndexRoute, buildHostsRoute, buildAccessRoute, buildExternalAccessRoute, buildLogsRoute, buildFindingsRoute, buildScheduleRoute, buildTopologyRoute, buildArtifactsRoute, buildAdminRoute, buildTerminalRoute]),
 ])
 
 export const router = createRouter({ routeTree })

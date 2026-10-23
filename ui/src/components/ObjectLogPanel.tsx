@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal } from 'lucide-react'
-import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
+import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert } from 'lucide-react'
+import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
-import type { RenderedStep, StepStatus, ObjectKind, DeployedObject } from '../api/types'
+import type { RenderedStep, CloudInitView, StepStatus, ObjectKind, DeployedObject, HostCredential } from '../api/types'
 import { EmptyState } from './EmptyState'
 import { Badge, Button, buttonClass, cn, InspectorPanel, Spinner } from '../ui'
 import { StatusBadge, PowerBadge, GONE_STATES } from './StatusBadge'
@@ -46,6 +46,8 @@ export function ObjectLogPanel({
   kind = 'host',
   object,
   teamNumber,
+  initialTab,
+  focusGroup,
   onClose,
 }: {
   repoId: string
@@ -59,9 +61,14 @@ export function ObjectLogPanel({
   // the id (it just shows less on Info).
   object?: DeployedObject
   teamNumber?: number
+  // Open straight to a tab (e.g. the dependency graph deep-links to 'steps')
+  // and, for the Steps tab, scroll to and briefly highlight one authored step
+  // group by its group_index.
+  initialTab?: Tab
+  focusGroup?: number
   onClose: () => void
 }) {
-  const [tab, setTab] = useState<Tab>('info')
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'info')
   const [wide, setWide] = useState(false)
   const fmt = useTimeFormat()
   // A network is provisioned by the builder, not by an in-guest agent, so
@@ -76,6 +83,7 @@ export function ObjectLogPanel({
     isLoading: renderLoading,
     error: renderError,
   } = useObjectRender(buildId, objectId, tab === 'render')
+  const { data: cloudInit, error: cloudInitError } = useObjectCloudInit(buildId, objectId, !isNetwork && tab === 'render')
 
   return (
     <InspectorPanel
@@ -112,7 +120,7 @@ export function ObjectLogPanel({
         </div>
       }
     >
-      <div className="-mx-4 -mt-3 mb-3 flex flex-wrap gap-1 border-b border-border px-4 pb-2">
+      <div className="-mx-4 -mt-3 mb-3 flex flex-nowrap gap-1 overflow-x-auto border-b border-border px-4 pb-2">
         <TabButton active={tab === 'info'} onClick={() => setTab('info')} icon={Info} label="Info" />
         <TabButton active={tab === 'events'} onClick={() => setTab('events')} icon={ScrollText} label="Events" />
         {!isNetwork && <TabButton active={tab === 'steps'} onClick={() => setTab('steps')} icon={ListChecks} label="Steps" />}
@@ -141,6 +149,17 @@ export function ObjectLogPanel({
                     <Badge tone="accent">{ev.kind}</Badge>
                   </div>
                   <div className="mt-1 text-fg">{ev.message}</div>
+                  {isDetailObject(ev.payload) && (
+                    <div className="mt-1 flex flex-col gap-0.5 border-l-2 border-border pl-2 text-[11px] text-fg-muted">
+                      {Object.entries(ev.payload)
+                        .filter(([, v]) => v !== '' && v != null)
+                        .map(([k, v]) => (
+                          <div key={k} className="break-all">
+                            <span className="text-fg-subtle">{k}:</span> <span className="text-fg">{fmtDetailValue(v)}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -204,11 +223,12 @@ export function ObjectLogPanel({
               hint="Steps appear here once the agent has checked in and they're queued to run."
             />
           )}
-          {buildSteps && buildSteps.length > 0 && <StepStatusList steps={buildSteps} />}
+          {buildSteps && buildSteps.length > 0 && <StepStatusList steps={buildSteps} focusGroup={focusGroup} />}
         </>
       )}
       {tab === 'render' && (
         <>
+          {cloudInit && !cloudInitError && <CloudInitSection view={cloudInit} />}
           {renderLoading && <LoadingRow />}
           {renderError && <div className="text-sm text-danger">{renderError instanceof ApiError ? renderError.message : 'Failed to render'}</div>}
           {renderedSteps && renderedSteps.length === 0 && <EmptyState icon={FileCode} title="No steps on this object" hint="Nothing to render." />}
@@ -243,17 +263,70 @@ function RenderedSteps({ steps }: { steps: RenderedStep[] }) {
   )
 }
 
+// CloudInitSection shows the first-boot configuration a host received before
+// any authored step ran -- the cloud-init / cloudbase-init / EC2Launch user-data
+// (and, on Incus/MicroCloud Windows, the config-drive meta-data) that installs
+// the agent. Shown above the rendered steps because it runs first, and because
+// when the agent HASN'T run this is the only config that did -- the view you
+// need to debug a box you can't log into yet.
+function CloudInitSection({ view }: { view: CloudInitView }) {
+  return (
+    <div className="mb-3 flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-semibold text-fg">First-Boot Configuration</span>
+        <Badge tone="info" className="rounded-full py-0.5">
+          {view.format}
+        </Badge>
+        {view.os && <span className="text-fg-muted">{view.os}</span>}
+      </div>
+      <div className="text-xs text-fg-subtle">{view.delivery}</div>
+      {view.temp_password && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-token border border-border bg-surface-sunken px-2 py-1.5 text-xs">
+          <span className="flex items-center gap-1.5 font-medium text-fg-muted">
+            <KeyRound size={12} /> Temporary login
+          </span>
+          <span className="text-fg">
+            {view.temp_username}
+            {' / '}
+            <span className="font-mono">{view.temp_password}</span>
+          </span>
+          <span className="text-fg-subtle">until the agent sets the real password</span>
+        </div>
+      )}
+      {view.note && (
+        <div className="flex items-start gap-1.5 rounded-token border border-warning bg-warning-soft p-2 text-xs text-fg">
+          <TriangleAlert size={13} className="mt-0.5 shrink-0 text-warning" />
+          <span>{view.note}</span>
+        </div>
+      )}
+      {view.meta_data && (
+        <div className="overflow-hidden rounded-token border border-border">
+          <div className="border-b border-border bg-surface-sunken px-2 py-1 text-xs font-medium text-fg">meta-data</div>
+          <pre className="overflow-x-auto whitespace-pre-wrap p-2 font-mono text-xs text-fg">{view.meta_data}</pre>
+        </div>
+      )}
+      <div className="overflow-hidden rounded-token border border-border">
+        <div className="border-b border-border bg-surface-sunken px-2 py-1 text-xs font-medium text-fg">user-data</div>
+        <pre className="overflow-x-auto whitespace-pre-wrap p-2 font-mono text-xs text-fg">{view.user_data}</pre>
+      </div>
+    </div>
+  )
+}
+
 // StepStatusList shows where a host is in its build: each materialized step
 // with its live status (pending → running → done / failed) and, when a step
 // has validators, whether each passed. This is the execution truth (the
 // real agent_task rows), distinct from the Render tab's rendered script.
-const STEP_STYLE: Record<string, { icon: typeof CircleCheck; tone: 'neutral' | 'info' | 'success' | 'danger'; label: string; spin?: boolean }> = {
+const STEP_STYLE: Record<string, { icon: typeof CircleCheck; tone: 'neutral' | 'info' | 'success' | 'warning' | 'danger'; label: string; spin?: boolean }> = {
   pending: { icon: CircleDashed, tone: 'neutral', label: 'Pending' },
   leased: { icon: Loader, tone: 'info', label: 'Running', spin: true },
   done: { icon: CircleCheck, tone: 'success', label: 'Done' },
   failed: { icon: CircleX, tone: 'danger', label: 'Failed' },
-  // Queued but held until this host's dependencies finish -- visible, not yet run.
-  blocked: { icon: CircleDashed, tone: 'neutral', label: 'Blocked' },
+  // Queued but held until a dependency (depends_on, or this or an earlier
+  // step's wait_for) is ready -- visible, not yet run.
+  blocked: { icon: Hourglass, tone: 'warning', label: 'Dependency Blocked' },
+  // An ignore_errors step that failed: tolerated, the host moved on past it.
+  ignored: { icon: CircleX, tone: 'neutral', label: 'Ignored' },
 }
 
 function StepBadge({ status }: { status: string }) {
@@ -266,8 +339,70 @@ function StepBadge({ status }: { status: string }) {
   )
 }
 
-function StepStatusList({ steps }: { steps: StepStatus[] }) {
+// How long an authored step took, wall-clock: from the first sub-command that
+// started to the last that finished (or now, if any is still running). null when
+// the step hasn't started yet.
+function groupDurationMs(steps: StepStatus[]): number | null {
+  let min = Infinity
+  let max = 0
+  let running = false
+  for (const s of steps) {
+    if (s.started_at) {
+      const t = Date.parse(s.started_at)
+      if (!Number.isNaN(t)) min = Math.min(min, t)
+      if (!s.finished_at) running = true
+    }
+    if (s.finished_at) {
+      const t = Date.parse(s.finished_at)
+      if (!Number.isNaN(t)) max = Math.max(max, t)
+    }
+  }
+  if (min === Infinity) return null
+  return Math.max(0, (running ? Date.now() : max) - min)
+}
+
+// An event's payload (what we sent the builder, a step's output, etc.) is a
+// non-empty object worth showing as detail under the message.
+function isDetailObject(p: unknown): p is Record<string, unknown> {
+  return !!p && typeof p === 'object' && !Array.isArray(p) && Object.keys(p as object).length > 0
+}
+
+// Render one payload value compactly: arrays comma-joined, objects as JSON,
+// long strings truncated so a step's full output doesn't flood the row.
+function fmtDetailValue(v: unknown): string {
+  if (Array.isArray(v)) return v.length ? v.join(', ') : '—'
+  if (v && typeof v === 'object') return JSON.stringify(v)
+  const s = String(v)
+  return s.length > 160 ? s.slice(0, 160) + '…' : s
+}
+
+// Compact duration: 15s, 1m 12s, 2h 5m.
+function formatStepDuration(ms: number): string {
+  const secs = Math.round(ms / 1000)
+  if (secs < 60) return `${secs}s`
+  const m = Math.floor(secs / 60)
+  const s = secs % 60
+  if (m < 60) return s ? `${m}m ${s}s` : `${m}m`
+  const h = Math.floor(m / 60)
+  const mm = m % 60
+  return mm ? `${h}h ${mm}m` : `${h}h`
+}
+
+function StepStatusList({ steps, focusGroup }: { steps: StepStatus[]; focusGroup?: number }) {
   const [open, setOpen] = useState<Set<number>>(new Set())
+  const groupRefs = useRef<Record<number, HTMLDivElement | null>>({})
+  const [flash, setFlash] = useState<number | null>(null)
+  // Deep-link from the dependency graph: scroll the targeted step group into
+  // view and flash it, once its steps have loaded.
+  useEffect(() => {
+    if (focusGroup == null) return
+    const el = groupRefs.current[focusGroup]
+    if (!el) return
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setFlash(focusGroup)
+    const t = setTimeout(() => setFlash(null), 1800)
+    return () => clearTimeout(t)
+  }, [focusGroup, steps])
   function toggle(i: number) {
     setOpen((prev) => {
       const next = new Set(prev)
@@ -278,20 +413,48 @@ function StepStatusList({ steps }: { steps: StepStatus[] }) {
   // Group consecutive steps that came from the same authored step, so the
   // expanded sub-commands (write file, execute, validate) read as one step
   // under a named heading rather than a flat wall of rows.
-  const groups: { key: number; label?: string; steps: StepStatus[] }[] = []
+  const groups: { key: number; label?: string; steps: StepStatus[]; waitFor?: string[]; milestone?: string }[] = []
   for (const s of steps) {
     const last = groups[groups.length - 1]
     if (last && last.key === s.group_index) last.steps.push(s)
-    else groups.push({ key: s.group_index, label: s.group_label, steps: [s] })
+    else groups.push({ key: s.group_index, label: s.group_label, steps: [s], waitFor: s.wait_for, milestone: s.milestone })
   }
   return (
     <div className="flex flex-col gap-3">
       {groups.map((g) => (
-        <div key={g.key} className="flex flex-col gap-1.5">
+        <div
+          key={g.key}
+          ref={(el) => { groupRefs.current[g.key] = el }}
+          className={cn('flex flex-col gap-1.5 rounded-token', flash === g.key && 'bg-accent-soft/60 ring-2 ring-accent/50 -mx-1 px-1 py-1 transition-colors')}
+        >
           {g.label && (
             <div className="flex items-center gap-2 px-0.5">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">{g.label}</span>
+              {g.milestone && (
+                <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-accent" title="Other hosts can wait_for this milestone">
+                  <Flag size={11} /> {g.milestone}
+                </span>
+              )}
               <span className="h-px flex-1 bg-border" />
+              {(() => {
+                const ms = groupDurationMs(g.steps)
+                return ms != null ? <span className="shrink-0 font-mono text-[11px] tabular-nums text-fg-subtle">{formatStepDuration(ms)}</span> : null
+              })()}
+            </div>
+          )}
+          {g.waitFor && g.waitFor.length > 0 && (
+            <div
+              className={cn(
+                'flex items-center gap-1.5 px-0.5 text-[11px]',
+                g.steps.some((s) => s.status === 'blocked') ? 'text-warning' : 'text-fg-subtle',
+              )}
+            >
+              <Hourglass size={11} className="shrink-0" />
+              <span>
+                {g.steps.some((s) => s.status === 'blocked') ? 'Waits for' : 'Waited for'}{' '}
+                <span className="font-mono">{g.waitFor.join(', ')}</span>
+                {g.steps.some((s) => s.status === 'blocked') && ' before this and every later step run'}
+              </span>
             </div>
           )}
           {g.steps.map((s) => (
@@ -397,6 +560,8 @@ function InfoTab({
         {teamNumber != null && <InfoRow label="Team" value={String(teamNumber)} />}
         <InfoRow label="Kind" value={kind} />
         {object?.network_name && <InfoRow label="Network" value={object.network_name} mono />}
+        {config?.address && <InfoRow label="IP address" value={config.address} mono />}
+        {object?.public_address && <InfoRow label="Public IP" value={object.public_address} mono />}
         {object && (
           <InfoRow label="State" valueNode={<StatusBadge status={object.status} kind={kind} blockedOn={object.blocked_on} />} />
         )}
@@ -411,6 +576,19 @@ function InfoTab({
         {object?.last_error && <InfoRow label="Last error" value={object.last_error} mono danger />}
       </dl>
 
+      {infra && infra.placement.length > 0 && (
+        <div>
+          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+            <ServerCog size={12} /> Builder
+          </div>
+          <dl className="flex flex-col divide-y divide-border text-sm">
+            {infra.placement.map((f) => (
+              <InfoRow key={f.label} label={f.label} value={f.value} mono />
+            ))}
+          </dl>
+        </div>
+      )}
+
       {config && kind !== 'network' && (
         <div>
           <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
@@ -424,51 +602,57 @@ function InfoTab({
             {config.command && config.command.length > 0 && <InfoRow label="Command" value={config.command.join(' ')} mono />}
             {ports && <InfoRow label="Open ports" value={ports} mono />}
             {config.depends_on && config.depends_on.length > 0 && <InfoRow label="Depends on" value={config.depends_on.join(', ')} mono />}
+            {config.waits_for && config.waits_for.length > 0 && <InfoRow label="Waits for" value={config.waits_for.join(', ')} mono />}
             {envLabel && <InfoRow label="Environment" value={envLabel} mono />}
             {varsLabel && <InfoRow label="Vars" value={varsLabel} mono />}
             {tagsLabel && <InfoRow label="Tags" value={tagsLabel} mono />}
           </dl>
-          {config.findings && config.findings.length > 0 && (
-            <div className="mt-2">
-              <div className="mb-1 text-xs font-medium text-fg-muted">Findings</div>
-              <div className="flex flex-col gap-1">
-                {config.findings.map((f, i) => (
-                  <div key={i} className="rounded-token border border-border bg-surface-sunken px-2 py-1 text-xs text-fg-muted">
-                    <span className="font-medium text-fg">sev {f.severity} · diff {f.difficulty}</span> — {f.description}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      {infra && (infra.placement.length > 0 || infra.password) && (
+      {/* Every account LaForge set a password for on this host, admin first;
+          a host without per-account steps still shows the environment password. */}
+      {infra && ((infra.credentials?.length ?? 0) > 0 || infra.password) && (
         <div>
           <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-            <ServerCog size={12} /> Builder &amp; access
+            <KeyRound size={12} /> Credentials
           </div>
           <dl className="flex flex-col divide-y divide-border text-sm">
-            {infra.placement.map((f) => (
-              <InfoRow key={f.label} label={f.label} value={f.value} mono />
-            ))}
-            {infra.password && <PasswordRow password={infra.password} />}
+            {infra.credentials && infra.credentials.length > 0
+              ? infra.credentials.map((c) => <CredentialRow key={c.username} credential={c} />)
+              : infra.password && (
+                  <CredentialRow credential={{ username: 'Root password', password: infra.password, applied: true, source: 'environment', admin: true }} />
+                )}
           </dl>
+        </div>
+      )}
+
+      {config?.findings && config.findings.length > 0 && (
+        <div>
+          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">Findings</div>
+          <div className="flex flex-col gap-1">
+            {config.findings.map((f, i) => (
+              <div key={i} className="rounded-token border border-border bg-surface-sunken px-2 py-1 text-xs text-fg-muted">
+                <span className="font-medium text-fg">sev {f.severity} · diff {f.difficulty}</span> — {f.description}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
   )
 }
 
-// PasswordRow shows the host's root/admin password for hand login, hidden by
+// CredentialRow shows one account's current password for hand login, hidden by
 // default with a reveal toggle and a one-click copy -- it's a real secret, so
-// it isn't rendered in the clear until asked for.
-function PasswordRow({ password }: { password: string }) {
+// it isn't rendered in the clear until asked for. "Pending" marks a password
+// whose step hasn't run yet (what the host is about to get, not what it has).
+function CredentialRow({ credential: c }: { credential: HostCredential }) {
   const [shown, setShown] = useState(false)
   const [copied, setCopied] = useState(false)
   async function copy() {
     try {
-      await navigator.clipboard.writeText(password)
+      await navigator.clipboard.writeText(c.password)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -477,9 +661,17 @@ function PasswordRow({ password }: { password: string }) {
   }
   return (
     <div className="flex items-start justify-between gap-3 py-2">
-      <dt className="shrink-0 text-xs font-medium text-fg-muted">Root password</dt>
+      <dt className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-fg-muted">
+        <span className="font-mono text-fg">{c.username}</span>
+        {c.admin && c.source === 'step' && <Badge tone="neutral" className="py-0 text-[10px]">Admin</Badge>}
+        {!c.applied && (
+          <Badge tone="warning" className="py-0 text-[10px]" title="This password's step hasn't run on the host yet">
+            Pending
+          </Badge>
+        )}
+      </dt>
       <dd className="flex min-w-0 items-center gap-1.5">
-        <span className="min-w-0 break-all text-right font-mono text-xs">{shown ? password : '••••••••••'}</span>
+        <span className="min-w-0 break-all text-right font-mono text-xs">{shown ? c.password : '••••••••••'}</span>
         <Button variant="ghost" size="icon" onClick={() => setShown((v) => !v)} aria-label={shown ? 'Hide password' : 'Show password'} title={shown ? 'Hide' : 'Show'}>
           {shown ? <EyeOff size={13} /> : <Eye size={13} />}
         </Button>
@@ -516,7 +708,7 @@ function InfoRow({
 
 function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: typeof ScrollText; label: string }) {
   return (
-    <Button variant="ghost" size="sm" onClick={onClick} className={cn(active && 'bg-surface-hover text-fg')}>
+    <Button variant="ghost" size="sm" onClick={onClick} className={cn('shrink-0', active && 'bg-surface-hover text-fg')}>
       <Icon size={12} /> {label}
     </Button>
   )

@@ -13,6 +13,7 @@ It speaks LXD's API, not Incus's. Standalone Incus servers use the
 - [Permissions](#permissions)
 - [Connecting it to LaForge](#connecting-it-to-laforge)
 - [Builder settings](#builder-settings)
+- [Networking coordination](#networking-coordination)
 - [The docker base image](#the-docker-base-image)
 - [Limits and troubleshooting](#limits-and-troubleshooting)
 
@@ -109,8 +110,9 @@ project.
 | Network ACLs | `POST`/`PUT`/`DELETE /1.0/network-acls…` | `visible_from` and `ports:` enforcement. |
 | Operations | `GET /1.0/operations/{id}/wait` | Waiting for the above to finish. |
 
-It does **not** touch cluster or server configuration, cluster members, other projects,
-profiles, the uplink network's own configuration, or other identities.
+Allocation validation also reads network configuration across projects sharing the
+cluster. It does **not** modify cluster or server configuration, cluster members,
+other projects, profiles, the uplink network's own configuration, or other identities.
 
 ### Option 1: a full trusted client (what the wizard does today)
 
@@ -125,6 +127,14 @@ unrestricted trusted client of the cluster: it can do anything on it. This is th
 simplest option and the one LaForge is tested with.
 
 ### Option 2: fine-grained permissions (LXD 5.21 and newer)
+
+The uplink allocation check needs network configuration across projects. LXD 5.21.8
+can omit networks the identity cannot view and redact configuration it cannot edit.
+The project-only grants below are therefore insufficient for cluster-wide allocation
+validation: use a full trusted client, or grant equivalent network configuration
+access in every project sharing the uplink. Visible OVN networks with redacted
+configuration cause deployment to fail; networks hidden entirely by LXD cannot be
+checked.
 
 LXD's built-in authorization lets you give LaForge exactly the project it uses. Create a
 group, grant it LaForge's project (`laforge` here; `default` if you didn't create one),
@@ -156,8 +166,9 @@ identity token and redeems it through the identities API.
 > container and a `public:` port. Any denied call fails that build with LXD's own
 > "not authorized" error.
 
-With a dedicated project, this keeps LaForge away from every other workload on the
-cluster: it can change only its own project, and only read the rest.
+The project grants above restrict resource changes to the chosen project. Additional
+network configuration permissions for allocation validation broaden that access;
+review those grants when using a restricted identity.
 
 Templates kept in a separate project (see [Images or snapshots](#images-or-snapshots))
 only need to be readable: LaForge copies from them and never changes them. With
@@ -165,8 +176,9 @@ only need to be readable: LaForge copies from them and never changes them. With
 `lxc auth group permission add laforge project <templates> viewer`. This, too, is
 unverified against a live cluster.
 
-A full trusted client (option 1) still works with a dedicated project — LaForge uses only
-the project it's configured with — but nothing stops it reaching others.
+A full trusted client (option 1) still works with a dedicated project. LaForge creates
+resources in that project and reads other projects' network allocations, while the
+identity itself has unrestricted access.
 
 ### If the project is restricted
 
@@ -195,7 +207,44 @@ If LaForge's project has `restricted=true`, also allow:
 
 A token is single-use and expires; if enrollment fails, generate a new one.
 
+## Networking coordination
+
+MicroCloud networking mutations run one at a time across workers and runner/API
+processes using the same LaForge database. This includes network creation and
+removal, peers, ACLs, external access, and instance operations that create, change,
+start or remove NICs. Asynchronous mutations retain the lock while waiting for LXD
+completion. Reads, guest commands and storage operations can still run concurrently.
+
+The PostgreSQL lock deliberately covers all MicroCloud configurations and clusters:
+API URLs, projects and credentials are not reliable cluster identities. This also
+serializes unrelated clusters and can reduce deployment throughput. Direct library
+clients without a database coordinate only within their process. External LXD clients
+and separate LaForge databases do not participate in this lock.
+
+Before a network task succeeds, both new networks and adopted/retried networks must
+be `Created`, match the requested OVN/NAT configuration, and have a valid
+`volatile.network.ipv4.address`. LaForge checks visible OVN networks across projects
+for another allocation on the same uplink. Missing or inconsistent read-back data
+fails deployment; a duplicate fails immediately with both network names and the
+address. The failed network's reference remains available for teardown, and its
+dependent guests fail without being released for deployment. Reconciliation does
+not reset a failed network's retry budget by creating fresh tasks.
+
+For a duplicate-allocation error, inspect the named networks, repair the conflicting
+allocations, then tear down the failed build and start a fresh build. LaForge does not
+reassign addresses or delete conflicting networks automatically. This validation
+checks allocation consistency; it does not prove guest outbound connectivity, and
+external clients can still change allocations after validation.
+
 ## Builder settings
+
+**API and operation timeout** is available in the builder editor's Placement
+settings. New MicroCloud builders default to **10 minutes** (600 seconds); existing
+explicit values are preserved. Increase it for slow cluster reads or large Ceph
+image copies. It also controls each image/snapshot verification request when saving
+the builder, without a separate 30-second limit over the entire catalog. Cancelling
+the caller still cancels verification. The API field is
+`incus_operation_timeout_seconds`; an omitted or zero value uses the default.
 
 | Setting | What it is |
 | --- | --- |

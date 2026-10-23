@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/globalcptc/laforge/internal/agentdelivery"
+	"github.com/globalcptc/laforge/internal/agentproto"
 	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/checkout"
 	"github.com/globalcptc/laforge/internal/db"
@@ -165,6 +166,26 @@ func (r *Runner) LeaseOne(ctx context.Context) (*db.Task, error) {
 	return &task, nil
 }
 
+// LeaseOneForBuilder leases the next leasable task belonging to ONE configured
+// builder (across all its builds), or (nil, nil) when that builder has nothing
+// leasable right now. This is the production lease path: the runner runs one
+// worker pool per configured builder (concurrency is a property of the hardware,
+// not of a build), so builders never contend and builds on the same builder
+// share its pool. builderConfigName is "" for builds with no configured_build.
+func (r *Runner) LeaseOneForBuilder(ctx context.Context, builderConfigName string) (*db.Task, error) {
+	q := db.New(r.Pool)
+	task, err := q.LeaseTaskForBuilder(ctx, db.LeaseTaskForBuilderParams{
+		LeaseOwner: db.StrPtr(r.ID), Column2: db.Interval(r.LeaseDuration), BuilderConfigName: builderConfigName,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("leasing a task for builder %q: %w", builderConfigName, err)
+	}
+	return &task, nil
+}
+
 // LeaseAndExecuteOne leases the next available task, if any, executes it
 // against r.Builder, and records the result. Returns (false, nil) when
 // there was nothing leasable right now, distinct from an error, so a
@@ -187,10 +208,21 @@ func (r *Runner) LeaseAndExecuteOne(ctx context.Context) (bool, error) {
 // reason LeaseOne is.
 func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	q := db.New(r.Pool)
+	// Log the START of every task, not just its outcome, so a host's event
+	// timeline shows the whole bring-up (deploy_network started -> completed,
+	// deploy_host started -> completed, access configured, ...) rather than only
+	// terminal lines. Fires per attempt, so retries are visible too.
+	r.logEvent(ctx, q, task.BuildID, task.ID, "task.started", fmt.Sprintf("%s (attempt %d)", task.Kind, task.Attempts))
 	stopHeartbeat := make(chan struct{})
 	go r.heartbeatLoop(ctx, task.ID, stopHeartbeat)
-	resolved, execErr := r.execute(ctx, q, task)
+	// A builder that times its phases (image copy, config drive, start, time
+	// queued for a host slot) records them here; they ride on this task's
+	// terminal event so the host's event timeline shows where a slow deploy's
+	// time went, on success and failure alike.
+	execCtx, phases := builder.WithPhaseTimer(ctx)
+	resolved, execErr := r.execute(execCtx, q, task)
 	close(stopHeartbeat)
+	phaseDetail := phasePayload(phases.Phases())
 
 	if resolved {
 		// The task row itself is already gone (a "remove" destroy deletes
@@ -201,9 +233,31 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 		return nil
 	}
 
+	// A readiness wait is not a failure: the hoster just isn't ready to take this
+	// access policy yet (an instance still being created, no external_ref). Defer
+	// and retry WITHOUT consuming the three-attempt budget -- for both public
+	// forwarding and private per-NIC ACLs, which share this exact wait: a private
+	// ACL applied before its guests exist silently skips them and falsely reports
+	// success (the network-access bug this handling fixes).
+	if errors.Is(execErr, builder.ErrExternalAccessNotReady) &&
+		(task.Kind == "configure_external_access" || task.Kind == "configure_network_access") {
+		_, err := q.DeferTask(ctx, db.DeferTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Column4: db.Interval(r.RetryBackoff(1))})
+		if err != nil {
+			return fmt.Errorf("deferring access configuration: %w", err)
+		}
+		r.logEvent(ctx, q, task.BuildID, task.ID, "task.waiting", execErr.Error())
+		return nil
+	}
 	if execErr != nil {
-		if task.Attempts >= MaxAttempts {
-			q.FailTask(ctx, db.FailTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error())})
+		// A permanent configuration error (e.g. a project name too long for the
+		// hoster's socket-path limit) can't be fixed by retrying -- fail it now
+		// instead of burning the whole retry budget on a deterministic failure.
+		// The classification is recorded on the failed row (task.permanent) so
+		// the orchestrator's teardown can stop re-queuing a destroy that can
+		// never succeed, instead of creating a fresh one every pass forever.
+		permanent := errors.Is(execErr, builder.ErrPermanentConfig)
+		if permanent || task.Attempts >= MaxAttempts {
+			q.FailTask(ctx, db.FailTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Permanent: permanent})
 			// Only a failed DEPLOY task marks the object deploy_failed -- a
 			// failed destroy leaves the object in 'destroying' for a later
 			// teardown/reconcile pass to retry, and must not be mislabeled
@@ -211,11 +265,15 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 			if task.DeployedObjectID.Valid && strings.HasPrefix(task.Kind, "deploy_") {
 				q.MarkDeployedObjectDeployFailed(ctx, db.MarkDeployedObjectDeployFailedParams{ID: task.DeployedObjectID, LastError: db.StrPtr(execErr.Error())})
 			}
-			r.logEvent(ctx, q, task.BuildID, task.ID, "task.failed", fmt.Sprintf("%s: %v (attempt %d, giving up)", task.Kind, execErr, task.Attempts))
+			reason := fmt.Sprintf("attempt %d, giving up", task.Attempts)
+			if permanent {
+				reason = "permanent configuration error, not retrying"
+			}
+			r.logBuilderCall(ctx, q, task.BuildID, task.ID, "task.failed", fmt.Sprintf("%s: %v (%s)", task.Kind, execErr, reason), phaseDetail)
 		} else {
 			backoff := r.RetryBackoff(task.Attempts)
 			q.RetryTask(ctx, db.RetryTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr(execErr.Error()), Column4: db.Interval(backoff)})
-			r.logEvent(ctx, q, task.BuildID, task.ID, "task.retry", fmt.Sprintf("%s: %v (attempt %d, retrying in %s)", task.Kind, execErr, task.Attempts, backoff))
+			r.logBuilderCall(ctx, q, task.BuildID, task.ID, "task.retry", fmt.Sprintf("%s: %v (attempt %d, retrying in %s)", task.Kind, execErr, task.Attempts, backoff), phaseDetail)
 		}
 		return execErr
 	}
@@ -223,8 +281,38 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	if _, err := q.CompleteTask(ctx, db.CompleteTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID)}); err != nil {
 		return fmt.Errorf("marking task complete: %w", err)
 	}
-	r.logEvent(ctx, q, task.BuildID, task.ID, "task.completed", task.Kind)
+	message := task.Kind
+	if phaseDetail != nil {
+		message = fmt.Sprintf("%s in %s", task.Kind, phaseDetail["total"])
+	}
+	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "task.completed", message, phaseDetail)
 	return nil
+}
+
+// phasePayload turns a builder's recorded phases into a task event's payload:
+// one human-readable duration per phase (the event timeline renders each key as
+// a detail row), the order they ran in, their total, and the same in
+// milliseconds under phases_ms for analysis queries. nil when the builder
+// recorded nothing, which logs as an empty payload exactly as before.
+func phasePayload(phases []builder.Phase) map[string]any {
+	if len(phases) == 0 {
+		return nil
+	}
+	out := make(map[string]any, len(phases)+3)
+	ms := make(map[string]int64, len(phases))
+	order := make([]string, 0, len(phases))
+	var total time.Duration
+	for _, p := range phases {
+		out[p.Name] = p.Duration.Round(100 * time.Millisecond).String()
+		ms[p.Name] = p.Duration.Milliseconds()
+		order = append(order, p.Name)
+		total += p.Duration
+	}
+	// jsonb doesn't keep key order, so the run order is spelled out.
+	out["phase_order"] = order
+	out["total"] = total.Round(100 * time.Millisecond).String()
+	out["phases_ms"] = ms
+	return out
 }
 
 func (r *Runner) heartbeatLoop(ctx context.Context, taskID pgtype.UUID, stop <-chan struct{}) {
@@ -257,6 +345,20 @@ func (r *Runner) logEvent(ctx context.Context, q *db.Queries, buildID pgtype.UUI
 	q.CreateEvent(ctx, db.CreateEventParams{
 		BuildID: buildID, TaskID: taskID, Kind: kind, Message: message, Payload: []byte("{}"),
 	})
+}
+
+// logBuilderCall records one event per request the runner makes to a builder's
+// API, with a human summary (message) AND the full request detail (payload), so
+// a host's event timeline shows not just "deploy_host" but exactly what was
+// sent -- os, size, address, network, ports. detail is any JSON-able value
+// (usually the builder spec); never put a secret in it (the agent download URL's
+// token, for example, is deliberately left out of the specs logged here).
+func (r *Runner) logBuilderCall(ctx context.Context, q *db.Queries, buildID, taskID pgtype.UUID, kind, message string, detail any) {
+	payload, err := json.Marshal(detail)
+	if err != nil || len(payload) == 0 || string(payload) == "null" {
+		payload = []byte("{}")
+	}
+	q.CreateEvent(ctx, db.CreateEventParams{BuildID: buildID, TaskID: taskID, Kind: kind, Message: message, Payload: payload})
 }
 
 // execute dispatches by task kind. The bool return is "the task row is
@@ -431,6 +533,15 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		return fmt.Errorf("loading content: %w", err)
 	}
 	team := strconv.FormatInt(int64(teamNumber), 10)
+	// The deploy task's payload carries the fingerprint it deploys and its
+	// critical-path priority (set by the orchestrator -- see its
+	// deployTaskPayload); the priority rides on the spec so a builder that
+	// queues creates (Incus's per-host cap) admits the critical path first.
+	var payload struct {
+		Fingerprint string `json:"fingerprint"`
+		Priority    int    `json:"priority"`
+	}
+	json.Unmarshal(task.Payload, &payload)
 
 	// Real status transition, found missing by direct audit:
 	// MarkDeployedObjectDeploying existed since
@@ -454,9 +565,22 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		if net == nil {
 			return fmt.Errorf("network %q not found in content", obj.ObjectName)
 		}
-		externalRef, err = b.DeployNetwork(ctx, builder.NetworkSpec{
-			ExternalName: externalName, DisplayName: networkDisplayName(teamNumber, obj.ObjectName), Team: team, CIDR: net.CIDR,
-		})
+		// The environment's overall address space (Environment.CIDR), threaded
+		// to the builder so a cloud builder can size the per-team VPC to hold
+		// every network. Best-effort: an env with no cidr (or a load hiccup)
+		// leaves it empty and the builder falls back to its own inference.
+		var vpcCIDR string
+		if build, berr := q.GetBuild(ctx, task.BuildID); berr == nil {
+			if env := findEnvironment(c, build.EnvironmentName); env != nil {
+				vpcCIDR = env.CIDR
+			}
+		}
+		nspec := builder.NetworkSpec{
+			ExternalName: externalName, DisplayName: networkDisplayName(teamNumber, obj.ObjectName), Team: team, CIDR: net.CIDR, VPCCIDR: vpcCIDR,
+		}
+		r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.deploy_network",
+			fmt.Sprintf("deploy network %s: cidr %s, team %s", obj.ObjectName, net.CIDR, team), nspec)
+		externalRef, err = b.DeployNetwork(ctx, nspec)
 	case "host":
 		h := findHost(c, obj.ObjectName)
 		if h == nil {
@@ -470,12 +594,42 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		if derr != nil {
 			return derr
 		}
+		// Record which agent this host runs, so the orchestrator's
+		// never-checked-in watchdog knows to expect a check-in and how long a
+		// first boot of this OS may take. Empty when delivery is disabled.
+		if del.Platform != "" {
+			if err := q.SetDeployedObjectAgentPlatform(ctx, db.SetDeployedObjectAgentPlatformParams{ID: obj.ID, AgentPlatform: string(del.Platform)}); err != nil {
+				return fmt.Errorf("recording agent platform: %w", err)
+			}
+		}
+		// A first-boot temporary admin password so the host is reachable before
+		// its agent runs the real set_password step -- only when an agent is
+		// actually being delivered (something will later replace it). Derived
+		// from the build secret, so the UI recomputes it rather than storing it.
+		tempPass := ""
+		if del.Platform != "" {
+			if secret, serr := db.RenderSecretForBuild(ctx, q, task.BuildID); serr == nil && len(secret) > 0 {
+				tempPass = agentdelivery.TempAdminPassword(string(secret), obj.ID.String())
+			}
+		}
 		hspec := builder.HostSpec{
 			ExternalName: externalName, DisplayName: displayName, Team: team,
 			Network: networkExternalName(task.BuildID, teamNumber, obj), NetworkDisplayName: networkDisplayName(teamNumber, db.StrOrEmpty(obj.NetworkName)), Address: addr,
 			OS: h.OS, Size: h.Size, DiskGB: h.Disk, TCPPorts: h.Ports.TCP, UDPPorts: h.Ports.UDP,
-			CloudInitUserData: del.UserData, CloudInitViaISO: del.Platform == agentdelivery.Windows,
+			// Embed-first agent delivery: hand the builder the patched binary so it
+			// can put it on the config drive; the download URL stays as fallback.
+			AgentBinary: del.Binary, AgentDownloadURL: del.DownloadURL,
+			TempAdminPassword: tempPass, Priority: payload.Priority,
 		}
+		// Log the host request with its full spec MINUS the agent download URL
+		// (it carries a one-time token -- see logBuilderCall).
+		r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.deploy_host",
+			fmt.Sprintf("deploy host %s: os %s, size %s, address %s, network %s", obj.ObjectName, h.OS, h.Size, addr, db.StrOrEmpty(obj.NetworkName)),
+			map[string]any{
+				"external_name": externalName, "os": h.OS, "size": h.Size, "disk_gb": h.Disk,
+				"address": addr, "network": db.StrOrEmpty(obj.NetworkName), "team": team,
+				"tcp_ports": h.Ports.TCP, "udp_ports": h.Ports.UDP, "priority": payload.Priority,
+			})
 		// MicroCloud alone implements this: the second NIC and its guest
 		// configuration must exist before the first Linux/Windows boot.
 		if publicBuilder, ok := b.(interface {
@@ -516,8 +670,8 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			// every builder (native OCI: oci.entrypoint; nesting: a bind-mounted
 			// --entrypoint). Cloud (Fargate/Zun): downloaded at start from its
 			// URL. Each builder takes what it needs; the others are ignored.
-			CloudInitUserData: del.UserData, CloudInitViaISO: del.Platform == agentdelivery.Windows,
 			AgentBinary: del.Binary, AgentDownloadURL: del.DownloadURL,
+			Priority: payload.Priority,
 		}
 		// Native container-log forwarding (environment container_logs): the
 		// builder applies this as its platform's log driver on the container. A
@@ -541,10 +695,24 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 			if cspec.DiskGB == 0 {
 				cspec.DiskGB = builder.DefaultComposeDiskGB
 			}
-			cspec.AgentBinary, cspec.AgentDownloadURL = nil, ""
+			// A compose container is a VM, not a planted-into OCI container, so the
+			// planted AgentBinary doesn't apply -- but AgentDownloadURL stays: it's
+			// how the VM's own user-data (rendered by the builder) installs the
+			// agent on first boot, exactly like a host.
+			cspec.AgentBinary = nil
 		} else if cred := r.registryCredFor(ctx, q, ct.Image); cred != nil {
 			cspec.RegistryHost, cspec.RegistryUser, cspec.RegistrySecret = cred.RegistryHost, cred.Username, cred.Secret
 		}
+		// Curated detail only -- NOT the raw spec, which carries secrets
+		// (registry password, env vars, the agent token).
+		r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.deploy_container",
+			fmt.Sprintf("deploy container %s: image %s, network %s, address %s", obj.ObjectName, ct.Image, db.StrOrEmpty(obj.NetworkName), addr),
+			map[string]any{
+				"external_name": externalName, "image": ct.Image, "size": ct.Size, "address": addr,
+				"network": db.StrOrEmpty(obj.NetworkName), "team": team, "compose": cspec.ComposeHost,
+				"tcp_ports": ct.Ports.TCP, "udp_ports": ct.Ports.UDP, "command": ct.Command,
+				"priority": payload.Priority,
+			})
 		externalRef, err = b.DeployContainer(ctx, cspec)
 	default:
 		return fmt.Errorf("unknown deployed_object kind %q", obj.Kind)
@@ -579,11 +747,6 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		r.AfterBuilderCall()
 	}
 
-	var payload struct {
-		Fingerprint string `json:"fingerprint"`
-	}
-	json.Unmarshal(task.Payload, &payload)
-
 	if _, err := q.MarkDeployedObjectRunning(ctx, db.MarkDeployedObjectRunningParams{
 		ID: obj.ID, ExternalRef: db.StrPtr(externalRef), Fingerprint: payload.Fingerprint,
 	}); err != nil {
@@ -600,9 +763,10 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 }
 
 // deliverAgent, when delivery is configured, builds this object's per-object
-// agent binary and the cloud-init user-data that fetches and runs it, stores the
-// binary for the api to serve (keyed by a fresh one-time token), and returns the
-// whole delivery. A host uses del.UserData (cloud-init); a native OCI container
+// agent binary and the neutral download intent (del.DownloadURL + Platform),
+// stores the binary for the api to serve (keyed by a fresh one-time token), and
+// returns the whole delivery. A host passes del.DownloadURL to the builder,
+// which renders it into its image's user-data format; a native OCI container
 // uses del.Binary directly (pushed in, agent as entrypoint -- see the incus
 // builder). When delivery isn't configured it returns a zero Delivery -- the
 // object deploys without an agent, exactly as before. Delivery must not fail a
@@ -612,11 +776,22 @@ func (r *Runner) deliverAgent(ctx context.Context, q *db.Queries, obj db.Deploye
 	if !r.Delivery.Enabled() {
 		return agentdelivery.Delivery{}, nil
 	}
-	tokenBytes := make([]byte, 32)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		return agentdelivery.Delivery{}, fmt.Errorf("generating agent download token: %w", err)
+	// Reuse the object's existing token on a retry rather than minting a new one.
+	// A VM bakes this token into its user-data at launch, and that user-data is
+	// immutable; if attempt 1 created the instance (token T1) and attempt 2
+	// rotated the stored token to T2, the running box would keep asking for T1,
+	// which the DB no longer has -- every agent download 404s and the agent never
+	// installs. Keeping the token stable across retries makes it always match what
+	// the instance actually baked. Only mint a fresh token for a first delivery
+	// (no existing artifact, e.g. after a purge).
+	token, err := q.GetAgentArtifactTokenByObject(ctx, obj.ID)
+	if err != nil || token == "" {
+		tokenBytes := make([]byte, 32)
+		if _, err := rand.Read(tokenBytes); err != nil {
+			return agentdelivery.Delivery{}, fmt.Errorf("generating agent download token: %w", err)
+		}
+		token = hex.EncodeToString(tokenBytes)
 	}
-	token := hex.EncodeToString(tokenBytes)
 	// agent-debug (environment YAML) bakes a local debug log into the binary;
 	// off (the default, and on any lookup miss) means the agent is silent on the
 	// box and only reports to the servers. A missing row -- no environment yet,
@@ -650,10 +825,24 @@ func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task
 		// -- the object stays destroyed, not deleted and not reset for a
 		// redeploy that a torn-down build will never ask for again.
 		Terminal bool `json:"terminal"`
+		// ExternalRef is the hoster reference captured when the task was
+		// enqueued, carried in the payload so a rebuild destroys the ACTUAL
+		// recorded instance even though Rebuild clears the row's external_ref
+		// synchronously (to hold the build in the deploy phase) before the
+		// runner reads it. Without this the destroy fell back to the logical
+		// name, which an Incus builder renders differently from the real
+		// `lf-...` instance, so destroyInstance "succeeded" as a no-op on a
+		// non-existent name and left the original VM running.
+		ExternalRef string `json:"external_ref"`
 	}
 	json.Unmarshal(task.Payload, &payload)
 
 	ref := db.StrOrEmpty(obj.ExternalRef)
+	if ref == "" && payload.ExternalRef != "" {
+		// A rebuild cleared the row's ref before this ran; use the one captured
+		// at enqueue time so we delete the real instance, not a guessed name.
+		ref = payload.ExternalRef
+	}
 	if ref == "" {
 		// Defensive: a destroy was requested for something never actually
 		// deployed (e.g. removed from content before its deploy task ever
@@ -673,6 +862,9 @@ func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task
 		return false, fmt.Errorf("recording destroying state: %w", err)
 	}
 
+	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.destroy_"+obj.Kind,
+		fmt.Sprintf("destroy %s %s: team %s, ref %s", obj.Kind, obj.ObjectName, team, ref),
+		map[string]any{"object": obj.ObjectName, "kind": obj.Kind, "team": team, "external_ref": ref, "remove": payload.Remove, "terminal": payload.Terminal})
 	switch obj.Kind {
 	case "network":
 		err = b.DestroyNetwork(ctx, team, ref)
@@ -747,12 +939,22 @@ func (r *Runner) executeAccess(ctx context.Context, q *db.Queries, task db.Task)
 	}
 	json.Unmarshal(task.Payload, &payload)
 
+	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder."+task.Kind,
+		fmt.Sprintf("%s for team %s", task.Kind, payload.Team), map[string]any{"team": payload.Team})
 	if task.Kind == "open_access" {
 		if err := b.OpenAccess(ctx, payload.Team); err != nil {
+			// Best-effort builders aggregate every instance's failure (naming
+			// each one). Surface that in the event timeline, not just the task's
+			// last_error, so an operator can see which box needs a hand -- then
+			// fail the task so it's visibly red and retried.
+			r.logEvent(ctx, q, task.BuildID, task.ID, "access.open.failed",
+				fmt.Sprintf("team %s open did not fully apply: %v", payload.Team, err))
 			return err
 		}
 	} else {
 		if err := b.CloseAccess(ctx, payload.Team); err != nil {
+			r.logEvent(ctx, q, task.BuildID, task.ID, "access.close.failed",
+				fmt.Sprintf("team %s close did not fully apply: %v", payload.Team, err))
 			return err
 		}
 	}
@@ -773,7 +975,71 @@ func (r *Runner) executeAccess(ctx context.Context, q *db.Queries, task db.Task)
 		return fmt.Errorf("recording access state: %w", err)
 	}
 	r.logEvent(ctx, q, task.BuildID, task.ID, eventKind, "team "+payload.Team)
+
+	// Closing the firewall only blocks NEW connections. On a bridge the
+	// published port is a nat-proxy whose DNAT conntrack survives the forward's
+	// removal, and the guest's egress replies ride Incus's global stateful
+	// bypass -- so an established RDP/SSH session stays up. The ACL can't scope
+	// statefulness or tear down a live flow, so after the close lands we fire a
+	// one-shot agent task at every host in the team to drop those sessions from
+	// inside the guest. The agent is still reachable over the one egress a
+	// closed team keeps, and the kill only touches inbound/listening sessions,
+	// never its own gateway connection.
+	if task.Kind == "close_access" {
+		r.dispatchSessionKill(ctx, q, task, team.ID, payload.Team)
+	}
 	return nil
+}
+
+// dispatchSessionKill queues a disconnect_sessions agent task on every deployed
+// host/container in the team, so a close actively ends live remote-access
+// sessions instead of leaving established ones running. Best-effort by design:
+// the firewall close has already succeeded and been recorded, so a failure to
+// queue a kill is logged to the timeline rather than failing (and re-running)
+// the whole close. ignore_errors keeps a box whose agent can't honor the
+// command (e.g. a Linux kernel without `ss -K`) from wedging its task lane.
+func (r *Runner) dispatchSessionKill(ctx context.Context, q *db.Queries, task db.Task, teamID pgtype.UUID, teamStr string) {
+	objs, err := q.ListDeployedObjectsByTeam(ctx, teamID)
+	if err != nil {
+		r.logEvent(ctx, q, task.BuildID, task.ID, "access.sessions.kill_failed",
+			fmt.Sprintf("team %s: could not list hosts to disconnect sessions: %v", teamStr, err))
+		return
+	}
+	dispatched := 0
+	var errs []error
+	for _, o := range objs {
+		if o.Kind != "host" && o.Kind != "container" {
+			continue // only guests run an agent
+		}
+		if o.ExternalRef == nil || *o.ExternalRef == "" {
+			continue // never created at the hoster -- no guest to reach
+		}
+		next, err := q.NextStepIndexForHost(ctx, o.ID)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", o.ObjectName, err))
+			continue
+		}
+		_, err = q.CreateAdHocAgentTask(ctx, db.CreateAdHocAgentTaskParams{
+			DeployedObjectID: o.ID,
+			StepIndex:        next,
+			Command:          agentproto.CmdDisconnectSessions,
+			Payload:          []byte("{}"),
+			IgnoreErrors:     true,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				continue // a concurrent close already queued this step -- fine
+			}
+			errs = append(errs, fmt.Errorf("%s: %w", o.ObjectName, err))
+			continue
+		}
+		dispatched++
+	}
+	msg := fmt.Sprintf("team %s: queued session disconnect on %d host(s)", teamStr, dispatched)
+	if len(errs) > 0 {
+		msg += fmt.Sprintf(" (%d could not be queued: %v)", len(errs), errors.Join(errs...))
+	}
+	r.logEvent(ctx, q, task.BuildID, task.ID, "access.sessions.disconnect", msg)
 }
 
 // executeConfigureNetworkAccess builds the team's full set of NetworkAccess
@@ -839,6 +1105,24 @@ func (r *Runner) executeConfigureNetworkAccess(ctx context.Context, q *db.Querie
 		} else {
 			continue // removed from content since deploy
 		}
+		// Every placed guest gets a NIC ACL (a host with no ports is "reachable on
+		// nothing"), so the policy must cover all of them -- applying it before a
+		// guest exists would silently skip that guest and falsely report success.
+		// A guest still being created makes the whole task WAIT (defer, no attempt
+		// consumed) until it's up; a guest that terminally failed to deploy has no
+		// NIC to configure, so skip it rather than block the team forever.
+		ref := db.StrOrEmpty(o.ExternalRef)
+		switch o.Status {
+		case "pending", "deploying":
+			return fmt.Errorf("%w: network-access target %s has not completed deployment", builder.ErrExternalAccessNotReady, o.ObjectName)
+		case "deploy_failed":
+			continue // no instance exists to ACL; don't strand the rest of the team
+		}
+		if ref == "" {
+			// Deployed-but-no-reference: creation is still settling (an uncertain
+			// deploy hasn't recorded the instance yet). Wait rather than skip.
+			return fmt.Errorf("%w: network-access target %s has no instance reference yet", builder.ErrExternalAccessNotReady, o.ObjectName)
+		}
 		rctx, err := render.Resolve(c, build.EnvironmentName, db.StrOrEmpty(o.AsName), int(teamNum))
 		if err != nil {
 			return fmt.Errorf("resolving address for %s: %w", db.StrOrEmpty(o.AsName), err)
@@ -869,6 +1153,9 @@ func (r *Runner) executeConfigureNetworkAccess(ctx context.Context, q *db.Querie
 			Hosts:        hostsByNet[o.ObjectName],
 		})
 	}
+	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.configure_network_access",
+		fmt.Sprintf("configure network access for team %s: %d network(s)", payload.Team, len(access)),
+		map[string]any{"team": payload.Team, "networks": access})
 	if err := b.ConfigureNetworkAccess(ctx, payload.Team, access); err != nil {
 		return fmt.Errorf("configuring network access for team %s: %w", payload.Team, err)
 	}
@@ -942,10 +1229,12 @@ func (r *Runner) executeConfigureExternalAccess(ctx context.Context, q *db.Queri
 			continue
 		}
 		ref := db.StrOrEmpty(o.ExternalRef)
-		if ref == "" {
-			continue // not deployed at the hoster yet
-		}
-		if reconcileEmpty && o.Status != "running" && o.Status != "building" && o.Status != "finished" && o.Status != "deployed" {
+		if ref == "" || !builder.ExternalAccessDeployReady(o.Status) {
+			// Incus allocates ports in sorted instance order. Wait for the full
+			// public set so a later VM cannot move an existing VM's mapping.
+			if !reconcileEmpty {
+				return fmt.Errorf("%w: public target %s has not completed deployment", builder.ErrExternalAccessNotReady, o.ObjectName)
+			}
 			continue
 		}
 		rctx, err := render.Resolve(c, build.EnvironmentName, db.StrOrEmpty(o.AsName), int(teamNum))
@@ -960,6 +1249,9 @@ func (r *Runner) executeConfigureExternalAccess(ctx context.Context, q *db.Queri
 		return nil // nothing public in this team
 	}
 
+	r.logBuilderCall(ctx, q, task.BuildID, task.ID, "builder.configure_external_access",
+		fmt.Sprintf("configure external access for team %s: %d host(s)", payload.Team, len(hosts)),
+		map[string]any{"team": payload.Team, "hosts": hosts})
 	endpoints, err := b.ConfigureExternalAccess(ctx, payload.Team, hosts)
 	if err != nil {
 		return fmt.Errorf("configuring external access for team %s: %w", payload.Team, err)

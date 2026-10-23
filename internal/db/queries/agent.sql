@@ -3,12 +3,27 @@
 -- last_heartbeat_at (and cert_fingerprint, in case a host was ever
 -- re-provisioned with a new identity -- shouldn't happen mid-build, but
 -- recording the fingerprint that's actually presenting is more honest
--- than assuming it never changes).
-INSERT INTO agent_session (deployed_object_id, cert_fingerprint)
-VALUES ($1, $2)
+-- than assuming it never changes). boot_at/agent_started_at are the agent's
+-- latest boot report; a heartbeat without one (an older agent) keeps the last.
+INSERT INTO agent_session (deployed_object_id, cert_fingerprint, boot_at, agent_started_at)
+VALUES (sqlc.arg(deployed_object_id), sqlc.arg(cert_fingerprint), sqlc.narg(boot_at), sqlc.narg(agent_started_at))
 ON CONFLICT (deployed_object_id) DO UPDATE
-    SET cert_fingerprint = EXCLUDED.cert_fingerprint, last_heartbeat_at = now()
+    SET cert_fingerprint = EXCLUDED.cert_fingerprint, last_heartbeat_at = now(),
+        boot_at = COALESCE(EXCLUDED.boot_at, agent_session.boot_at),
+        agent_started_at = COALESCE(EXCLUDED.agent_started_at, agent_session.agent_started_at)
 RETURNING *;
+
+-- name: GetAgentCheckinContext :one
+-- What the gateway needs, before recording a heartbeat, to tell whether this
+-- is the agent's FIRST check-in since the object was (re)deployed: the deploy
+-- time, the previous heartbeat (NULL when the agent has never checked in), and
+-- whether the never-checked-in watchdog already flagged it. A rebuilt host
+-- keeps its old agent_session row, so "first" means "no heartbeat since
+-- deployed_at", not "no session row".
+SELECT o.deployed_at, o.agent_checkin_overdue_at, s.last_heartbeat_at
+FROM deployed_object o
+LEFT JOIN agent_session s ON s.deployed_object_id = o.id
+WHERE o.id = $1;
 
 -- name: GetAgentSessionByDeployedObject :one
 SELECT * FROM agent_session WHERE deployed_object_id = $1;
@@ -28,8 +43,8 @@ SELECT * FROM agent_session ORDER BY last_heartbeat_at DESC;
 -- theoretical concern) -- so this query only ever needs the INSERT
 -- privilege migrations/00007 actually grants, matching its own "no
 -- SELECT" design intent instead of contradicting it.
-INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, remote_addr, next_poll_ms, cpu_pct, mem_pct, disk_pct, net_rx_bps, net_tx_bps, boot_at, agent_started_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
 
 -- name: DeleteAgentHeartbeatsOlderThan :execrows
 -- The real answer to migrations/00007's own "deliberately unaddressed:
@@ -83,15 +98,62 @@ WHERE team.build_id = $1;
 -- counted as open but never leased, and is flipped to 'pending' by
 -- UnblockAgentTasksForObject once the dependency finishes. ad_hoc defaults false
 -- (strict ordered, failure-blocking lane); operator commands use
--- CreateAdHocAgentTask instead.
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, status)
+-- CreateAdHocAgentTask instead. max_attempts is the script's `retries:`
+-- override (retries + 1); NULL leaves the gateway default. milestone/
+-- step_script name the authored step the row came from (what another
+-- host's wait_for can target); wait_for is set only on the first row of a
+-- step that itself waits (see migration 00068).
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, reboots, status, max_attempts, milestone, step_script, wait_for)
 VALUES (
   sqlc.arg(deployed_object_id), sqlc.arg(step_index), sqlc.arg(command),
-  sqlc.arg(payload), sqlc.arg(ignore_errors),
-  COALESCE(NULLIF(sqlc.arg(status)::text, ''), 'pending')
+  sqlc.arg(payload), sqlc.arg(ignore_errors), sqlc.arg(reboots),
+  COALESCE(NULLIF(sqlc.arg(status)::text, ''), 'pending'),
+  sqlc.narg(max_attempts), sqlc.narg(milestone), sqlc.narg(step_script), sqlc.narg(wait_for)
 )
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
 RETURNING *;
+
+-- name: CompleteLeasedRebootsTaskForHost :one
+-- The reboot-aware completion: a `reboots: true` step reboots the host, which
+-- kills the agent before it can report a result, so the step stays 'leased'. The
+-- agent only ever asks for a new task (get-task) when it has nothing in flight --
+-- so a get-task arriving while a reboots step is still 'leased' means the box
+-- rebooted and the agent is back. That reconnect IS the step's completion: mark
+-- it done here (instead of letting the lease expire and re-running the script on
+-- an already-changed box). Returns the row so get-task can log a step event; no
+-- row (ErrNoRows) when there's no leased reboots step, the normal case.
+UPDATE agent_task SET status = 'done', last_error = NULL, updated_at = now()
+WHERE deployed_object_id = $1 AND reboots = true AND status = 'leased'
+RETURNING *;
+
+-- name: StampRebootDurationsForHost :exec
+-- Make a reboot step's duration cover the WHOLE reboot. The agent acks a reboot
+-- 'done' BEFORE rebooting (durable completion -- see CompleteLeasedRebootsTaskForHost
+-- and the agent's reboot branch), so its finished_at lands at the ack (~seconds)
+-- and the real downtime (shutdown + boot + agent reconnect) hides in the gap
+-- before the next step is leased. Pull that gap in: set the reboot step's
+-- finished_at to the next step that actually started (its started_at IS the
+-- reconnect moment, since steps lease strictly in order and the next one can't
+-- start until the agent is back). Keyed on a fixed timestamp, not now(), so it's
+-- idempotent and converges -- safe to run on every get-task. Only ever EXTENDS
+-- (finished_at < next start), never shrinks, and a reboot with no later started
+-- step (last step, or next step blocked/failed) keeps its ack-time finish.
+UPDATE agent_task r
+SET finished_at = nxt.started_at, updated_at = now()
+FROM (
+  SELECT r2.id AS reboot_id,
+         (SELECT n.started_at FROM agent_task n
+            WHERE n.deployed_object_id = r2.deployed_object_id
+              AND n.step_index > r2.step_index
+              AND n.started_at IS NOT NULL
+            ORDER BY n.step_index
+            LIMIT 1) AS started_at
+  FROM agent_task r2
+  WHERE r2.deployed_object_id = $1 AND r2.reboots = true AND r2.status = 'done'
+) nxt
+WHERE r.id = nxt.reboot_id
+  AND nxt.started_at IS NOT NULL
+  AND (r.finished_at IS NULL OR r.finished_at < nxt.started_at);
 
 -- name: UnblockAgentTasksForObject :exec
 -- Release an object's steps once its dependencies have finished: flip every
@@ -99,13 +161,50 @@ RETURNING *;
 UPDATE agent_task SET status = 'pending', updated_at = now()
 WHERE deployed_object_id = $1 AND status = 'blocked';
 
+-- name: UnblockAgentTasksBelowIndex :exec
+-- Release an object's blocked steps that sit below its first still-unsatisfied
+-- step-level gate (wait_for): the gate row and everything after it stay
+-- blocked; the steps before it become leasable in order.
+UPDATE agent_task SET status = 'pending', updated_at = now()
+WHERE deployed_object_id = $1 AND status = 'blocked' AND step_index < sqlc.arg(below)::integer;
+
+-- name: ListBlockedStepGatesForObject :many
+-- The step-level gates an object is still held at, in step order: each row is
+-- the first command of an authored step with a wait_for, not yet released.
+SELECT step_index, wait_for FROM agent_task
+WHERE deployed_object_id = $1 AND status = 'blocked' AND wait_for IS NOT NULL
+ORDER BY step_index;
+
+-- name: CountOpenAuthoredStepsBelowIndex :one
+-- How many authored steps before a gate are still unfinished -- zero means the
+-- host has worked up to the gate and is now actually waiting on it.
+SELECT count(*)::bigint FROM agent_task
+WHERE deployed_object_id = $1 AND NOT ad_hoc AND step_index < sqlc.arg(below)::integer
+  AND status NOT IN ('done', 'ignored');
+
+-- name: ListStepGateProgressByTeam :many
+-- Where every host/container in a team stands on each of its milestone/script
+-- points: per deployed object and point, how many of its rows exist and how
+-- many are reached (done/ignored) or failed. A wait_for on the same team is
+-- satisfied once every copy of its target has all rows of the point reached.
+SELECT deployed_object.id AS deployed_object_id, deployed_object.object_name,
+       agent_task.milestone, agent_task.step_script,
+       count(*)::bigint AS total,
+       count(*) FILTER (WHERE agent_task.status IN ('done', 'ignored'))::bigint AS reached,
+       count(*) FILTER (WHERE agent_task.status = 'failed')::bigint AS failed
+FROM agent_task
+JOIN deployed_object ON deployed_object.id = agent_task.deployed_object_id
+WHERE deployed_object.team_id = $1 AND NOT agent_task.ad_hoc
+  AND (agent_task.milestone IS NOT NULL OR agent_task.step_script IS NOT NULL)
+GROUP BY deployed_object.id, deployed_object.object_name, agent_task.milestone, agent_task.step_script;
+
 -- name: CreateAdHocAgentTask :one
 -- Operator-dispatched tasks (immediate `run` and scheduled dispatch). ad_hoc =
 -- true puts them in the always-eligible lane so they run even past a failed
 -- authored step -- see NextAgentTaskForHost. Same shape as CreateAgentTask
 -- otherwise (step_index still from NextStepIndexForHost, so it's unique).
-INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, ad_hoc)
-VALUES ($1, $2, $3, $4, $5, true)
+INSERT INTO agent_task (deployed_object_id, step_index, command, payload, ignore_errors, ad_hoc, scheduled_task_id)
+VALUES ($1, $2, $3, $4, $5, true, $6)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
 RETURNING *;
 
@@ -157,7 +256,8 @@ SELECT COALESCE(MAX(step_index), -1) + 1 FROM agent_task WHERE deployed_object_i
 -- so plain UPDATE's own row-level locking serializes two concurrent callers.
 UPDATE agent_task
 SET status = 'leased', lease_expires_at = now() + $2::interval,
-    attempts = attempts + 1, updated_at = now()
+    attempts = attempts + 1, updated_at = now(),
+    started_at = coalesce(started_at, now())
 WHERE id = (
     SELECT t.id FROM agent_task t
     WHERE t.deployed_object_id = $1
@@ -177,13 +277,31 @@ WHERE id = (
 AND (status = 'pending' OR (status = 'leased' AND lease_expires_at < now()))
 RETURNING *;
 
+-- name: RenewAgentTaskLease :execrows
+-- Heartbeat-driven lease renewal. The agent names the task it is still running
+-- on every heartbeat; extending that task's lease keeps a long step (anything
+-- past one lease, 60s by default) from expiring and being leased AGAIN, which
+-- ran the same script twice at once after a reconnect. Scoped to the agent's
+-- own object and to a task that is still 'leased', so a stale or forged id
+-- changes nothing.
+UPDATE agent_task SET lease_expires_at = now() + sqlc.arg(lease)::interval, updated_at = now()
+WHERE id = sqlc.arg(id) AND deployed_object_id = sqlc.arg(deployed_object_id) AND status = 'leased';
+
 -- name: CompleteAgentTask :one
-UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now()
+UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now(),
+    finished_at = now()
 WHERE id = $1
 RETURNING *;
 
 -- name: FailAgentTask :one
-UPDATE agent_task SET status = $2, last_error = $3, updated_at = now()
+-- $2 is 'pending' for a retryable transient (still under MaxAttempts), or the
+-- terminal 'failed'/'ignored'. Stamp finished_at ONLY on a terminal status, so a
+-- step that's still retrying keeps showing as running (started_at set, no
+-- finished_at) rather than frozen at an intermediate attempt. started_at is
+-- preserved across retries (set once, on the first lease), so the step's total
+-- duration spans all its attempts.
+UPDATE agent_task SET status = $2, last_error = $3, updated_at = now(),
+    finished_at = CASE WHEN $2 IN ('failed', 'ignored') THEN now() ELSE finished_at END
 WHERE id = $1
 RETURNING *;
 
@@ -253,11 +371,21 @@ SELECT * FROM validator_result WHERE agent_task_id = $1 ORDER BY created_at;
 
 -- name: CreateAgentArtifact :exec
 -- Upsert: an object's deploy task can be retried, and re-delivering just
--- replaces the (regenerable) binary and token.
+-- replaces the (regenerable) binary -- but KEEPS the token the caller passes.
+-- A retry must reuse the object's existing token (see GetAgentArtifactTokenByObject
+-- in deliverAgent): the instance baked that token into its immutable user-data on
+-- the first attempt, so rotating it here would strand the running box on a token
+-- the DB no longer has, and every agent download would 404.
 INSERT INTO agent_artifact (deployed_object_id, platform, token, agent_binary)
 VALUES ($1, $2, $3, $4)
 ON CONFLICT (deployed_object_id) DO UPDATE SET
     platform = EXCLUDED.platform, token = EXCLUDED.token, agent_binary = EXCLUDED.agent_binary, created_at = now();
+
+-- name: GetAgentArtifactTokenByObject :one
+-- The object's current download token, so a retried delivery reuses it instead
+-- of rotating it (the instance's user-data baked the first attempt's token and
+-- can't be changed after launch).
+SELECT token FROM agent_artifact WHERE deployed_object_id = $1;
 
 -- name: GetAgentArtifactByToken :one
 -- What the api serves to a booting instance: the bytes for this one-time
@@ -306,3 +434,20 @@ FROM event WHERE build_id = $1;
 DELETE FROM agent_artifact aa
 USING deployed_object o, team t
 WHERE aa.deployed_object_id = o.id AND o.team_id = t.id AND t.build_id = $1;
+
+-- name: ListCredentialStepsByBuild :many
+-- Every step in a build that sets an account's password -- set_password and
+-- create_user, authored, auto-inserted ("Set admin password") or ad-hoc.
+-- currentCredentials (internal/api) folds these into each host's CURRENT
+-- password per account: the last one the agent actually applied, else the next
+-- one planned.
+SELECT a.deployed_object_id, a.command, a.step_index, a.status, a.ad_hoc, a.finished_at,
+       (a.payload->>'username')::text AS username,
+       (a.payload->>'password')::text AS password
+FROM agent_task a
+JOIN deployed_object o ON o.id = a.deployed_object_id
+JOIN team t ON t.id = o.team_id
+WHERE t.build_id = $1
+  AND a.command IN ('set_password', 'create_user')
+  AND coalesce(a.payload->>'username', '') <> ''
+  AND coalesce(a.payload->>'password', '') <> '';

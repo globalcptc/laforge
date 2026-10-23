@@ -82,14 +82,15 @@ func (ctx *Context) TemplateData() map[string]interface{} {
 	}
 }
 
-// funcMap provides the bare-identifier forms: `vars.key` (a niladic
+// funcMap provides the bare-identifier forms -- plus the password
+// generators (passwords.go): `vars.key` (a niladic
 // function whose result is then field/key-chained -- valid Go template
 // grammar, verified empirically before relying on it) and
 // `range people "name"`, which looks up a people source by name and
 // returns its rows as plain string maps so `.username`, `.first_name`,
 // etc. resolve as ordinary map keys inside the range.
 func funcMap(ctx *Context, content *loader.Content) template.FuncMap {
-	return template.FuncMap{
+	fm := template.FuncMap{
 		"vars": func() map[string]string {
 			return ctx.EffectiveVars()
 		},
@@ -112,6 +113,11 @@ func funcMap(ctx *Context, content *loader.Content) template.FuncMap {
 			return nil, fmt.Errorf("no people source named %q (loaded sources: %s)", sourceName, peopleSourceNames(content))
 		},
 	}
+	// passphrase / wordchain / randompassword (passwords.go).
+	for name, fn := range generatorFuncs(ctx) {
+		fm[name] = fn
+	}
+	return fm
 }
 
 func peopleSourceNames(c *loader.Content) string {

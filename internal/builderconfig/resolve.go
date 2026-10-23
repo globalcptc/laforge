@@ -26,9 +26,11 @@ package builderconfig
 import (
 	"context"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -61,7 +63,7 @@ func Resolve(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder, error) 
 	case "incus":
 		return resolveIncusPool(pool, row)
 	case "aws":
-		return resolveAWS(row)
+		return resolveAWS(pool, row)
 	case "openstack":
 		return resolveOpenStack(row)
 	default:
@@ -110,14 +112,32 @@ func cloudSizes(raw []byte) map[string]string {
 // from each SDK's standard environment chain (AWS_*, OS_*) and region from the
 // matching env var (set on the runner), so nothing secret is stored in the DB;
 // the image/size maps come from the builder config the wizard writes.
-func resolveAWS(row db.BuilderConfig) (builder.Builder, error) {
+func resolveAWS(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	b, err := awsbuilder.New(ctx, awsbuilder.Config{
-		Region: os.Getenv("AWS_REGION"),
-		Images: cloudImages(row.IncusImages),
-		Sizes:  cloudSizes(row.IncusSizes),
-	})
+	var in awsbuilder.ConfigInput
+	if len(row.AwsConfig) > 0 {
+		if err := json.Unmarshal(row.AwsConfig, &in); err != nil {
+			return nil, fmt.Errorf("builder config %q: parsing aws_config: %w", row.Name, err)
+		}
+	}
+	// A stored region wins; otherwise fall back to the runner env (New applies
+	// the rest of the AWS_* fallbacks for any still-empty field).
+	if in.Region == "" {
+		in.Region = os.Getenv("AWS_REGION")
+	}
+	cfg := awsbuilder.ConfigFromInput(in, cloudImages(row.IncusImages), cloudSizes(row.IncusSizes))
+	// The enrolled wizard credential (builder_credential), when the config names
+	// one. Absent means the runner's ambient AWS chain (an instance-profile role).
+	if row.AwsCredentialID.Valid {
+		cred, err := db.New(pool).GetBuilderCredential(ctx, row.AwsCredentialID)
+		if err != nil {
+			return nil, fmt.Errorf("builder config %q: loading AWS credential: %w", row.Name, err)
+		}
+		cfg.AccessKeyID = cred.AwsAccessKeyID
+		cfg.SecretAccessKey = cred.AwsSecretAccessKey
+	}
+	b, err := awsbuilder.New(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("builder config %q: %w", row.Name, err)
 	}
@@ -164,6 +184,9 @@ func ResolveMicrocloudClient(pool *pgxpool.Pool, row db.BuilderConfig) (*microcl
 		client, err := ep.microcloudClient()
 		if err != nil {
 			return nil, fmt.Errorf("builder config %q: constructing client: %w", row.Name, err)
+		}
+		if pool != nil {
+			client.NetworkLock = microcloud.SQLNetworkLocker{Pool: pool, Key: row.Name}
 		}
 		return client, nil
 	case "incus":
@@ -348,9 +371,14 @@ func resolveMicrocloud(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builde
 		ExternalPortMin:       int(db.Int32OrZero(row.ExternalPortMin)),
 		ExternalPortMax:       int(db.Int32OrZero(row.ExternalPortMax)),
 		DockerBaseFingerprint: row.DockerBaseFingerprint,
+		ClusterGroup:          row.MicrocloudClusterGroup,
+		GatewayAddr:           gatewayAddr(),
 	})
 	if pool != nil && row.ID.Valid {
 		b.PublicAddresses = microcloud.SQLPublicAddressAllocator{Pool: pool, BuilderID: row.ID}
+	}
+	if pool != nil {
+		b.Client.NetworkLock = microcloud.SQLNetworkLocker{Pool: pool, Key: row.Name}
 	}
 	return b, nil
 }
@@ -382,6 +410,17 @@ func (e endpoint) microcloudClient() (*microcloud.Client, error) {
 	return microcloud.NewClient(e.apiURL, e.certPEM, e.keyPEM, e.serverCertPEM, e.project)
 }
 
+// gatewayAddr is the host:port a deployed agent dials -- the same value the
+// runner bakes into every agent (GATEWAY_PUBLIC_ADDR). The Incus/MicroCloud
+// builders pin it as the only external egress a CLOSED team keeps, so telemetry
+// survives the pre-competition window. Read from the runner's own process
+// environment (the runner is Resolve's real caller and already reads this env to
+// deliver agents), so no new column is needed; "" when unset, which CloseAccess
+// treats as a misconfiguration rather than silently cutting telemetry.
+func gatewayAddr() string {
+	return strings.TrimSpace(os.Getenv("GATEWAY_PUBLIC_ADDR"))
+}
+
 // resolveIncusPool builds one internal/builder/incus.Builder per entry in
 // the row's own incus_hosts JSONB array (migration 00014) and wraps them
 // in an internal/builder/incuspool.Pool. Every host needs a connection --
@@ -406,8 +445,22 @@ func resolveIncusPool(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder
 		return nil, err
 	}
 
+	requireDistinct := row.IncusOneTeamPerHost
+	for _, hc := range hostConfigs {
+		if (incus.Config{NetworkType: hc.NetworkType, OVNUplinkNetwork: hc.OVNUplinkNetwork}).NetworkMode() == "bridge" {
+			requireDistinct = true
+		}
+	}
 	hosts := make([]*incus.Builder, 0, len(hostConfigs))
+	seenEndpoints := map[string]bool{}
+	seenCertificates := map[string]bool{}
 	for i, hc := range hostConfigs {
+		if hc.NetworkType != "" && hc.NetworkType != "bridge" && hc.NetworkType != "ovn" {
+			return nil, fmt.Errorf("incus_hosts[%d]: network_type must be bridge or ovn", i)
+		}
+		if hc.NetworkType == "ovn" && hc.OVNUplinkNetwork == "" {
+			return nil, fmt.Errorf("incus_hosts[%d]: OVN requires an uplink network", i)
+		}
 		var ep endpoint
 		if hc.CredentialID != "" {
 			var id pgtype.UUID
@@ -421,6 +474,17 @@ func resolveIncusPool(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder
 		if err != nil {
 			return nil, fmt.Errorf("builder config %q: incus_hosts[%d]: %w", row.Name, i, err)
 		}
+		if requireDistinct {
+			endpointKey := strings.TrimRight(strings.ToLower(ep.apiURL), "/")
+			certificateKey := string(ep.serverCertPEM)
+			if cert, _ := pem.Decode(ep.serverCertPEM); cert != nil {
+				certificateKey = string(cert.Bytes)
+			}
+			if seenEndpoints[endpointKey] || (certificateKey != "" && seenCertificates[certificateKey]) {
+				return nil, fmt.Errorf("incus_hosts[%d]: one team per host requires distinct servers; duplicate endpoint or server certificate", i)
+			}
+			seenEndpoints[endpointKey], seenCertificates[certificateKey] = true, true
+		}
 		client, err := ep.client()
 		if err != nil {
 			return nil, fmt.Errorf("builder config %q: incus_hosts[%d]: constructing client: %w", row.Name, i, err)
@@ -430,12 +494,16 @@ func resolveIncusPool(pool *pgxpool.Pool, row db.BuilderConfig) (builder.Builder
 		}
 		hosts = append(hosts, incus.New(client, incus.Config{
 			Images: images, Sizes: sizes,
-			OVNUplinkNetwork: hc.OVNUplinkNetwork, StoragePool: hc.StoragePool, DockerBaseFingerprint: row.DockerBaseFingerprint,
-			ExternalAccessIP: db.StrOrEmpty(row.ExternalAccessIp),
-			ExternalPortMin:  int(db.Int32OrZero(row.ExternalPortMin)),
-			ExternalPortMax:  int(db.Int32OrZero(row.ExternalPortMax)),
+			NetworkType: hc.NetworkType, OVNUplinkNetwork: hc.OVNUplinkNetwork, StoragePool: hc.StoragePool, DockerBaseFingerprint: row.DockerBaseFingerprint,
+			ExternalAccessIP:     db.StrOrEmpty(row.ExternalAccessIp),
+			ExternalPortMin:      int(db.Int32OrZero(row.ExternalPortMin)),
+			ExternalPortMax:      int(db.Int32OrZero(row.ExternalPortMax)),
+			MaxConcurrentDeploys: int(row.IncusHostMaxConcurrency),
+			GatewayAddr:          gatewayAddr(),
 		}))
 	}
 
-	return incuspool.New(hosts, images), nil
+	resolved := incuspool.New(hosts, images)
+	resolved.OneTeamPerHost = row.IncusOneTeamPerHost
+	return resolved, nil
 }

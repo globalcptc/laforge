@@ -30,6 +30,14 @@ type Builder struct {
 	// while a deploy/destroy call is genuinely in flight, not before it
 	// even started.
 	WorkDelay time.Duration
+
+	// FailDestroy, when set, makes every Destroy* call return this error after
+	// the usual simulated latency, without touching the fake hoster table --
+	// the way a real builder refuses a destroy it cannot perform. Tests use it
+	// with builder.ErrPermanentConfig (wrapped) to prove a teardown stops on a
+	// permanent failure, and with a plain error to prove it keeps retrying a
+	// transient one. Clear it to let destroys succeed again.
+	FailDestroy error
 }
 
 func New(pool *pgxpool.Pool) *Builder {
@@ -71,6 +79,9 @@ func (b *Builder) ensure(ctx context.Context, externalName, kind string) (string
 func (b *Builder) destroy(ctx context.Context, externalRef string) error {
 	if err := b.wait(ctx); err != nil {
 		return err
+	}
+	if b.FailDestroy != nil {
+		return b.FailDestroy
 	}
 	q := db.New(b.Pool)
 	// Destroying an already-destroyed (or never-existed) resource is a
@@ -114,6 +125,12 @@ func (b *Builder) DestroyContainer(ctx context.Context, team, externalRef string
 // UI/dispatch path to be exercised end to end locally.
 func (b *Builder) PowerAction(ctx context.Context, team, externalRef, action string, force bool) error {
 	return b.wait(ctx)
+}
+
+// ConsoleLog returns a fixed, recognizable console log -- the fake has no
+// guest, but the never-checked-in watchdog's capture path still runs end to end.
+func (b *Builder) ConsoleLog(ctx context.Context, team, externalRef string, maxBytes int) (string, error) {
+	return builder.TailBytes([]byte("fake console log for "+externalRef+"\n"), maxBytes), nil
 }
 
 func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {

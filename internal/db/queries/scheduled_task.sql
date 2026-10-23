@@ -61,8 +61,59 @@ UPDATE scheduled_task SET status = 'canceled', updated_at = now()
 WHERE id = $1 AND build_id = $2 AND status = 'pending'
 RETURNING *;
 
+-- name: CancelScheduledTasksForBuild :execrows
+-- Cancel every still-pending scheduled task for a build in one shot --
+-- called when the build is torn down or reaches a terminal status, so
+-- its `schedule:` rows stop coming due (and stop driving content
+-- resolves + GitHub token mints) forever after it is gone.
+UPDATE scheduled_task SET status = 'canceled', updated_at = now()
+WHERE build_id = $1 AND status = 'pending';
+
 -- name: ListScheduledTasksByBuild :many
 SELECT * FROM scheduled_task WHERE build_id = $1 ORDER BY created_at DESC;
 
 -- name: GetScheduledTask :one
 SELECT * FROM scheduled_task WHERE id = $1;
+
+-- name: ListScheduledTasksWithContextByBuild :many
+-- The Schedule page's enriched list: every scheduled task plus the host it
+-- targets (object_name/as_name/kind) and team, and a rollup of the agent_task
+-- runs it has actually spawned (linked by scheduled_task_id). A content task is
+-- one row per team's host copy -- the UI groups them by (object_name,
+-- schedule_index); the per-row run columns drive the per-team status and the
+-- console/log modal. deployed_object is a LEFT JOIN so an ad-hoc task with no
+-- single object (target-based) still lists.
+SELECT st.*,
+       o.object_name AS host_object_name,
+       o.as_name AS host_as_name,
+       o.kind AS host_kind,
+       tm.team_number AS team_number,
+       run.total::bigint AS run_total,
+       run.failed::bigint AS run_failed,
+       run.open::bigint AS run_open,
+       run.last_run_id AS last_run_id,
+       run.last_status AS last_run_status,
+       run.last_finished_at AS last_run_finished_at
+FROM scheduled_task st
+LEFT JOIN deployed_object o ON o.id = st.deployed_object_id
+LEFT JOIN team tm ON tm.id = o.team_id
+LEFT JOIN LATERAL (
+    SELECT count(*) AS total,
+           count(*) FILTER (WHERE at.status = 'failed') AS failed,
+           count(*) FILTER (WHERE at.status IN ('pending', 'leased', 'blocked')) AS open,
+           (SELECT a2.id FROM agent_task a2 WHERE a2.scheduled_task_id = st.id ORDER BY a2.step_index DESC LIMIT 1) AS last_run_id,
+           COALESCE((SELECT a2.status FROM agent_task a2 WHERE a2.scheduled_task_id = st.id ORDER BY a2.step_index DESC LIMIT 1), '')::text AS last_status,
+           (SELECT a2.finished_at FROM agent_task a2 WHERE a2.scheduled_task_id = st.id ORDER BY a2.step_index DESC LIMIT 1) AS last_finished_at
+    FROM agent_task at WHERE at.scheduled_task_id = st.id
+) run ON true
+WHERE st.build_id = $1
+ORDER BY st.created_at DESC;
+
+-- name: ListRunsForScheduledTask :many
+-- Every agent_task run a scheduled task has spawned, newest first -- the
+-- console output (agent_task.output) + status + timing behind the per-team
+-- run modal on the Schedule page.
+SELECT id, step_index, command, payload, status, output, last_error, started_at, finished_at, created_at, updated_at
+FROM agent_task
+WHERE scheduled_task_id = $1
+ORDER BY step_index DESC;

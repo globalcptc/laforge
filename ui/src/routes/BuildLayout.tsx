@@ -1,9 +1,17 @@
 import { useState } from 'react'
 import { Link, Outlet, useParams, useRouterState } from '@tanstack/react-router'
-import { GitCommitHorizontal, Rocket, Trash2, TriangleAlert } from 'lucide-react'
-import { useBuild, useDeployBuild, useTeardownBuild } from '../api/hooks'
+import { GitCommitHorizontal, RotateCcw, Rocket, Trash2, TriangleAlert } from 'lucide-react'
+import {
+  useBuild,
+  useBuildReadiness,
+  useBuilders,
+  useDeployBuild,
+  useMe,
+  useRetryTeardown,
+  useTeardownBuild,
+} from '../api/hooks'
 import { StatusBadge } from '../components/StatusBadge'
-import { BuilderKindBadge } from '../components/BuilderKindBadge'
+import { BuilderPill } from '../components/BuilderPill'
 import { ApiError } from '../api/client'
 import { Button, cn, PageHeader, useToast } from '../ui'
 
@@ -24,8 +32,14 @@ const TABS = [
 export function BuildLayout() {
   const { repoId, buildId } = useParams({ from: '/repos/$repoId/builds/$buildId' })
   const { data: build } = useBuild(buildId)
+  const { data: builders } = useBuilders()
+  const builderColor = builders?.find((b) => b.name === build?.builder_config_name)?.color
   const deploy = useDeployBuild(buildId)
   const teardown = useTeardownBuild(buildId)
+  const retryTeardown = useRetryTeardown(buildId)
+  const me = useMe()
+  // Pre-deploy quota warnings matter only while the build can still be deployed.
+  const readiness = useBuildReadiness(buildId, build?.status === 'planned')
   const [deployError, setDeployError] = useState<string | null>(null)
   const [teardownError, setTeardownError] = useState<string | null>(null)
   const toast = useToast()
@@ -58,13 +72,22 @@ export function BuildLayout() {
     }
   }
 
+  async function onRetryTeardown() {
+    try {
+      await retryTeardown.mutateAsync()
+    } catch (e) {
+      const message = e instanceof ApiError ? e.message : 'Retry failed'
+      toast({ title: 'Teardown retry failed', description: message, tone: 'danger', duration: 0 })
+    }
+  }
+
   return (
     <>
       <PageHeader
         title={
           <span className="flex min-w-0 items-center gap-3">
             <span className="shrink-0">{build?.environment_name ?? '…'}</span>
-            {build?.builder_kind && <BuilderKindBadge kind={build.builder_kind} name={build.builder_config_name} label={build.builder_config_name} />}
+            {build?.builder_config_name && <BuilderPill name={build.builder_config_name} color={builderColor} kind={build.builder_kind} />}
             {build && <StatusBadge status={build.status} />}
             {build?.commit_sha && (
               <span className="flex min-w-0 items-center gap-1.5 text-sm font-normal text-fg-muted" title={build.commit_message ?? undefined}>
@@ -127,14 +150,60 @@ export function BuildLayout() {
             </Link>
           )
         })}
+        {/* Admin escape hatches live in their own tab at the very end, visible
+            only to instance admins (the route itself also gates the content). */}
+        {me.data?.is_instance_admin && (
+          (() => {
+            const href = `${base}/admin`
+            const active = pathname === href
+            return (
+              <Link
+                to={href}
+                className={cn(
+                  'ml-auto shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium',
+                  active ? 'border-accent text-fg' : 'border-transparent text-fg-subtle hover:text-fg',
+                )}
+              >
+                Admin
+              </Link>
+            )
+          })()
+        )}
       </nav>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-2">
+        {build?.status === 'planned' && readiness.data?.checked && (readiness.data.warnings ?? []).length > 0 && (
+          <div className="mb-3 flex items-start gap-2.5 rounded-token border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-sm text-warning">
+            <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <div className="font-medium">This build may exceed the builder’s account quotas</div>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-warning/90">
+                {(readiness.data.warnings ?? []).map((warn, i) => (
+                  <li key={i} className="break-words">{warn}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+        {/* reconcile_error carries two things: a deploy that can't start
+            (builder/content incompatibility) and, while tearing_down, a
+            teardown that stopped because the hoster refused a destroy for a
+            reason retrying can't fix. The second gets its own title and the
+            explicit retry the orchestrator waits for. */}
         {build?.reconcile_error && (
           <div className="mb-3 flex items-start gap-2.5 rounded-token border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-sm text-danger">
             <TriangleAlert size={16} className="mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <div className="font-medium">This build is blocked and can’t deploy</div>
+            <div className="min-w-0 flex-1">
+              <div className="font-medium">
+                {build.status === 'tearing_down' ? 'Teardown Is Stuck' : 'This build is blocked and can’t deploy'}
+              </div>
               <div className="mt-0.5 break-words text-danger/90">{build.reconcile_error}</div>
+              {build.status === 'tearing_down' && (
+                <div className="mt-2">
+                  <Button variant="primary" onClick={onRetryTeardown} disabled={retryTeardown.isPending}>
+                    <RotateCcw size={12} /> {retryTeardown.isPending ? 'Retrying…' : 'Retry Teardown'}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}

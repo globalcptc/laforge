@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/globalcptc/laforge/internal/db"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // handleListExternalAccess returns every realized external endpoint in a build:
@@ -35,10 +36,11 @@ func (s *Server) handleListExternalAccess(w http.ResponseWriter, r *http.Request
 }
 
 // externalAccessExportRow is one line of the full external-access export: where
-// to connect AND how to log in. The password is the environment's root/admin
-// password (the same one handleObjectInfra exposes per host); the username is
-// derived from the host's OS. Containers get no login (no admin account over a
-// public port), so username/password are blank for them.
+// to connect AND how to log in. The password is the host's CURRENT admin
+// password (see currentCredentials -- the last admin set_password the agent
+// applied, else the environment root password); the username is that built-in
+// admin account, derived from the host's OS. Containers get no login (no admin
+// account over a public port), so username/password are blank for them.
 type externalAccessExportRow struct {
 	Team     int32  `json:"team"`
 	Host     string `json:"host"`
@@ -47,6 +49,16 @@ type externalAccessExportRow struct {
 	Protocol string `json:"protocol"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+	// The fields below let a client select and label endpoints (the scoring
+	// export wizard): which object and internal port this endpoint maps, and
+	// whether the password is confirmed on the box yet.
+	DeployedObjectID pgtype.UUID `json:"deployed_object_id"`
+	ObjectName       string      `json:"object_name"`
+	Kind             string      `json:"kind"`
+	InternalPort     string      `json:"internal_port"`
+	PublicAddress    string      `json:"public_address"`
+	PasswordApplied  bool        `json:"password_applied"`
+	PasswordSource   string      `json:"password_source,omitempty"`
 }
 
 // handleExportExternalAccess returns the external endpoints enriched with the
@@ -75,11 +87,16 @@ func (s *Server) handleExportExternalAccess(w http.ResponseWriter, r *http.Reque
 			osByName[h.Name] = h.OS
 		}
 	}
-	password := ""
+	rootPassword := ""
 	if env, err := s.Queries.GetEnvironmentByRevisionAndName(r.Context(), db.GetEnvironmentByRevisionAndNameParams{
 		ContentRevisionID: build.ContentRevisionID, Name: build.EnvironmentName,
 	}); err == nil {
-		password = db.StrOrEmpty(env.RootPassword)
+		rootPassword = db.StrOrEmpty(env.RootPassword)
+	}
+	passwords, err := currentCredentials(r.Context(), s.Queries, build.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
 	}
 
 	out := make([]externalAccessExportRow, 0, len(rows))
@@ -94,12 +111,17 @@ func (s *Server) handleExportExternalAccess(w http.ResponseWriter, r *http.Reque
 		}
 		row := externalAccessExportRow{
 			Team: e.TeamNumber, Host: host, IP: ip, Port: e.ExternalPort, Protocol: e.Protocol,
+			DeployedObjectID: e.DeployedObjectID, ObjectName: e.ObjectName, Kind: e.Kind,
+			InternalPort: e.InternalPort, PublicAddress: e.PublicAddress,
 		}
-		// Only hosts have an admin login over the env root password; a container
-		// exposes a service port, not a desktop/shell to sign into.
+		// Only hosts have an admin login; a container exposes a service port,
+		// not a desktop/shell to sign into.
 		if e.Kind == "host" {
+			hp := passwordFor(passwords, e.DeployedObjectID, rootPassword)
 			row.Username = adminUsernameForOS(osByName[e.ObjectName])
-			row.Password = password
+			row.Password = hp.Password
+			row.PasswordApplied = hp.Applied
+			row.PasswordSource = hp.Source
 		}
 		out = append(out, row)
 	}

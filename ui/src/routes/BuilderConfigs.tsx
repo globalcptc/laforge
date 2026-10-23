@@ -6,6 +6,7 @@ import { ApiError } from '../api/client'
 import { EmptyState } from '../components/EmptyState'
 import { BuilderImageConsole } from '../components/BuilderImageConsole'
 import { RegistryCredentials } from '../components/RegistryCredentials'
+import { BuilderPill } from '../components/BuilderPill'
 import { KIND_LABEL } from '../components/builder-wizard/model'
 import type { BuilderConfig } from '../api/types'
 import { Badge, Button, Card, CardHeader, PageHeader, Spinner, Table, TableScroller, Td, Th, buttonClass, cn, useToast } from '../ui'
@@ -95,7 +96,16 @@ export function BuilderConfigs() {
 
 function serverSummary(bc: BuilderConfig): string {
   if (bc.kind === 'fake') return '—'
-  if (bc.kind === 'aws' || bc.kind === 'openstack') return 'runner env creds'
+  if (bc.kind === 'aws') {
+    // Region-first: an AWS builder's credential is nearly always an IAM key, so
+    // saying so adds nothing. Append the account id when captured (it says WHICH
+    // account you deploy into, which is actually useful).
+    const region = bc.aws_config?.region
+    const account = bc.aws_config?.account
+    if (region && account) return `${region} · account ${account}`
+    return region || (account ? `account ${account}` : '—')
+  }
+  if (bc.kind === 'openstack') return 'runner env creds'
   if (bc.kind === 'incus') return `${bc.incus_hosts.length} host${bc.incus_hosts.length === 1 ? '' : 's'}`
   return bc.incus_credential_id ? '1 cluster' : (bc.incus_api_url ?? '—')
 }
@@ -121,8 +131,8 @@ function BuilderRow({ bc, onOpenConsole }: { bc: BuilderConfig; onOpenConsole: (
   return (
     <tr>
       <Td className="font-medium text-fg">
-        <Link to="/admin/infrastructure/$name" params={{ name: bc.name }} className="text-accent hover:underline">
-          {bc.name}
+        <Link to="/admin/infrastructure/$name" params={{ name: bc.name }} className="hover:opacity-80">
+          <BuilderPill name={bc.name} color={bc.color} kind={bc.kind} />
         </Link>
       </Td>
       <Td>
@@ -151,7 +161,7 @@ function BuilderRow({ bc, onOpenConsole }: { bc: BuilderConfig; onOpenConsole: (
       </Td>
       <Td className="text-right">
         <Link
-          to="/admin/infrastructure/$name"
+          to="/admin/infrastructure/$name/edit"
           params={{ name: bc.name }}
           className={cn(buttonClass({ variant: 'ghost', size: 'sm' }), 'text-brand hover:bg-brand-soft hover:text-brand')}
         >

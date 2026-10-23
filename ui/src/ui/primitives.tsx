@@ -21,6 +21,8 @@ const buttonStyles = cva(
         brand: 'bg-brand text-fg-inverted hover:bg-brand-hover',
         // CPTC coral, a light fill -- fixed dark ink for text, not white.
         coral: 'bg-cptc-coral text-cptc-coral-fg hover:brightness-95',
+        // Darker CPTC pink -- the "Build Now" CTA. Fixed white ink.
+        pink: 'bg-cptc-pink text-cptc-pink-fg hover:brightness-95',
         link: 'text-accent hover:text-accent-hover underline-offset-4 hover:underline',
       },
       size: {
@@ -170,6 +172,44 @@ export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
 
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return <select className={cn(fieldBase, 'h-9 pr-8', className)} {...props} />;
+}
+
+// Slider is a numeric range control with a live readout. The native range is
+// tinted with the accent token (accent-accent), and valueLabel lets a caller
+// render a value specially (e.g. 0 -> "Unlimited").
+export function Slider({
+  value,
+  min = 0,
+  max = 100,
+  step = 1,
+  onChange,
+  valueLabel,
+  className,
+}: {
+  value: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  onChange: (value: number) => void;
+  valueLabel?: (value: number) => ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn('flex items-center gap-3', className)}>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-surface-sunken accent-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-soft"
+      />
+      <span className="min-w-20 shrink-0 text-right font-mono text-sm tabular-nums text-fg">
+        {valueLabel ? valueLabel(value) : value}
+      </span>
+    </div>
+  );
 }
 
 export function Label({ className, ...props }: HTMLAttributes<HTMLLabelElement>) {

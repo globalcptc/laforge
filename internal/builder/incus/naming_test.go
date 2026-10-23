@@ -11,7 +11,7 @@ func TestInstanceNameReadableAndBounded(t *testing.T) {
 	const ext = "build-11111111-2222-3333-4444-555555555555-team-3-host-webserver"
 
 	t.Run("readable from a display hint", func(t *testing.T) {
-		got := instanceName("main-t3-webserver", ext)
+		got := instanceName("main-t3-webserver", ext, "default")
 		if !strings.HasPrefix(got, "lf-main-t3-webserver-") {
 			t.Fatalf("instanceName = %q, want it to start with the readable lf-main-t3-webserver-", got)
 		}
@@ -22,21 +22,21 @@ func TestInstanceNameReadableAndBounded(t *testing.T) {
 	})
 
 	t.Run("deterministic", func(t *testing.T) {
-		if a, b := instanceName("main-t3-webserver", ext), instanceName("main-t3-webserver", ext); a != b {
+		if a, b := instanceName("main-t3-webserver", ext, "default"), instanceName("main-t3-webserver", ext, "default"); a != b {
 			t.Fatalf("not deterministic: %q vs %q", a, b)
 		}
 	})
 
 	t.Run("same host, different builds don't collide", func(t *testing.T) {
-		a := instanceName("main-t3-webserver", ext+"-A")
-		b := instanceName("main-t3-webserver", ext+"-B")
+		a := instanceName("main-t3-webserver", ext+"-A", "default")
+		b := instanceName("main-t3-webserver", ext+"-B", "default")
 		if a == b {
 			t.Fatalf("both builds got %q -- the suffix must disambiguate them", a)
 		}
 	})
 
 	t.Run("empty hint falls back to the hash", func(t *testing.T) {
-		if got, want := instanceName("", ext), shortName(ext); got != want {
+		if got, want := instanceName("", ext, "default"), shortName(ext); got != want {
 			t.Fatalf("instanceName(\"\", ...) = %q, want the shortName hash %q", got, want)
 		}
 	})
@@ -75,7 +75,7 @@ func TestInstanceNameReadableAndBounded(t *testing.T) {
 
 	t.Run("sanitizes and stays within Incus's limits", func(t *testing.T) {
 		// A messy branch with slashes, spaces, and uppercase.
-		got := instanceName("Feature/Big Rewrite-t10-DB Server!!", ext)
+		got := instanceName("Feature/Big Rewrite-t10-DB Server!!", ext, "default")
 		for _, r := range got {
 			ok := r == '-' || (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
 			if !ok {

@@ -84,7 +84,8 @@ func BuildDockerBase(ctx context.Context, c *Client, src BaseImageSource, storag
 	}
 
 	log("Installing Docker and the compose plugin …")
-	out, err := c.execRecord(ctx, tempBuildInstance, builder.DockerBaseInstallScript)
+	// Incus hosts run modern kernels, so Docker's default overlay2 is fine.
+	out, err := c.execRecord(ctx, tempBuildInstance, builder.DockerBaseInstallScript(""))
 	logLines(log, out)
 	if err != nil {
 		return "", fmt.Errorf("installing docker: %w", err)

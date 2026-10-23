@@ -1,5 +1,6 @@
-import { AlertTriangle, Boxes, Cloud, Server } from 'lucide-react'
+import { AlertTriangle, Boxes, CloudCog, Container, Server } from 'lucide-react'
 import { Field, Input, cn } from '../../ui'
+import { ColorPicker } from '../ColorPicker'
 import type { Kind } from './model'
 
 const KINDS: { kind: Kind; title: string; body: string; icon: typeof Server; draft?: boolean }[] = [
@@ -18,15 +19,14 @@ const KINDS: { kind: Kind; title: string; body: string; icon: typeof Server; dra
   {
     kind: 'aws',
     title: 'AWS (EC2)',
-    body: 'Amazon EC2: a per-team VPC/subnet, instances from your AMIs. Credentials and region come from the runner’s AWS environment (AWS_* / AWS_REGION).',
-    icon: Cloud,
-    draft: true,
+    body: 'Amazon EC2 + Fargate: a per-team VPC with a subnet per network, instances from your AMIs. Enter an access key and pick the region, AMIs and instance types here.',
+    icon: CloudCog,
   },
   {
     kind: 'openstack',
     title: 'OpenStack',
     body: 'An OpenStack cloud (Nova/Neutron): instances from Glance images and Nova flavors. Credentials and region come from the runner’s OS_* environment.',
-    icon: Cloud,
+    icon: Container,
     draft: true,
   },
   // The 'fake' (simulated) builder stays wired up in the backend for local
@@ -34,10 +34,10 @@ const KINDS: { kind: Kind; title: string; body: string; icon: typeof Server; dra
   // something an operator sets up for a real event.
 ]
 
-// The cloud builders are real code but have never been exercised against a live
-// account, and don't yet wire external reachability (VPC egress / floating IPs)
-// or terminate established connections on close -- so they're marked Draft here
-// rather than presented as production-ready.
+// OpenStack is real code but hasn't been exercised against a live account and
+// still reads its credential from the runner environment, so it's marked Draft
+// rather than presented as production-ready. (AWS was promoted out of Draft once
+// its wizard, discovery, external access and access-schedule landed.)
 const DRAFT_KINDS = new Set<Kind>(KINDS.filter((k) => k.draft).map((k) => k.kind))
 
 export const NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/
@@ -45,15 +45,19 @@ export const NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/
 export function StepType({
   name,
   kind,
+  color,
   editing,
   onName,
   onKind,
+  onColor,
 }: {
   name: string
   kind: Kind
+  color: string
   editing: boolean
   onName: (v: string) => void
   onKind: (k: Kind) => void
+  onColor: (v: string) => void
 }) {
   const nameError = name && !NAME_PATTERN.test(name) ? 'Use lowercase letters, numbers, and dashes.' : undefined
   return (
@@ -65,6 +69,10 @@ export function StepType({
         className="mb-0 max-w-sm"
       >
         <Input value={name} onChange={(e) => onName(e.target.value.toLowerCase())} disabled={editing} placeholder="cptc-microcloud" autoFocus={!editing} />
+      </Field>
+
+      <Field label="Color" hint="Shown as a colored pill wherever this builder’s name appears." className="mb-0">
+        <ColorPicker value={color} onChange={onColor} previewName={name} previewKind={kind} />
       </Field>
 
       <div>

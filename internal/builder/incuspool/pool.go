@@ -38,7 +38,8 @@ import (
 // aggregates across all of them for Inspect (which isn't team-scoped) --
 // see hostForTeam's own doc comment for the routing rule.
 type Pool struct {
-	Hosts []*incus.Builder
+	OneTeamPerHost bool
+	Hosts          []*incus.Builder
 	// Images is the pool-wide os/image catalog (see migration 00014's own
 	// doc comment: content's os/image/size names are pool-wide, not
 	// per-host) -- exposed via ImageNames so
@@ -85,6 +86,9 @@ func (p *Pool) hostForTeam(team string) (*incus.Builder, error) {
 	if err != nil || n < 1 {
 		return nil, fmt.Errorf("incus pool: team %q is not a valid team number", team)
 	}
+	if err := p.ValidateTeamCount(n); err != nil {
+		return nil, err
+	}
 	return p.Hosts[(n-1)%len(p.Hosts)], nil
 }
 
@@ -128,6 +132,29 @@ func (p *Pool) DestroyHost(ctx context.Context, team, externalRef string) error 
 	return h.DestroyHost(ctx, team, externalRef)
 }
 
+// HostReference forwards the optional name-reconstruction hook the runner probes
+// on destroy. Every pool host computes the instance name identically (it's a pure
+// function of display/external name), so any host answers -- the pool just needs
+// to expose the method so the destroy fallback can rebuild the real `lf-...` name
+// instead of the logical external name. See the incus builder's HostReference.
+func (p *Pool) HostReference(externalName, displayName string) string {
+	if len(p.Hosts) == 0 {
+		return externalName
+	}
+	return p.Hosts[0].HostReference(externalName, displayName)
+}
+
+// SourceDiskMinBytes forwards the pre-deploy disk-shrink check so the orchestrator
+// preflight (which resolves an "incus" builder to this Pool) can reject a host
+// whose disk: is smaller than its mapped snapshot. The os->snapshot mapping is the
+// same on every host, so any host answers.
+func (p *Pool) SourceDiskMinBytes(ctx context.Context, os string) (int64, string, bool, error) {
+	if len(p.Hosts) == 0 {
+		return 0, "", false, nil
+	}
+	return p.Hosts[0].SourceDiskMinBytes(ctx, os)
+}
+
 func (p *Pool) DestroyContainer(ctx context.Context, team, externalRef string) error {
 	h, err := p.hostForTeam(team)
 	if err != nil {
@@ -142,6 +169,15 @@ func (p *Pool) PowerAction(ctx context.Context, team, externalRef, action string
 		return err
 	}
 	return h.PowerAction(ctx, team, externalRef, action, force)
+}
+
+// ConsoleLog routes to the host that holds this team's instances.
+func (p *Pool) ConsoleLog(ctx context.Context, team, externalRef string, maxBytes int) (string, error) {
+	h, err := p.hostForTeam(team)
+	if err != nil {
+		return "", err
+	}
+	return h.ConsoleLog(ctx, team, externalRef, maxBytes)
 }
 
 // Inspect aggregates every host's own Inspect -- not team-scoped (Inspect
@@ -197,4 +233,27 @@ func (p *Pool) ConfigureExternalAccess(ctx context.Context, team string, hosts [
 		return nil, err
 	}
 	return h.ConfigureExternalAccess(ctx, team, hosts)
+}
+
+// ValidateTeamCount is called before reconciliation queues any deployment tasks.
+func (p *Pool) ValidateTeamCount(teams int) error {
+	// Every refusal here is a property of the pool's configuration, not of the
+	// hoster's momentary state: retrying the same task against the same host
+	// list can never change the answer. Marked permanent so the runner fails
+	// the task on its first attempt and the orchestrator's teardown stops
+	// re-queuing destroys for it (the wedged-teardown loop this classification
+	// exists to end), instead of both retrying forever.
+	if len(p.Hosts) == 0 {
+		return fmt.Errorf("%w: incus pool has no hosts configured", builder.ErrPermanentConfig)
+	}
+	if p.OneTeamPerHost && teams > len(p.Hosts) {
+		return fmt.Errorf("%w: one team per host requires %d distinct Incus hosts, but only %d are configured", builder.ErrPermanentConfig, teams, len(p.Hosts))
+	}
+	// Content repeats the same subnets for every team; a native bridge host cannot take a second copy.
+	for n := len(p.Hosts); n < teams; n++ {
+		if p.Hosts[n%len(p.Hosts)].Config.NetworkMode() == "bridge" {
+			return fmt.Errorf("%w: team %d would reuse a bridge host's subnets: configure at least %d distinct hosts for %d teams", builder.ErrPermanentConfig, n+1, teams, teams)
+		}
+	}
+	return nil
 }

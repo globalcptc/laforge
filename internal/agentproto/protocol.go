@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
 )
 
 type MessageType byte
@@ -168,6 +169,17 @@ type HeartbeatRequestPayload struct {
 	DiskPct  *float64 `json:"disk_pct,omitempty"`
 	NetRxBps *float64 `json:"net_rx_bps,omitempty"`
 	NetTxBps *float64 `json:"net_tx_bps,omitempty"`
+
+	// InflightTaskID is the task the agent is still running on its worker
+	// thread, if any. The gateway renews that task's lease on every heartbeat,
+	// so a step longer than one lease is never re-leased and run a second time
+	// alongside the first (after a reconnect, say).
+	InflightTaskID string `json:"inflight_task_id,omitempty"`
+	// BootTime and AgentStartedAt are Unix seconds: when the OS booted and when
+	// this agent process started. Together with the object's deploy time they
+	// split "deployed -> first check-in" into boot, agent start and connect.
+	BootTime       *int64 `json:"boot_time,omitempty"`
+	AgentStartedAt *int64 `json:"agent_started_at,omitempty"`
 }
 
 type HeartbeatResponsePayload struct {
@@ -267,10 +279,35 @@ type ValidatorResult struct {
 
 type ReportStatusRequestPayload struct {
 	TaskID           string            `json:"task_id"`
-	Status           string            `json:"status"` // "done" | "failed"
+	Status           string            `json:"status"` // StatusDone | StatusFailed | StatusTimeout
 	Output           string            `json:"output,omitempty"`
 	Error            string            `json:"error,omitempty"`
 	ValidatorResults []ValidatorResult `json:"validator_results,omitempty"`
+}
+
+// Report statuses. StatusTimeout is a failure the agent ended itself because
+// the step ran past its timeout_sec. It is terminal: a step that hit its own
+// deadline is almost always deterministic (a wait loop whose peer never
+// appears, a hung installer), so re-running it only spends the same time again.
+const (
+	StatusDone    = "done"
+	StatusFailed  = "failed"
+	StatusTimeout = "timeout"
+)
+
+// timeoutErrorPattern is the phrase the agent's execute uses for a timeout
+// ("<cmd> timed out after <N>s and was killed ..."), recognized so an agent
+// that reports a timeout as a plain StatusFailed is still treated as one. It is
+// deliberately specific: a script's own output ("curl: Connection timed out
+// after 30001 milliseconds") is a transient worth retrying, not this.
+var timeoutErrorPattern = regexp.MustCompile(` timed out after \d+s and was killed`)
+
+// IsTimeout reports whether a status report is an agent-enforced timeout.
+func (r ReportStatusRequestPayload) IsTimeout() bool {
+	if r.Status == StatusTimeout {
+		return true
+	}
+	return r.Status == StatusFailed && timeoutErrorPattern.MatchString(r.Error)
 }
 
 type ReportStatusResponsePayload struct {

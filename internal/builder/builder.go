@@ -56,6 +56,13 @@ type NetworkSpec struct {
 	DisplayName  string // "t<team><network>", for a readable hoster name -- see incus.networkName
 	Team         string
 	CIDR         string
+	// VPCCIDR is the environment's overall address space (Environment.CIDR):
+	// the supernet every network fits inside. A cloud builder that hosts a whole
+	// team in one VPC (AWS) creates that VPC with exactly this CIDR and carves
+	// each network's subnet from it. Empty when the environment declares none --
+	// the on-prem builders (Incus/MicroCloud) ignore it regardless, and AWS then
+	// falls back to inferring a containing /16 from CIDR.
+	VPCCIDR string
 }
 
 // Network, like Team, was found missing while proving a real two-team
@@ -104,13 +111,35 @@ type HostSpec struct {
 	DiskGB             int
 	TCPPorts           []string
 	UDPPorts           []string
-	// CloudInitUserData, when set, is delivered to the instance at
-	// create time (Incus: the cloud-init.user-data config key). Agents
-	// aren't baked into images -- this is how a fresh host installs and
-	// starts its own agent on first boot. Empty means no agent delivery
-	// (a build still deploys).
-	CloudInitUserData string
-	CloudInitViaISO   bool
+	// AgentDownloadURL is the one-time-token URL the fresh instance fetches its
+	// own agent binary from on first boot (agentdelivery.Delivery.DownloadURL).
+	// Agents aren't baked into images -- this is how a host installs and starts
+	// its agent. Empty means no agent delivery (a build still deploys). The
+	// BUILDER renders this into its image's user-data format using the renderers
+	// in internal/agentdelivery (LinuxUserData / WindowsCloudbaseUserData /
+	// WindowsEC2LaunchUserData), choosing by agentdelivery.PlatformFor(OS) -- the
+	// format is a property of the image/hoster, so the builder owns it.
+	AgentDownloadURL string
+	// AgentBinary is the per-host patched agent binary (agentdelivery.Delivery.
+	// Binary). When set, a builder that can attach a NoCloud config drive writes
+	// it onto that drive so the first-boot user-data copies it locally instead of
+	// downloading (embed-first; AgentDownloadURL stays as the fallback). Empty
+	// means download-only. A builder with no config drive (AWS) ignores it and
+	// relies on AgentDownloadURL.
+	AgentBinary []byte
+	// TempAdminPassword is a throwaway admin password (agentdelivery.
+	// TempAdminPassword) the first-boot user-data sets so a host is reachable
+	// before its agent runs the real set_password step. Empty means don't set
+	// one. It is deliberately not the environment's real password -- see that
+	// function's doc.
+	TempAdminPassword string
+	// Priority is this object's place on the build's critical path: how many
+	// objects (transitively) depends_on it, so a domain controller the rest of a
+	// team waits on outranks a leaf workstation. 0 = nothing waits on it. Set by
+	// the orchestrator, carried on the deploy task. A builder that admits
+	// creates through a bounded queue (Incus's per-host cap) serves higher
+	// priorities first; the rest ignore it.
+	Priority int
 }
 
 // DockerBaseAlias is the image alias a builder's "docker base image" job
@@ -120,23 +149,46 @@ type HostSpec struct {
 // machine from it.
 const DockerBaseAlias = "laforge-docker-base"
 
+// OldKernelStorageDriver is Docker's built-in, dependency-free storage driver
+// for hosts whose kernel can't do overlay2. overlay2 (Docker's default) needs a
+// kernel new enough to mount overlayfs as an unprivileged/nested user, which old
+// MicroCloud nodes don't have, so Docker there fails to start or to run a
+// container. "vfs" is the naive copy-per-layer driver built into Docker with no
+// kernel feature or extra package required -- it works on any kernel, at the
+// cost of disk space and layer-copy speed. We only force it where overlay2 is
+// unavailable (MicroCloud); builders on modern kernels (Incus) keep overlay2.
+const OldKernelStorageDriver = "vfs"
+
 // DockerBaseInstallScript is what the docker-base job runs inside its build
 // container: Docker Engine and the compose plugin from Docker's own apt
 // repository (download.docker.com) rather than the distribution's packages,
 // which trail it by a long way. It then checks that the daemon came up under
 // nesting and can actually run a container, and prints DOCKER_OK on success.
-const DockerBaseInstallScript = `export DEBIAN_FRONTEND=noninteractive
+//
+// storageDriver, when non-empty, is pinned in /etc/docker/daemon.json BEFORE the
+// daemon first starts (so docker-ce's own postinst start already uses it), for
+// hosts that can't do overlay2 -- see OldKernelStorageDriver. Empty leaves
+// Docker's default (overlay2).
+func DockerBaseInstallScript(storageDriver string) string {
+	daemonJSON := ""
+	if storageDriver != "" {
+		daemonJSON = `install -m 0755 -d /etc/docker
+printf '%s' '{"storage-driver":"` + storageDriver + `"}' > /etc/docker/daemon.json
+`
+	}
+	return `export DEBIAN_FRONTEND=noninteractive
 apt-get update && apt-get install -y ca-certificates curl || exit 1
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc || exit 1
 chmod a+r /etc/apt/keyrings/docker.asc
 . /etc/os-release
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${UBUNTU_CODENAME:-$VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list
-apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || exit 1
+` + daemonJSON + `apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin || exit 1
 systemctl enable --now docker
 sleep 3
 docker --version
 docker info >/dev/null 2>&1 && docker compose version && docker run --rm hello-world >/dev/null 2>&1 && docker image rm hello-world >/dev/null 2>&1 && echo DOCKER_OK || echo DOCKER_BAD`
+}
 
 // DockerBaseCleanupScript trims the build container before it is published:
 // apt caches, and cloud-init's record of having run, so an instance created
@@ -144,14 +196,17 @@ docker info >/dev/null 2>&1 && docker compose version && docker run --rm hello-w
 const DockerBaseCleanupScript = `apt-get clean; rm -rf /var/lib/apt/lists/*; cloud-init clean --logs >/dev/null 2>&1; true`
 
 // ComposeHostSpec is the machine a compose container runs on, as the host a
-// builder deploys for it (see ContainerSpec.ComposeHost).
+// builder deploys for it (see ContainerSpec.ComposeHost). It runs at the
+// container's own configured size, resolved through the builder's size map like
+// any host.
 func (s ContainerSpec) ComposeHostSpec() HostSpec {
 	return HostSpec{
 		ExternalName: s.ExternalName, DisplayName: s.DisplayName, Team: s.Team,
 		Network: s.Network, NetworkDisplayName: s.NetworkDisplayName, Address: s.Address,
 		OS: ComposeHostImage, Size: s.Size, DiskGB: s.DiskGB,
 		TCPPorts: s.TCPPorts, UDPPorts: s.UDPPorts,
-		CloudInitUserData: s.CloudInitUserData, CloudInitViaISO: s.CloudInitViaISO,
+		AgentDownloadURL: s.AgentDownloadURL,
+		Priority:         s.Priority,
 	}
 }
 
@@ -175,7 +230,7 @@ type ContainerSpec struct {
 	// ComposeHost marks a container that runs a Docker Compose project rather
 	// than one image. The builder gives it a Docker-capable Linux machine --
 	// booted from its ComposeHostImage, with DiskGB of disk and the agent
-	// delivered by CloudInitUserData like any host -- and nothing else: the
+	// delivered via AgentDownloadURL like any host -- and nothing else: the
 	// project is unpacked and started by the agent, as the container's first
 	// commands. Image, Env, Command and the registry fields are empty.
 	ComposeHost bool
@@ -186,12 +241,10 @@ type ContainerSpec struct {
 	Image string
 	Size  string
 	// Env and Command are the container's environment and command override.
-	Env               map[string]string
-	Command           []string
-	TCPPorts          []string
-	UDPPorts          []string
-	CloudInitUserData string
-	CloudInitViaISO   bool
+	Env      map[string]string
+	Command  []string
+	TCPPorts []string
+	UDPPorts []string
 	// AgentBinary is the object's patched LaForge agent (a static musl-linux
 	// binary). It is planted so the agent is the application container's own
 	// entrypoint, supervising the image's real command -- making a container
@@ -229,6 +282,8 @@ type ContainerSpec struct {
 	// every service inherits it.
 	LogDriver  string
 	LogOptions map[string]string
+	// Priority is the same critical-path rank as HostSpec.Priority.
+	Priority int
 }
 
 // Resource is one thing Inspect finds already existing at the hoster,
@@ -250,6 +305,97 @@ const (
 	PowerStateStopped = "stopped"
 	PowerStateOther   = "other" // exists but neither cleanly running nor stopped (frozen, error, starting...)
 )
+
+// Metric is one self-describing stat a builder publishes about its own backend
+// (the hoster/stack, NOT the deployed guests). The UI renders generically from
+// these, so a builder can add a metric and have it appear with no UI change:
+// Kind "timeseries" draws a chart from stored history, "gauge" draws a
+// usage-vs-limit bar. See docs/plans/builder-monitoring.md.
+type Metric struct {
+	Key   string   `json:"key"`   // stable id: "cpu", "mem", "disk_ops", "net", "api_latency", "quota:vpcs"
+	Label string   `json:"label"` // human label for display
+	Node  string   `json:"node"`  // "" = builder-wide; a server/member name for per-node (Incus)
+	Kind  string   `json:"kind"`  // MetricTimeseries | MetricGauge
+	Unit  string   `json:"unit"`  // "%", "ops/s", "ms", "count", "bytes/s", ...
+	Value float64  `json:"value"`
+	Max   *float64 `json:"max,omitempty"` // set only for a gauge (the quota limit); nil = unbounded series
+}
+
+const (
+	MetricTimeseries = "timeseries"
+	MetricGauge      = "gauge"
+	// MetricCounter is a monotonically-increasing total (e.g. cumulative network
+	// bytes). Value carries the raw counter; the API turns consecutive samples
+	// into a per-second rate for the chart, so the builder never has to compute a
+	// rate itself (and a single live sample simply yields no rate yet). Unit is
+	// the DISPLAY unit of that rate, e.g. "bytes/s".
+	MetricCounter = "counter"
+)
+
+// Stats is a builder's current reading of its own backend health -- a flat list
+// of self-describing Metrics plus any best-effort warnings (a node that couldn't
+// be read, a quota near its limit). Sampled on an interval by the collector and
+// stored for the time-series history; gauges are shown at their latest value.
+type Stats struct {
+	Metrics  []Metric `json:"metrics"`
+	Warnings []string `json:"warnings,omitempty"`
+}
+
+// MetricProvider is the OPTIONAL stats contract: a builder that can report its
+// stack's health implements it, and is probed for it (b.(MetricProvider)) the
+// same way the other optional builder capabilities are. A builder that doesn't
+// (OpenStack, the fake builder) simply has no stats UI.
+type MetricProvider interface {
+	Stats(ctx context.Context) (Stats, error)
+}
+
+// ConsoleLogReader is the OPTIONAL instance-console contract: a builder that can
+// read a deployed instance's console output (boot messages, cloud-init or
+// cloudbase-init progress) implements it, and is probed for it
+// (b.(ConsoleLogReader)) like MetricProvider. The orchestrator captures it when
+// a host's agent never checks in, since the console is the one view of a guest
+// that doesn't depend on the agent. ConsoleLog returns at most the last maxBytes
+// of the log.
+type ConsoleLogReader interface {
+	ConsoleLog(ctx context.Context, team, externalRef string, maxBytes int) (string, error)
+}
+
+// TailBytes keeps the last max bytes of a console log (max <= 0 keeps it all).
+func TailBytes(b []byte, max int) string {
+	if max > 0 && len(b) > max {
+		b = b[len(b)-max:]
+	}
+	return string(b)
+}
+
+// Demand is what an environment will need from its builder, estimated across all
+// teams BEFORE any hoster call, so a quota wall is caught up front instead of
+// mid-deploy (the sibling of the AWS IAM pre-flight check). Builder-agnostic: it
+// carries LaForge concepts (teams, public hosts, size names), and the builder
+// translates them into its own units -- on AWS, Teams -> VPCs, PublicHosts ->
+// Elastic IPs, and each size -> an instance type whose vCPUs count toward the
+// region vCPU quota. See docs/plans/builder-monitoring.md.
+type Demand struct {
+	Teams          int            // one isolated network per team (one VPC on AWS)
+	PublicHosts    int            // total across teams -- each needs an external address (an EIP on AWS)
+	InstanceCounts map[string]int // size name -> number of host instances across all teams
+}
+
+// Readiness is a ReadinessChecker's verdict: human-readable warnings about limits
+// the build would exceed. Empty Warnings means clear to deploy. It's advisory --
+// the check never blocks a deploy, it surfaces what a quota would.
+type Readiness struct {
+	Warnings []string `json:"warnings,omitempty"`
+}
+
+// ReadinessChecker is the OPTIONAL pre-deploy capacity contract: a builder whose
+// backend enforces account limits implements it and is probed for it
+// (b.(ReadinessChecker)), the same way MetricProvider is. Only AWS implements it
+// today -- it's the one hoster where a quota silently breaks a deploy. A builder
+// that doesn't simply has no pre-deploy readiness warnings.
+type ReadinessChecker interface {
+	CheckReadiness(ctx context.Context, d Demand) (Readiness, error)
+}
 
 // Builder is the contract. Every Deploy*/Destroy* call must be an
 // "ensure": safe to call more than once for the same ExternalName /

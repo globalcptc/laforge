@@ -1,8 +1,8 @@
 --
 -- PostgreSQL database dump
 --
--- Dumped from database version 17.11 (Debian 17.11-1.pgdg13+2)
--- Dumped by pg_dump version 17.11 (Debian 17.11-1.pgdg13+2)
+-- Dumped from database version 16.15 (Homebrew)
+-- Dumped by pg_dump version 16.15 (Homebrew)
 --
 -- Name: laforge_notify_event(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -50,7 +50,9 @@ CREATE TABLE public.agent_heartbeat (
     mem_pct double precision,
     disk_pct double precision,
     net_rx_bps double precision,
-    net_tx_bps double precision
+    net_tx_bps double precision,
+    boot_at timestamp with time zone,
+    agent_started_at timestamp with time zone
 );
 --
 -- Name: agent_session; Type: TABLE; Schema: public; Owner: -
@@ -60,7 +62,9 @@ CREATE TABLE public.agent_session (
     deployed_object_id uuid NOT NULL,
     cert_fingerprint text NOT NULL,
     first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
-    last_heartbeat_at timestamp with time zone DEFAULT now() NOT NULL
+    last_heartbeat_at timestamp with time zone DEFAULT now() NOT NULL,
+    boot_at timestamp with time zone,
+    agent_started_at timestamp with time zone
 );
 --
 -- Name: agent_task; Type: TABLE; Schema: public; Owner: -
@@ -80,6 +84,14 @@ CREATE TABLE public.agent_task (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     ignore_errors boolean DEFAULT false NOT NULL,
     ad_hoc boolean DEFAULT false NOT NULL,
+    reboots boolean DEFAULT false NOT NULL,
+    started_at timestamp with time zone,
+    finished_at timestamp with time zone,
+    max_attempts integer,
+    milestone text,
+    step_script text,
+    wait_for jsonb,
+    scheduled_task_id uuid,
     CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text, 'blocked'::text])))
 );
 --
@@ -94,6 +106,12 @@ CREATE TABLE public.attention_dismissal (
 --
 -- Name: build; Type: TABLE; Schema: public; Owner: -
 --
+CREATE TABLE public.build_render_secret (
+    build_id uuid NOT NULL,
+    secret bytea NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE public.build (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     configured_build_id uuid,
@@ -104,7 +122,8 @@ CREATE TABLE public.build (
     auto_built boolean DEFAULT false NOT NULL,
     reconcile_error text,
     created_by_account_id uuid,
-    CONSTRAINT build_status_check CHECK ((status = ANY (ARRAY['planned'::text, 'deploying'::text, 'building'::text, 'finished'::text, 'failed'::text, 'tearing_down'::text, 'torn_down'::text, 'purged'::text])))
+    resolved_revision_id uuid,
+    CONSTRAINT build_status_check CHECK ((status = ANY (ARRAY['planned'::text, 'deploying'::text, 'building'::text, 'finished'::text, 'failed'::text, 'tearing_down'::text, 'torn_down'::text, 'purged'::text, 'discarded'::text])))
 );
 --
 -- Name: builder_config; Type: TABLE; Schema: public; Owner: -
@@ -134,6 +153,13 @@ CREATE TABLE public.builder_config (
     external_port_max integer,
     incus_project text,
     microcloud_public_access jsonb,
+    aws_config jsonb,
+    aws_credential_id uuid,
+    incus_one_team_per_host boolean DEFAULT false NOT NULL,
+    color text DEFAULT ''::text NOT NULL,
+    max_concurrency integer DEFAULT 0 NOT NULL,
+    microcloud_cluster_group text DEFAULT 'default'::text NOT NULL,
+    incus_host_max_concurrency integer DEFAULT 0 NOT NULL,
     CONSTRAINT builder_config_kind_check CHECK ((kind = ANY (ARRAY['fake'::text, 'incus'::text, 'microcloud'::text, 'aws'::text, 'openstack'::text])))
 );
 --
@@ -147,7 +173,9 @@ CREATE TABLE public.builder_credential (
     server_cert_pem text NOT NULL,
     client_cert_pem text NOT NULL,
     client_key_pem text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    aws_access_key_id text DEFAULT ''::text NOT NULL,
+    aws_secret_access_key text DEFAULT ''::text NOT NULL
 );
 --
 -- Name: builder_image_build; Type: TABLE; Schema: public; Owner: -
@@ -188,6 +216,21 @@ CREATE SEQUENCE public.builder_image_build_log_id_seq
 --
 ALTER SEQUENCE public.builder_image_build_log_id_seq OWNED BY public.builder_image_build_log.id;
 --
+-- Name: builder_metric_sample; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.builder_metric_sample (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    builder_config_id uuid NOT NULL,
+    key text NOT NULL,
+    label text DEFAULT ''::text NOT NULL,
+    node text DEFAULT ''::text NOT NULL,
+    kind text NOT NULL,
+    unit text DEFAULT ''::text NOT NULL,
+    value double precision NOT NULL,
+    max double precision,
+    sampled_at timestamp with time zone DEFAULT now() NOT NULL
+);
+--
 -- Name: configured_build; Type: TABLE; Schema: public; Owner: -
 --
 CREATE TABLE public.configured_build (
@@ -200,6 +243,14 @@ CREATE TABLE public.configured_build (
     current_content_revision_id uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     auto_deploy_enabled boolean DEFAULT true NOT NULL
+);
+--
+-- Name: configured_build_favorite; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.configured_build_favorite (
+    account_id uuid NOT NULL,
+    configured_build_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 --
 -- Name: container; Type: TABLE; Schema: public; Owner: -
@@ -258,8 +309,11 @@ CREATE TABLE public.deployed_object (
     steps_materialized_at timestamp with time zone,
     blocked_on jsonb,
     public_address text DEFAULT ''::text NOT NULL,
+    deployed_at timestamp with time zone,
+    agent_platform text DEFAULT ''::text NOT NULL,
+    agent_checkin_overdue_at timestamp with time zone,
     CONSTRAINT deployed_object_kind_check CHECK ((kind = ANY (ARRAY['network'::text, 'host'::text, 'container'::text, 'dns'::text]))),
-    CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroying'::text, 'destroyed'::text])))
+    CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroying'::text, 'destroy_failed'::text, 'destroyed'::text])))
 );
 --
 -- Name: environment; Type: TABLE; Schema: public; Owner: -
@@ -282,7 +336,8 @@ CREATE TABLE public.environment (
     findings jsonb DEFAULT '[]'::jsonb NOT NULL,
     extends text,
     agent_debug boolean DEFAULT false NOT NULL,
-    container_logs jsonb
+    container_logs jsonb,
+    cidr text
 );
 --
 -- Name: event; Type: TABLE; Schema: public; Owner: -
@@ -586,6 +641,7 @@ CREATE TABLE public.task (
     last_error text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    permanent boolean DEFAULT false NOT NULL,
     CONSTRAINT task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text])))
 );
 --
@@ -672,6 +728,14 @@ ALTER TABLE ONLY public.attention_dismissal
 --
 ALTER TABLE ONLY public.build
     ADD CONSTRAINT build_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: build_render_secret build_render_secret_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.build_render_secret
+    ADD CONSTRAINT build_render_secret_pkey PRIMARY KEY (build_id);
 --
 -- Name: builder_config builder_config_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -698,15 +762,25 @@ ALTER TABLE ONLY public.builder_image_build_log
 ALTER TABLE ONLY public.builder_image_build
     ADD CONSTRAINT builder_image_build_pkey PRIMARY KEY (id);
 --
+-- Name: builder_metric_sample builder_metric_sample_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.builder_metric_sample
+    ADD CONSTRAINT builder_metric_sample_pkey PRIMARY KEY (id);
+--
+-- Name: configured_build_favorite configured_build_favorite_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.configured_build_favorite
+    ADD CONSTRAINT configured_build_favorite_pkey PRIMARY KEY (account_id, configured_build_id);
+--
 -- Name: configured_build configured_build_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 ALTER TABLE ONLY public.configured_build
     ADD CONSTRAINT configured_build_pkey PRIMARY KEY (id);
 --
--- Name: configured_build configured_build_repository_id_branch_environment_path_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: configured_build configured_build_repo_branch_env_builder_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 ALTER TABLE ONLY public.configured_build
-    ADD CONSTRAINT configured_build_repository_id_branch_environment_path_key UNIQUE (repository_id, branch, environment_path);
+    ADD CONSTRAINT configured_build_repo_branch_env_builder_key UNIQUE (repository_id, branch, environment_path, builder_config_name);
 --
 -- Name: container container_content_revision_id_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -767,6 +841,11 @@ ALTER TABLE ONLY public.fake_dns_record
 --
 ALTER TABLE ONLY public.fake_hoster_resource
     ADD CONSTRAINT fake_hoster_resource_pkey PRIMARY KEY (external_ref);
+--
+-- Name: github_installation github_installation_account_login_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.github_installation
+    ADD CONSTRAINT github_installation_account_login_key UNIQUE (account_login);
 --
 -- Name: github_installation github_installation_installation_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -950,6 +1029,14 @@ CREATE INDEX agent_session_fingerprint_idx ON public.agent_session USING btree (
 --
 CREATE INDEX agent_task_leasable_idx ON public.agent_task USING btree (deployed_object_id, status, step_index);
 --
+-- Name: agent_task_milestone_idx; Type: INDEX; Schema: public; Owner: -
+--
+CREATE INDEX agent_task_milestone_idx ON public.agent_task USING btree (deployed_object_id) WHERE ((milestone IS NOT NULL) OR (step_script IS NOT NULL));
+--
+-- Name: agent_task_scheduled_task_idx; Type: INDEX; Schema: public; Owner: -
+--
+CREATE INDEX agent_task_scheduled_task_idx ON public.agent_task USING btree (scheduled_task_id) WHERE (scheduled_task_id IS NOT NULL);
+--
 -- Name: builder_image_build_by_builder_idx; Type: INDEX; Schema: public; Owner: -
 --
 CREATE INDEX builder_image_build_by_builder_idx ON public.builder_image_build USING btree (builder_config_id, created_at DESC);
@@ -961,6 +1048,14 @@ CREATE UNIQUE INDEX builder_image_build_log_seq_idx ON public.builder_image_buil
 -- Name: builder_image_build_pending_idx; Type: INDEX; Schema: public; Owner: -
 --
 CREATE INDEX builder_image_build_pending_idx ON public.builder_image_build USING btree (created_at) WHERE (status = 'pending'::text);
+--
+-- Name: builder_metric_sample_lookup; Type: INDEX; Schema: public; Owner: -
+--
+CREATE INDEX builder_metric_sample_lookup ON public.builder_metric_sample USING btree (builder_config_id, key, node, sampled_at DESC);
+--
+-- Name: builder_metric_sample_sampled_at; Type: INDEX; Schema: public; Owner: -
+--
+CREATE INDEX builder_metric_sample_sampled_at ON public.builder_metric_sample USING btree (sampled_at);
 --
 -- Name: deployed_object_identity_idx; Type: INDEX; Schema: public; Owner: -
 --
@@ -1010,6 +1105,10 @@ CREATE INDEX shell_session_live_idx ON public.shell_session USING btree (status)
 --
 CREATE INDEX task_leasable_idx ON public.task USING btree (status, lease_expires_at);
 --
+-- Name: task_object_history_idx; Type: INDEX; Schema: public; Owner: -
+--
+CREATE INDEX task_object_history_idx ON public.task USING btree (deployed_object_id, created_at DESC) WHERE (deployed_object_id IS NOT NULL);
+--
 -- Name: task_one_open_per_object; Type: INDEX; Schema: public; Owner: -
 --
 CREATE UNIQUE INDEX task_one_open_per_object ON public.task USING btree (deployed_object_id) WHERE ((status = ANY (ARRAY['pending'::text, 'leased'::text])) AND (deployed_object_id IS NOT NULL));
@@ -1037,6 +1136,8 @@ ALTER TABLE ONLY public.agent_session
 --
 ALTER TABLE ONLY public.agent_task
     ADD CONSTRAINT agent_task_deployed_object_id_fkey FOREIGN KEY (deployed_object_id) REFERENCES public.deployed_object(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.agent_task
+    ADD CONSTRAINT agent_task_scheduled_task_id_fkey FOREIGN KEY (scheduled_task_id) REFERENCES public.scheduled_task(id) ON DELETE SET NULL;
 --
 -- Name: attention_dismissal attention_dismissal_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
@@ -1047,6 +1148,11 @@ ALTER TABLE ONLY public.attention_dismissal
 --
 ALTER TABLE ONLY public.attention_dismissal
     ADD CONSTRAINT attention_dismissal_build_id_fkey FOREIGN KEY (build_id) REFERENCES public.build(id) ON DELETE CASCADE;
+--
+-- Name: build_render_secret build_render_secret_build_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.build_render_secret
+    ADD CONSTRAINT build_render_secret_build_id_fkey FOREIGN KEY (build_id) REFERENCES public.build(id) ON DELETE CASCADE;
 --
 -- Name: build build_configured_build_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
@@ -1063,6 +1169,11 @@ ALTER TABLE ONLY public.build
 ALTER TABLE ONLY public.build
     ADD CONSTRAINT build_created_by_account_id_fkey FOREIGN KEY (created_by_account_id) REFERENCES public.account(id) ON DELETE SET NULL;
 --
+-- Name: builder_config builder_config_aws_credential_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.builder_config
+    ADD CONSTRAINT builder_config_aws_credential_id_fkey FOREIGN KEY (aws_credential_id) REFERENCES public.builder_credential(id);
+--
 -- Name: builder_config builder_config_incus_credential_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 ALTER TABLE ONLY public.builder_config
@@ -1078,10 +1189,25 @@ ALTER TABLE ONLY public.builder_image_build
 ALTER TABLE ONLY public.builder_image_build_log
     ADD CONSTRAINT builder_image_build_log_build_id_fkey FOREIGN KEY (build_id) REFERENCES public.builder_image_build(id) ON DELETE CASCADE;
 --
+-- Name: builder_metric_sample builder_metric_sample_builder_config_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.builder_metric_sample
+    ADD CONSTRAINT builder_metric_sample_builder_config_id_fkey FOREIGN KEY (builder_config_id) REFERENCES public.builder_config(id) ON DELETE CASCADE;
+--
 -- Name: configured_build configured_build_current_content_revision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 ALTER TABLE ONLY public.configured_build
     ADD CONSTRAINT configured_build_current_content_revision_id_fkey FOREIGN KEY (current_content_revision_id) REFERENCES public.content_revision(id);
+--
+-- Name: configured_build_favorite configured_build_favorite_account_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.configured_build_favorite
+    ADD CONSTRAINT configured_build_favorite_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.account(id) ON DELETE CASCADE;
+--
+-- Name: configured_build_favorite configured_build_favorite_configured_build_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.configured_build_favorite
+    ADD CONSTRAINT configured_build_favorite_configured_build_id_fkey FOREIGN KEY (configured_build_id) REFERENCES public.configured_build(id) ON DELETE CASCADE;
 --
 -- Name: configured_build configured_build_repository_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --

@@ -19,18 +19,18 @@
 
 use serde_json::Value;
 use std::fs;
-use std::io::Write as _;
-use std::process::Command;
-#[cfg(unix)]
-use std::process::Stdio;
-use std::sync::OnceLock;
+use std::io::{Read, Write as _};
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{mpsc, Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 /// Outcome is (status, output, error) exactly matching
 /// agentproto.ReportStatusRequestPayload's three fields -- run() always
 /// returns one of these, never panics, for any payload shape including a
 /// deliberately malformed one (see the malformed-payload tests below).
 pub struct Outcome {
-    pub status: &'static str, // "done" | "failed"
+    pub status: &'static str, // "done" | "failed" | "timeout" (execute only)
     pub output: String,
     pub error: String,
     /// Only ever non-empty for a `validate` task (see validators::run) --
@@ -65,6 +65,7 @@ fn dispatch_table() -> &'static (u64, crate::obfuscate::JumpTable<Handler>) {
             ("add_to_group", cmd_add_to_group),
             ("service", cmd_service),
             ("reboot", cmd_reboot),
+            ("disconnect_sessions", cmd_disconnect_sessions),
             ("download", cmd_download),
             ("extract", cmd_extract),
         ];
@@ -96,9 +97,22 @@ pub fn run(command: &str, payload: &Value) -> Outcome {
     };
     match result {
         Ok(output) => Outcome { status: "done", output, error: String::new(), validator_results: Vec::new() },
-        Err(error) => Outcome { status: "failed", output: String::new(), error, validator_results: Vec::new() },
+        Err(error) => {
+            // A timed-out execute reports "timeout" so the gateway can treat it as
+            // terminal (no retry); older gateways see any non-"done" as failed.
+            let status = if command == "execute" && error.starts_with(&format!("{} {TIMED_OUT}", opt_str(payload, "command"))) {
+                "timeout"
+            } else {
+                "failed"
+            };
+            Outcome { status, output: String::new(), error, validator_results: Vec::new() }
+        }
     }
 }
+
+/// Follows the command name in a timed-out execute's error; run() keys the
+/// "timeout" status off it, and the gateway falls back to matching it.
+const TIMED_OUT: &str = "timed out after ";
 
 fn req_str<'a>(payload: &'a Value, field: &str) -> Result<&'a str, String> {
     payload.get(field).and_then(Value::as_str).ok_or_else(|| format!("missing or non-string field {field:?}"))
@@ -122,12 +136,320 @@ fn cmd_execute(payload: &Value) -> Result<String, String> {
             cmd.current_dir(dir);
         }
     }
-    let out = cmd.output().map_err(|e| format!("spawning {command}: {e}"))?;
-    if out.status.success() {
-        Ok(String::from_utf8_lossy(&out.stdout).to_string())
-    } else {
-        Err(format!("{command} exited {}: {}", out.status, String::from_utf8_lossy(&out.stderr)))
+    // The gateway sends the step's timeout_sec; absent or 0 means no deadline.
+    let timeout_sec = payload.get("timeout_sec").and_then(Value::as_u64).unwrap_or(0);
+    let timeout = (timeout_sec > 0).then(|| Duration::from_secs(timeout_sec));
+    let out = run_captured(cmd, timeout, PIPE_DRAIN_GRACE).map_err(|e| format!("spawning {command}: {e}"))?;
+    match out.status {
+        Some(status) if status.success() => Ok(String::from_utf8_lossy(&out.stdout).to_string()),
+        Some(status) => Err(format!("{command} exited {status}: {}", failure_detail(&out.stdout, &out.stderr))),
+        None => Err(format!(
+            "{command} {TIMED_OUT}{timeout_sec}s and was killed along with its child processes; output before the kill: {}",
+            failure_detail(&out.stdout, &out.stderr)
+        )),
     }
+}
+
+// --- run_captured: execute with a deadline and a whole-tree kill ----------
+//
+// Command::output() waits forever, so a hung script used to hold its host's
+// task lane indefinitely regardless of the step's timeout. run_captured spawns
+// the child into its own killable unit -- a process group on Unix, a Job Object
+// on Windows -- drains stdout/stderr on threads, and polls for exit against the
+// deadline. On expiry the WHOLE tree is killed, not just the direct child: a
+// shell wrapper killed alone leaves its grandchildren running and holding the
+// output pipes open.
+//
+// Escape hatches remain: a Unix grandchild that calls setsid() leaves the
+// group, and on Windows a grandchild started in the instant between spawn and
+// job assignment isn't in the job. Both are far outside what a step script does
+// in practice.
+
+/// How long to keep reading a command's output after it exits (or is killed).
+/// A script that backgrounds a daemon without redirecting it leaves that daemon
+/// holding the pipe -- Command::output() would wait on it forever. After the
+/// grace the capture keeps draining (so the daemon never blocks on a full pipe)
+/// but discards, and the step reports what it had.
+const PIPE_DRAIN_GRACE: Duration = Duration::from_secs(5);
+
+const WAIT_POLL: Duration = Duration::from_millis(50);
+
+struct Captured {
+    /// None when the deadline expired and the tree was killed.
+    status: Option<ExitStatus>,
+    stdout: Vec<u8>,
+    stderr: Vec<u8>,
+}
+
+fn run_captured(mut cmd: Command, timeout: Option<Duration>, drain_grace: Duration) -> std::io::Result<Captured> {
+    cmd.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut tree = ProcessTree::spawn(cmd)?;
+    let stdout = Capture::start(tree.child.stdout.take());
+    let stderr = Capture::start(tree.child.stderr.take());
+    let deadline = timeout.map(|t| Instant::now() + t);
+    let status = loop {
+        match tree.child.try_wait() {
+            Ok(Some(status)) => break Some(status),
+            Ok(None) => {}
+            Err(e) => {
+                tree.kill();
+                return Err(e);
+            }
+        }
+        let mut nap = WAIT_POLL;
+        if let Some(d) = deadline {
+            let left = d.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                tree.kill();
+                break None;
+            }
+            nap = nap.min(left);
+        }
+        std::thread::sleep(nap);
+    };
+    let drain_until = Instant::now() + drain_grace;
+    Ok(Captured { status, stdout: stdout.finish(drain_until), stderr: stderr.finish(drain_until) })
+}
+
+/// Capture drains one output pipe on its own thread into a shared buffer, so
+/// the result can be taken at a deadline even if the pipe never reaches EOF.
+struct Capture {
+    buf: Arc<Mutex<Vec<u8>>>,
+    detached: Arc<AtomicBool>,
+    done: mpsc::Receiver<()>,
+}
+
+impl Capture {
+    fn start<R: Read + Send + 'static>(src: Option<R>) -> Capture {
+        let buf = Arc::new(Mutex::new(Vec::new()));
+        let detached = Arc::new(AtomicBool::new(false));
+        let (tx, done) = mpsc::channel();
+        if let Some(mut src) = src {
+            let (buf, detached) = (buf.clone(), detached.clone());
+            std::thread::spawn(move || {
+                let mut chunk = [0u8; 8192];
+                loop {
+                    match src.read(&mut chunk) {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) if !detached.load(Ordering::Relaxed) => {
+                            buf.lock().unwrap_or_else(|e| e.into_inner()).extend_from_slice(&chunk[..n])
+                        }
+                        Ok(_) => {}
+                    }
+                }
+                let _ = tx.send(());
+            });
+        }
+        Capture { buf, detached, done }
+    }
+
+    /// Waits for EOF until `until`, then takes whatever was read. The channel
+    /// also disconnects (returning at once) when there was no pipe to read.
+    fn finish(self, until: Instant) -> Vec<u8> {
+        let _ = self.done.recv_timeout(until.saturating_duration_since(Instant::now()));
+        self.detached.store(true, Ordering::Relaxed);
+        std::mem::take(&mut *self.buf.lock().unwrap_or_else(|e| e.into_inner()))
+    }
+}
+
+/// ProcessTree is a spawned child plus the handle that kills everything it
+/// started: its process group on Unix, its Job Object on Windows.
+struct ProcessTree {
+    child: Child,
+    #[cfg(windows)]
+    job: Option<job::Job>,
+}
+
+#[cfg(unix)]
+impl ProcessTree {
+    fn spawn(mut cmd: Command) -> std::io::Result<ProcessTree> {
+        use std::os::unix::process::CommandExt;
+        cmd.process_group(0); // the child leads a new group whose id is its pid
+        Ok(ProcessTree { child: cmd.spawn()? })
+    }
+
+    fn kill(&mut self) {
+        extern "C" {
+            fn kill(pid: i32, sig: i32) -> i32;
+        }
+        const SIGKILL: i32 = 9;
+        // A negative pid signals the whole process group.
+        unsafe {
+            kill(-(self.child.id() as i32), SIGKILL);
+        }
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+#[cfg(windows)]
+impl ProcessTree {
+    fn spawn(mut cmd: Command) -> std::io::Result<ProcessTree> {
+        use std::os::windows::io::AsRawHandle;
+        let child = cmd.spawn()?;
+        // Without a job, a timeout still kills the direct child; only the tree
+        // kill degrades. Nested jobs need Windows 8 / Server 2012 or later.
+        let job = job::Job::new().and_then(|j| j.assign(child.as_raw_handle()).map(|_| j));
+        let job = match job {
+            Ok(j) => Some(j),
+            Err(e) => {
+                crate::diag::write_line(&format!("laforge-agent: execute: no job object for pid {} ({e}); timeout will kill only the direct child", child.id()));
+                None
+            }
+        };
+        Ok(ProcessTree { child, job })
+    }
+
+    fn kill(&mut self) {
+        if let Some(job) = &self.job {
+            job.terminate();
+        }
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+/// Minimal Job Object FFI, declared directly (like antitamper.rs and shell.rs)
+/// rather than pulling in a Windows API crate. The job is created with
+/// KILL_ON_JOB_CLOSE so the tree also dies if the agent itself does; on a
+/// normal exit Drop clears that flag before closing, so a daemon a script
+/// legitimately started outlives the step.
+#[cfg(windows)]
+mod job {
+    use std::os::raw::c_void;
+
+    type Handle = *mut c_void;
+
+    #[repr(C)]
+    #[derive(Default)]
+    struct BasicLimitInformation {
+        per_process_user_time_limit: i64,
+        per_job_user_time_limit: i64,
+        limit_flags: u32,
+        minimum_working_set_size: usize,
+        maximum_working_set_size: usize,
+        active_process_limit: u32,
+        affinity: usize,
+        priority_class: u32,
+        scheduling_class: u32,
+    }
+
+    #[repr(C)]
+    #[derive(Default)]
+    struct IoCounters {
+        read_operation_count: u64,
+        write_operation_count: u64,
+        other_operation_count: u64,
+        read_transfer_count: u64,
+        write_transfer_count: u64,
+        other_transfer_count: u64,
+    }
+
+    #[repr(C)]
+    #[derive(Default)]
+    struct ExtendedLimitInformation {
+        basic: BasicLimitInformation,
+        io: IoCounters,
+        process_memory_limit: usize,
+        job_memory_limit: usize,
+        peak_process_memory_used: usize,
+        peak_job_memory_used: usize,
+    }
+
+    const JOB_OBJECT_EXTENDED_LIMIT_INFORMATION: i32 = 9;
+    const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE: u32 = 0x2000;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn CreateJobObjectW(attributes: *mut c_void, name: *const u16) -> Handle;
+        fn SetInformationJobObject(job: Handle, class: i32, info: *mut c_void, len: u32) -> i32;
+        fn AssignProcessToJobObject(job: Handle, process: Handle) -> i32;
+        fn TerminateJobObject(job: Handle, exit_code: u32) -> i32;
+        fn CloseHandle(handle: Handle) -> i32;
+    }
+
+    pub struct Job(Handle);
+
+    impl Job {
+        pub fn new() -> std::io::Result<Job> {
+            let h = unsafe { CreateJobObjectW(std::ptr::null_mut(), std::ptr::null()) };
+            if h.is_null() {
+                return Err(std::io::Error::last_os_error());
+            }
+            let job = Job(h);
+            job.set_limit_flags(JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE)?;
+            Ok(job)
+        }
+
+        pub fn assign(&self, process: std::os::windows::io::RawHandle) -> std::io::Result<()> {
+            if unsafe { AssignProcessToJobObject(self.0, process as Handle) } == 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            Ok(())
+        }
+
+        pub fn terminate(&self) {
+            unsafe {
+                TerminateJobObject(self.0, 1);
+            }
+        }
+
+        fn set_limit_flags(&self, flags: u32) -> std::io::Result<()> {
+            let mut info = ExtendedLimitInformation::default();
+            info.basic.limit_flags = flags;
+            let ok = unsafe {
+                SetInformationJobObject(
+                    self.0,
+                    JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+                    &mut info as *mut _ as *mut c_void,
+                    std::mem::size_of::<ExtendedLimitInformation>() as u32,
+                )
+            };
+            if ok == 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            Ok(())
+        }
+    }
+
+    impl Drop for Job {
+        fn drop(&mut self) {
+            let _ = self.set_limit_flags(0);
+            unsafe {
+                CloseHandle(self.0);
+            }
+        }
+    }
+}
+
+// failure_detail builds the diagnostic for a failed command from BOTH its stderr
+// and stdout -- many tools (docker compose among them, and plain shell scripts)
+// write their real error to stdout, so stderr alone comes back empty and a step
+// failure reads as a bare "exited 1:" with nothing useful. Capped to a tail so a
+// noisy command can't bloat the event payload (the error is almost always last).
+fn failure_detail(stdout: &[u8], stderr: &[u8]) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    let e = String::from_utf8_lossy(stderr);
+    if !e.trim().is_empty() {
+        parts.push(e.trim_end().to_string());
+    }
+    let o = String::from_utf8_lossy(stdout);
+    if !o.trim().is_empty() {
+        parts.push(o.trim_end().to_string());
+    }
+    let joined = if parts.is_empty() { "(no output)".to_string() } else { parts.join("\n") };
+    tail(&joined, 16_000)
+}
+
+// tail keeps the last `max` bytes of s (on a char boundary), prefixing a marker
+// when it had to cut -- a command's failure is almost always at the end.
+fn tail(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        return s.to_string();
+    }
+    let cut = s.len() - max;
+    let start = (cut..s.len()).find(|&i| s.is_char_boundary(i)).unwrap_or(s.len());
+    format!("…(truncated)…\n{}", &s[start..])
 }
 
 fn cmd_write_file(payload: &Value) -> Result<String, String> {
@@ -419,14 +741,150 @@ fn cmd_service(payload: &Value) -> Result<String, String> {
 #[cfg(unix)]
 fn cmd_reboot(payload: &Value) -> Result<String, String> {
     let delay = payload.get("delay_sec").and_then(Value::as_i64).unwrap_or(0).max(0);
+    // Cancel any already-pending shutdown so a re-issue is idempotent; ignore the
+    // error when none is pending.
+    let _ = run_ok("shutdown", &["-c"]);
     run_ok("shutdown", &["-r", &format!("+{}", (delay + 59) / 60)])?;
     Ok(format!("reboot scheduled in {delay}s"))
 }
 #[cfg(windows)]
 fn cmd_reboot(payload: &Value) -> Result<String, String> {
     let delay = payload.get("delay_sec").and_then(Value::as_i64).unwrap_or(0).max(0);
-    run_ok("shutdown", &["/r", "/t", &delay.to_string()])?;
-    Ok(format!("reboot scheduled in {delay}s"))
+    // Abort any shutdown this box already has scheduled, so re-issuing is
+    // idempotent -- otherwise `shutdown /r` fails with 1190 ("a system shutdown
+    // has already been scheduled"). Ignore the error: it fails when nothing is
+    // scheduled, which is the normal case.
+    let _ = run_ok("shutdown", &["/a"]);
+    // /f forces the reboot through. A non-forced reboot issued by the agent
+    // (running as a LocalSystem service, session 0) was observed being DEFERRED
+    // until an interactive login released it -- leaving the host hung mid-build.
+    run_ok("shutdown", &["/r", "/t", &delay.to_string(), "/f"])?;
+    Ok(format!("reboot scheduled in {delay}s (forced)"))
+}
+
+/// parse_rdp_session_ids pulls the numeric session IDs of connected RDP
+/// sessions out of `query session` output. A connected RDP session's
+/// SESSIONNAME is "rdp-tcp#<n>"; the bare "rdp-tcp" listener, "console" and
+/// "services" rows are skipped, so only live remote sessions are returned.
+/// USERNAME can be blank, which shifts columns, so the ID is taken as the first
+/// purely-numeric token on the row rather than by position ("rdp-tcp#2" is not
+/// purely numeric, so the name is never mistaken for the ID). Kept pure and
+/// platform-independent so it can be unit-tested anywhere, not only on Windows.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn parse_rdp_session_ids(text: &str) -> Vec<u32> {
+    let mut ids: Vec<u32> = Vec::new();
+    for line in text.lines() {
+        // A leading '>' marks the current session; strip it before matching.
+        let line = line.trim_start_matches('>').trim_start();
+        let mut toks = line.split_whitespace();
+        let name = match toks.next() {
+            Some(n) => n,
+            None => continue,
+        };
+        if !name.starts_with("rdp-tcp#") {
+            continue;
+        }
+        if let Some(id) = toks.find_map(|t| t.parse::<u32>().ok()) {
+            ids.push(id);
+        }
+    }
+    ids
+}
+
+/// cmd_disconnect_sessions forcibly ends live interactive remote-access
+/// sessions WITHOUT disturbing the agent's own outbound connection to the
+/// gateway. The access reconciler fires this at a team on close, because the
+/// network firewall only blocks NEW connections: an already-established RDP/SSH
+/// session rides conntrack (on a bridge the published port is a nat-proxy whose
+/// DNAT conntrack survives the proxy's removal) and the firewall can't tear a
+/// live flow down. The agent, reached over the one egress path a closed team
+/// keeps, drops the sessions from inside the guest instead. It only ever acts
+/// on the inbound/listening side (log off RDP sessions; reset established
+/// sockets on service ports), never on its own outbound gateway socket.
+#[cfg(windows)]
+fn cmd_disconnect_sessions(_payload: &Value) -> Result<String, String> {
+    // `query session` lists one row per session. A connected RDP session's
+    // SESSIONNAME is "rdp-tcp#<n>"; the bare "rdp-tcp" row is the idle listener
+    // and "console"/"services" are local, so keying on the "rdp-tcp#" prefix
+    // hits exactly the live remote sessions. The agent runs as a LocalSystem
+    // service in session 0, which has no "rdp-tcp#" name, so it is never a
+    // candidate -- its gateway connection is untouched.
+    let out = Command::new("query")
+        .arg("session")
+        .output()
+        .map_err(|e| format!("spawning query session: {e}"))?;
+    if !out.status.success() {
+        return Err(format!("query session exited {}: {}", out.status, String::from_utf8_lossy(&out.stderr).trim()));
+    }
+    let text = String::from_utf8_lossy(&out.stdout);
+    let ids = parse_rdp_session_ids(&text);
+    if ids.is_empty() {
+        return Ok("no active RDP sessions to disconnect".to_string());
+    }
+    let mut done: Vec<u32> = Vec::new();
+    let mut errs: Vec<String> = Vec::new();
+    for id in &ids {
+        match Command::new("logoff").arg(id.to_string()).output() {
+            Ok(o) if o.status.success() => done.push(*id),
+            Ok(o) => errs.push(format!("session {id}: logoff exited {} {}", o.status, String::from_utf8_lossy(&o.stderr).trim())),
+            Err(e) => errs.push(format!("session {id}: spawning logoff: {e}")),
+        }
+    }
+    if done.is_empty() && !errs.is_empty() {
+        return Err(format!("failed to log off RDP session(s): {}", errs.join("; ")));
+    }
+    let mut msg = format!("logged off {} RDP session(s): {:?}", done.len(), done);
+    if !errs.is_empty() {
+        msg.push_str(&format!(" ({} failed: {})", errs.len(), errs.join("; ")));
+    }
+    Ok(msg)
+}
+
+#[cfg(unix)]
+fn cmd_disconnect_sessions(payload: &Value) -> Result<String, String> {
+    // `ss -K` resets matching sockets; it needs CONFIG_INET_DIAG_DESTROY and
+    // root (the agent has both). We match the LISTENING side (sport) of the
+    // usual remote-access ports plus any the server passed in `ports`, so only
+    // inbound sessions are reset -- the agent's own connection is OUTBOUND to
+    // the gateway on a different port and is never matched. Best-effort per
+    // port: a kernel without -K support is reported, not fatal.
+    let mut ports: Vec<u64> = vec![22, 3389, 5900];
+    if let Some(arr) = payload.get("ports").and_then(Value::as_array) {
+        for v in arr {
+            if let Some(p) = v.as_u64() {
+                if p > 0 && p < 65536 {
+                    ports.push(p);
+                }
+            }
+        }
+    }
+    ports.sort_unstable();
+    ports.dedup();
+    let mut done: Vec<u64> = Vec::new();
+    let mut errs: Vec<String> = Vec::new();
+    for p in &ports {
+        let out = Command::new("ss")
+            .arg("-K")
+            .arg("state")
+            .arg("established")
+            .arg(format!("sport = :{p}"))
+            .output();
+        match out {
+            // ss exits 0 whether or not it killed anything on that port, so a
+            // clean exit just means "nothing established there" or "reset them".
+            Ok(o) if o.status.success() => done.push(*p),
+            Ok(o) => errs.push(format!("port {p}: ss -K exited {} {}", o.status, String::from_utf8_lossy(&o.stderr).trim())),
+            Err(e) => errs.push(format!("port {p}: spawning ss: {e}")),
+        }
+    }
+    if done.is_empty() && !errs.is_empty() {
+        return Err(format!("could not reset sessions: {}", errs.join("; ")));
+    }
+    let mut msg = format!("reset established sessions on port(s): {done:?}");
+    if !errs.is_empty() {
+        msg.push_str(&format!(" ({} port(s) failed: {})", errs.len(), errs.join("; ")));
+    }
+    Ok(msg)
 }
 
 fn run_ok(cmd: &str, args: &[&str]) -> Result<(), String> {
@@ -488,6 +946,34 @@ mod tests {
     }
 
     #[test]
+    fn parses_only_connected_rdp_session_ids() {
+        // Representative `query session` output: the services (0) and console
+        // (1) rows and the idle "rdp-tcp" listener (65536) must be ignored; only
+        // the two connected "rdp-tcp#N" rows -- one with a blank USERNAME,
+        // shifting the columns, and the current one marked with '>' -- yield IDs.
+        let text = "\
+ SESSIONNAME       USERNAME                 ID  STATE   TYPE        DEVICE
+ services                                    0  Disc
+ console                                     1  Conn
+>rdp-tcp#2         Administrator             2  Active  rdpwd
+ rdp-tcp#5                                   5  Active  rdpwd
+ rdp-tcp                                 65536  Listen
+";
+        assert_eq!(parse_rdp_session_ids(text), vec![2, 5]);
+    }
+
+    #[test]
+    fn parses_no_sessions_when_only_listener_present() {
+        let text = "\
+ SESSIONNAME       USERNAME                 ID  STATE   TYPE        DEVICE
+ services                                    0  Disc
+ console                                     1  Conn
+ rdp-tcp                                 65536  Listen
+";
+        assert!(parse_rdp_session_ids(text).is_empty());
+    }
+
+    #[test]
     fn execute_failing_command_reports_failed_not_panic() {
         let outcome = run("execute", &json!({"command": "/bin/sh", "args": ["-c", "exit 7"]}));
         assert_eq!(outcome.status, "failed");
@@ -499,6 +985,114 @@ mod tests {
         let outcome = run("execute", &json!({"command": "/no/such/binary/at/all"}));
         assert_eq!(outcome.status, "failed");
         assert!(!outcome.error.is_empty());
+    }
+
+    #[cfg(unix)]
+    fn pid_alive(pid: i32) -> bool {
+        extern "C" {
+            fn kill(pid: i32, sig: i32) -> i32;
+        }
+        unsafe { kill(pid, 0) == 0 }
+    }
+
+    // Polls briefly: a SIGKILLed orphan stays a zombie until init reaps it.
+    #[cfg(unix)]
+    fn wait_dead(pid: i32) -> bool {
+        let until = Instant::now() + Duration::from_secs(3);
+        while Instant::now() < until {
+            if !pid_alive(pid) {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        false
+    }
+
+    #[cfg(unix)]
+    fn grandchild_pid(output: &str) -> i32 {
+        let rest = output.split("grandchild=").nth(1).unwrap_or_else(|| panic!("no grandchild pid in output: {output}"));
+        rest.chars().take_while(char::is_ascii_digit).collect::<String>().parse().unwrap()
+    }
+
+    #[test]
+    fn execute_timeout_kills_and_reports_tail() {
+        let start = Instant::now();
+        let outcome = run(
+            "execute",
+            &json!({"command": "/bin/sh", "args": ["-c", "echo before-the-hang; sleep 30"], "timeout_sec": 1}),
+        );
+        assert_eq!(outcome.status, "timeout");
+        assert!(outcome.error.contains("timed out after 1s"), "error should say it timed out: {}", outcome.error);
+        assert!(outcome.error.contains("before-the-hang"), "error should carry the output tail: {}", outcome.error);
+        assert!(start.elapsed() < Duration::from_secs(4), "took {:?}", start.elapsed());
+    }
+
+    // The case that hung prod: the wrapper shell is killed, but a grandchild
+    // it started still holds stdout/stderr open. Killing only the direct child
+    // would leave the step waiting on the pipes (and the grandchild running).
+    #[cfg(unix)]
+    #[test]
+    fn execute_timeout_kills_grandchild_holding_pipes() {
+        let start = Instant::now();
+        let outcome = run(
+            "execute",
+            &json!({"command": "/bin/sh", "args": ["-c", "sleep 30 & echo grandchild=$!; wait"], "timeout_sec": 1}),
+        );
+        assert_eq!(outcome.status, "timeout");
+        assert!(outcome.error.contains("timed out"), "{}", outcome.error);
+        // Well under PIPE_DRAIN_GRACE: the pipes closed because the grandchild died.
+        assert!(start.elapsed() < Duration::from_secs(3), "took {:?}", start.elapsed());
+        let pid = grandchild_pid(&outcome.error);
+        assert!(wait_dead(pid), "grandchild {pid} survived the timeout");
+    }
+
+    // Only a real deadline expiry is "timeout"; a script that merely prints the
+    // phrase and fails is an ordinary failure.
+    #[test]
+    fn execute_output_mentioning_timeout_is_still_failed() {
+        let outcome = run("execute", &json!({"command": "/bin/sh", "args": ["-c", "echo 'curl timed out after 5s' >&2; exit 1"]}));
+        assert_eq!(outcome.status, "failed", "{}", outcome.error);
+    }
+
+    #[test]
+    fn execute_zero_or_missing_timeout_means_no_deadline() {
+        for payload in [
+            json!({"command": "/bin/sh", "args": ["-c", "sleep 1; echo ok"], "timeout_sec": 0}),
+            json!({"command": "/bin/sh", "args": ["-c", "sleep 1; echo ok"]}),
+        ] {
+            let outcome = run("execute", &payload);
+            assert_eq!(outcome.status, "done", "error was: {}", outcome.error);
+            assert_eq!(outcome.output.trim(), "ok");
+        }
+    }
+
+    #[test]
+    fn execute_finishing_inside_timeout_succeeds() {
+        let outcome = run("execute", &json!({"command": "/bin/echo", "args": ["fast"], "timeout_sec": 30}));
+        assert_eq!(outcome.status, "done", "error was: {}", outcome.error);
+        assert_eq!(outcome.output.trim(), "fast");
+    }
+
+    // A script that exits normally but leaves a background process holding the
+    // pipes must still return (after the drain grace) and must NOT kill that
+    // process -- steps legitimately start daemons.
+    #[cfg(unix)]
+    #[test]
+    fn exited_command_with_lingering_grandchild_returns_after_grace() {
+        let mut cmd = Command::new("/bin/sh");
+        cmd.args(["-c", "sleep 30 & echo grandchild=$!"]);
+        let start = Instant::now();
+        let out = run_captured(cmd, None, Duration::from_millis(300)).unwrap();
+        assert!(start.elapsed() < Duration::from_secs(3), "took {:?}", start.elapsed());
+        assert!(out.status.unwrap().success());
+        let pid = grandchild_pid(&String::from_utf8_lossy(&out.stdout));
+        assert!(pid_alive(pid), "a normal exit must not kill the script's background processes");
+        unsafe {
+            extern "C" {
+                fn kill(pid: i32, sig: i32) -> i32;
+            }
+            kill(pid, 9);
+        }
     }
 
     #[test]

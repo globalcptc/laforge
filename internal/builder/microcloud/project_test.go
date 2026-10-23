@@ -97,7 +97,7 @@ func TestDeployInstanceInAProject(t *testing.T) {
 		wantRoot bool
 	}{{"laforge", true}, {"", false}} {
 		rec, client := newProjectRecorder(t, map[string]interface{}{
-			"/1.0/instances/" + instanceName("", "x") + "/state": map[string]string{"status": "Running"},
+			"/1.0/instances/" + instanceName("", "x", tc.project) + "/state": map[string]string{"status": "Running"},
 		})
 		client.Project = tc.project
 		b := New(client, Config{

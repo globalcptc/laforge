@@ -31,13 +31,13 @@ func adminConnString(t *testing.T) string {
 	return "host=/tmp port=5432 user=lucas dbname=laforge_dev sslmode=disable"
 }
 
-// gatewayConnString connects as the REAL restricted laforge_gateway role
-// (migrations/00004) -- the whole point of server_test.go is that the
-// gateway is proven against its actual, limited database identity, not a
-// full-privilege stand-in.
-func gatewayConnString() string {
-	return "host=/tmp port=5432 user=laforge_gateway password=laforge_gateway_dev_only_do_not_use_in_prod dbname=laforge_dev sslmode=disable"
-}
+// The REAL restricted laforge_gateway role + its dev password (migrations/00004).
+// The whole point of server_test.go is that the gateway is proven against its
+// actual, limited database identity, not a full-privilege stand-in.
+const (
+	gatewayRole     = "laforge_gateway"
+	gatewayPassword = "laforge_gateway_dev_only_do_not_use_in_prod"
+)
 
 func openAdminPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
@@ -49,11 +49,27 @@ func openAdminPool(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
+// openGatewayPool connects to the SAME database adminConnString names, but as
+// the restricted laforge_gateway role. Deriving from the admin connection
+// (rather than a hardcoded local one) keeps both pools on one database whether
+// that's a local laforge_dev socket or a disposable LAFORGE_TEST_DATABASE_URL --
+// otherwise the admin pool seeds one database while the gateway reads another,
+// and every heartbeat fails the deployed_object foreign key.
 func openGatewayPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	_, pool, err := db.Open(context.Background(), gatewayConnString())
+	cfg, err := pgxpool.ParseConfig(adminConnString(t))
+	if err != nil {
+		t.Fatalf("parsing admin conn for the gateway role: %v", err)
+	}
+	cfg.ConnConfig.User = gatewayRole
+	cfg.ConnConfig.Password = gatewayPassword
+	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("db.Open (laforge_gateway role): %v -- is migrations/00004_agent_tables.sql applied?", err)
+	}
+	if err := pool.Ping(context.Background()); err != nil {
+		pool.Close()
+		t.Fatalf("ping as laforge_gateway: %v -- is migrations/00004_agent_tables.sql applied (role + grants)?", err)
 	}
 	t.Cleanup(pool.Close)
 	return pool

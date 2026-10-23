@@ -1,22 +1,27 @@
-// Containers on AWS are ECS/Fargate tasks, not EC2 VMs -- a different shape from
-// the rest of this builder. This file is a DRAFT: it has never run against a real
-// AWS account. The model mirrors the Incus native-container path (the LaForge
-// agent runs as the container's supervising entrypoint so a container checks in
-// and runs steps/validators like a host), adapted to Fargate's constraints:
+// Containers on AWS take two shapes. A single-image container runs as an
+// ECS/Fargate task (this file); a compose container runs the same way as on every
+// other builder -- on a Docker-capable machine the agent runs `docker compose up`
+// on -- which here is an EC2 instance booted from the `compose-host` image (see
+// DeployContainer's ComposeHost branch), because Fargate forbids the nested Docker
+// a real compose project needs.
+//
+// The Fargate model mirrors the Incus native-container path (the LaForge agent
+// runs as the container's supervising entrypoint so a container checks in and runs
+// steps/validators like a host), adapted to Fargate's constraints:
 //
 //   - Fargate pulls the image and runs it -- there's no file API to push the
 //     agent in -- so the agent is DOWNLOADED at start: an init container
 //     (a small public image) fetches the patched agent by its one-time-token URL
 //     onto a shared volume, and the app container runs it as its entrypoint.
-//   - Fargate doesn't hand back the image's own entrypoint (Incus did), so the
-//     command the agent supervises comes from the content `command:` if set,
-//     else is fetched from the image's registry config (imageEntrypoint).
+//   - Fargate doesn't hand back the image's own entrypoint, so the command the
+//     agent supervises comes from the content `command:` if set, else is fetched
+//     from the image's registry config (imageEntrypoint).
 //
-// Account-specific inputs (ECS cluster, task execution role, log group) come from
-// the environment -- see Config. Known DRAFT gaps: a static Address isn't applied
-// (Fargate's ENI gets a dynamic IP); the app image must have a shell for the
-// agent's `sh -c`; the one-time download token won't survive a task restart;
-// imageEntrypoint only does anonymous Docker Hub pulls.
+// Not yet exercised against a real AWS account. Known Fargate (single-image)
+// limits: a static Address isn't applied (the ENI gets a dynamic IP); the app
+// image must have a shell for the agent's `sh -c`; the one-time download token
+// won't survive a task restart; imageEntrypoint only does anonymous Docker Hub
+// pulls (set `command:` to avoid it).
 package aws
 
 import (
@@ -26,6 +31,7 @@ import (
 	"strings"
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	ecstypes "github.com/aws/aws-sdk-go-v2/service/ecs/types"
 
@@ -44,23 +50,49 @@ const (
 // is the task ARN. DRAFT -- see the file header.
 func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpec) (string, error) {
 	if spec.ComposeHost {
-		return "", fmt.Errorf("compose containers are not supported on this builder yet")
+		// A compose project needs a real Docker daemon, which Fargate can't give
+		// (no privileged/nested Docker). So -- exactly like the other builders --
+		// it runs on a Docker-capable machine the agent runs `docker compose up`
+		// on; on AWS that machine is an EC2 instance booted from the `compose-host`
+		// image. DeployHost gives it its per-object SG, agent delivery, firewall
+		// and external-access handling for free.
+		return b.DeployHost(ctx, spec.ComposeHostSpec())
 	}
 	if b.cfg.ExecutionRoleARN == "" {
-		return "", fmt.Errorf("AWS Fargate needs an ECS task execution role -- set AWS_ECS_EXECUTION_ROLE_ARN")
+		return "", fmt.Errorf("AWS Fargate needs an ECS task execution role -- set the builder's execution role ARN")
 	}
-	subnetID, err := b.subnetForNetwork(ctx, spec.Network)
+	// Ensure the ECS cluster exists before RunTask -- AWS does NOT auto-create a
+	// cluster (not even "default"), so a missing one is a flat
+	// ClusterNotFoundException. Like the VPC/IGW/SG, the builder provisions it.
+	if err := b.ensureCluster(ctx); err != nil {
+		return "", err
+	}
+	// Ensure the CloudWatch log group exists so the awslogs driver can write --
+	// otherwise Fargate fails the container at startup (or, with no group
+	// configured at all, a crash leaves no logs). Only for the default awslogs
+	// path; an environment's own container_logs driver manages its own sink.
+	if spec.LogDriver == "" {
+		if err := b.ensureLogGroup(ctx); err != nil {
+			return "", err
+		}
+	}
+	subnetID, vpcID, _, _, err := b.subnetForNetwork(ctx, spec.Network)
 	if err != nil {
 		return "", fmt.Errorf("resolving subnet for container %q: %w", spec.ExternalName, err)
 	}
-	sgID, err := b.ensureTeamSecurityGroup(ctx, spec.Team, subnetID)
+	// Per-object SG, like a host. The task's SG membership is fixed at launch,
+	// but ConfigureNetworkAccess converges this SG's RULES afterward, so the
+	// container gets the same port firewall as an EC2 host.
+	sgID, err := b.ensureObjectSecurityGroup(ctx, spec.ExternalName, spec.Team, vpcID)
 	if err != nil {
 		return "", err
 	}
 
 	// The command the agent supervises: content Command if set, else the image's
 	// own entrypoint (Fargate doesn't expose it, so fetch it from the registry).
-	supervise := strings.Join(spec.Command, " ")
+	// Shell-quote each argv element -- the agent runs this via `sh -c`, so a
+	// space-join would re-split a multi-word arg (e.g. nginx's "daemon off;").
+	supervise := imagemeta.ShellJoin(spec.Command)
 	if supervise == "" && len(spec.AgentDownloadURL) > 0 {
 		ep, err := imagemeta.Entrypoint(ctx, spec.Image)
 		if err != nil {
@@ -160,24 +192,183 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 		}
 		return "", fmt.Errorf("Fargate RunTask for %q returned no task: %s", spec.ExternalName, reason)
 	}
-	return awssdk.ToString(run.Tasks[0].TaskArn), nil
+	arn := awssdk.ToString(run.Tasks[0].TaskArn)
+	// Tag the object SG with the task ARN so ConfigureNetworkAccess finds it from
+	// the externalRef the runner hands back (it never gets the ExternalName).
+	b.tagSGWithRef(ctx, sgID, arn)
+	return arn, nil
 }
 
-// DestroyContainer stops the Fargate task. Idempotent: a missing/stopped task is
-// not an error.
+// ensureCluster makes sure the configured ECS cluster exists, creating it if
+// absent. A plain Fargate cluster has no instances and no standing cost, so --
+// like the VPC/IGW/SG the builder already ensure-creates -- LaForge provisions
+// it rather than making the operator pre-create one. AWS does NOT auto-create
+// any cluster, including "default" (the config default), so even that name needs
+// this. The cluster is account/region-scoped and SHARED across every team and
+// build, so teardown never deletes it (a Fargate cluster at rest is free).
+func (b *Builder) ensureCluster(ctx context.Context) error {
+	name := b.cfg.Cluster
+	if name == "" {
+		name = "default"
+	}
+	if out, err := b.ecs.DescribeClusters(ctx, &ecs.DescribeClustersInput{Clusters: []string{name}}); err == nil {
+		for _, c := range out.Clusters {
+			if awssdk.ToString(c.Status) == "ACTIVE" {
+				return nil
+			}
+		}
+	}
+	if _, err := b.ecs.CreateCluster(ctx, &ecs.CreateClusterInput{
+		ClusterName: awssdk.String(name),
+		Tags:        []ecstypes.Tag{{Key: awssdk.String(laforgeManagedTag), Value: awssdk.String("true")}},
+	}); err != nil {
+		return fmt.Errorf("ensuring ECS cluster %q exists: %w", name, err)
+	}
+	return nil
+}
+
+// inspectTasks lists the cluster's running LaForge Fargate tasks as container
+// Resources, so the power-state poll finds a deployed container by its task ARN
+// (external_ref) instead of marking it missing. StartedBy="laforge" scopes to
+// our own tasks; desired-status RUNNING means a stopped/failed task is correctly
+// absent (reported missing). A not-yet-created cluster simply has no tasks.
+func (b *Builder) inspectTasks(ctx context.Context) ([]builder.Resource, error) {
+	cluster := b.cfg.Cluster
+	if cluster == "" {
+		cluster = "default"
+	}
+	var out []builder.Resource
+	var next *string
+	for {
+		list, err := b.ecs.ListTasks(ctx, &ecs.ListTasksInput{
+			Cluster:       awssdk.String(cluster),
+			StartedBy:     awssdk.String("laforge"),
+			DesiredStatus: ecstypes.DesiredStatusRunning,
+			NextToken:     next,
+		})
+		if err != nil {
+			if isECSClusterNotFound(err) {
+				return out, nil // no cluster yet -> no tasks
+			}
+			return nil, fmt.Errorf("listing ECS tasks: %w", err)
+		}
+		for _, arn := range list.TaskArns {
+			out = append(out, builder.Resource{ExternalRef: arn, Kind: "container", State: builder.PowerStateRunning})
+		}
+		if list.NextToken == nil {
+			return out, nil
+		}
+		next = list.NextToken
+	}
+}
+
+// ensureLogGroup makes sure the awslogs target log group exists, creating it if
+// absent. The ECS task execution role (AWS-managed AmazonECSTaskExecutionRolePolicy)
+// can write streams + events but NOT create the group, and the awslogs driver
+// won't create a missing group on its own -- so without this a container either
+// fails to start or (with no group configured) crashes with no captured output.
+// Idempotent: a ResourceAlreadyExists is success. No-op if logging isn't awslogs.
+func (b *Builder) ensureLogGroup(ctx context.Context) error {
+	if b.logs == nil || b.cfg.LogGroup == "" {
+		return nil
+	}
+	_, err := b.logs.CreateLogGroup(ctx, &cloudwatchlogs.CreateLogGroupInput{
+		LogGroupName: awssdk.String(b.cfg.LogGroup),
+		Tags:         map[string]string{laforgeManagedTag: "true"},
+	})
+	if err != nil && !isLogGroupExists(err) {
+		return fmt.Errorf("ensuring CloudWatch log group %q exists: %w", b.cfg.LogGroup, err)
+	}
+	return nil
+}
+
+// DestroyContainer stops the Fargate task and removes what the deploy created
+// alongside it: the task-definition family (deregistered) and the per-object
+// security group. Idempotent: a missing/stopped task, an already-gone task def,
+// and an absent SG are all not errors.
 func (b *Builder) DestroyContainer(ctx context.Context, team, externalRef string) error {
 	if externalRef == "" {
 		return nil
 	}
-	_, err := b.ecs.StopTask(ctx, &ecs.StopTaskInput{
-		Cluster: awssdk.String(b.cfg.Cluster),
-		Task:    awssdk.String(externalRef),
-		Reason:  awssdk.String("laforge teardown"),
-	})
-	if err != nil && !isNotFound(err) {
-		return fmt.Errorf("stopping Fargate task %s: %w", externalRef, err)
+	// A compose container is an EC2 instance (see DeployContainer's ComposeHost
+	// branch); its ref is an instance id, not a task ARN. Route it to DestroyHost
+	// (which already tears down its SG and EIP).
+	if strings.HasPrefix(externalRef, "i-") {
+		return b.DestroyHost(ctx, team, externalRef)
 	}
-	return nil
+	// Only a real task ARN is a task we can stop. When the object never recorded
+	// one (its deploy failed before RunTask), the runner falls back to the
+	// deterministic ExternalName -- there's no task to stop, so skip straight to
+	// SG cleanup. A missing cluster or task is "already gone," never a hard error,
+	// so a config mistake (wrong ECS cluster) can't wedge teardown forever.
+	if strings.HasPrefix(externalRef, "arn:") || strings.Contains(externalRef, ":task/") {
+		out, err := b.ecs.StopTask(ctx, &ecs.StopTaskInput{
+			Cluster: awssdk.String(b.cfg.Cluster),
+			Task:    awssdk.String(externalRef),
+			Reason:  awssdk.String("laforge teardown"),
+		})
+		if err != nil && !isNotFound(err) && !isMalformed(err) && !isECSClusterNotFound(err) {
+			return fmt.Errorf("stopping Fargate task %s: %w", externalRef, err)
+		}
+		// Deregister the task-definition family this container registered
+		// (best-effort -- a leaked INACTIVE task def costs nothing, so it never
+		// blocks teardown).
+		if err == nil && out.Task != nil {
+			b.deregisterTaskFamily(ctx, awssdk.ToString(out.Task.TaskDefinitionArn))
+		}
+	}
+	// Delete the per-object SG. A stopping task's ENI still references it, so a
+	// DependencyViolation here is "task still draining" -- returned as retryable
+	// so the SG (and later the VPC) don't leak.
+	return b.deleteObjectSecurityGroup(ctx, externalRef)
+}
+
+// deregisterTaskFamily deregisters every revision of the task-definition family
+// named by taskDefArn ("arn:...:task-definition/laforge-<name>:<rev>"). Each
+// DeployContainer registers a new revision, so teardown clears the whole family.
+// Best-effort throughout; a listing or deregister hiccup just leaves an inert
+// INACTIVE revision behind.
+func (b *Builder) deregisterTaskFamily(ctx context.Context, taskDefArn string) {
+	family := taskFamilyFromARN(taskDefArn)
+	if family == "" {
+		return
+	}
+	var next *string
+	for {
+		list, err := b.ecs.ListTaskDefinitions(ctx, &ecs.ListTaskDefinitionsInput{
+			FamilyPrefix: awssdk.String(family),
+			NextToken:    next,
+		})
+		if err != nil {
+			return
+		}
+		for _, arn := range list.TaskDefinitionArns {
+			// FamilyPrefix is a prefix match, so guard against a sibling family
+			// (e.g. laforge-web vs laforge-web2) by comparing the family exactly.
+			if taskFamilyFromARN(arn) != family {
+				continue
+			}
+			_, _ = b.ecs.DeregisterTaskDefinition(ctx, &ecs.DeregisterTaskDefinitionInput{TaskDefinition: awssdk.String(arn)})
+		}
+		if list.NextToken == nil {
+			return
+		}
+		next = list.NextToken
+	}
+}
+
+// taskFamilyFromARN pulls the family out of a task-definition ARN or a
+// "family:revision" string: "arn:...:task-definition/laforge-web01:3" ->
+// "laforge-web01". Returns "" if there's nothing usable.
+func taskFamilyFromARN(arn string) string {
+	s := arn
+	if i := strings.LastIndex(s, "/"); i >= 0 {
+		s = s[i+1:] // drop the arn prefix, keep "laforge-web01:3"
+	}
+	if i := strings.LastIndex(s, ":"); i >= 0 {
+		s = s[:i] // drop ":<revision>"
+	}
+	return s
 }
 
 // fargateSize maps a content size to Fargate CPU/memory units. The shared Sizes

@@ -14,8 +14,28 @@ export function StepReview({ draft }: { draft: Draft }) {
 
       {cloud && (
         <>
-          <Section title="Credentials">
-            <Row label="Source">Runner environment ({draft.kind === 'aws' ? 'AWS_* / AWS_REGION' : 'OS_* / OS_REGION_NAME'})</Row>
+          <Section title="Account">
+            {draft.kind === 'aws' ? (
+              <>
+                <Row label="Credential">
+                  {draft.awsCredentialId ? (
+                    <span>IAM access key{draft.awsConfig?.account ? ` · account ${draft.awsConfig.account}` : ''}</span>
+                  ) : (
+                    'runner instance role'
+                  )}
+                </Row>
+                <Row label="Region">
+                  <span className="font-mono">{draft.awsConfig?.region || '—'}</span>
+                </Row>
+                {draft.awsConfig?.execution_role_arn && (
+                  <Row label="Execution role">
+                    <span className="font-mono">{draft.awsConfig.execution_role_arn}</span>
+                  </Row>
+                )}
+              </>
+            ) : (
+              <Row label="Source">Runner environment (OS_* / OS_REGION_NAME)</Row>
+            )}
           </Section>
           <Section title="Images">
             {draft.images.filter((i) => i.name && i.fingerprint).length === 0 && <div className="px-3 py-2 text-fg-muted">None mapped.</div>}
@@ -39,6 +59,12 @@ export function StepReview({ draft }: { draft: Draft }) {
       {draft.kind !== 'fake' && !cloud && (
         <>
           <Section title={draft.kind === 'incus' ? `Hosts (${draft.hosts.length})` : 'Cluster'}>
+            {draft.kind === 'incus' && <Row label="Team placement">{draft.oneTeamPerHost ? 'One team per host; reject builds exceeding host count' : 'Round-robin (bridge hosts cannot share team subnets)'}</Row>}
+            {draft.kind === 'incus' && (
+              <Row label="Deploys per host">
+                {draft.incusHostMaxConcurrency ? `${draft.incusHostMaxConcurrency} at once, depends_on roots first` : 'Unlimited'}
+              </Row>
+            )}
             {draft.hosts.map((h, i) => (
               <Row key={h.key} label={draft.kind === 'incus' ? `Host ${i + 1}` : 'Server'}>
                 <div>
@@ -50,7 +76,7 @@ export function StepReview({ draft }: { draft: Draft }) {
                       project <span className="font-mono">{h.project || 'default'}</span> ·{' '}
                     </>
                   )}
-                  pool <span className="font-mono">{h.storagePool || '—'}</span> · uplink <span className="font-mono">{h.uplink || '—'}</span>
+                  pool <span className="font-mono">{h.storagePool || '—'}</span> · {draft.kind === 'incus' && h.networkType === 'bridge' ? 'native bridges' : <>OVN uplink <span className="font-mono">{h.uplink || '—'}</span></>}
                 </div>
               </Row>
             ))}
