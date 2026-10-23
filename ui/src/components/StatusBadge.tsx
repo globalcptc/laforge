@@ -120,7 +120,7 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   invalid: { icon: ShieldOff, tone: 'warning', label: 'Validation Failed' },
   // Build-level aggregate failure -- terminal, still.
   failed: { icon: CircleX, tone: 'danger', label: 'Failed' },
-  tearing_down: { icon: Loader, anim: 'spin', tone: 'pink', label: 'Tearing down' },
+  tearing_down: { icon: OctagonX, anim: 'spin', tone: 'pink', label: 'Tearing down' },
   // Destroyed is a terminal resting state -- no animation.
   torn_down: { icon: PowerOff, tone: 'neutral', label: 'Destroyed' },
   purged: { icon: Trash2, tone: 'neutral', label: 'Purged' },

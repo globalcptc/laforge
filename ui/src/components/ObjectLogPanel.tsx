@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert, RotateCcw } from 'lucide-react'
+import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldOff, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert, RotateCcw } from 'lucide-react'
 import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
@@ -524,7 +524,7 @@ function StepRow({ step: s, expanded, onToggle }: { step: StepStatus; expanded: 
             <div className="flex flex-col gap-0.5">
               {s.validators.map((v, i) => (
                 <div key={i} className={cn('flex items-start gap-1.5', v.passed ? 'text-success' : 'text-danger')}>
-                  {v.passed ? <ShieldCheck size={12} className="mt-0.5 shrink-0" /> : <ShieldX size={12} className="mt-0.5 shrink-0" />}
+                  {v.passed ? <ShieldCheck size={12} className="mt-0.5 shrink-0" /> : <ShieldOff size={12} className="mt-0.5 shrink-0" />}
                   <span className="font-medium">{v.kind}</span>
                   {v.message && <span className="text-fg-muted">— {v.message}</span>}
                 </div>
