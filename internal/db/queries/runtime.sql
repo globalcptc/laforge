@@ -900,3 +900,20 @@ WHERE b.status = 'planned'
                     AND n.status = 'planned'
                     AND (n.created_at, n.id) > (b.created_at, b.id)))
 RETURNING *;
+
+-- name: GetLatestDestroyTaskForObject :one
+-- The most recent destroy task for one object, with how many of its destroy
+-- tasks have failed -- what the reconciler decides from for an object that
+-- should be redeployed (a rebuild, a content change): an open one is in
+-- flight (wait, and say so), a failed transient one is re-queued after a
+-- backoff so the old instance is actually removed before anything is
+-- deployed in its place, a failed permanent one stops the object with the
+-- error, and a done one means the way is clear.
+SELECT t.*,
+    (SELECT count(*) FROM task f
+     WHERE f.deployed_object_id = t.deployed_object_id
+       AND f.kind LIKE 'destroy_%' AND f.status = 'failed')::int AS failed_count
+FROM task t
+WHERE t.deployed_object_id = $1 AND t.kind LIKE 'destroy_%'
+ORDER BY t.created_at DESC
+LIMIT 1;

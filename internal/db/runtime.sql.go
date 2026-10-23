@@ -951,6 +951,63 @@ func (q *Queries) GetFakeHosterResource(ctx context.Context, externalRef string)
 	return i, err
 }
 
+const getLatestDestroyTaskForObject = `-- name: GetLatestDestroyTaskForObject :one
+SELECT t.id, t.build_id, t.deployed_object_id, t.kind, t.payload, t.status, t.attempts, t.lease_owner, t.lease_expires_at, t.last_error, t.created_at, t.updated_at, t.permanent,
+    (SELECT count(*) FROM task f
+     WHERE f.deployed_object_id = t.deployed_object_id
+       AND f.kind LIKE 'destroy_%' AND f.status = 'failed')::int AS failed_count
+FROM task t
+WHERE t.deployed_object_id = $1 AND t.kind LIKE 'destroy_%'
+ORDER BY t.created_at DESC
+LIMIT 1
+`
+
+type GetLatestDestroyTaskForObjectRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	BuildID          pgtype.UUID        `json:"build_id"`
+	DeployedObjectID pgtype.UUID        `json:"deployed_object_id"`
+	Kind             string             `json:"kind"`
+	Payload          json.RawMessage    `json:"payload"`
+	Status           string             `json:"status"`
+	Attempts         int32              `json:"attempts"`
+	LeaseOwner       *string            `json:"lease_owner"`
+	LeaseExpiresAt   pgtype.Timestamptz `json:"lease_expires_at"`
+	LastError        *string            `json:"last_error"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Permanent        bool               `json:"permanent"`
+	FailedCount      int32              `json:"failed_count"`
+}
+
+// The most recent destroy task for one object, with how many of its destroy
+// tasks have failed -- what the reconciler decides from for an object that
+// should be redeployed (a rebuild, a content change): an open one is in
+// flight (wait, and say so), a failed transient one is re-queued after a
+// backoff so the old instance is actually removed before anything is
+// deployed in its place, a failed permanent one stops the object with the
+// error, and a done one means the way is clear.
+func (q *Queries) GetLatestDestroyTaskForObject(ctx context.Context, deployedObjectID pgtype.UUID) (GetLatestDestroyTaskForObjectRow, error) {
+	row := q.db.QueryRow(ctx, getLatestDestroyTaskForObject, deployedObjectID)
+	var i GetLatestDestroyTaskForObjectRow
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
+		&i.FailedCount,
+	)
+	return i, err
+}
+
 const getLiveDeployingBuildForConfiguredBuild = `-- name: GetLiveDeployingBuildForConfiguredBuild :one
 SELECT id, configured_build_id, content_revision_id, environment_name, status, created_at, auto_built, reconcile_error, created_by_account_id, resolved_revision_id FROM build
 WHERE configured_build_id = $1 AND status IN ('deploying', 'building', 'finished')

@@ -612,16 +612,31 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 		}
 		return false, nil
 	}
-	if obj.Status == "destroying" || obj.Status == "destroyed" {
-		// let the in-flight (or already-completed-but-not-yet-reset)
-		// destroy finish; nothing new to request this pass.
-		if deployTasks && throttled("destroying/"+obj.ID.String(), time.Minute) {
-			decide(ctx, q, buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: %s; waiting for the runner before redeploying", objectLabel(obj, 0), obj.Status), nil)
-		}
-		return false, nil
+	if obj.Status == "destroyed" {
+		return false, nil // a torn-down object stays gone
 	}
 	if !deployTasks {
 		return false, nil // planned: the object row and its fingerprint are already recorded above; stop here
+	}
+	// Before anything is (re)deployed in this object's place, its last destroy
+	// -- a rebuild's, a content change's -- must actually have finished;
+	// otherwise the old instance stays at the hoster beside the new one, or
+	// (if the deploy can't even be queued behind an open task) the object
+	// sits pending with nothing in the log saying why. So: an open destroy is
+	// waited for, and said; a transiently failed one is queued again, with
+	// the same hoster reference, after a backoff; a permanently failed one
+	// stops the object with its error. Only a done destroy (or none) clears
+	// the way to deploy.
+	if proceed, err := settleLastDestroy(ctx, q, buildID, obj); err != nil || !proceed {
+		return false, err
+	}
+	if obj.Status == "destroying" {
+		// No destroy task is in flight (settleLastDestroy would have said), yet
+		// the runner's reset to pending never happened: say so once a minute.
+		if throttled("destroying/"+obj.ID.String(), time.Minute) {
+			decide(ctx, q, buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: marked destroying but no destroy task is open; waiting for the runner to reset it", objectLabel(obj, 0)), nil)
+		}
+		return false, nil
 	}
 	// pending, deploying, or deploy_failed: ensure a deploy task exists.
 	// CreateTaskIfNoneOpen is the idempotency guard here -- if one's
@@ -867,4 +882,69 @@ func findContainer(c *loader.Content, name string) *loader.Container {
 		}
 	}
 	return nil
+}
+
+// settleLastDestroy looks at obj's most recent destroy task and reports
+// whether a deploy may go ahead (true: the last destroy is done, or there
+// never was one). See reconcileObject. The backoff before re-queuing a
+// failed destroy is the teardown's (teardownRequeueBackoff), so a flaky
+// hoster is retried the same way whichever path asked for the destroy.
+func settleLastDestroy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject) (bool, error) {
+	last, err := q.GetLatestDestroyTaskForObject(ctx, obj.ID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return true, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("reading %s's last destroy task: %w", objectLabel(obj, 0), err)
+	}
+	age := time.Since(last.UpdatedAt.Time).Round(time.Second)
+	switch last.Status {
+	case "done":
+		return true, nil
+	case "pending", "leased":
+		if throttled("destroy-open/"+obj.ID.String(), time.Minute) {
+			state := last.Status
+			if last.Status == "leased" {
+				state = fmt.Sprintf("leased by %s until %s", db.StrOrEmpty(last.LeaseOwner), last.LeaseExpiresAt.Time.Format(time.TimeOnly))
+			}
+			msg := fmt.Sprintf("%s: its destroy task is %s (attempt %d, %s old); not deploying until the old instance is gone", objectLabel(obj, 0), state, last.Attempts, age)
+			if e := db.StrOrEmpty(last.LastError); e != "" {
+				msg += "; last error: " + e
+			}
+			decide(ctx, q, buildID, obj.ID, "reconcile.waiting", msg, map[string]any{"task_id": last.ID.String(), "task_status": last.Status, "attempts": last.Attempts, "last_error": db.StrOrEmpty(last.LastError)})
+		}
+		return false, nil
+	case "failed":
+		errText := db.StrOrEmpty(last.LastError)
+		if last.Permanent {
+			if obj.Status != "deploy_failed" {
+				msg := fmt.Sprintf("the old instance could not be destroyed (permanent error): %s -- fix the builder or remove it at the hoster, then rebuild", errText)
+				if _, err := q.MarkDeployedObjectDeployFailed(ctx, db.MarkDeployedObjectDeployFailedParams{ID: obj.ID, LastError: db.StrPtr(msg)}); err != nil {
+					return false, err
+				}
+				decide(ctx, q, buildID, obj.ID, "reconcile.deploy_failed", fmt.Sprintf("%s: %s", objectLabel(obj, 0), msg), map[string]any{"task_id": last.ID.String(), "error": errText})
+			}
+			return false, nil
+		}
+		wait := teardownRequeueBackoff(int(last.FailedCount))
+		if time.Since(last.UpdatedAt.Time) < wait {
+			if throttled("destroy-backoff/"+obj.ID.String(), time.Minute) {
+				decide(ctx, q, buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: its destroy failed %d time(s) (%s); trying again in %s", objectLabel(obj, 0), last.FailedCount, errText, (wait-time.Since(last.UpdatedAt.Time)).Round(time.Second)), nil)
+			}
+			return false, nil
+		}
+		// Same payload as the failed one, so the real hoster reference a
+		// rebuild captured (the row's own was cleared) is kept.
+		task, err := q.CreateTaskIfNoneOpen(ctx, db.CreateTaskIfNoneOpenParams{BuildID: buildID, DeployedObjectID: obj.ID, Kind: last.Kind, Payload: last.Payload})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil // something else opened a task meanwhile
+		}
+		if err != nil {
+			return false, fmt.Errorf("re-requesting destroy of %s: %w", objectLabel(obj, 0), err)
+		}
+		decide(ctx, q, buildID, obj.ID, "reconcile.destroy_retry", fmt.Sprintf("%s: destroy queued again after %d failed attempt(s) (%s); the old instance must go before it's redeployed", objectLabel(obj, 0), last.FailedCount, errText),
+			map[string]any{"task_id": task.ID.String(), "failed_destroys": last.FailedCount, "last_error": errText})
+		return false, nil
+	}
+	return true, nil
 }

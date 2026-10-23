@@ -256,7 +256,9 @@ so the two agree:
   (by alice from 10.0.0.5)` — with who made it.
 - **orchestrator**: every decision, with its reason: a deploy or destroy requested and
   why (`reconcile.deploy`, `reconcile.recreate` with the old and new fingerprints,
-  `reconcile.remove`, `rebuild.destroy`, `teardown.destroy`); a host held on a step-only
+  `reconcile.remove`, `rebuild.destroy`, `teardown.destroy`); a failed destroy queued
+  again before anything is redeployed in its place (`reconcile.destroy_retry`), or the
+  host stopped with the error when the hoster says it never will be; a host held on a step-only
   change; a host failed for its network or a dependency; steps queued or blocked; every
   object and build status move (`lifecycle.building`, `lifecycle.finished`,
   `build.status`); and, once a minute while it lasts, what it's waiting for
