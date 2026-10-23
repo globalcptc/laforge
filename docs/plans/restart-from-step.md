@@ -7,7 +7,8 @@ A host whose build stopped — a step failed, a validator didn't pass — can to
 That's the right tool when the box is wrong; it's the wrong tool when step 7 of 12 failed
 because a package mirror timed out, or because the script had a typo that's now fixed.
 This adds **Restart from step**: pick an authored step, and the host runs that step and
-everything after it again, on the box it already has.
+everything after it again — in full, downloads included — on the box it already has.
+Pick it once for every instance of that host across the build's teams.
 
 ## Contents
 
@@ -15,7 +16,7 @@ everything after it again, on the box it already has.
 2. [The action](#2-the-action)
 3. [What happens underneath](#3-what-happens-underneath)
 4. [Dependents](#4-dependents)
-5. [Content fixes: restart instead of recreate](#5-content-fixes-restart-instead-of-recreate)
+5. [Many hosts at once](#5-many-hosts-at-once)
 6. [API, UI, CLI](#6-api-ui-cli)
 7. [Database changes](#7-database-changes)
 8. [Edge cases and rules](#8-edge-cases-and-rules)
@@ -51,33 +52,42 @@ The pieces this builds on, as the code has them today:
   build in place") move a live build to the new revision; each object's **fingerprint**
   (`internal/orchestrator/fingerprint.go`: image, size, disk, ports, depends_on, the
   rendered steps and script bodies) is recomputed, and a changed fingerprint means
-  **recreate**. A one-line script fix therefore rebuilds every host that runs the script.
+  **recreate**. That rule is out of scope here (§10).
+- **Ad-hoc targets** (`orchestrator.MatchAdHocTargets`, used by `run`, schedules and
+  rebuild) already select hosts across teams by name, tag, kind, id or search.
 
 ## 2. The action
 
-**Restart from step** is offered on a host or container (never a network) whose status
+**Restart from step** is offered on hosts and containers (never networks) whose status
 is `build_failed` or `invalid`, to anyone with `manage` on the repository — the level
-that can rebuild, power-cycle and run commands.
+that can rebuild, power-cycle and run commands. It's a manual action: an operator picks
+it; nothing restarts a step on its own.
 
 The operator picks an **authored step** (the groups the steps panel already shows:
-"install-tool", "join-domain"…), by default the one that failed. LaForge:
+"install-tool", "join-domain"…), by default the one that failed, and which instances of
+the host to apply it to (§5). LaForge:
 
-1. shows what will happen (a dry run): which steps will run again, that the host stays
-   as it is, and which dependents will resume (§4);
-2. on confirm, throws away the chosen step and everything after it, queues them again
-   **from the build's current content**, and puts the host back to `building`;
-3. the agent, on its next poll, picks up the first re-queued step; the lifecycle poll
-   finishes or fails the host as it always does.
+1. shows what will happen (a dry run): which steps will run again, on which hosts, that
+   the boxes stay as they are, and which dependents will resume (§4);
+2. on confirm, throws away the chosen step and everything after it on each host, queues
+   them again **from the build's current content**, and puts each host back to
+   `building`;
+3. each agent, on its next poll, picks up its first re-queued step; the lifecycle poll
+   finishes or fails each host as it always does.
 
 Nothing is destroyed, no deploy task is made, the hoster isn't called. Steps before the
 chosen one keep their results and output; the re-run steps' history is preserved in the
 event log (`step_done`/`step_failed` events are append-only, keyed by object).
 
-The step re-runs **as written**: a `script:` step writes the file again and executes it
-again. Steps already have to tolerate that — a rebuild re-runs them all on a fresh box —
-but a restart runs them on a box where they may have half-happened, so the content
-rules get one sentence: *steps should be safe to run twice* (install if missing, write
-the whole file, idempotent commands). The confirm dialog says this.
+**The whole step runs again, from the top.** A `script:` step writes its file again and
+executes it again; a `download:` step fetches the file again and overwrites what's
+there; an `extract:` extracts again; a `compose:` pulls and brings the project up
+again; a `validate:` re-checks. Nothing from the earlier attempt is trusted — the
+failure may have left a half-written file or a half-finished install, and a partial
+re-run would build on it. The operator chose the step because something from there on
+is wrong; everything from there on is redone. Steps therefore have to be safe to run
+twice (install if missing, write the whole file, idempotent commands) — they already
+must be, since a rebuild runs them all again — and the confirm dialog says so.
 
 ## 3. What happens underneath
 
@@ -127,84 +137,72 @@ call (they can restart those from their own step 0).
 Only direct and transitive dependents in that specific state are touched; the graph
 comes from the build's content, as in rebuild.
 
-## 5. Content fixes: restart instead of recreate
+## 5. Many hosts at once
 
-The action alone covers transient failures. The common case — *the script was wrong,
-I fixed it* — runs into the fingerprint rule: pushing the fix changes the host's
-fingerprint, and the in-place update **recreates** the host before anyone can restart
-anything. So the second half of this plan is a change to that rule:
+A failed step usually fails the same way on every team's copy of the host — the mirror
+was down for all of them, the script was wrong for all of them. So the action is picked
+once for a **host definition** and applied to its instances:
 
-- **Split the fingerprint.** `Fingerprint` keeps hashing everything, but records two
-  parts on the object: an **infrastructure** fingerprint (os, image, size, disk, compose
-  archive, ports, depends_on — what the hoster built) and a **steps** fingerprint (the
-  rendered steps and script bodies). `deployed_object` gains `steps_fingerprint`.
-- **Infrastructure change → recreate**, as today. **Steps-only change → mark, don't
-  recreate**: the host gets `steps_outdated_from = G`, where *G* is the first authored
-  step whose expanded commands differ between the revision it was built from and the
-  new one (a straight comparison of the two `ExpandSteps` outputs, group by group). Its
-  row shows *steps outdated* on the hosts page with the step named.
-- **Then either**: the operator restarts from *G* (the button is pre-filled), or, with
-  the build's **auto-apply step changes** switch on (off by default; a per-configured-
-  build setting beside auto-deploy), the orchestrator does it on the reconcile pass that
-  found the difference — for hosts that are `finished`, `build_failed` or `invalid`, never
-  one that's mid-build, and never a host whose infrastructure also changed.
-- A **finished** host restarted this way goes `finished → building` and finishes again;
-  its dependents aren't touched (their dependency is still configured; it's being
-  reconfigured, which is the operator's judgement — the event log says it happened).
-
-This is what makes a competition fix cheap: push, watch the hosts that run that script
-re-run from the changed step, no boxes recreated, no agents re-enrolled. The old
-behaviour is one switch away — recreating remains the answer whenever the author wants
-a clean box (rebuild) or infrastructure changed.
+- **Who's eligible.** Every deployed object in the build with the same `object_name`
+  (the same host or container in the content, hence the same authored steps), in a
+  restartable state. Instances of *other* hosts aren't offered, even if they happen to
+  run the same script — their step numbering differs and "step 3" means something else
+  there; restart those from their own panel.
+- **Picking.** The dialog opened from one host lists every team's instance of it with its
+  state and failed step, all restartable ones ticked; untick to leave some alone. The
+  hosts page's bulk selection (the same team/tag/search selectors `run` and `rebuild`
+  use) can start it too, as long as the selection is one host definition.
+- **One step, per host.** The chosen step is a group index into that definition's steps
+  — the same on every instance — and each host is handled independently (§3): a host
+  with a running step is skipped and named unless `force`, a host whose agent is gone
+  just queues. The result lists what happened to each.
+- **Dependents** (§4) are resolved per host: team 3's web01 resumes team 3's dependents.
 
 ## 6. API, UI, CLI
 
-**API** — one endpoint, modelled on rebuild:
+**API** — one endpoint, modelled on rebuild and `run`:
 
 ```
-POST /builds/{id}/objects/{objectId}/restart-steps
-{ "from_group": 3, "resume_dependents": true, "force": false, "dry_run": false }
+POST /builds/{id}/restart-steps
+{ "target": { "ids": [...] } | { "name": "web01", "teams": [1,3] },
+  "from_group": 3, "resume_dependents": true, "force": false, "dry_run": false }
 ```
 
-- `dry_run` returns: the steps that will re-run (group index, label, commands), whether
-  the content revision differs from the host's, the dependents that will resume, and
-  whether a step is running now.
-- Otherwise it performs §3 and §4 and returns the new tasks and the resumed dependents.
-- `409` when the host isn't `build_failed`/`invalid` (or, for §5, `finished` with
-  `steps_outdated_from` set), when `from_group` names no step, or when a step is running
-  and `force` is false. Manage level; the build must be deploying/building/finished/failed,
-  as for rebuild.
+- The target resolves through `MatchAdHocTargets`; every matched object must share one
+  `object_name`, or `400` naming the odd ones out.
+- `dry_run` returns, per host: its state, the steps that will re-run (group index,
+  label, commands), whether a step is running now, and the dependents that will resume.
+- Otherwise it performs §3 and §4 on each eligible host and returns, per host, the new
+  tasks and resumed dependents, or why it was skipped.
+- `409` when no target is in a restartable state or `from_group` names no step of that
+  host; a host with a running step is skipped (not an error) unless `force`. Manage
+  level; the build must be deploying/building/finished/failed, as for rebuild.
 
-**UI** — on the host's steps panel (`ObjectLogPanel`), each authored step group gets a
+**UI** — on a host's steps panel (`ObjectLogPanel`), each authored step group gets a
 **Restart from here** control when the host is in a restartable state; the failed group
-also gets it inline next to its red badge. The dialog is the dry run: "Steps 7–12 will
-run again on *web01* as it is. The content has changed since this host was built
-(install-tool.sh). 2 hosts that depend on web01 will resume once it finishes. Steps
-should be safe to run twice." On the hosts page, a `build_failed`/`invalid` row's
-hover controls gain *Restart steps…* beside *Rebuild*, and a *steps outdated from
-"install-tool"* note appears when §5 marks one. The configured-build page gets the
-**auto-apply step changes** switch.
+also gets it inline next to its red badge. The dialog is the dry run: the step list from
+there on, then every team's instance of this host with its state and a tick box (all
+restartable ones ticked), the dependents that will resume, a note if the content has
+changed since these hosts were built, and the "steps run again in full; they should be
+safe to run twice" line. On the hosts page, a `build_failed`/`invalid` row's hover
+controls gain *Restart steps…* beside *Rebuild*, and the bulk-action bar offers it when
+the selection is one host definition.
 
 **CLI** — `laforge build restart-steps <build> --host web01 --from install-tool
-[--team 3] [--no-dependents] [--force] [--dry-run]`, resolving the step by label or
+[--team 3,4] [--no-dependents] [--force] [--dry-run]`, resolving the step by label or
 index, printing the dry run and asking before acting (as `laforge run` does).
 
 ## 7. Database changes
 
-One migration:
-
-- `agent_task.step_group integer` — which authored step a row came from (NULL for
-  ad-hoc); set by `materializeSteps` from `PlannedCommand.Group`. The steps API reads it
-  instead of re-expanding content to attribute rows, which also fixes attribution after a
-  content change (today's re-expansion attributes old rows against new content).
-- `deployed_object.steps_fingerprint text`, `deployed_object.steps_outdated_from
-  integer` (§5).
-- `configured_build.auto_apply_steps boolean NOT NULL DEFAULT false` (§5).
+One migration: `agent_task.step_group integer` — which authored step a row came from
+(NULL for ad-hoc); set by `materializeSteps` from `PlannedCommand.Group`. The steps API
+reads it instead of re-expanding content to attribute rows, which also fixes attribution
+after a content change (today's re-expansion attributes old rows against new content).
 
 New queries: `DeleteAuthoredAgentTasksFromGroup(object, group)`,
-`SetDeployedObjectRestarting(object)` (`build_failed`/`invalid`/`finished → building`,
-clear `last_error`), `ResumeDependentForRestart(object)` (`build_failed → running` where
-`steps_materialized_at IS NULL`), `SetDeployedObjectStepsOutdated(object, group|NULL)`.
+`SetDeployedObjectRestarting(object)` (`build_failed`/`invalid → building`, clear
+`last_error`), `ResumeDependentForRestart(object)` (`build_failed → running` where
+`steps_materialized_at IS NULL`).
 
 ## 8. Edge cases and rules
 
@@ -221,23 +219,31 @@ clear `last_error`), `ResumeDependentForRestart(object)` (`build_failed → runn
 | The build is `tearing_down`/`torn_down`/`purged` | `409`, as for rebuild. |
 | Two operators restart the same host at once | The second finds the host `building` and gets `409` (the state check is in the transaction). |
 | Validators (`validate:` steps) after *G* | Re-run; their old `validator_result` rows went with the deleted tasks, so the build's findings reflect the new run. |
-| Fingerprint rule and a restart | A manual restart doesn't touch fingerprints; after §5, restarting from the outdated step clears `steps_outdated_from` and sets `steps_fingerprint` to the new revision's. |
+| A restart and the fingerprint | A restart doesn't touch the host's fingerprint; it re-expands steps from the build's current revision, which is the one the fingerprint was computed from. |
+| Several hosts, one with a running step | That host is skipped and named in the result; the others proceed. `force` includes it. |
 
 ## 9. Phases
 
 | Phase | Size | What | Done when |
 | --- | --- | --- | --- |
-| **R1 The action** | M | `step_group` on tasks (and the steps API reading it), the endpoint with dry run, the transaction in §3, dependents in §4, the gateway's unknown-task tolerance, the steps-panel and hosts-page UI, the CLI, `steps.restarted` events | a fake-builder host whose step 2 of 4 failed is restarted from step 2: steps 0–1 keep their output, 2–3 run again with new task ids, the host goes `building → finished`; a dependent failed on it resumes and finishes; a restart while a task is leased is refused without `force`; a late report for the deleted task is dropped |
-| **R2 Content fixes** | M | the split fingerprint, `steps_outdated_from` with the first-changed-group diff, the hosts-page note, pre-filled restart, the `auto_apply_steps` switch and the orchestrator's automatic restart | pushing a script change to a live build marks its hosts *steps outdated from* that step and recreates none; with the switch on they re-run from it and finish; changing a host's image still recreates it |
-
-R1 stands alone and is worth shipping first.
+| **R1 The action** | M | `step_group` on tasks (and the steps API reading it), the endpoint with targets and dry run, the transaction in §3 per host, dependents in §4, the gateway's unknown-task tolerance, the steps-panel dialog with the instance list, the hosts-page controls, the CLI, `steps.restarted` events | a fake-builder build with three teams: web01 fails at step 2 of 4 on all three; restarting from step 2 for all of them keeps steps 0–1's output, runs 2–3 again with new task ids (a `download:` among them fetches again), and each goes `building → finished`; a dependent failed on team 2's web01 resumes and finishes; the instance with a leased task is skipped without `force`; a late report for a deleted task is dropped |
 
 ## 10. Open decisions
 
-- **Finished hosts without a content change.** Should *Restart from step* be offered on
-  a `finished` host at all (re-run a validator, redo a step by hand)? Harmless to allow
-  under `manage`; the plan allows it only via §5's outdated marker to keep the first
-  version's surface small.
+- **Finished hosts.** Should *Restart from step* be offered on a `finished` host (re-run
+  a validator, redo a step by hand)? Harmless to allow under `manage`; left out of the
+  first version to keep its surface small.
+- **Content fixes and the fingerprint rule.** A pushed fix to a script changes the
+  fingerprint of every host that runs it, and the in-place update recreates them before
+  anyone can restart a step. So this action helps with failures the content didn't
+  cause (a mirror down, a flaky install) and with fixes that don't reach the
+  fingerprint; a fix that does still means a rebuild. Changing that rule — treating
+  step-only changes as "restart from the first changed step" rather than "recreate" —
+  is a separate decision, deliberately not taken here.
+- **Hosts that share steps through `extends`.** Two host definitions with the same
+  base have the same early steps but may add their own; the action keeps to one
+  definition. If restarting a shared base step across definitions turns out to matter,
+  the match can become "same expanded steps up to and including the chosen one".
 - **Where a restarted step's old output goes.** The deleted rows' `output` is gone from
   the steps panel (the events keep `step_done`/`step_failed` with the output's tail).
   Keeping the last run's rows as a collapsed "previous attempt" would need a `run` column
