@@ -496,6 +496,11 @@
     width: var(--spacing-inspector);
     flex: 0 0 auto;
     background-color: var(--color-surface-raised);
+    /* Own the foreground too, not just the background: the panel can be mounted
+       inside a subtree that hardcodes a text colour (e.g. the status Matrix's
+       dark wall-display board), and without this its body text would inherit
+       that colour onto the panel's themed light surface. */
+    color: var(--color-fg);
     border-left: 1px solid var(--color-border);
     overflow-y: auto;
     /* Pin overflow-x: without it, overflow-x defaults to `visible`, which the CSS
