@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
 import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldOff, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert, RotateCcw } from 'lucide-react'
 import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
@@ -74,8 +74,21 @@ export function ObjectLogPanel({
   onRestartFrom?: (group: number) => void
   onClose: () => void
 }) {
+  const router = useRouter()
   const [tab, setTab] = useState<Tab>(initialTab ?? 'info')
   const [wide, setWide] = useState(false)
+
+  // The interactive shell always opens in its own standalone window (not a tab
+  // or in-app navigation): the terminal is a long-lived session you keep open
+  // while working elsewhere in the app, so it gets a dedicated window. Passing
+  // window features forces a separate window rather than a browser tab.
+  const openTerminalWindow = () => {
+    const href = router.buildLocation({
+      to: '/repos/$repoId/builds/$buildId/hosts/$objectId/terminal',
+      params: { repoId, buildId, objectId },
+    }).href
+    window.open(href, `laforge-terminal-${objectId}`, 'noopener,width=960,height=640')
+  }
   const fmt = useTimeFormat()
   // A network is provisioned by the builder, not by an in-guest agent, so
   // it has a log (events) and findings but no steps/heartbeats/render --
@@ -105,14 +118,14 @@ export function ObjectLogPanel({
               the panel you open to work on a host. Hosts and containers only,
               and not once the instance is gone. */}
           {!isNetwork && (!object || !GONE_STATES.has(object.status)) && (
-            <Link
-              to="/repos/$repoId/builds/$buildId/hosts/$objectId/terminal"
-              params={{ repoId, buildId, objectId }}
+            <button
+              type="button"
+              onClick={openTerminalWindow}
               className={buttonClass({ variant: 'secondary', size: 'sm' })}
-              title="Open an interactive root/admin shell on this host"
+              title="Open an interactive root/admin shell on this host in a new window"
             >
               <Terminal size={14} /> Open Terminal
-            </Link>
+            </button>
           )}
           <Button
             variant="ghost"
