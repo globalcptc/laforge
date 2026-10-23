@@ -36,12 +36,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -155,6 +157,9 @@ func New(ctx context.Context, cfg Config) (*Builder, error) {
 		// reconcile. (We have been bitten by unthrottled API loops before.)
 		awsconfig.WithRetryMode(awssdk.RetryModeAdaptive),
 		awsconfig.WithRetryMaxAttempts(8),
+		// Every SDK retry is a log line: a throttled or flaky AWS API is
+		// otherwise indistinguishable from a stalled runner.
+		awsconfig.WithClientLogMode(awssdk.LogRetries),
 	}
 	if cfg.Region != "" {
 		opts = append(opts, awsconfig.WithRegion(cfg.Region))
@@ -1057,6 +1062,11 @@ func awsReservedAddress(cidr, ip string) (reserved bool, reason string) {
 // --- Hosts ----------------------------------------------------------------
 
 func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string, error) {
+	started := time.Now()
+	slog.InfoContext(ctx, "AWS deploying host", "external_name", spec.ExternalName, "team", spec.Team, "os", spec.OS, "size", spec.Size)
+	defer func() {
+		slog.InfoContext(ctx, "AWS deploy host returned", "external_name", spec.ExternalName, "elapsed", time.Since(started).Round(time.Millisecond))
+	}()
 	if id, err := b.findInstance(ctx, spec.ExternalName); err != nil {
 		return "", err
 	} else if id != "" {
@@ -1166,21 +1176,30 @@ func (b *Builder) DestroyHost(ctx context.Context, team, externalRef string) err
 	// its laforge:external-name tag; an empty result means nothing was created,
 	// so there's nothing to terminate and destroy is a no-op (minus any SG/EIP a
 	// partial deploy may have made, cleaned below).
+	started := time.Now()
 	instanceID := externalRef
 	if !strings.HasPrefix(instanceID, "i-") {
+		slog.InfoContext(ctx, "AWS destroy: looking up the instance by its external name", "external_name", externalRef, "team", team)
 		id, err := b.findInstance(ctx, externalRef)
 		if err != nil {
+			slog.ErrorContext(ctx, "AWS destroy: instance lookup failed", "external_name", externalRef, "error", err)
 			return err
 		}
 		instanceID = id
+		if instanceID == "" {
+			slog.InfoContext(ctx, "AWS destroy: no instance exists for this name; only cleaning up its security group", "external_name", externalRef)
+		}
 	}
 	if instanceID != "" {
 		// Release any Elastic IP we attached for external access, so a teardown
 		// doesn't leak (and keep paying for) an allocation.
+		slog.InfoContext(ctx, "AWS destroy: releasing any Elastic IP, then terminating the instance", "instance", instanceID, "team", team)
 		b.releaseEIPForRef(ctx, instanceID)
 		if _, err := b.ec2.TerminateInstances(ctx, &ec2.TerminateInstancesInput{InstanceIds: []string{instanceID}}); err != nil && !isNotFound(err) && !isMalformed(err) {
+			slog.ErrorContext(ctx, "AWS destroy: TerminateInstances failed", "instance", instanceID, "elapsed", time.Since(started).Round(time.Millisecond), "error", err)
 			return fmt.Errorf("terminating instance %s: %w", instanceID, err)
 		}
+		slog.InfoContext(ctx, "AWS destroy: termination requested", "instance", instanceID, "elapsed", time.Since(started).Round(time.Millisecond))
 	}
 	// Delete the host's per-object security group (found by the ref it was tagged
 	// with at deploy). If we don't, it leaks AND blocks the team VPC teardown
@@ -1191,7 +1210,14 @@ func (b *Builder) DestroyHost(ctx context.Context, team, externalRef string) err
 	// again and succeeds once the ENI is gone. A failed-deploy SG tagged by name
 	// only (never tagged with a ref) isn't found here and is instead swept by the
 	// VPC teardown.
-	return b.deleteObjectSecurityGroup(ctx, externalRef)
+	slog.InfoContext(ctx, "AWS destroy: deleting the host's security group", "external_ref", externalRef)
+	err := b.deleteObjectSecurityGroup(ctx, externalRef)
+	if err != nil {
+		slog.WarnContext(ctx, "AWS destroy: security group not deleted yet", "external_ref", externalRef, "elapsed", time.Since(started).Round(time.Millisecond), "error", err)
+		return err
+	}
+	slog.InfoContext(ctx, "AWS destroy: done", "external_ref", externalRef, "elapsed", time.Since(started).Round(time.Millisecond))
+	return nil
 }
 
 // deleteObjectSecurityGroup removes the per-object security group tagged with

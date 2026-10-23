@@ -3,7 +3,9 @@ package orchestrator
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -80,10 +82,20 @@ func Rebuild(ctx context.Context, pool *pgxpool.Pool, build db.Build, content *l
 		if err != nil {
 			return nil, fmt.Errorf("building rebuild destroy payload for %s: %w", o.ID.String(), err)
 		}
-		if _, err := q.CreateTaskIfNoneOpen(ctx, db.CreateTaskIfNoneOpenParams{
+		team := teamNumberByID[o.TeamID.String()]
+		task, err := q.CreateTaskIfNoneOpen(ctx, db.CreateTaskIfNoneOpenParams{
 			BuildID: build.ID, DeployedObjectID: o.ID, Kind: "destroy_" + o.Kind, Payload: payload,
-		}); err != nil {
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Something is already in flight for it (a deploy, an earlier
+			// destroy): say so rather than fail the whole rebuild. The reset
+			// below still makes the next pass redeploy once that task ends.
+			decide(ctx, q, build.ID, o.ID, "rebuild.waiting", fmt.Sprintf("%s: rebuild requested, but it already has an open task; its destroy waits for that to finish", objectLabel(o, team)), nil)
+		} else if err != nil {
 			return nil, fmt.Errorf("enqueuing rebuild destroy for %s: %w", o.ID.String(), err)
+		} else {
+			decide(ctx, q, build.ID, o.ID, "rebuild.destroy", fmt.Sprintf("%s: destroy task queued for the rebuild (hoster ref %s); it redeploys once destroyed", objectLabel(o, team), db.StrOrEmpty(o.ExternalRef)),
+				map[string]any{"task_id": task.ID.String(), "external_ref": db.StrOrEmpty(o.ExternalRef)})
 		}
 		if _, err := q.ResetDeployedObjectForRedeploy(ctx, o.ID); err != nil {
 			return nil, fmt.Errorf("resetting %s for rebuild: %w", o.ID.String(), err)

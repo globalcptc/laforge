@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -125,15 +126,22 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 				continue
 			}
 			if !checkedIn[id] {
+				if throttled("checkin-wait/"+id, time.Minute) {
+					decide(ctx, q, buildID, o.ID, "lifecycle.waiting", fmt.Sprintf("%s: instance is up; waiting for its agent to check in", objectLabel(o, 0)), nil)
+				}
 				continue // instance up, agent not seen yet -- stay running
 			}
-			if err := applyObjectState(ctx, q, o.ID, evaluateBuild(id)); err != nil {
+			next := evaluateBuild(id)
+			if err := applyObjectState(ctx, q, o.ID, next); err != nil {
 				return err
 			}
+			noteObjectState(ctx, q, buildID, o, next, steps[id])
 		case "building":
-			if err := applyObjectState(ctx, q, o.ID, evaluateBuild(id)); err != nil {
+			next := evaluateBuild(id)
+			if err := applyObjectState(ctx, q, o.ID, next); err != nil {
 				return err
 			}
+			noteObjectState(ctx, q, buildID, o, next, steps[id])
 		}
 	}
 	return nil
@@ -158,4 +166,25 @@ func applyObjectState(ctx context.Context, q *db.Queries, id pgtype.UUID, state 
 		return fmt.Errorf("setting %s on %s: %w", state, id.String(), err)
 	}
 	return nil
+}
+
+// noteObjectState records an object's lifecycle move (running -> building ->
+// finished / build_failed / invalid) once, with the step counts behind it.
+func noteObjectState(ctx context.Context, q *db.Queries, buildID pgtype.UUID, o db.DeployedObject, next string, s struct{ total, open, failed int64 }) {
+	if next == o.Status {
+		return
+	}
+	var why string
+	switch next {
+	case "building":
+		why = fmt.Sprintf("agent checked in; %d of %d step(s) still to run", s.open, s.total)
+	case "finished":
+		why = fmt.Sprintf("every step done (%d) and every validator passed", s.total)
+	case "build_failed":
+		why = fmt.Sprintf("%d step(s) failed; %d of %d never ran", s.failed, s.open, s.total)
+	case "invalid":
+		why = "all steps done, but a validator did not pass"
+	}
+	decide(ctx, q, buildID, o.ID, "lifecycle."+next, fmt.Sprintf("%s: %s -> %s: %s", objectLabel(o, 0), o.Status, next, why),
+		map[string]any{"from": o.Status, "to": next, "steps_total": s.total, "steps_open": s.open, "steps_failed": s.failed})
 }

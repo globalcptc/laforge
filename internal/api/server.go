@@ -19,8 +19,12 @@ package api
 
 import (
 	"crypto/rsa"
+	"log"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -145,7 +149,54 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	s.mux.ServeHTTP(w, r)
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		s.mux.ServeHTTP(w, r)
+		return
+	}
+	// Every request that changes something is a line in the api's log --
+	// who, what, the answer and how long -- so an operator's action
+	// (deploy, rebuild, restart, teardown, a command) can be found in the
+	// log next to what the orchestrator and runner then did about it.
+	started := time.Now()
+	rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+	s.mux.ServeHTTP(rw, r)
+	log.Printf("api: %s %s -> %d in %s (by %s from %s)", r.Method, r.URL.Path, rw.status, time.Since(started).Round(time.Millisecond), s.actorFor(r), clientAddr(r))
+}
+
+// statusRecorder remembers the status a handler wrote, for the request log.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusRecorder) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+// Unwrap lets http.ResponseController reach the real writer (flushing,
+// hijacking for WebSockets) through the recorder.
+func (w *statusRecorder) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
+// actorFor names who made a request, for the log: the session's or token's
+// GitHub login, the agent or site for machine callers, or "anonymous".
+func (s *Server) actorFor(r *http.Request) string {
+	if sess, err := s.sessionFromRequest(r); err == nil && sess.GithubLogin != "" {
+		return sess.GithubLogin
+	}
+	if auth := r.Header.Get("Authorization"); auth != "" {
+		scheme, _, _ := strings.Cut(auth, " ")
+		return strings.ToLower(scheme) + " token"
+	}
+	return "anonymous"
+}
+
+// clientAddr is the request's peer address without the port.
+func clientAddr(r *http.Request) string {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
 
 func (s *Server) routes() {

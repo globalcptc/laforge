@@ -20,8 +20,10 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -226,6 +228,7 @@ func (e *APIError) Busy() bool {
 func (c *Client) get(ctx context.Context, path string) (json.RawMessage, error) {
 	return c.do(ctx, http.MethodGet, path, nil)
 }
+
 // getRaw does a GET and returns the untouched response body, for endpoints that
 // don't speak the LXD JSON envelope -- notably /1.0/metrics, which is OpenMetrics
 // text. The normal do()/get() path would fail trying to json.Unmarshal it.
@@ -302,7 +305,25 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 	return c.doWithHeaders(ctx, method, path, body, nil, nil)
 }
 
+// doWithHeaders is every request this client makes; each is logged with its
+// method, path, duration and outcome (see the MicroCloud client's do for why:
+// a stalled deploy or rebuild is only diagnosable from the request log).
 func (c *Client) doWithHeaders(ctx context.Context, method, path string, body interface{}, headers http.Header, responseHeaders *http.Header) (json.RawMessage, error) {
+	started := time.Now()
+	result, err := c.doRequest(ctx, method, path, body, headers, responseHeaders)
+	elapsed := time.Since(started).Round(time.Millisecond)
+	switch {
+	case err == nil:
+		slog.InfoContext(ctx, "Incus API request", "method", method, "path", path, "elapsed", elapsed)
+	case errors.Is(err, context.Canceled):
+		slog.WarnContext(ctx, "Incus API request cancelled", "method", method, "path", path, "elapsed", elapsed)
+	default:
+		slog.WarnContext(ctx, "Incus API request failed", "method", method, "path", path, "elapsed", elapsed, "error", err)
+	}
+	return result, err
+}
+
+func (c *Client) doRequest(ctx context.Context, method, path string, body interface{}, headers http.Header, responseHeaders *http.Header) (json.RawMessage, error) {
 	// reqCtx, not a reassigned ctx: waitForOperation below needs the
 	// ORIGINAL, undecorated ctx this function was called with, not this
 	// request's own short-lived deadline -- a child context can never
@@ -377,6 +398,7 @@ func (c *Client) doWithHeaders(ctx context.Context, method, path string, body in
 	case "error":
 		return nil, &APIError{HTTPStatus: resp.StatusCode, ErrorCode: ar.ErrorCode, Message: ar.Error}
 	case "async":
+		slog.InfoContext(ctx, "Incus API accepted an async operation", "method", method, "path", path, "operation", ar.Operation)
 		return c.waitForOperation(ctx, ar.Operation)
 	default: // "sync"
 		return ar.Metadata, nil
@@ -441,7 +463,18 @@ func (e *operationPendingError) Unwrap() error {
 // found" instead of the real, actionable cause. Every caller of do()/
 // post()/put()/patch()/delete() that goes through an async operation
 // (network/instance create, start/stop, ...) was affected equally.
-func (c *Client) waitForOperation(ctx context.Context, opPath string) (json.RawMessage, error) {
+func (c *Client) waitForOperation(ctx context.Context, opPath string) (result json.RawMessage, resultErr error) {
+	started := time.Now()
+	stopProgress := logWaitProgress(ctx, "Incus", opPath, started)
+	defer func() {
+		stopProgress()
+		elapsed := time.Since(started).Round(time.Millisecond)
+		if resultErr == nil {
+			slog.InfoContext(ctx, "Incus operation finished", "operation", opPath, "elapsed", elapsed)
+		} else {
+			slog.WarnContext(ctx, "Incus operation did not succeed", "operation", opPath, "elapsed", elapsed, "wait_limit", c.OperationTimeout, "error", resultErr)
+		}
+	}()
 	// The client's own deadline must be strictly longer than what the
 	// URL's ?timeout=N tells the SERVER to hold the long-poll for --
 	// otherwise the client could give up and tear down the connection
@@ -518,4 +551,26 @@ func (c *Client) operationWaitURL(opPath string) (string, error) {
 	}
 	u.RawQuery = query.Encode()
 	return c.BaseURL + u.RequestURI(), nil
+}
+
+// logWaitProgress logs every 30 seconds that an operation is still being
+// waited on, until the returned stop is called -- so a slow hoster is
+// distinguishable from a stalled runner in the log.
+func logWaitProgress(ctx context.Context, hoster, opPath string, started time.Time) (stop func()) {
+	done := make(chan struct{})
+	go func() {
+		t := time.NewTicker(30 * time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				slog.InfoContext(ctx, hoster+" operation still running", "operation", opPath, "waited", time.Since(started).Round(time.Second))
+			}
+		}
+	}()
+	return func() { close(done) }
 }

@@ -532,6 +532,10 @@ func (s *Server) logStepEventWith(ctx context.Context, q *db.Queries, task db.Ag
 		payload[k] = v
 	}
 	payloadBody, _ := json.Marshal(payload)
+	if detail != "" && len(detail) > 300 {
+		detail = detail[:300] + "…"
+	}
+	log.Printf("gateway: build %s object %s: %s -- %s %s", buildID.String()[:8], task.DeployedObjectID.String()[:8], kind, message, strings.TrimSpace(detail))
 	if err := q.CreateAgentStepEvent(ctx, db.CreateAgentStepEventParams{
 		BuildID: buildID, DeployedObjectID: task.DeployedObjectID, Kind: kind, Message: message, Payload: payloadBody,
 	}); err != nil {

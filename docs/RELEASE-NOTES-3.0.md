@@ -186,6 +186,14 @@ This note covers the whole 3.0 line.
 
 ## Operations & Observability
 
+- **Everything LaForge does is logged, twice**: as a line in the service's own log and
+  as an event on the build's Logs tab. The orchestrator records every decision with its
+  reason (deploy, recreate, remove, rebuild, teardown, held, failed for a network or a
+  dependency, each status move, and what it's waiting on); the runner every task
+  attempt and its duration; the api every operator action with who made it; the
+  builders every hoster request, operation and destroy phase; the gateway every step.
+  Long log lines open in place on the Logs tab.
+
 - **A React operator console**: active builds grouped by repository on a home dashboard;
   per-build hosts/containers/networks with live status, infra power state, and agent
   health; live **logs over SSE**; **findings**, **topology**, **access** and **external

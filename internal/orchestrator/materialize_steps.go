@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -54,10 +55,12 @@ func materializeStepsIfReady(ctx context.Context, q *db.Queries, repoRoot string
 	// ignored, matching reconcile's depends_on handling.)
 	for _, d := range dependsOn {
 		if placed[d] && failedDeps[d] {
-			return q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{
-				ID:        obj.ID,
-				LastError: db.StrPtr(fmt.Sprintf("dependency %q failed to configure", d)),
-			})
+			msg := fmt.Sprintf("dependency %q failed to configure", d)
+			if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{ID: obj.ID, LastError: db.StrPtr(msg)}); err != nil {
+				return err
+			}
+			decide(ctx, q, buildID, obj.ID, "lifecycle.build_failed", fmt.Sprintf("%s: %s; its steps never ran (restart %s from a step, or rebuild it, and this host resumes)", asName, msg, d), map[string]any{"dependency": d})
+			return nil
 		}
 	}
 	// Which placed dependencies haven't finished yet -- what this object is
@@ -123,11 +126,13 @@ func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *lo
 		q.CreateEvent(ctx, db.CreateEventParams{BuildID: buildID, Kind: "steps.note", Message: n, Payload: []byte("{}")})
 	}
 	if len(authored) > 0 {
-		q.CreateEvent(ctx, db.CreateEventParams{
-			BuildID: buildID, Kind: "steps.materialized",
-			Message: fmt.Sprintf("%d step command(s) queued for %s", len(authored), asName),
-			Payload: []byte("{}"),
-		})
+		msg := fmt.Sprintf("%d step command(s) queued for %s", len(authored), asName)
+		if len(blockedOn) > 0 {
+			msg += fmt.Sprintf("; blocked until %s finish configuring", strings.Join(blockedOn, ", "))
+		}
+		decide(ctx, q, buildID, obj.ID, "steps.materialized", msg, map[string]any{"commands": len(authored), "blocked_on": blockedOn})
+	} else {
+		decide(ctx, q, buildID, obj.ID, "steps.materialized", fmt.Sprintf("%s has no steps; it finishes once its agent checks in", asName), nil)
 	}
 	return nil
 }

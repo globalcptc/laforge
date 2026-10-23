@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 	"time"
@@ -779,9 +780,13 @@ func (b *Builder) DestroyContainer(ctx context.Context, team, externalRef string
 }
 
 func (b *Builder) destroyInstance(ctx context.Context, name string) error {
+	started := time.Now()
+	slog.InfoContext(ctx, "Incus destroying instance: waiting for any in-flight creation", "project", b.Client.Project, "instance", name)
 	if err := b.Client.waitForInstanceCreation(ctx, name); err != nil {
+		slog.ErrorContext(ctx, "Incus destroy: creation wait failed", "instance", name, "error", err)
 		return err
 	}
+	slog.InfoContext(ctx, "Incus destroy: stopping the instance (force, 30s)", "instance", name)
 	_, err := b.Client.put(ctx, "/1.0/instances/"+name+"/state", map[string]interface{}{
 		"action": "stop", "timeout": 30, "force": true,
 	})
@@ -790,17 +795,24 @@ func (b *Builder) destroyInstance(ctx context.Context, name string) error {
 		alreadyStopped := errors.As(err, &apiErr) && (apiErr.NotFound() ||
 			strings.Contains(apiErr.Message, "already stopped") || strings.Contains(apiErr.Message, "not running"))
 		if !alreadyStopped {
+			slog.ErrorContext(ctx, "Incus destroy: stop failed", "instance", name, "elapsed", time.Since(started).Round(time.Millisecond), "error", err)
 			return fmt.Errorf("stopping instance %s: %w", name, err)
 		}
+		slog.InfoContext(ctx, "Incus destroy: instance already stopped or gone", "instance", name, "detail", err.Error())
 	}
+	slog.InfoContext(ctx, "Incus destroy: deleting the instance", "instance", name)
 	_, err = b.Client.delete(ctx, "/1.0/instances/"+name)
 	if err != nil {
 		var apiErr *APIError
 		if errors.As(err, &apiErr) && apiErr.NotFound() {
+			slog.InfoContext(ctx, "Incus destroy: instance was already gone", "instance", name)
 			// Still clean up the config-drive volume below.
 		} else {
+			slog.ErrorContext(ctx, "Incus destroy: delete failed", "instance", name, "elapsed", time.Since(started).Round(time.Millisecond), "error", err)
 			return fmt.Errorf("deleting instance %s: %w", name, err)
 		}
+	} else {
+		slog.InfoContext(ctx, "Incus destroy: instance deleted; removing leftovers (config drive, host ACL)", "instance", name, "elapsed", time.Since(started).Round(time.Millisecond))
 	}
 	// Remove the config-drive volume, if this instance had one (Windows).
 	// A missing volume is a no-op; other errors must remain visible so

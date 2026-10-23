@@ -804,7 +804,8 @@ func (b *Builder) destroyInstance(ctx context.Context, name string, options ...d
 			}
 		}
 	}
-	slog.InfoContext(ctx, "MicroCloud deleting instance", "project", b.Client.Project, "instance", name, "retain_public_ip_for_rebuild", retain)
+	destroyStarted := time.Now()
+	slog.InfoContext(ctx, "MicroCloud destroying instance: stopping it (force, 30s)", "project", b.Client.Project, "instance", name, "retain_public_ip_for_rebuild", retain)
 	_, err := b.Client.put(ctx, "/1.0/instances/"+name+"/state", map[string]interface{}{
 		"action": "stop", "timeout": 30, "force": true,
 	})
@@ -813,17 +814,27 @@ func (b *Builder) destroyInstance(ctx context.Context, name string, options ...d
 		alreadyStopped := errors.As(err, &apiErr) && (apiErr.NotFound() ||
 			strings.Contains(apiErr.Message, "already stopped") || strings.Contains(apiErr.Message, "not running"))
 		if !alreadyStopped {
+			slog.ErrorContext(ctx, "MicroCloud destroy: stop failed", "instance", name, "elapsed", time.Since(destroyStarted).Round(time.Millisecond), "error", err)
 			return fmt.Errorf("stopping instance %s: %w", name, err)
 		}
+		slog.InfoContext(ctx, "MicroCloud destroy: instance already stopped or gone", "instance", name, "detail", err.Error())
+	} else {
+		slog.InfoContext(ctx, "MicroCloud destroy: instance stopped", "instance", name, "elapsed", time.Since(destroyStarted).Round(time.Millisecond))
 	}
+	deleteStarted := time.Now()
+	slog.InfoContext(ctx, "MicroCloud destroy: deleting the instance", "instance", name)
 	_, err = b.Client.delete(ctx, "/1.0/instances/"+name)
 	if err != nil {
 		var apiErr *APIError
 		if errors.As(err, &apiErr) && apiErr.NotFound() {
+			slog.InfoContext(ctx, "MicroCloud destroy: instance was already gone", "instance", name)
 			// Still clean up the config-drive volume below.
 		} else {
+			slog.ErrorContext(ctx, "MicroCloud destroy: delete failed", "instance", name, "elapsed", time.Since(deleteStarted).Round(time.Millisecond), "error", err)
 			return fmt.Errorf("deleting instance %s: %w", name, err)
 		}
+	} else {
+		slog.InfoContext(ctx, "MicroCloud destroy: instance deleted", "instance", name, "elapsed", time.Since(deleteStarted).Round(time.Millisecond))
 	}
 	if b.PublicAddresses != nil {
 		// A successful asynchronous delete is followed by an exact read. Do
@@ -836,12 +847,17 @@ func (b *Builder) destroyInstance(ctx context.Context, name string, options ...d
 		}
 		if !retain {
 			if err := b.PublicAddresses.Release(ctx, b.publicProject(), name, opts.externalName); err != nil {
+				slog.ErrorContext(ctx, "MicroCloud destroy: releasing the public address failed", "instance", name, "error", err)
 				return fmt.Errorf("releasing public address: %w", err)
 			}
+			slog.InfoContext(ctx, "MicroCloud destroy: public address released", "instance", name)
 		} else {
 			slog.InfoContext(ctx, "MicroCloud public IP reservation retained for rebuild", "project", b.publicProject(), "instance", name)
 		}
 	}
+	// Best-effort cleanup of what the instance left behind; each is logged by
+	// the client, and a failure here never fails the destroy.
+	slog.InfoContext(ctx, "MicroCloud destroy: removing leftovers (public ACL, config drive, host ACL)", "instance", name)
 	_, _ = b.Client.delete(ctx, "/1.0/network-acls/"+publicACLName(b.publicProject(), name))
 	// Remove the config-drive volume, if this instance had one (Windows).
 	// A no-op when there wasn't one; never fails the destroy.
@@ -849,6 +865,7 @@ func (b *Builder) destroyInstance(ctx context.Context, name string, options ...d
 	// Remove this instance's per-host port-firewall ACL now that its only user
 	// is gone, so it doesn't linger orphaned. Best-effort. Mirrors incus.
 	_, _ = b.Client.delete(ctx, "/1.0/network-acls/"+hostACLName(name))
+	slog.InfoContext(ctx, "MicroCloud destroy: done", "instance", name, "elapsed", time.Since(destroyStarted).Round(time.Millisecond))
 	return nil
 }
 

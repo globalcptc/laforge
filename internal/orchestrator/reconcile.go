@@ -333,6 +333,7 @@ func finalizeBuildStatus(ctx context.Context, q *db.Queries, buildID pgtype.UUID
 			if _, err := q.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: buildID, Status: "deploying"}); err != nil {
 				return false, fmt.Errorf("re-entering deploy phase for pending infra: %w", err)
 			}
+			decide(ctx, q, buildID, pgtype.UUID{}, "build.status", fmt.Sprintf("build is deploying again: %d object(s) have infrastructure pending (a rebuild or redeploy)", infraPending), nil)
 		}
 		return false, nil
 	}
@@ -353,6 +354,8 @@ func finalizeBuildStatus(ctx context.Context, q *db.Queries, buildID pgtype.UUID
 		if _, err := q.SetBuildStatus(ctx, db.SetBuildStatusParams{ID: buildID, Status: status}); err != nil {
 			return false, fmt.Errorf("marking build %s: %w", status, err)
 		}
+		decide(ctx, q, buildID, pgtype.UUID{}, "build.status", fmt.Sprintf("build is now %s (was %s): %d object(s) live, %d still building, %d failed", status, current, live, agentWorking, failed),
+			map[string]any{"from": current, "to": status, "live": live, "building": agentWorking, "failed": failed})
 		// A failed build is terminal and will never run its schedule:
 		// rows, so cancel them -- otherwise they stay pending and overdue
 		// and the dispatch loop keeps resolving content + minting a GitHub
@@ -390,8 +393,12 @@ func reconcileRemovals(ctx context.Context, q *db.Queries, buildID, teamID pgtyp
 		if obj.Status == "destroyed" {
 			continue
 		}
-		if err := requestDestroy(ctx, q, buildID, obj, true, deployTasks); err != nil {
+		requested, err := requestDestroy(ctx, q, buildID, obj, true, deployTasks)
+		if err != nil {
 			return fmt.Errorf("removing %s %q: %w", obj.Kind, identity, err)
+		}
+		if requested {
+			decide(ctx, q, buildID, obj.ID, "reconcile.remove", fmt.Sprintf("%s: no longer in the content; destroying and removing it", objectLabel(obj, 0)), nil)
 		}
 	}
 	return nil
@@ -499,10 +506,15 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	// also lets the build settle instead of leaving those guests pending forever.
 	if deployTasks && !infraUp(obj.Status) && obj.Status != "destroying" && obj.Status != "destroyed" && networkName != "" && !networkUp[networkName] {
 		if networkFailed[networkName] && obj.Status != "deploy_failed" {
-			_, err := q.MarkDeployedObjectDeployFailed(ctx, db.MarkDeployedObjectDeployFailedParams{
-				ID: obj.ID, LastError: db.StrPtr(fmt.Sprintf("network %q failed to deploy; resolve its failure before redeploying", networkName)),
-			})
+			msg := fmt.Sprintf("network %q failed to deploy; resolve its failure before redeploying", networkName)
+			_, err := q.MarkDeployedObjectDeployFailed(ctx, db.MarkDeployedObjectDeployFailedParams{ID: obj.ID, LastError: db.StrPtr(msg)})
+			if err == nil {
+				decide(ctx, q, buildID, obj.ID, "reconcile.deploy_failed", fmt.Sprintf("%s: %s", objectLabel(obj, int32(teamNum)), msg), nil)
+			}
 			return err
+		}
+		if throttled("network-wait/"+obj.ID.String(), time.Minute) {
+			decide(ctx, q, buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: waiting for network %q to be up before deploying", objectLabel(obj, int32(teamNum)), networkName), nil)
 		}
 		return nil
 	}
@@ -568,7 +580,8 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 		if obj.Fingerprint == desiredFP {
 			return false, nil // already correct
 		}
-		if holdOnStepChange && obj.InfraFingerprint != "" && obj.InfraFingerprint == desiredInfraFP {
+		stepsOnly := obj.InfraFingerprint != "" && obj.InfraFingerprint == desiredInfraFP
+		if holdOnStepChange && stepsOnly {
 			n, err := q.MarkDeployedObjectStepsChanged(ctx, db.MarkDeployedObjectStepsChangedParams{ID: obj.ID, StepsChangedFingerprint: desiredFP})
 			if err != nil {
 				return false, fmt.Errorf("marking steps changed: %w", err)
@@ -581,11 +594,30 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 		}
 		// "rebuild means recreate": destroy first, not remove -- a later
 		// pass (once destroyed resets it to pending) will redeploy fresh.
-		return false, requestDestroy(ctx, q, buildID, obj, false, deployTasks)
+		what := "its infrastructure (image, size, disk, ports or dependencies)"
+		if stepsOnly {
+			what = "only its steps or scripts (this build recreates on any change)"
+		} else if obj.InfraFingerprint == "" {
+			what = "its content (deployed before changes could be told apart)"
+		}
+		requested, err := requestDestroy(ctx, q, buildID, obj, false, deployTasks)
+		if err != nil {
+			return false, err
+		}
+		if requested {
+			decide(ctx, q, buildID, obj.ID, "reconcile.recreate", fmt.Sprintf("%s: %s changed in the content; destroying it to redeploy fresh", objectLabel(obj, 0), what),
+				map[string]any{"deployed_fingerprint": obj.Fingerprint, "desired_fingerprint": desiredFP, "steps_only": stepsOnly})
+		} else if deployTasks && throttled("recreate-wait/"+obj.ID.String(), time.Minute) {
+			decide(ctx, q, buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: needs recreating but already has an open task; waiting for it", objectLabel(obj, 0)), nil)
+		}
+		return false, nil
 	}
 	if obj.Status == "destroying" || obj.Status == "destroyed" {
 		// let the in-flight (or already-completed-but-not-yet-reset)
 		// destroy finish; nothing new to request this pass.
+		if deployTasks && throttled("destroying/"+obj.ID.String(), time.Minute) {
+			decide(ctx, q, buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: %s; waiting for the runner before redeploying", objectLabel(obj, 0), obj.Status), nil)
+		}
 		return false, nil
 	}
 	if !deployTasks {
@@ -600,7 +632,7 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 	if err != nil {
 		return false, err
 	}
-	_, err = q.CreateTaskIfNoneOpen(ctx, db.CreateTaskIfNoneOpenParams{
+	task, err := q.CreateTaskIfNoneOpen(ctx, db.CreateTaskIfNoneOpenParams{
 		BuildID: buildID, DeployedObjectID: obj.ID, Kind: "deploy_" + obj.Kind, Payload: payload,
 	})
 	if err != nil {
@@ -609,6 +641,12 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 		}
 		return false, err
 	}
+	why := "not deployed yet"
+	if obj.Status == "deploy_failed" {
+		why = "its last deploy failed; trying again"
+	}
+	decide(ctx, q, buildID, obj.ID, "reconcile.deploy", fmt.Sprintf("%s: %s; deploy task queued (priority %d)", objectLabel(obj, 0), why, priority),
+		map[string]any{"task_id": task.ID.String(), "fingerprint": desiredFP, "priority": priority})
 	return true, nil
 }
 
@@ -629,21 +667,27 @@ func deployTaskPayload(fingerprint, infraFingerprint string, priority int) ([]by
 	return json.Marshal(p)
 }
 
-func requestDestroy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, remove bool, deployTasks bool) error {
+// requestDestroy queues a destroy for obj and reports whether it did (false
+// when the object already has an open task, which is then the one to wait
+// for, or when the build is only planned).
+func requestDestroy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, remove bool, deployTasks bool) (bool, error) {
 	if !deployTasks {
-		return nil // a `planned` build never destroys anything real either
+		return false, nil // a `planned` build never destroys anything real either
 	}
 	payload, err := json.Marshal(map[string]bool{"remove": remove})
 	if err != nil {
-		return err
+		return false, err
 	}
 	_, err = q.CreateTaskIfNoneOpen(ctx, db.CreateTaskIfNoneOpenParams{
 		BuildID: buildID, DeployedObjectID: obj.ID, Kind: "destroy_" + obj.Kind, Payload: payload,
 	})
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return err
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
 	}
-	return nil
+	return true, nil
 }
 
 // placedNames is the set of object and network names that appear in an

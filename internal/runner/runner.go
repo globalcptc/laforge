@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -212,7 +213,8 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	// timeline shows the whole bring-up (deploy_network started -> completed,
 	// deploy_host started -> completed, access configured, ...) rather than only
 	// terminal lines. Fires per attempt, so retries are visible too.
-	r.logEvent(ctx, q, task.BuildID, task.ID, "task.started", fmt.Sprintf("%s (attempt %d)", task.Kind, task.Attempts))
+	r.logEvent(ctx, q, task.BuildID, task.ID, "task.started", fmt.Sprintf("%s (attempt %d of %d, object %s, lease %s)", task.Kind, task.Attempts, MaxAttempts, shortID(task.DeployedObjectID), r.LeaseDuration))
+	taskStarted := time.Now()
 	stopHeartbeat := make(chan struct{})
 	go r.heartbeatLoop(ctx, task.ID, stopHeartbeat)
 	// A builder that times its phases (image copy, config drive, start, time
@@ -223,6 +225,7 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	resolved, execErr := r.execute(execCtx, q, task)
 	close(stopHeartbeat)
 	phaseDetail := phasePayload(phases.Phases())
+	log.Printf("[%s] build %s task %s: %s returned after %s (error: %v)", r.ID, shortID(task.BuildID), shortID(task.ID), task.Kind, time.Since(taskStarted).Round(time.Millisecond), execErr)
 
 	if resolved {
 		// The task row itself is already gone (a "remove" destroy deletes
@@ -330,9 +333,13 @@ func (r *Runner) heartbeatLoop(ctx context.Context, taskID pgtype.UUID, stop <-c
 			// `WHERE lease_owner = $2`. A reclaimed runner's eventual
 			// Complete/Retry/Fail calls simply affect zero rows and are
 			// harmless -- whoever reclaimed the lease owns the outcome.
-			q.HeartbeatTask(ctx, db.HeartbeatTaskParams{
+			if _, err := q.HeartbeatTask(ctx, db.HeartbeatTaskParams{
 				ID: taskID, LeaseOwner: db.StrPtr(r.ID), Column3: db.Interval(r.LeaseDuration),
-			})
+			}); err != nil {
+				// Said, not acted on (see above): the log is where a lost
+				// lease shows up while the builder call is still running.
+				log.Printf("[%s] task %s: renewing the lease failed: %v -- another runner may now own it", r.ID, shortID(taskID), err)
+			}
 		case <-stop:
 			return
 		case <-ctx.Done():
@@ -342,9 +349,21 @@ func (r *Runner) heartbeatLoop(ctx context.Context, taskID pgtype.UUID, stop <-c
 }
 
 func (r *Runner) logEvent(ctx context.Context, q *db.Queries, buildID pgtype.UUID, taskID pgtype.UUID, kind, message string) {
+	// Every event the runner records for a build's timeline is also a line
+	// in its own log, so a stalled task can be followed from the process
+	// without the UI, and the two agree.
+	log.Printf("[%s] build %s task %s: %s -- %s", r.ID, shortID(buildID), shortID(taskID), kind, message)
 	q.CreateEvent(ctx, db.CreateEventParams{
 		BuildID: buildID, TaskID: taskID, Kind: kind, Message: message, Payload: []byte("{}"),
 	})
+}
+
+// shortID is the first 8 characters of an id, for log lines; "-" for none.
+func shortID(id pgtype.UUID) string {
+	if !id.Valid {
+		return "-"
+	}
+	return id.String()[:8]
 }
 
 // logBuilderCall records one event per request the runner makes to a builder's
@@ -358,6 +377,7 @@ func (r *Runner) logBuilderCall(ctx context.Context, q *db.Queries, buildID, tas
 	if err != nil || len(payload) == 0 || string(payload) == "null" {
 		payload = []byte("{}")
 	}
+	log.Printf("[%s] build %s task %s: %s -- %s %s", r.ID, shortID(buildID), shortID(taskID), kind, message, payload)
 	q.CreateEvent(ctx, db.CreateEventParams{BuildID: buildID, TaskID: taskID, Kind: kind, Message: message, Payload: payload})
 }
 
