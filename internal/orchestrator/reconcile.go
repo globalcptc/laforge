@@ -513,9 +513,7 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 			}
 			return err
 		}
-		if throttled("network-wait/"+obj.ID.String(), time.Minute) {
-			decide(ctx, q, buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: waiting for network %q to be up before deploying", objectLabel(obj, int32(teamNum)), networkName), nil)
-		}
+		decideRepeating(ctx, q, "network-wait/"+obj.ID.String(), buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: waiting for network %q to be up before deploying", objectLabel(obj, int32(teamNum)), networkName), nil)
 		return nil
 	}
 	// The box deploys ahead of time: its deploy task is no longer gated on
@@ -607,8 +605,8 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 		if requested {
 			decide(ctx, q, buildID, obj.ID, "reconcile.recreate", fmt.Sprintf("%s: %s changed in the content; destroying it to redeploy fresh", objectLabel(obj, 0), what),
 				map[string]any{"deployed_fingerprint": obj.Fingerprint, "desired_fingerprint": desiredFP, "steps_only": stepsOnly})
-		} else if deployTasks && throttled("recreate-wait/"+obj.ID.String(), time.Minute) {
-			decide(ctx, q, buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: needs recreating but already has an open task; waiting for it", objectLabel(obj, 0)), nil)
+		} else if deployTasks {
+			decideRepeating(ctx, q, "recreate-wait/"+obj.ID.String(), buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: needs recreating but already has an open task; waiting for it", objectLabel(obj, 0)), nil)
 		}
 		return false, nil
 	}
@@ -633,9 +631,7 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 	if obj.Status == "destroying" {
 		// No destroy task is in flight (settleLastDestroy would have said), yet
 		// the runner's reset to pending never happened: say so once a minute.
-		if throttled("destroying/"+obj.ID.String(), time.Minute) {
-			decide(ctx, q, buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: marked destroying but no destroy task is open; waiting for the runner to reset it", objectLabel(obj, 0)), nil)
-		}
+		decideRepeating(ctx, q, "destroying/"+obj.ID.String(), buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: marked destroying but no destroy task is open; waiting for the runner to reset it", objectLabel(obj, 0)), nil)
 		return false, nil
 	}
 	// pending, deploying, or deploy_failed: ensure a deploy task exists.
@@ -902,17 +898,15 @@ func settleLastDestroy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 	case "done":
 		return true, nil
 	case "pending", "leased":
-		if throttled("destroy-open/"+obj.ID.String(), time.Minute) {
-			state := last.Status
-			if last.Status == "leased" {
-				state = fmt.Sprintf("leased by %s until %s", db.StrOrEmpty(last.LeaseOwner), last.LeaseExpiresAt.Time.Format(time.TimeOnly))
-			}
-			msg := fmt.Sprintf("%s: its destroy task is %s (attempt %d, %s old); not deploying until the old instance is gone", objectLabel(obj, 0), state, last.Attempts, age)
-			if e := db.StrOrEmpty(last.LastError); e != "" {
-				msg += "; last error: " + e
-			}
-			decide(ctx, q, buildID, obj.ID, "reconcile.waiting", msg, map[string]any{"task_id": last.ID.String(), "task_status": last.Status, "attempts": last.Attempts, "last_error": db.StrOrEmpty(last.LastError)})
+		state := last.Status
+		if last.Status == "leased" {
+			state = fmt.Sprintf("leased by %s until %s", db.StrOrEmpty(last.LeaseOwner), last.LeaseExpiresAt.Time.Format(time.TimeOnly))
 		}
+		msg := fmt.Sprintf("%s: its destroy task is %s (attempt %d, %s old); not deploying until the old instance is gone", objectLabel(obj, 0), state, last.Attempts, age)
+		if e := db.StrOrEmpty(last.LastError); e != "" {
+			msg += "; last error: " + e
+		}
+		decideRepeating(ctx, q, "destroy-open/"+obj.ID.String(), buildID, obj.ID, "reconcile.waiting", msg, map[string]any{"task_id": last.ID.String(), "task_status": last.Status, "attempts": last.Attempts, "last_error": db.StrOrEmpty(last.LastError)})
 		return false, nil
 	case "failed":
 		errText := db.StrOrEmpty(last.LastError)
@@ -928,9 +922,7 @@ func settleLastDestroy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 		}
 		wait := teardownRequeueBackoff(int(last.FailedCount))
 		if time.Since(last.UpdatedAt.Time) < wait {
-			if throttled("destroy-backoff/"+obj.ID.String(), time.Minute) {
-				decide(ctx, q, buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: its destroy failed %d time(s) (%s); trying again in %s", objectLabel(obj, 0), last.FailedCount, errText, (wait-time.Since(last.UpdatedAt.Time)).Round(time.Second)), nil)
-			}
+			decideRepeating(ctx, q, "destroy-backoff/"+obj.ID.String(), buildID, obj.ID, "reconcile.waiting", fmt.Sprintf("%s: its destroy failed %d time(s) (%s); trying again in %s", objectLabel(obj, 0), last.FailedCount, errText, (wait-time.Since(last.UpdatedAt.Time)).Round(time.Second)), nil)
 			return false, nil
 		}
 		// Same payload as the failed one, so the real hoster reference a

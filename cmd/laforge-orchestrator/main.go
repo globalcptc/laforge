@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -234,9 +235,22 @@ func main() {
 			if recErr != "" {
 				val = &recErr
 			}
-			if e := q.SetBuildReconcileError(bctx, db.SetBuildReconcileErrorParams{ID: b.ID, ReconcileError: val}); e != nil {
+			// A detached context: when the pass timed out, bctx is already
+			// dead, and the one thing that must still be written is WHY.
+			recCtx, cancelRec := context.WithTimeout(context.Background(), 5*time.Second)
+			if e := q.SetBuildReconcileError(recCtx, db.SetBuildReconcileErrorParams{ID: b.ID, ReconcileError: val}); e != nil {
 				log.Printf("recording reconcile error for build %s: %v", b.ID, e)
 			}
+			if recErr != "" {
+				msg := "reconcile pass failed: " + recErr
+				if errors.Is(bctx.Err(), context.DeadlineExceeded) {
+					msg = fmt.Sprintf("reconcile pass gave up after %s (RECONCILE_BUILD_TIMEOUT) in phase %q: %s -- the hoster calls in this phase are logged above; hosts in later teams were not reconciled this pass", reconcileBuildTimeout.Round(time.Second), lastPhase(phases), recErr)
+				}
+				q.CreateEvent(recCtx, db.CreateEventParams{BuildID: b.ID, Kind: "reconcile.error", Message: msg, Payload: []byte("{}")})
+			} else {
+				q.CreateEvent(recCtx, db.CreateEventParams{BuildID: b.ID, Kind: "reconcile.recovered", Message: "reconcile passes are completing again (was: " + prev + ")", Payload: []byte("{}")})
+			}
+			cancelRec()
 		}
 		// Enforce visible_from once a team's networks are up (peering + ACLs
 		// via the builder). Deliberately after Reconcile, which drives the
@@ -393,6 +407,21 @@ func main() {
 		}
 	}
 
+	// Repeating-event retention: the orchestrator's "still waiting" journal
+	// entries say what a stuck object is waiting on; after a day the old ones
+	// say only that it was. Drop them so a long-stuck build's Logs page stays
+	// loadable. Everything else in the journal is kept.
+	cleanupRepeatingEvents := func() {
+		n, err := q.PruneRepeatingEvents(ctx, db.Interval(24*time.Hour))
+		if err != nil {
+			log.Printf("pruning repeating events: %v", err)
+			return
+		}
+		if n > 0 {
+			log.Printf("pruned %d repeating 'waiting' event(s) older than a day", n)
+		}
+	}
+
 	// Session retention: expired session rows are otherwise never
 	// deleted anywhere -- the exact same unbounded-growth shape already
 	// fixed for agent_heartbeat, just missed for session. No retention window to
@@ -474,7 +503,12 @@ func main() {
 		if *builderMetricsInterval <= 0 {
 			return
 		}
-		if err := orchestrator.CollectBuilderMetrics(ctx, pool); err != nil {
+		// Bounded: a probe of an unreachable hoster (a decommissioned test
+		// cluster) otherwise waits the full operation timeout, minutes, and
+		// holds the metrics loop with it.
+		mctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		if err := orchestrator.CollectBuilderMetrics(mctx, pool); err != nil {
 			log.Printf("collecting builder metrics: %v", err)
 		}
 	}
@@ -536,6 +570,7 @@ func main() {
 	}
 	cleanupHeartbeats()
 	cleanupSessions()
+	cleanupRepeatingEvents()
 	dispatchScheduledTasks()
 	reconcileAccess()
 	pollInstanceStates()
@@ -592,6 +627,7 @@ func main() {
 		case <-heartbeatTicker.C:
 			cleanupHeartbeats()
 			cleanupSessions()
+			cleanupRepeatingEvents()
 			cleanupBuilderMetrics()
 			discardStalePlannedBuilds()
 		case <-scheduleTicker.C:
@@ -642,4 +678,14 @@ func envDurationDefault(name string, def time.Duration) time.Duration {
 		}
 	}
 	return def
+}
+
+// lastPhase names the phase a pass was in when it stopped, from the marks
+// collected so far ("reconcile=1m59s" -> "reconcile").
+func lastPhase(phases []string) string {
+	if len(phases) == 0 {
+		return "start"
+	}
+	name, _, _ := strings.Cut(phases[len(phases)-1], "=")
+	return name
 }

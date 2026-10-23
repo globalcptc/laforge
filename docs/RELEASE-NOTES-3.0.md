@@ -192,7 +192,10 @@ This note covers the whole 3.0 line.
   dependency, each status move, and what it's waiting on); the runner every task
   attempt and its duration; the api every operator action with who made it; the
   builders every hoster request, operation and destroy phase; the gateway every step.
-  Long log lines open in place on the Logs tab.
+  Long log lines open in place on the Logs tab, which loads the newest 5,000 events and
+  fetches earlier pages on demand ("Load earlier"), so a long or stuck build's journal
+  always opens. "Still waiting" entries are written to the journal at most twice an hour
+  per host (the orchestrator's own log has them every minute) and pruned after a day.
 - **Concurrency limits hold.** A builder's limit (*Max concurrency* in the wizard) now
   applies to the next task leased, not after a pool has drained, and a task is only
   leased once a slot is free (before, one task per pool sat leased and unheartbeated
@@ -201,6 +204,17 @@ This note covers the whole 3.0 line.
   content change's — is queued again (with its hoster reference) before anything is
   redeployed in its place, and a host whose old instance can't be destroyed is stopped
   with the error instead of sitting pending.
+- **Reconcile passes finish.** The build/builder compatibility check read every source
+  image's snapshot from the hoster on every 2-second pass (10+ seconds each on a loaded
+  MicroCloud cluster), so a pass timed out inside team 1 and later teams were never
+  reconciled. A passed check is now remembered per build and revision for an hour, and
+  each source's size per builder; a pass that does time out records why on the build
+  (`reconcile.error`, naming the phase) and `reconcile.recovered` when passes complete
+  again. Builder metrics probes are bounded to 30 s.
+- **The concurrency limit counts deploys and destroys.** A builder's *Max concurrency*
+  is how many instances are created or destroyed at once; access and network
+  configuration tasks (seconds each) run alongside instead of queueing behind a hundred
+  deploys. The runner's log names the slot per lease and what's waiting.
 - **Leaner MicroCloud destroys.** A destroy reads the instance once, stops and deletes
   it, and then removes only what that instance actually had — its public NIC's ACL, its
   per-host port ACL, its Windows config-drive volume — concurrently, instead of a blind

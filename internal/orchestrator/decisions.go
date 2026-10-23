@@ -39,6 +39,31 @@ func decide(ctx context.Context, q *db.Queries, buildID, objectID pgtype.UUID, k
 	q.CreateEvent(ctx, db.CreateEventParams{BuildID: buildID, Kind: kind, Message: message, Payload: payload})
 }
 
+// decideRepeating is decide for a condition the reconciler meets on every
+// pass while it lasts -- an object waiting on an open task, a network, an
+// agent. It is logged once a minute (throttled on key), but written to the
+// build's journal only once every 30 minutes: the journal should say the
+// wait is happening and what on, not fill with the same line every minute
+// for every host of a stuck build (a Logs page that can't load records
+// nothing). Returns whether it reported at all.
+func decideRepeating(ctx context.Context, q *db.Queries, key string, buildID, objectID pgtype.UUID, kind, message string, detail map[string]any) bool {
+	if !throttled(key, time.Minute) {
+		return false
+	}
+	if throttled(key+"/journal", 30*time.Minute) {
+		decide(ctx, q, buildID, objectID, kind, message, detail)
+		return true
+	}
+	payload := "{}"
+	if len(detail) > 0 {
+		if b, err := json.Marshal(detail); err == nil {
+			payload = string(b)
+		}
+	}
+	log.Printf("orchestrator: build %s %s: %s -- %s %s", shortID(buildID), shortID(objectID), kind, message, payload)
+	return true
+}
+
 // objectLabel names an object the way the UI does: "web01 (host, team 3)".
 func objectLabel(obj db.DeployedObject, team int32) string {
 	name := db.StrOrEmpty(obj.AsName)

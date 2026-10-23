@@ -274,7 +274,10 @@ so the two agree:
 
 On the Logs tab each event is one line; a line that's cut off at the window's edge, or
 that carries detail (a step's error, what was sent to the hoster), has a chevron and
-opens in place.
+opens in place. The tab loads the newest 5,000 events and offers **Load earlier** for the
+rest (the footer says how many there are in all); the `…waiting` entries are journaled at
+most twice an hour per host and pruned after a day, while the orchestrator's own log has
+them every minute.
 
 ### Sending to Splunk
 

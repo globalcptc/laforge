@@ -2,7 +2,8 @@ import { useParams } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Radio, Search, ChevronRight, Download, Copy, Check } from 'lucide-react'
-import { useEvents, useLiveEvents } from '../api/hooks'
+import { ApiError } from '../api/client'
+import { fetchEventsBefore, useEvents, useEventsSummary, useLiveEvents } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import type { LFEvent } from '../api/types'
 import { EmptyState } from '../components/EmptyState'
@@ -93,7 +94,14 @@ function eventDetail(payload: unknown): string {
 // lifecycle) lands here alongside the deploy/access lifecycle.
 export function BuildLogs() {
   const { buildId } = useParams({ from: '/repos/$repoId/builds/$buildId/logs' })
-  const { data: history } = useEvents(buildId)
+  const { data: history, error: historyError, isLoading: historyLoading } = useEvents(buildId)
+  const { data: summary } = useEventsSummary(buildId)
+  // Earlier pages, fetched on demand ("Load earlier"): the api serves the
+  // newest 5,000 at first; a long build's journal can be far larger.
+  const [older, setOlder] = useState<LFEvent[]>([])
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [olderError, setOlderError] = useState<string | null>(null)
+  const [exhausted, setExhausted] = useState(false)
   const [live, setLive] = useState<LFEvent[]>([])
   // Batch incoming live events instead of a setState per event. A busy build
   // streams events faster than React can repaint; appending one at a time meant
@@ -156,9 +164,28 @@ export function BuildLogs() {
   }
 
   const all = useMemo(() => {
-    const seen = new Set((history ?? []).map((e) => e.id))
-    return [...(history ?? []), ...live.filter((e) => !seen.has(e.id))]
-  }, [history, live])
+    const seen = new Set([...older, ...(history ?? [])].map((e) => e.id))
+    return [...older, ...(history ?? []), ...live.filter((e) => !seen.has(e.id))]
+  }, [older, history, live])
+
+  async function loadEarlier() {
+    const oldest = all[0]
+    if (!oldest || loadingOlder) return
+    setLoadingOlder(true)
+    setOlderError(null)
+    try {
+      const page = await fetchEventsBefore(buildId, oldest.created_at)
+      if (page.length === 0) setExhausted(true)
+      setOlder((prev) => [...page, ...prev])
+    } catch (e) {
+      setOlderError(e instanceof ApiError ? e.message : 'Could not load earlier events')
+    } finally {
+      setLoadingOlder(false)
+    }
+  }
+  const total = summary?.total
+  const loaded = (older.length + (history?.length ?? 0))
+  const moreAvailable = !exhausted && total != null && loaded < total
 
   // Every distinct kind actually present, for the kind filter -- so it only
   // ever offers values that exist in this build's journal.
@@ -243,7 +270,15 @@ export function BuildLogs() {
         </div>
       </div>
 
-      {all.length === 0 ? (
+      {historyError ? (
+        <EmptyState
+          icon={Radio}
+          title="The log couldn’t be loaded"
+          hint={`${historyError instanceof ApiError ? historyError.message : 'The request failed.'} Live events still stream in below as they happen; reload the page to try again.`}
+        />
+      ) : historyLoading && all.length === 0 ? (
+        <EmptyState icon={Radio} title="Loading the log…" hint="Fetching the newest events." />
+      ) : all.length === 0 ? (
         <EmptyState icon={Radio} title="No events yet" hint="Events appear here as the build progresses." />
       ) : shown.length === 0 ? (
         <EmptyState icon={Search} title="No events match" hint="Clear the search or kind filter to see the full journal." />
@@ -268,6 +303,20 @@ export function BuildLogs() {
               )
             })}
           </div>
+        </div>
+      )}
+      {!historyError && all.length > 0 && (total != null || moreAvailable) && (
+        <div className="flex shrink-0 items-center gap-3 border-t border-border pt-2 text-xs text-fg-muted">
+          <span>
+            {total != null && loaded < total ? `Showing the newest ${loaded.toLocaleString()} of ${total.toLocaleString()} events` : `${loaded.toLocaleString()} events`}
+            {query || kind ? ` (${shown.length.toLocaleString()} match the filter)` : ''}
+          </span>
+          {moreAvailable && (
+            <Button variant="secondary" size="sm" onClick={loadEarlier} disabled={loadingOlder}>
+              {loadingOlder ? 'Loading…' : 'Load earlier'}
+            </Button>
+          )}
+          {olderError && <span className="text-danger">{olderError}</span>}
         </div>
       )}
     </div>

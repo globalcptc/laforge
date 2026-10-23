@@ -426,11 +426,28 @@ export function useDeployedObjects(buildId: string | undefined) {
   })
 }
 
+// useEvents is the newest page of a build's journal (the api bounds it to
+// 5,000 events); earlier pages come through fetchEventsBefore as the Logs
+// page asks for them, and useEventsSummary says how many there are in all.
 export function useEvents(buildId: string | undefined) {
   return useQuery<LFEvent[]>({
     queryKey: ['events', buildId],
     queryFn: () => api.get(`/builds/${buildId}/events`),
     enabled: !!buildId,
+    retry: 1,
+  })
+}
+
+export function fetchEventsBefore(buildId: string, before: string): Promise<LFEvent[]> {
+  return api.get(`/builds/${buildId}/events?before=${encodeURIComponent(before)}`)
+}
+
+export function useEventsSummary(buildId: string | undefined) {
+  return useQuery<{ total: number; page_size: number }>({
+    queryKey: ['events-summary', buildId],
+    queryFn: () => api.get(`/builds/${buildId}/events/summary`),
+    enabled: !!buildId,
+    refetchInterval: 30_000,
   })
 }
 

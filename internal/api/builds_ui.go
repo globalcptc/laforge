@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -208,9 +209,19 @@ func (s *Server) handleListDeployedObjects(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, views)
 }
 
-// handleListEvents is "Build → Logs", the plain
-// (non-live) read of the whole journal -- handleLiveStatus (live.go) is
-// the same data, tailed.
+// Events a page loads at once, and the most it may ask for. A long or
+// stuck build's journal runs to hundreds of thousands of rows; the Logs page
+// loads the newest page and asks for earlier ones on demand.
+const (
+	eventsPageDefault = 5000
+	eventsPageMax     = 20000
+)
+
+// handleListEvents is "Build → Logs", the plain (non-live) read of the
+// journal, newest first, bounded: `?limit=` (default 5000, at most 20000)
+// and `?before=<RFC 3339>` for the page before that. handleLiveStatus
+// (live.go) is the same data, tailed. GET …/events/summary says how many
+// there are in all.
 func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 	build, repo, err := s.buildAndOwningRepository(r)
 	if err != nil {
@@ -221,16 +232,59 @@ func (s *Server) handleListEvents(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	rows, err := s.Queries.ListEventsByBuildWithObject(r.Context(), build.ID)
+	limit := eventsPageDefault
+	if v := r.URL.Query().Get("limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			writeError(w, http.StatusBadRequest, errors.New("limit must be a positive number"))
+			return
+		}
+		limit = min(n, eventsPageMax)
+	}
+	before := time.Now().Add(time.Hour) // "everything so far"
+	if v := r.URL.Query().Get("before"); v != "" {
+		t, err := time.Parse(time.RFC3339Nano, v)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, errors.New("before must be an RFC 3339 time"))
+			return
+		}
+		before = t
+	}
+	rows, err := s.Queries.ListEventsByBuildWithObjectPage(r.Context(), db.ListEventsByBuildWithObjectPageParams{
+		BuildID: build.ID, Before: pgtype.Timestamptz{Time: before, Valid: true}, MaxRows: int32(limit),
+	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	// Oldest first, as the journal has always been served; the page reverses
+	// for display.
 	views := make([]eventView, 0, len(rows))
-	for _, row := range rows {
+	for i := len(rows) - 1; i >= 0; i-- {
+		row := rows[i]
 		views = append(views, makeEventView(row.Event, row.ObjAsName, row.ObjObjectName, row.TeamNumber))
 	}
 	writeJSON(w, http.StatusOK, views)
+}
+
+// handleEventsSummary is GET /builds/{id}/events/summary: how many events the
+// build's journal holds, so the Logs page can say what fraction it has.
+func (s *Server) handleEventsSummary(w http.ResponseWriter, r *http.Request) {
+	build, repo, err := s.buildAndOwningRepository(r)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	if _, err := s.requireLevel(r.Context(), r, repo, levelRead); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	n, err := s.Queries.CountEventsByBuild(r.Context(), build.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"total": n, "page_size": eventsPageDefault})
 }
 
 // eventView is a journal event flattened together with the host it's

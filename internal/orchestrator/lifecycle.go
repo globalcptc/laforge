@@ -3,7 +3,6 @@ package orchestrator
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -126,9 +125,7 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 				continue
 			}
 			if !checkedIn[id] {
-				if throttled("checkin-wait/"+id, time.Minute) {
-					decide(ctx, q, buildID, o.ID, "lifecycle.waiting", fmt.Sprintf("%s: instance is up; waiting for its agent to check in", objectLabel(o, 0)), nil)
-				}
+				decideRepeating(ctx, q, "checkin-wait/"+id, buildID, o.ID, "lifecycle.waiting", fmt.Sprintf("%s: instance is up; waiting for its agent to check in", objectLabel(o, 0)), nil)
 				continue // instance up, agent not seen yet -- stay running
 			}
 			next := evaluateBuild(id)

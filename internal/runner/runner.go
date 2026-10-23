@@ -187,6 +187,30 @@ func (r *Runner) LeaseOneForBuilder(ctx context.Context, builderConfigName strin
 	return &task, nil
 }
 
+// IsHeavyTask reports whether a task kind creates or destroys an instance at
+// the hoster -- what a builder's concurrency limit (builder_config.
+// max_concurrency) counts. Access and network configuration tasks are light:
+// ACL and forwarding updates that take seconds and run alongside.
+func IsHeavyTask(kind string) bool {
+	return strings.HasPrefix(kind, "deploy_") || strings.HasPrefix(kind, "destroy_")
+}
+
+// LeaseOneLightForBuilder is LeaseOneForBuilder restricted to light tasks
+// (IsHeavyTask false), for a pool whose deploy/destroy slots are all taken.
+func (r *Runner) LeaseOneLightForBuilder(ctx context.Context, builderConfigName string) (*db.Task, error) {
+	q := db.New(r.Pool)
+	task, err := q.LeaseLightTaskForBuilder(ctx, db.LeaseLightTaskForBuilderParams{
+		LeaseOwner: db.StrPtr(r.ID), Column2: db.Interval(r.LeaseDuration), BuilderConfigName: builderConfigName,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("leasing a light task for builder %q: %w", builderConfigName, err)
+	}
+	return &task, nil
+}
+
 // LeaseAndExecuteOne leases the next available task, if any, executes it
 // against r.Builder, and records the result. Returns (false, nil) when
 // there was nothing leasable right now, distinct from an error, so a

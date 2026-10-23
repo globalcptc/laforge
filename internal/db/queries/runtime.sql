@@ -917,3 +917,63 @@ FROM task t
 WHERE t.deployed_object_id = $1 AND t.kind LIKE 'destroy_%'
 ORDER BY t.created_at DESC
 LIMIT 1;
+
+-- name: ListEventsByBuildWithObjectPage :many
+-- The Logs page's bounded read: the newest `limit` events before `before`
+-- (newest first), each resolved to its host as ListEventsByBuildWithObject
+-- does. A long or stuck build's journal runs to hundreds of thousands of
+-- rows; the page loads the newest few thousand and asks for earlier ones
+-- on demand rather than all of them at once.
+SELECT sqlc.embed(event),
+       obj.as_name AS obj_as_name,
+       obj.object_name AS obj_object_name,
+       tm.team_number AS team_number
+FROM event
+LEFT JOIN task ON task.id = event.task_id
+LEFT JOIN deployed_object obj ON obj.id = COALESCE(event.deployed_object_id, task.deployed_object_id)
+LEFT JOIN team tm ON tm.id = obj.team_id
+WHERE event.build_id = sqlc.arg(build_id) AND event.created_at < sqlc.arg(before)
+ORDER BY event.created_at DESC
+LIMIT sqlc.arg(max_rows)::int;
+
+-- name: CountEventsByBuild :one
+SELECT count(*)::bigint FROM event WHERE build_id = $1;
+
+-- name: PruneRepeatingEvents :execrows
+-- The orchestrator's "still waiting" events (reconcile.waiting,
+-- lifecycle.waiting, teardown.waiting, rebuild.waiting) repeat while a
+-- condition lasts; the latest says what's being waited on, the older ones
+-- say only that it was. Dropped after `older_than`, build by build, so a
+-- long-stuck build's journal stays readable and the Logs page loadable.
+DELETE FROM event WHERE kind LIKE '%.waiting' AND created_at < now() - sqlc.arg(older_than)::interval;
+
+-- name: LeaseLightTaskForBuilder :one
+-- LeaseTaskForBuilder for light tasks only -- those that don't create or
+-- destroy an instance (not deploy_*/destroy_*): access and network
+-- configuration. A pool at its deploy/destroy concurrency limit keeps
+-- leasing these so an ACL change never waits hours behind queued deploys.
+UPDATE task
+SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
+    attempts = attempts + 1, updated_at = now()
+WHERE id = (
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    WHERE coalesce(cb.builder_config_name, '') = $3
+      AND t.kind NOT LIKE 'deploy\_%' AND t.kind NOT LIKE 'destroy\_%'
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+    ORDER BY t.created_at
+    FOR UPDATE OF t SKIP LOCKED
+    LIMIT 1
+)
+RETURNING *;
+
+-- name: CountLeasableHeavyTasksForBuilder :one
+-- How many deploy/destroy tasks one builder has waiting to be leased: what
+-- its concurrency limit is holding back.
+SELECT count(*) FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE coalesce(cb.builder_config_name, '') = $1
+  AND (t.kind LIKE 'deploy\_%' OR t.kind LIKE 'destroy\_%')
+  AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()));

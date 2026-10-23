@@ -47,7 +47,7 @@ func TestCheckHostDiskCapacity(t *testing.T) {
 	t.Run("below minimum is rejected with an actionable message", func(t *testing.T) {
 		c, env := envWithHost("bff-dc-01", "win2016", 60) // 60 GB = 60e9 < 64 GiB
 		b := &fakeDiskBuilder{min: giB64, src: "CPTC-Templates/windows-2016-base/sysprepped", ok: true}
-		err := checkHostDiskCapacity(context.Background(), b, c, env, nil)
+		err := checkHostDiskCapacity(context.Background(), b, "disk-test-1", c, env, nil)
 		if err == nil {
 			t.Fatal("want rejection for a 60 GB host against a 64 GiB source")
 		}
@@ -62,7 +62,7 @@ func TestCheckHostDiskCapacity(t *testing.T) {
 		// 69 GB = 69e9 >= 68,719,476,736.
 		c, env := envWithHost("h", "win2016", 69)
 		b := &fakeDiskBuilder{min: giB64, ok: true}
-		if err := checkHostDiskCapacity(context.Background(), b, c, env, nil); err != nil {
+		if err := checkHostDiskCapacity(context.Background(), b, "disk-test-2", c, env, nil); err != nil {
 			t.Errorf("69 GB should satisfy a 64 GiB source: %v", err)
 		}
 	})
@@ -70,7 +70,7 @@ func TestCheckHostDiskCapacity(t *testing.T) {
 	t.Run("above minimum is accepted", func(t *testing.T) {
 		c, env := envWithHost("h", "win2016", 120)
 		b := &fakeDiskBuilder{min: giB64, ok: true}
-		if err := checkHostDiskCapacity(context.Background(), b, c, env, nil); err != nil {
+		if err := checkHostDiskCapacity(context.Background(), b, "disk-test-3", c, env, nil); err != nil {
 			t.Errorf("120 GB should satisfy a 64 GiB source: %v", err)
 		}
 	})
@@ -78,7 +78,7 @@ func TestCheckHostDiskCapacity(t *testing.T) {
 	t.Run("disk 64 is still too small for a 64 GiB source (GB vs GiB)", func(t *testing.T) {
 		c, env := envWithHost("h", "win2016", 64) // 64 GB = 64e9 < 64 GiB = 68.7e9
 		b := &fakeDiskBuilder{min: giB64, ok: true}
-		if err := checkHostDiskCapacity(context.Background(), b, c, env, nil); err == nil {
+		if err := checkHostDiskCapacity(context.Background(), b, "disk-test-4", c, env, nil); err == nil {
 			t.Error("64 GB (decimal) must not satisfy a 64 GiB (binary) source")
 		}
 	})
@@ -86,7 +86,7 @@ func TestCheckHostDiskCapacity(t *testing.T) {
 	t.Run("no explicit disk is skipped (copy keeps the source size)", func(t *testing.T) {
 		c, env := envWithHost("h", "win2016", 0)
 		b := &fakeDiskBuilder{min: giB64, ok: true}
-		if err := checkHostDiskCapacity(context.Background(), b, c, env, nil); err != nil {
+		if err := checkHostDiskCapacity(context.Background(), b, "disk-test-5", c, env, nil); err != nil {
 			t.Errorf("a host with no disk: should be skipped: %v", err)
 		}
 		if b.seen["win2016"] {
@@ -97,7 +97,7 @@ func TestCheckHostDiskCapacity(t *testing.T) {
 	t.Run("undeterminable source minimum is skipped (deploy guards it)", func(t *testing.T) {
 		c, env := envWithHost("h", "win2019", 60)
 		b := &fakeDiskBuilder{ok: false}
-		if err := checkHostDiskCapacity(context.Background(), b, c, env, nil); err != nil {
+		if err := checkHostDiskCapacity(context.Background(), b, "disk-test-6", c, env, nil); err != nil {
 			t.Errorf("an undeterminable minimum must not fail preflight: %v", err)
 		}
 	})

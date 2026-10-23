@@ -302,6 +302,13 @@ func builderConcurrency(ctx context.Context, q *db.Queries, builderConfigName st
 // nothing is in flight; the supervisor restarts it when work reappears. Exits
 // promptly on context cancellation (shutdown).
 //
+// The limit is "the most hosts LaForge deploys on this cluster at once" (the
+// wizard's words), so it counts the tasks that create or destroy instances
+// (deploy_*, destroy_*). Access and network configuration tasks -- ACL and
+// forwarding updates, seconds each -- run alongside without taking a slot:
+// otherwise a limit of 2 with a hundred queued deploys also made every
+// access change wait hours behind them.
+//
 // Two things keep the limit honest. A slot is taken BEFORE a task is leased:
 // leasing first and then waiting for a slot left a leased task sitting with no
 // heartbeat, its lease quietly expiring (and, with a second runner, open to
@@ -315,10 +322,11 @@ func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName
 	limit := builderConcurrency(ctx, q, builderConfigName)
 	limitRead := time.Now()
 	log.Printf("[%s] builder %q: worker pool started, concurrency limit %s", id, builderConfigName, describeLimit(limit))
-	var inFlight int64
+	var inFlight, heavyInFlight int64
 	var wg sync.WaitGroup
 	defer wg.Wait() // never leave tasks running past the pool
 	lastSaturated := time.Time{}
+	idleSince := time.Time{}
 
 	for {
 		if ctx.Err() != nil {
@@ -331,22 +339,23 @@ func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName
 			}
 			limitRead = time.Now()
 		}
-		busy := atomic.LoadInt64(&inFlight)
-		if limit > 0 && busy >= int64(limit) {
-			// Every slot is taken: don't lease anything yet. Say so every 30s
-			// while it lasts, with how much is waiting, so a slow builder
-			// reads as "at its limit", not as "doing nothing".
-			if time.Since(lastSaturated) > 30*time.Second {
-				waiting, _ := q.CountLeasableTasksForBuilder(ctx, builderConfigName)
-				log.Printf("[%s] builder %q: at its concurrency limit (%d/%d tasks running, %d waiting to be leased)", id, builderConfigName, busy, limit, waiting)
-				lastSaturated = time.Now()
-			}
-			if sleepCtx(ctx, pollInterval) {
-				return
-			}
-			continue
+		busy := atomic.LoadInt64(&heavyInFlight)
+		saturated := limit > 0 && busy >= int64(limit)
+		if saturated && time.Since(lastSaturated) > 30*time.Second {
+			// Every slot is taken: only light tasks are leased until one frees.
+			// Say so every 30s while it lasts, with how much is waiting, so a
+			// slow builder reads as "at its limit", not as "doing nothing".
+			waiting, _ := q.CountLeasableHeavyTasksForBuilder(ctx, builderConfigName)
+			log.Printf("[%s] builder %q: at its concurrency limit (%d/%d deploy/destroy tasks running, %d waiting to be leased)", id, builderConfigName, busy, limit, waiting)
+			lastSaturated = time.Now()
 		}
-		task, err := r.LeaseOneForBuilder(ctx, builderConfigName)
+		var task *db.Task
+		var err error
+		if saturated {
+			task, err = r.LeaseOneLightForBuilder(ctx, builderConfigName)
+		} else {
+			task, err = r.LeaseOneForBuilder(ctx, builderConfigName)
+		}
 		if err != nil {
 			log.Printf("[%s] builder %q lease error: %v", id, builderConfigName, err)
 			if sleepCtx(ctx, pollInterval) {
@@ -355,13 +364,21 @@ func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName
 			continue
 		}
 		if task != nil {
-			running := atomic.AddInt64(&inFlight, 1)
-			log.Printf("LEASED %s kind=%s attempt=%d builder=%q slot=%d/%s", task.ID, task.Kind, task.Attempts, builderConfigName, running, describeLimit(limit))
+			atomic.AddInt64(&inFlight, 1)
+			heavy := runner.IsHeavyTask(task.Kind)
+			slot := "light"
+			if heavy {
+				slot = fmt.Sprintf("%d/%s", atomic.AddInt64(&heavyInFlight, 1), describeLimit(limit))
+			}
+			log.Printf("LEASED %s kind=%s attempt=%d builder=%q slot=%s", task.ID, task.Kind, task.Attempts, builderConfigName, slot)
 			wg.Add(1)
 			t := *task
 			go func() {
 				defer wg.Done()
 				defer atomic.AddInt64(&inFlight, -1)
+				if heavy {
+					defer atomic.AddInt64(&heavyInFlight, -1)
+				}
 				if err := r.ExecuteAndRecord(ctx, t); err != nil {
 					log.Printf("[%s] task %s error: %v", id, t.ID, err)
 				}
@@ -377,7 +394,18 @@ func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName
 			continue
 		}
 		if pending == 0 && atomic.LoadInt64(&inFlight) == 0 {
-			return // queue drained, nothing in flight -- this builder's pool is idle
+			// Queue drained, nothing in flight. Stay for a while rather than
+			// exit at once: tasks held in a retry backoff become leasable
+			// again within seconds, and a pool that exits and is restarted
+			// for each of them logs "worker pool started" in a loop.
+			if idleSince.IsZero() {
+				idleSince = time.Now()
+			} else if time.Since(idleSince) > 30*time.Second {
+				log.Printf("[%s] builder %q: worker pool idle for 30s; exiting (it restarts when work appears)", id, builderConfigName)
+				return
+			}
+		} else {
+			idleSince = time.Time{}
 		}
 		if sleepCtx(ctx, pollInterval) {
 			return

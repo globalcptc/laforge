@@ -146,6 +146,17 @@ func (q *Queries) CountAgentTasksByBuild(ctx context.Context, buildIds []pgtype.
 	return items, nil
 }
 
+const countEventsByBuild = `-- name: CountEventsByBuild :one
+SELECT count(*)::bigint FROM event WHERE build_id = $1
+`
+
+func (q *Queries) CountEventsByBuild(ctx context.Context, buildID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countEventsByBuild, buildID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countFakeHosterResourcesByRef = `-- name: CountFakeHosterResourcesByRef :one
 SELECT count(*) FROM fake_hoster_resource WHERE external_ref = $1
 `
@@ -155,6 +166,24 @@ SELECT count(*) FROM fake_hoster_resource WHERE external_ref = $1
 // runner called ensure for it.
 func (q *Queries) CountFakeHosterResourcesByRef(ctx context.Context, externalRef string) (int64, error) {
 	row := q.db.QueryRow(ctx, countFakeHosterResourcesByRef, externalRef)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countLeasableHeavyTasksForBuilder = `-- name: CountLeasableHeavyTasksForBuilder :one
+SELECT count(*) FROM task t
+LEFT JOIN build b ON b.id = t.build_id
+LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+WHERE coalesce(cb.builder_config_name, '') = $1
+  AND (t.kind LIKE 'deploy\_%' OR t.kind LIKE 'destroy\_%')
+  AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+`
+
+// How many deploy/destroy tasks one builder has waiting to be leased: what
+// its concurrency limit is holding back.
+func (q *Queries) CountLeasableHeavyTasksForBuilder(ctx context.Context, builderConfigName string) (int64, error) {
+	row := q.db.QueryRow(ctx, countLeasableHeavyTasksForBuilder, builderConfigName)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -1332,6 +1361,55 @@ func (q *Queries) InsertFakeDNSRecord(ctx context.Context, arg InsertFakeDNSReco
 	return err
 }
 
+const leaseLightTaskForBuilder = `-- name: LeaseLightTaskForBuilder :one
+UPDATE task
+SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
+    attempts = attempts + 1, updated_at = now()
+WHERE id = (
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    WHERE coalesce(cb.builder_config_name, '') = $3
+      AND t.kind NOT LIKE 'deploy\_%' AND t.kind NOT LIKE 'destroy\_%'
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+    ORDER BY t.created_at
+    FOR UPDATE OF t SKIP LOCKED
+    LIMIT 1
+)
+RETURNING id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent
+`
+
+type LeaseLightTaskForBuilderParams struct {
+	LeaseOwner        *string         `json:"lease_owner"`
+	Column2           pgtype.Interval `json:"column_2"`
+	BuilderConfigName string          `json:"builder_config_name"`
+}
+
+// LeaseTaskForBuilder for light tasks only -- those that don't create or
+// destroy an instance (not deploy_*/destroy_*): access and network
+// configuration. A pool at its deploy/destroy concurrency limit keeps
+// leasing these so an ACL change never waits hours behind queued deploys.
+func (q *Queries) LeaseLightTaskForBuilder(ctx context.Context, arg LeaseLightTaskForBuilderParams) (Task, error) {
+	row := q.db.QueryRow(ctx, leaseLightTaskForBuilder, arg.LeaseOwner, arg.Column2, arg.BuilderConfigName)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.BuildID,
+		&i.DeployedObjectID,
+		&i.Kind,
+		&i.Payload,
+		&i.Status,
+		&i.Attempts,
+		&i.LeaseOwner,
+		&i.LeaseExpiresAt,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Permanent,
+	)
+	return i, err
+}
+
 const leaseTask = `-- name: LeaseTask :one
 UPDATE task
 SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
@@ -2091,6 +2169,70 @@ func (q *Queries) ListEventsByBuildWithObject(ctx context.Context, buildID pgtyp
 	return items, nil
 }
 
+const listEventsByBuildWithObjectPage = `-- name: ListEventsByBuildWithObjectPage :many
+SELECT event.id, event.build_id, event.task_id, event.kind, event.message, event.payload, event.created_at, event.deployed_object_id,
+       obj.as_name AS obj_as_name,
+       obj.object_name AS obj_object_name,
+       tm.team_number AS team_number
+FROM event
+LEFT JOIN task ON task.id = event.task_id
+LEFT JOIN deployed_object obj ON obj.id = COALESCE(event.deployed_object_id, task.deployed_object_id)
+LEFT JOIN team tm ON tm.id = obj.team_id
+WHERE event.build_id = $1 AND event.created_at < $2
+ORDER BY event.created_at DESC
+LIMIT $3::int
+`
+
+type ListEventsByBuildWithObjectPageParams struct {
+	BuildID pgtype.UUID        `json:"build_id"`
+	Before  pgtype.Timestamptz `json:"before"`
+	MaxRows int32              `json:"max_rows"`
+}
+
+type ListEventsByBuildWithObjectPageRow struct {
+	Event         Event   `json:"event"`
+	ObjAsName     *string `json:"obj_as_name"`
+	ObjObjectName *string `json:"obj_object_name"`
+	TeamNumber    *int32  `json:"team_number"`
+}
+
+// The Logs page's bounded read: the newest `limit` events before `before`
+// (newest first), each resolved to its host as ListEventsByBuildWithObject
+// does. A long or stuck build's journal runs to hundreds of thousands of
+// rows; the page loads the newest few thousand and asks for earlier ones
+// on demand rather than all of them at once.
+func (q *Queries) ListEventsByBuildWithObjectPage(ctx context.Context, arg ListEventsByBuildWithObjectPageParams) ([]ListEventsByBuildWithObjectPageRow, error) {
+	rows, err := q.db.Query(ctx, listEventsByBuildWithObjectPage, arg.BuildID, arg.Before, arg.MaxRows)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEventsByBuildWithObjectPageRow
+	for rows.Next() {
+		var i ListEventsByBuildWithObjectPageRow
+		if err := rows.Scan(
+			&i.Event.ID,
+			&i.Event.BuildID,
+			&i.Event.TaskID,
+			&i.Event.Kind,
+			&i.Event.Message,
+			&i.Event.Payload,
+			&i.Event.CreatedAt,
+			&i.Event.DeployedObjectID,
+			&i.ObjAsName,
+			&i.ObjObjectName,
+			&i.TeamNumber,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEventsByDeployedObject = `-- name: ListEventsByDeployedObject :many
 SELECT event.id, event.build_id, event.task_id, event.kind, event.message, event.payload, event.created_at, event.deployed_object_id FROM event
 JOIN task ON task.id = event.task_id
@@ -2650,6 +2792,23 @@ WHERE id = $1 AND steps_materialized_at IS NULL
 func (q *Queries) MarkDeployedObjectStepsMaterialized(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, markDeployedObjectStepsMaterialized, id)
 	return err
+}
+
+const pruneRepeatingEvents = `-- name: PruneRepeatingEvents :execrows
+DELETE FROM event WHERE kind LIKE '%.waiting' AND created_at < now() - $1::interval
+`
+
+// The orchestrator's "still waiting" events (reconcile.waiting,
+// lifecycle.waiting, teardown.waiting, rebuild.waiting) repeat while a
+// condition lasts; the latest says what's being waited on, the older ones
+// say only that it was. Dropped after `older_than`, build by build, so a
+// long-stuck build's journal stays readable and the Logs page loadable.
+func (q *Queries) PruneRepeatingEvents(ctx context.Context, olderThan pgtype.Interval) (int64, error) {
+	result, err := q.db.Exec(ctx, pruneRepeatingEvents, olderThan)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const resetDeployedObjectForRedeploy = `-- name: ResetDeployedObjectForRedeploy :one

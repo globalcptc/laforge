@@ -153,8 +153,8 @@ func Teardown(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID) erro
 		}
 		if created {
 			decide(ctx, q, buildID, obj.ID, "teardown.destroy", fmt.Sprintf("%s: destroy task queued for the teardown (hoster ref %s)", objectLabel(obj, 0), db.StrOrEmpty(obj.ExternalRef)), nil)
-		} else if throttled("teardown-wait/"+obj.ID.String(), time.Minute) {
-			decide(ctx, q, buildID, obj.ID, "teardown.waiting", fmt.Sprintf("%s: still %s; a destroy task is open and waiting for a runner, or running", objectLabel(obj, 0), obj.Status), nil)
+		} else {
+			decideRepeating(ctx, q, "teardown-wait/"+obj.ID.String(), buildID, obj.ID, "teardown.waiting", fmt.Sprintf("%s: still %s; a destroy task is open and waiting for a runner, or running", objectLabel(obj, 0), obj.Status), nil)
 		}
 		if created && seen && last.Status == "failed" {
 			q.CreateObjectEvent(ctx, db.CreateObjectEventParams{

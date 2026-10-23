@@ -302,6 +302,7 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/infra", s.handleObjectInfra)
 	mux.HandleFunc("GET /builds/{id}/objects/{objectId}/config", s.handleObjectConfig)
 	mux.HandleFunc("GET /builds/{id}/events", s.handleListEvents)
+	mux.HandleFunc("GET /builds/{id}/events/summary", s.handleEventsSummary)
 	mux.HandleFunc("GET /builds/{id}/live", s.handleLiveStatus)
 	mux.HandleFunc("POST /builds/{id}/tasks", s.handleCreateAdHocTask)
 	mux.HandleFunc("POST /builds/{id}/power", s.handlePowerAction)
