@@ -120,7 +120,7 @@ function compareEntries(a: ExternalAccessEntry, b: ExternalAccessEntry, key: Sor
       r = a.protocol.localeCompare(b.protocol)
       break
     case 'port':
-      r = a.internal_port - b.internal_port
+      r = Number(a.internal_port) - Number(b.internal_port)
       break
     case 'address':
       r = a.public_address.localeCompare(b.public_address, undefined, { numeric: true })
