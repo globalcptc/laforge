@@ -30,7 +30,7 @@ import (
 // lives in the topology, not a DB table.
 func ReconcileExternalAccess(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID) error {
 	q := db.New(pool)
-	c, err := loader.Load(repoRoot)
+	c, err := loader.LoadCached(repoRoot)
 	if err != nil {
 		return fmt.Errorf("loading content: %w", err)
 	}

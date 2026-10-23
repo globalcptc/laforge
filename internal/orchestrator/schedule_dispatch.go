@@ -150,7 +150,7 @@ func loadBuildContext(ctx context.Context, q *db.Queries, resolve ContentResolve
 	if err != nil {
 		return buildContext{}, fmt.Errorf("resolving content location: %w", err)
 	}
-	c, err := loader.Load(repoRoot)
+	c, err := loader.LoadCached(repoRoot)
 	if err != nil {
 		return buildContext{}, fmt.Errorf("loading content: %w", err)
 	}

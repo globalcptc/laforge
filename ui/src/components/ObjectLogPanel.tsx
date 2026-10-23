@@ -243,8 +243,15 @@ export function ObjectLogPanel({
 // drawer preview and the wide expanded modal, so both show identical
 // content, just with different room.
 function RenderedSteps({ steps }: { steps: RenderedStep[] }) {
+  const hasTemplated = steps.some((s) => s.segments?.some((seg) => seg.templated))
   return (
     <div className="flex flex-col gap-3">
+      {hasTemplated && (
+        <div className="flex items-center gap-1.5 text-xs text-fg-subtle">
+          <span className="rounded-sm bg-accent-soft px-1 font-mono text-accent-fg">highlighted</span>
+          replaced by a template value
+        </div>
+      )}
       {steps.map((s) => (
         <div key={s.index} className="overflow-hidden rounded-token border border-border">
           <div className="flex items-center gap-2 border-b border-border bg-surface-sunken px-2 py-1 text-xs">
@@ -252,7 +259,19 @@ function RenderedSteps({ steps }: { steps: RenderedStep[] }) {
             <span className="font-medium text-fg">{s.action}</span>
             {s.script_name && <span className="text-accent">{s.script_name}</span>}
           </div>
-          {s.rendered ? (
+          {s.segments && s.segments.length > 0 ? (
+            <pre className="overflow-x-auto whitespace-pre-wrap p-2 font-mono text-xs text-fg">
+              {s.segments.map((seg, i) =>
+                seg.templated ? (
+                  <span key={i} className="rounded-sm bg-accent-soft text-accent-fg" title="Replaced by a template value">
+                    {seg.text}
+                  </span>
+                ) : (
+                  <span key={i}>{seg.text}</span>
+                ),
+              )}
+            </pre>
+          ) : s.rendered ? (
             <pre className="overflow-x-auto whitespace-pre-wrap p-2 font-mono text-xs text-fg">{s.rendered}</pre>
           ) : (
             <pre className="overflow-x-auto whitespace-pre-wrap p-2 font-mono text-xs text-fg-muted">{JSON.stringify(s.raw, null, 2)}</pre>

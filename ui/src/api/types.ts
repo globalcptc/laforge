@@ -414,6 +414,8 @@ export interface RenderedStep {
   action: string
   script_name?: string
   rendered?: string
+  /** `rendered` split into plain/templated runs so the Render tab can colorize what a template replaced; concatenating the texts reproduces `rendered`. */
+  segments?: { text: string; templated: boolean }[]
   raw: Record<string, unknown>
 }
 
