@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldOff, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert, RotateCcw } from 'lucide-react'
 import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
-import type { RenderedStep, CloudInitView, StepStatus, ObjectKind, DeployedObject, HostCredential } from '../api/types'
+import type { RenderedStep, CloudInitView, StepStatus, ObjectKind, DeployedObject, HostCredential, AgentHeartbeat } from '../api/types'
 import { EmptyState } from './EmptyState'
 import { Badge, Button, buttonClass, cn, InspectorPanel, Spinner } from '../ui'
 import { StatusBadge, PowerBadge, GONE_STATES } from './StatusBadge'
@@ -200,7 +200,9 @@ export function ObjectLogPanel({
             />
           )}
           {heartbeats && heartbeats.length > 0 && (
-            <div className="overflow-x-auto">
+            <>
+              <HeartbeatCharts heartbeats={heartbeats} wide={wide} />
+              <div className="overflow-x-auto">
               <table className="w-full border-collapse font-mono text-xs">
                 <thead>
                   <tr className="border-b border-border text-left text-fg-subtle">
@@ -232,7 +234,8 @@ export function ObjectLogPanel({
                   })}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </>
           )}
         </>
       )}
@@ -269,6 +272,115 @@ export function ObjectLogPanel({
         </>
       )}
     </InspectorPanel>
+  )
+}
+
+// Per-host resource charts at the top of the Heartbeats tab: CPU, memory and
+// disk over this object's own heartbeat history. One combined chart in the
+// narrow drawer; three larger independent charts when the panel is expanded.
+// Colours match the Overview dashboard's resource charts (DashboardCharts):
+// CPU = accent, memory = purple, disk = warning.
+const HB_METRICS = [
+  { key: 'cpu_pct', label: 'CPU', color: 'var(--color-accent)' },
+  { key: 'mem_pct', label: 'Memory', color: 'var(--color-purple)' },
+  { key: 'disk_pct', label: 'Disk', color: 'var(--color-warning)' },
+] as const
+
+function HeartbeatCharts({ heartbeats, wide }: { heartbeats: AgentHeartbeat[]; wide: boolean }) {
+  // Heartbeats come newest-first; a time series reads oldest -> newest.
+  const chrono = useMemo(() => [...heartbeats].reverse(), [heartbeats])
+  const times = chrono.map((h) => h.created_at)
+  const series = HB_METRICS.map((m) => ({ values: chrono.map((h) => h[m.key]), color: m.color, label: m.label }))
+  // Nothing to plot until at least one check-in carried a metric (older agents
+  // report null); skip the charts rather than drawing flat lines at zero.
+  if (!series.some((s) => s.values.some((v) => v != null))) return null
+  if (wide) {
+    return (
+      <div className="mb-3 flex flex-col gap-3">
+        {series.map((s) => (
+          <MetricChart key={s.label} title={s.label} times={times} series={[s]} height={120} />
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div className="mb-3">
+      <MetricChart title="CPU · Memory · Disk" times={times} series={series} height={96} />
+    </div>
+  )
+}
+
+// MetricChart is a small 0-100% line chart over the heartbeat timeline, drawn
+// the same way as the dashboard's ResourceLineChart (shared axis/gridline
+// layout and tokens). A null sample breaks the line rather than reading as a
+// drop to zero.
+function MetricChart({ title, times, series, height = 96 }: {
+  title: string
+  times: string[]
+  series: { values: (number | null)[]; color: string; label: string }[]
+  height?: number
+}) {
+  const fmt = useTimeFormat()
+  const width = 400
+  const max = 100
+  const n = times.length
+  const stepX = n > 1 ? width / (n - 1) : 0
+  const midY = height / 2
+  const pathFor = (values: (number | null)[]) => {
+    let d = ''
+    let pen = false
+    values.forEach((v, i) => {
+      if (v == null) {
+        pen = false
+        return
+      }
+      const x = n > 1 ? i * stepX : width / 2
+      const y = height - (Math.min(Math.max(v, 0), max) / max) * height
+      d += `${pen ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)} `
+      pen = true
+    })
+    return d.trim()
+  }
+  const latest = (values: (number | null)[]) => {
+    for (let i = values.length - 1; i >= 0; i--) if (values[i] != null) return values[i] as number
+    return null
+  }
+  return (
+    <div className="rounded-token border border-border p-3">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">{title}</div>
+      <div className="flex gap-2">
+        <div className="flex shrink-0 flex-col justify-between text-right text-[10px] text-fg-subtle" style={{ height }}>
+          <span>100%</span>
+          <span>50%</span>
+          <span>0%</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full" style={{ height }}>
+            <line x1={0} y1={height} x2={width} y2={height} stroke="var(--color-border)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            <line x1={0} y1={midY} x2={width} y2={midY} stroke="var(--color-border)" strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+            {series.map((s) => (
+              <path key={s.label} d={pathFor(s.values)} fill="none" stroke={s.color} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+            ))}
+          </svg>
+          <div className="mt-1 flex justify-between text-[10px] text-fg-subtle">
+            <span>{n > 0 ? fmt.timeShort(times[0]) : ''}</span>
+            <span>{n > 0 ? fmt.timeShort(times[n - 1]) : ''}</span>
+          </div>
+        </div>
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-fg-muted">
+        {series.map((s) => {
+          const lv = latest(s.values)
+          return (
+            <span key={s.label} className="inline-flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
+              {s.label}
+              {lv != null ? ` ${Math.round(lv)}%` : ''}
+            </span>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
