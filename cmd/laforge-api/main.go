@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -113,7 +114,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	q, pool, err := db.Open(ctx, databaseURL)
+	// API_MAX_CONNS sizes the API's database pool. pgx's default is the CPU
+	// count -- 4 on a small host -- which a handful of page loads (each fans
+	// out several requests) and the agent endpoints exhaust, queueing every
+	// other request behind them.
+	apiConns := int32(20)
+	if v := os.Getenv("API_MAX_CONNS"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 {
+			log.Fatalf("API_MAX_CONNS must be a positive number, got %q", v)
+		}
+		apiConns = int32(n)
+	}
+	q, pool, err := db.OpenWithMaxConns(ctx, databaseURL, apiConns)
 	if err != nil {
 		log.Fatalf("connecting to database: %v", err)
 	}

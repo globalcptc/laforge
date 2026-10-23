@@ -104,7 +104,7 @@ type buildDetail struct {
 }
 
 func (s *Server) handleGetBuild(w http.ResponseWriter, r *http.Request) {
-	build, repo, err := s.buildAndOwningRepository(r)
+	buildID, repo, err := s.buildRepository(r)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err)
 		return
@@ -113,58 +113,67 @@ func (s *Server) handleGetBuild(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
-	teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	// One query for every object in the build, one for every agent
-	// session, rather than a query per team -- the matrix/table already
-	// want the whole build's data at once, and this is the same shape
-	// handleListDeployedObjects uses.
-	allObjs, err := s.Queries.ListDeployedObjectsByBuild(r.Context(), build.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	views, err := attachAgentHealth(r.Context(), s.Queries, build.ID, allObjs)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	byTeam := make(map[string][]objectView, len(teams))
-	for _, v := range views {
-		key := v.TeamID.String()
-		byTeam[key] = append(byTeam[key], v)
-	}
-	detail := buildDetail{Build: build, Teams: make([]teamSummary, 0, len(teams))}
-	if env, err := s.Queries.GetEnvironmentByRevisionAndName(r.Context(), db.GetEnvironmentByRevisionAndNameParams{
-		ContentRevisionID: build.ContentRevisionID, Name: build.EnvironmentName,
-	}); err == nil {
-		json.Unmarshal(env.Access, &detail.Access) // malformed/absent -- leave Access nil, not a request failure
-	}
-	// Commit + builder for the header, best-effort per hop.
-	if rev, err := s.Queries.GetContentRevision(r.Context(), build.ContentRevisionID); err == nil {
-		detail.CommitSha = rev.CommitSha
-		detail.CommitMessage = db.StrOrEmpty(rev.CommitMessage)
-	}
-	if build.ConfiguredBuildID.Valid {
-		if cb, err := s.Queries.GetConfiguredBuild(r.Context(), build.ConfiguredBuildID); err == nil {
-			detail.BuilderConfigName = cb.BuilderConfigName
-			detail.Branch = cb.Branch
-			if bc, err := s.Queries.GetBuilderConfigByName(r.Context(), cb.BuilderConfigName); err == nil {
-				detail.BuilderKind = bc.Kind
+	// The same for everyone who may read the build: computed once and
+	// shared by every open page polling it (sharedread.go).
+	s.shared.serve(w, r, "build:"+buildID.String(), func(w http.ResponseWriter, r *http.Request) {
+		build, err := s.Queries.GetBuild(r.Context(), buildID)
+		if err != nil {
+			writeError(w, http.StatusNotFound, errors.New("no such build"))
+			return
+		}
+		teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		// One query for every object in the build, one for every agent
+		// session, rather than a query per team -- the matrix/table already
+		// want the whole build's data at once, and this is the same shape
+		// handleListDeployedObjects uses.
+		allObjs, err := s.Queries.ListDeployedObjectsByBuild(r.Context(), build.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		views, err := attachAgentHealth(r.Context(), s.Queries, build.ID, allObjs)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		byTeam := make(map[string][]objectView, len(teams))
+		for _, v := range views {
+			key := v.TeamID.String()
+			byTeam[key] = append(byTeam[key], v)
+		}
+		detail := buildDetail{Build: build, Teams: make([]teamSummary, 0, len(teams))}
+		if env, err := s.Queries.GetEnvironmentByRevisionAndName(r.Context(), db.GetEnvironmentByRevisionAndNameParams{
+			ContentRevisionID: build.ContentRevisionID, Name: build.EnvironmentName,
+		}); err == nil {
+			json.Unmarshal(env.Access, &detail.Access) // malformed/absent -- leave Access nil, not a request failure
+		}
+		// Commit + builder for the header, best-effort per hop.
+		if rev, err := s.Queries.GetContentRevision(r.Context(), build.ContentRevisionID); err == nil {
+			detail.CommitSha = rev.CommitSha
+			detail.CommitMessage = db.StrOrEmpty(rev.CommitMessage)
+		}
+		if build.ConfiguredBuildID.Valid {
+			if cb, err := s.Queries.GetConfiguredBuild(r.Context(), build.ConfiguredBuildID); err == nil {
+				detail.BuilderConfigName = cb.BuilderConfigName
+				detail.Branch = cb.Branch
+				if bc, err := s.Queries.GetBuilderConfigByName(r.Context(), cb.BuilderConfigName); err == nil {
+					detail.BuilderKind = bc.Kind
+				}
 			}
 		}
-	}
-	for _, tm := range teams {
-		objs := byTeam[tm.ID.String()]
-		if objs == nil {
-			objs = []objectView{}
+		for _, tm := range teams {
+			objs := byTeam[tm.ID.String()]
+			if objs == nil {
+				objs = []objectView{}
+			}
+			detail.Teams = append(detail.Teams, teamSummary{Team: tm, Objects: objs})
 		}
-		detail.Teams = append(detail.Teams, teamSummary{Team: tm, Objects: objs})
-	}
-	writeJSON(w, http.StatusOK, detail)
+		writeJSON(w, http.StatusOK, detail)
+	})
 }
 
 // handleListDeployedObjects is the flat form of the same data -- "Build →
@@ -173,7 +182,7 @@ func (s *Server) handleGetBuild(w http.ResponseWriter, r *http.Request) {
 // TargetPicker) actually wants, rather than walking handleGetBuild's
 // team-nested shape.
 func (s *Server) handleListDeployedObjects(w http.ResponseWriter, r *http.Request) {
-	build, repo, err := s.buildAndOwningRepository(r)
+	buildID, repo, err := s.buildRepository(r)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err)
 		return
@@ -182,31 +191,40 @@ func (s *Server) handleListDeployedObjects(w http.ResponseWriter, r *http.Reques
 		writeAuthError(w, err)
 		return
 	}
-	objs, err := s.Queries.ListDeployedObjectsByBuild(r.Context(), build.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	views, err := attachAgentHealth(r.Context(), s.Queries, build.ID, objs)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	if views == nil {
-		views = []objectView{}
-	}
-	// Fill in the human team number per object so a client (e.g. `laforge shell`)
-	// can resolve a single host by team + name without mapping team_id itself.
-	if teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID); err == nil {
-		num := make(map[string]int32, len(teams))
-		for _, t := range teams {
-			num[t.ID.String()] = t.TeamNumber
+	// The same for everyone who may read the build: computed once and
+	// shared by every open page polling it (sharedread.go).
+	s.shared.serve(w, r, "objects:"+buildID.String(), func(w http.ResponseWriter, r *http.Request) {
+		build, err := s.Queries.GetBuild(r.Context(), buildID)
+		if err != nil {
+			writeError(w, http.StatusNotFound, errors.New("no such build"))
+			return
 		}
-		for i := range views {
-			views[i].TeamNumber = num[views[i].TeamID.String()]
+		objs, err := s.Queries.ListDeployedObjectsByBuild(r.Context(), build.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
 		}
-	}
-	writeJSON(w, http.StatusOK, views)
+		views, err := attachAgentHealth(r.Context(), s.Queries, build.ID, objs)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if views == nil {
+			views = []objectView{}
+		}
+		// Fill in the human team number per object so a client (e.g. `laforge shell`)
+		// can resolve a single host by team + name without mapping team_id itself.
+		if teams, err := s.Queries.ListTeamsByBuild(r.Context(), build.ID); err == nil {
+			num := make(map[string]int32, len(teams))
+			for _, t := range teams {
+				num[t.ID.String()] = t.TeamNumber
+			}
+			for i := range views {
+				views[i].TeamNumber = num[views[i].TeamID.String()]
+			}
+		}
+		writeJSON(w, http.StatusOK, views)
+	})
 }
 
 // Events a page loads at once, and the most it may ask for. A long or

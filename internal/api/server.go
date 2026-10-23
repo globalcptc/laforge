@@ -35,6 +35,13 @@ import (
 
 type Server struct {
 	Queries *db.Queries
+	// live is the one shared LISTEN behind every live stream (livehub.go).
+	live *liveHub
+	// shared lets every viewer of a build share one computation of the
+	// build-wide reads open pages poll (sharedread.go).
+	shared sharedReads
+	// auth caches the answers access checks need (authcache.go).
+	auth authCache
 	// Pool is used only where a transaction spans more than one query --
 	// today, that's internal/ingest.ValidateAndStore, called from
 	// webhook.go's reconcile. Every other handler goes through Queries.
@@ -123,7 +130,8 @@ type Server struct {
 }
 
 func New(q *db.Queries, pool *pgxpool.Pool, gh *ghclient.Client, webhookSecret, serviceToken string) *Server {
-	s := &Server{Queries: q, Pool: pool, GH: gh, WebhookSecret: webhookSecret, ServiceToken: serviceToken}
+	s := &Server{Queries: q, Pool: pool, GH: gh, WebhookSecret: webhookSecret, ServiceToken: serviceToken, live: newLiveHub(pool, q)}
+	s.live.changed = s.shared.forgetBuild
 	s.routes()
 	return s
 }
@@ -150,7 +158,21 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == http.MethodGet || r.Method == http.MethodHead {
-		s.mux.ServeHTTP(w, r)
+		// Reads are logged only when they fail or are slow -- the ones an
+		// operator goes looking for when a page won't load. Streams (live
+		// updates, terminals) are long by design and aren't timed.
+		// The writer goes to them unwrapped (they need its Flusher/Hijacker).
+		if strings.HasSuffix(r.URL.Path, "/live") || strings.HasSuffix(r.URL.Path, "/terminal") {
+			s.mux.ServeHTTP(w, r)
+			return
+		}
+		started := time.Now()
+		rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		s.mux.ServeHTTP(rw, r)
+		took := time.Since(started)
+		if rw.status >= 400 || took > slowRequest {
+			log.Printf("api: %s %s -> %d in %s (by %s from %s)", r.Method, r.URL.Path, rw.status, took.Round(time.Millisecond), s.actorFor(r), clientAddr(r))
+		}
 		return
 	}
 	// Every request that changes something is a line in the api's log --
@@ -160,8 +182,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	started := time.Now()
 	rw := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 	s.mux.ServeHTTP(rw, r)
+	// A change to a build shows on the next read, not up to sharedReadMaxAge
+	// later.
+	// Sessions and access levels are re-read after any change: a logout or
+	// an access grant takes effect on the next request.
+	s.auth.forgetAccess()
+	if rest, ok := strings.CutPrefix(r.URL.Path, "/builds/"); ok {
+		id, _, _ := strings.Cut(rest, "/")
+		s.shared.forgetBuild(id)
+	}
 	log.Printf("api: %s %s -> %d in %s (by %s from %s)", r.Method, r.URL.Path, rw.status, time.Since(started).Round(time.Millisecond), s.actorFor(r), clientAddr(r))
 }
+
+// slowRequest is how long a read can take before it's logged.
+const slowRequest = 2 * time.Second
 
 // statusRecorder remembers the status a handler wrote, for the request log.
 type statusRecorder struct {

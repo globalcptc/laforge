@@ -1073,6 +1073,13 @@ CREATE INDEX event_build_idx ON public.event USING btree (build_id, created_at);
 -- Name: event_deployed_object_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 CREATE INDEX event_deployed_object_id_idx ON public.event USING btree (deployed_object_id) WHERE (deployed_object_id IS NOT NULL);
+
+
+--
+-- Name: event_task_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX event_task_id_idx ON public.event USING btree (task_id) WHERE (task_id IS NOT NULL);
 --
 -- Name: external_access_object_idx; Type: INDEX; Schema: public; Owner: -
 --
