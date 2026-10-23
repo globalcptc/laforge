@@ -225,6 +225,15 @@ This note covers the whole 3.0 line.
   connection changed; a concurrency or size change saves at once. When images are
   re-checked, the snapshot reads run in parallel, and if the check still fails or times
   out the wizard offers *Save without verifying images*.
+- **Lost agents fail the host instead of stalling it.** A host whose agent checked in and
+  then went silent for `AGENT_LOST_AFTER` (30 m) with steps still to run, or whose agent
+  never connected within `AGENT_NEVER_CHECKED_IN_AFTER` (60 m) of the instance coming
+  up, goes `build_failed` with the reason and time — visible, and rebuildable or
+  restartable — rather than sitting "building" with 31 pending steps for the rest of the
+  event.
+- **A builder's slots are shared fairly between builds.** The next task leased comes
+  from the build with the fewest deploys already running, so one build's backlog of a
+  hundred deploys can't starve another build's two.
 - **Destroys lease ahead of deploys.** A rebuild's or teardown's destroy no longer waits
   behind a queue of deploys for one of the builder's slots: it frees capacity and is what
   the operator asked for, so it goes first.

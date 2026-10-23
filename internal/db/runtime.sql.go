@@ -1438,7 +1438,12 @@ WHERE id = (
     -- Destroys first: a destroy frees capacity, and a rebuild's or a
     -- teardown's destroy is what an operator asked for -- behind a queue of
     -- deploys it would otherwise wait hours for its turn.
+    -- Then the build with the fewest deploy/destroy tasks already running:
+    -- a builder's slots are shared fairly between its builds, so one build's
+    -- backlog of a hundred deploys can't starve another build's two.
     ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             (SELECT count(*) FROM task x WHERE x.build_id = t.build_id AND x.status = 'leased'
+                AND x.lease_expires_at > now() AND (x.kind LIKE 'deploy\_%' OR x.kind LIKE 'destroy\_%')) ASC,
              CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
                   THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
              t.created_at
@@ -1515,7 +1520,12 @@ WHERE id = (
     -- Destroys first: a destroy frees capacity, and a rebuild's or a
     -- teardown's destroy is what an operator asked for -- behind a queue of
     -- deploys it would otherwise wait hours for its turn.
+    -- Then the build with the fewest deploy/destroy tasks already running:
+    -- a builder's slots are shared fairly between its builds, so one build's
+    -- backlog of a hundred deploys can't starve another build's two.
     ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             (SELECT count(*) FROM task x WHERE x.build_id = t.build_id AND x.status = 'leased'
+                AND x.lease_expires_at > now() AND (x.kind LIKE 'deploy\_%' OR x.kind LIKE 'destroy\_%')) ASC,
              CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
                   THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
              t.created_at
@@ -1579,7 +1589,12 @@ WHERE id = (
     -- Destroys first: a destroy frees capacity, and a rebuild's or a
     -- teardown's destroy is what an operator asked for -- behind a queue of
     -- deploys it would otherwise wait hours for its turn.
+    -- Then the build with the fewest deploy/destroy tasks already running:
+    -- a builder's slots are shared fairly between its builds, so one build's
+    -- backlog of a hundred deploys can't starve another build's two.
     ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             (SELECT count(*) FROM task x WHERE x.build_id = t.build_id AND x.status = 'leased'
+                AND x.lease_expires_at > now() AND (x.kind LIKE 'deploy\_%' OR x.kind LIKE 'destroy\_%')) ASC,
              CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
                   THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
              t.created_at

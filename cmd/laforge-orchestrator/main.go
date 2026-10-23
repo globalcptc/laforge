@@ -60,6 +60,8 @@ func main() {
 	checkinLinux := flag.Duration("agent-checkin-deadline-linux", envDurationDefault("AGENT_CHECKIN_DEADLINE_LINUX", orchestrator.DefaultCheckinWatchdog.Linux), "how long after deploy a Linux host's agent may take to send its first heartbeat before the watchdog flags it (event + needs-attention, console log captured); 0 disables")
 	checkinWindows := flag.Duration("agent-checkin-deadline-windows", envDurationDefault("AGENT_CHECKIN_DEADLINE_WINDOWS", orchestrator.DefaultCheckinWatchdog.Windows), "the same deadline for a Windows host, whose first boot (sysprep, cloudbase-init) is far slower; 0 disables")
 	checkinReboot := flag.Bool("agent-checkin-reboot", envBoolDefault("AGENT_CHECKIN_REBOOT", false), "force-reboot a host once when its agent misses the check-in deadline")
+	agentLostAfter := flag.Duration("agent-lost-after", envDurationDefault("AGENT_LOST_AFTER", orchestrator.AgentLostAfter), "how long a host's agent may go without a heartbeat, with steps still to run, before the host is failed as lost (build_failed, with the reason); 0 disables")
+	agentNeverAfter := flag.Duration("agent-never-checked-in-after", envDurationDefault("AGENT_NEVER_CHECKED_IN_AFTER", orchestrator.AgentNeverCheckedInAfter), "how long after its instance came up a host whose agent has never connected is failed (build_failed, with the reason); 0 disables")
 	once := flag.Bool("once", false, "reconcile every non-terminal build exactly once, then exit (for scripting/tests)")
 	flag.Parse()
 
@@ -461,6 +463,7 @@ func main() {
 	// tracked. Only builds that can have live instances are polled.
 	checkinWatchdog := orchestrator.DefaultCheckinWatchdog
 	checkinWatchdog.Linux, checkinWatchdog.Windows, checkinWatchdog.Reboot = *checkinLinux, *checkinWindows, *checkinReboot
+	orchestrator.AgentLostAfter, orchestrator.AgentNeverCheckedInAfter = *agentLostAfter, *agentNeverAfter
 	pollInstanceStates := func(ctx context.Context) {
 		builds, err := q.ListBuildsByStatus(ctx, []string{"deploying", "building", "finished", "failed"})
 		if err != nil {
