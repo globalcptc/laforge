@@ -625,11 +625,15 @@ export function useCreateBuilderConfig() {
   })
 }
 
+// useUpdateBuilderConfig saves a builder. The api re-checks the builder's
+// images against the hoster only when images, hosts or the connection
+// changed; verify: false skips that check on request (the "save anyway"
+// after a slow hoster made the check time out).
 export function useUpdateBuilderConfig() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ name, ...req }: { name: string } & BuilderConfigRequest) =>
-      api.put<BuilderConfig>(`/builder-configs/${encodeURIComponent(name)}`, req),
+    mutationFn: ({ name, verify, ...req }: { name: string; verify?: boolean } & BuilderConfigRequest) =>
+      api.put<BuilderConfig>(`/builder-configs/${encodeURIComponent(name)}${verify === false ? '?verify=false' : ''}`, req),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['builder-configs'] }),
   })
 }

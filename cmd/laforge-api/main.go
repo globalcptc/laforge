@@ -162,7 +162,9 @@ func main() {
 			Q:       q, GH: gh, AppID: appID, AppPrivateKey: appPrivateKey, ServiceToken: serviceToken,
 		}
 	}
-	httpServer := &http.Server{Addr: addr, Handler: server}
+	// Header and idle timeouts only: SSE and WebSocket handlers hold a
+	// response open for as long as the client stays, so no WriteTimeout.
+	httpServer := &http.Server{Addr: addr, Handler: server, ReadHeaderTimeout: 15 * time.Second, IdleTimeout: 2 * time.Minute}
 
 	go func() {
 		<-ctx.Done()
@@ -193,4 +195,3 @@ func envOr(name, fallback string) string {
 	}
 	return fallback
 }
-

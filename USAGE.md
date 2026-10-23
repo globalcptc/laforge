@@ -264,7 +264,13 @@ so the two agree:
   `build.status`); and, once a minute while it lasts, what it's waiting for
   (`reconcile.waiting`, `lifecycle.waiting`: an open task, a network, an agent).
 - **runner**: every task it leases, starts, retries, fails or completes, with the attempt
-  and how long the builder call took; the lease renewals that fail.
+  and how long the builder call took; the lease renewals that fail. A task that runs past
+  `RUNNER_TASK_TIMEOUT` (default 45m) fails that attempt and is retried, so a hung hoster
+  call never holds a slot for good.
+- **orchestrator jobs**: each periodic job (`instance-states`, `access`, `schedules`,
+  `builder-metrics`, the cleanups) logs when it takes over 30 s or hits its limit, and
+  `job "x": skipping this tick; the previous run has been going for 2m10s` when it's
+  stuck — the line to look for when the hosts page stops updating.
 - **the builders** (MicroCloud, Incus): every request to the hoster's API with its path,
   duration and outcome; every async operation accepted, a line every 30 s while it's
   still running, and how it ended; each phase of a destroy (stop, delete, confirm,

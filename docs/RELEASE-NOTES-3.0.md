@@ -211,6 +211,18 @@ This note covers the whole 3.0 line.
   each source's size per builder; a pass that does time out records why on the build
   (`reconcile.error`, naming the phase) and `reconcile.recovered` when passes complete
   again. Builder metrics probes are bounded to 30 s.
+- **Nothing waits on a hung hoster.** The orchestrator's periodic jobs (power-state
+  poll, access and schedule dispatch, housekeeping, metrics) run off its main loop, each
+  bounded and never two at once — a tick that finds the previous run still going is
+  skipped and logged with how long it has been running. Power states are inspected per
+  builder in parallel, 60 s each; the check-in watchdog's hoster calls are bounded; the
+  runner fails and retries a task that runs past `RUNNER_TASK_TIMEOUT` (45 m) so a hung
+  builder call can't hold a concurrency slot forever; the api has header/idle timeouts
+  and bounds its live drift scan.
+- **Saving a builder no longer waits on the hoster** unless its images, hosts or
+  connection changed; a concurrency or size change saves at once. When images are
+  re-checked, the snapshot reads run in parallel, and if the check still fails or times
+  out the wizard offers *Save without verifying images*.
 - **The concurrency limit counts deploys and destroys.** A builder's *Max concurrency*
   is how many instances are created or destroyed at once; access and network
   configuration tasks (seconds each) run alongside instead of queueing behind a hundred

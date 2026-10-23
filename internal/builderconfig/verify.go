@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -64,18 +65,41 @@ func VerifyImages(ctx context.Context, pool *pgxpool.Pool, row db.BuilderConfig)
 		if h.timeoutSeconds > 0 {
 			client.OperationTimeout = time.Duration(h.timeoutSeconds) * time.Second
 		}
-		for _, name := range snapshots {
-			ref := images[name]
-			ok, err := client.SnapshotExists(ctx, ref.SourceProject, ref.Instance, ref.Snapshot)
-			if err != nil {
-				return fmt.Errorf("checking snapshot %s/%s on %s: %w", ref.Instance, ref.Snapshot, h.label, err)
+		// Snapshot checks in parallel: each is one read that takes 10+ seconds
+		// on a loaded cluster, and a builder may offer a dozen images -- one
+		// after another they outlast a browser's patience for a save.
+		type snapResult struct {
+			name string
+			ok   bool
+			err  error
+		}
+		results := make([]snapResult, len(snapshots))
+		var wg sync.WaitGroup
+		for i, name := range snapshots {
+			wg.Add(1)
+			go func(i int, name string) {
+				defer wg.Done()
+				ref := images[name]
+				started := time.Now()
+				ok, err := client.SnapshotExists(ctx, ref.SourceProject, ref.Instance, ref.Snapshot)
+				if err != nil {
+					err = fmt.Errorf("checking snapshot %s/%s on %s (after %s): %w", ref.Instance, ref.Snapshot, h.label, time.Since(started).Round(time.Millisecond), err)
+				}
+				results[i] = snapResult{name: name, ok: ok, err: err}
+			}(i, name)
+		}
+		wg.Wait()
+		for _, res := range results {
+			if res.err != nil {
+				return res.err
 			}
-			if !ok {
+			if !res.ok {
+				ref := images[res.name]
 				where := h.label
 				if ref.SourceProject != "" {
 					where += " (project " + ref.SourceProject + ")"
 				}
-				problems = append(problems, fmt.Sprintf("%q (snapshot %s/%s) is not on %s", name, ref.Instance, ref.Snapshot, where))
+				problems = append(problems, fmt.Sprintf("%q (snapshot %s/%s) is not on %s", res.name, ref.Instance, ref.Snapshot, where))
 			}
 		}
 		if len(local) == 0 {

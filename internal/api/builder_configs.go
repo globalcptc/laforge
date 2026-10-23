@@ -13,8 +13,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -194,22 +196,22 @@ func (req builderConfigRequest) validate(pool *pgxpool.Pool) (db.CreateBuilderCo
 		return db.CreateBuilderConfigParams{}, errors.New("incus_host_max_concurrency is only supported by the Incus builder")
 	}
 	params := db.CreateBuilderConfigParams{
-		Kind:                   req.Kind,
-		IncusOneTeamPerHost:    req.IncusOneTeamPerHost,
-		MicrocloudPublicAccess: publicAccess,
-		AwsConfig:              awsConfig,
-		IncusApiUrl:            db.StrPtr(req.IncusApiUrl),
-		IncusClientCertPath:    db.StrPtr(req.IncusClientCertPath),
-		IncusClientKeyPath:     db.StrPtr(req.IncusClientKeyPath),
-		IncusServerCertPem:     db.StrPtr(req.IncusServerCertPem),
-		IncusOvnUplinkNetwork:  db.StrPtr(req.IncusOvnUplinkNetwork),
-		IncusStoragePool:       db.StrPtr(req.IncusStoragePool),
-		IncusImages:            images,
-		IncusSizes:             sizes,
-		IncusHosts:             hosts,
-		ExternalAccessIp:       db.StrPtr(req.ExternalAccessIP),
-		Color:                  req.Color,
-		MicrocloudClusterGroup: clusterGroup,
+		Kind:                    req.Kind,
+		IncusOneTeamPerHost:     req.IncusOneTeamPerHost,
+		MicrocloudPublicAccess:  publicAccess,
+		AwsConfig:               awsConfig,
+		IncusApiUrl:             db.StrPtr(req.IncusApiUrl),
+		IncusClientCertPath:     db.StrPtr(req.IncusClientCertPath),
+		IncusClientKeyPath:      db.StrPtr(req.IncusClientKeyPath),
+		IncusServerCertPem:      db.StrPtr(req.IncusServerCertPem),
+		IncusOvnUplinkNetwork:   db.StrPtr(req.IncusOvnUplinkNetwork),
+		IncusStoragePool:        db.StrPtr(req.IncusStoragePool),
+		IncusImages:             images,
+		IncusSizes:              sizes,
+		IncusHosts:              hosts,
+		ExternalAccessIp:        db.StrPtr(req.ExternalAccessIP),
+		Color:                   req.Color,
+		MicrocloudClusterGroup:  clusterGroup,
 		MaxConcurrency:          maxConcurrency,
 		IncusHostMaxConcurrency: incusHostMaxConcurrency,
 	}
@@ -433,9 +435,26 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	if err := s.verifyImages(r, params); err != nil {
-		writeError(w, http.StatusBadRequest, err)
-		return
+	// Re-verify images against the hoster only when something that affects
+	// them changed -- the images, the hosts, the connection, the project. A
+	// save that changes the concurrency limit or the sizes shouldn't wait on
+	// a snapshot read per image on a loaded cluster (minutes, and a timed-out
+	// save). `?verify=false` skips it on request, logged.
+	skip := r.URL.Query().Get("verify") == "false"
+	if existing, err := s.Queries.GetBuilderConfigByName(r.Context(), name); err == nil && !imagesOrConnectionChanged(existing, params) {
+		log.Printf("api: builder %q: saved without re-verifying images (images, hosts and connection unchanged)", name)
+		skip = true
+	} else if skip {
+		log.Printf("api: builder %q: saved without verifying images, as requested (verify=false)", name)
+	}
+	if !skip {
+		started := time.Now()
+		if err := s.verifyImages(r, params); err != nil {
+			log.Printf("api: builder %q: image verification failed after %s: %v", name, time.Since(started).Round(time.Millisecond), err)
+			writeError(w, http.StatusBadRequest, fmt.Errorf("%w -- to save anyway, repeat the save without verifying images", err))
+			return
+		}
+		log.Printf("api: builder %q: images verified in %s", name, time.Since(started).Round(time.Millisecond))
 	}
 	row, err := s.Queries.UpdateBuilderConfig(r.Context(), db.UpdateBuilderConfigParams{
 		Name: name, Kind: params.Kind,
@@ -448,12 +467,12 @@ func (s *Server) handleUpdateBuilderConfig(w http.ResponseWriter, r *http.Reques
 		IncusOneTeamPerHost: params.IncusOneTeamPerHost,
 		ExternalAccessIp:    params.ExternalAccessIp,
 		ExternalPortMin:     params.ExternalPortMin, ExternalPortMax: params.ExternalPortMax,
-		IncusProject:           params.IncusProject,
-		MicrocloudPublicAccess: params.MicrocloudPublicAccess,
-		AwsConfig:              params.AwsConfig,
+		IncusProject:            params.IncusProject,
+		MicrocloudPublicAccess:  params.MicrocloudPublicAccess,
+		AwsConfig:               params.AwsConfig,
 		AwsCredentialID:         params.AwsCredentialID,
 		Color:                   params.Color,
-		MicrocloudClusterGroup: params.MicrocloudClusterGroup,
+		MicrocloudClusterGroup:  params.MicrocloudClusterGroup,
 		MaxConcurrency:          params.MaxConcurrency,
 		IncusHostMaxConcurrency: params.IncusHostMaxConcurrency,
 	})
@@ -478,4 +497,19 @@ func (s *Server) handleDeleteBuilderConfig(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// imagesOrConnectionChanged reports whether a builder update touches anything
+// image verification depends on: which images, which hosts, how the hoster is
+// reached, and which project.
+func imagesOrConnectionChanged(existing db.BuilderConfig, params db.CreateBuilderConfigParams) bool {
+	return existing.Kind != params.Kind ||
+		string(existing.IncusImages) != string(params.IncusImages) ||
+		string(existing.IncusHosts) != string(params.IncusHosts) ||
+		existing.IncusApiUrl != params.IncusApiUrl ||
+		existing.IncusServerCertPem != params.IncusServerCertPem ||
+		existing.IncusClientCertPath != params.IncusClientCertPath ||
+		existing.IncusClientKeyPath != params.IncusClientKeyPath ||
+		existing.IncusCredentialID != params.IncusCredentialID ||
+		existing.IncusProject != params.IncusProject
 }

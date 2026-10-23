@@ -8,7 +8,9 @@
 package api
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/globalcptc/laforge/internal/builder"
 	"github.com/globalcptc/laforge/internal/db"
@@ -31,6 +33,11 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 		writeAuthError(w, err)
 		return
 	}
+	// A live hoster scan, bounded: a hung hoster answers "timed out", not a
+	// request that never completes.
+	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
+	defer cancel()
+	r = r.WithContext(ctx)
 	report, err := orchestrator.DetectDrift(r.Context(), s.Pool, build.ID)
 	if err != nil {
 		writeError(w, statusUpstreamFailed, err)

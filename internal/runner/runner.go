@@ -105,6 +105,12 @@ type Runner struct {
 	ID                string
 	LeaseDuration     time.Duration
 	HeartbeatInterval time.Duration
+	// TaskTimeout bounds one task's execution (the builder calls it makes,
+	// retries included). A hung hoster call would otherwise hold the task's
+	// lease -- the heartbeat keeps renewing it -- and with it one of the
+	// builder's concurrency slots, forever. Past it the task fails this
+	// attempt and is retried like any other failure. Zero disables.
+	TaskTimeout time.Duration
 	// RetryBackoffBase scales how long a failed-but-retryable task is held
 	// before it can be re-leased (see RetryBackoff). Zero means the
 	// production default (retryBackoffBase); tests that exercise the retry
@@ -246,7 +252,15 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	// terminal event so the host's event timeline shows where a slow deploy's
 	// time went, on success and failure alike.
 	execCtx, phases := builder.WithPhaseTimer(ctx)
+	if r.TaskTimeout > 0 {
+		var cancel context.CancelFunc
+		execCtx, cancel = context.WithTimeout(execCtx, r.TaskTimeout)
+		defer cancel()
+	}
 	resolved, execErr := r.execute(execCtx, q, task)
+	if execErr != nil && r.TaskTimeout > 0 && errors.Is(execCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
+		execErr = fmt.Errorf("gave up after %s (RUNNER_TASK_TIMEOUT): %w", r.TaskTimeout, execErr)
+	}
 	close(stopHeartbeat)
 	phaseDetail := phasePayload(phases.Phases())
 	log.Printf("[%s] build %s task %s: %s returned after %s (error: %v)", r.ID, shortID(task.BuildID), shortID(task.ID), task.Kind, time.Since(taskStarted).Round(time.Millisecond), execErr)

@@ -266,11 +266,13 @@ export function BuilderWizard() {
     setFurthest((f) => Math.max(f, i))
   }
 
-  async function save() {
+  // verify=false repeats a save without re-checking images against the hoster:
+  // offered when the check itself is what failed (a slow or unreachable host).
+  async function save(verify = true) {
     setSaveError(null)
     try {
       const req = toRequest(draft)
-      if (editingName) await update.mutateAsync({ name: editingName, ...req })
+      if (editingName) await update.mutateAsync({ name: editingName, verify, ...req })
       else await create.mutateAsync({ name: draft.name, ...req })
       toast({ title: editingName ? 'Builder saved' : 'Builder created', description: draft.name, tone: 'success' })
       if (editingName) {
@@ -466,8 +468,13 @@ export function BuilderWizard() {
                   </Button>
                   <div className="flex items-center gap-3">
                     {saveError && <span className="max-w-md text-xs text-danger">{saveError}</span>}
+                    {saveError && editingName && /verif|snapshot|timeout|deadline/i.test(saveError) && (
+                      <Button variant="secondary" size="sm" onClick={() => save(false)} disabled={saving} title="Save this builder without re-checking its images against the hoster">
+                        Save without verifying images
+                      </Button>
+                    )}
                     {activeBlocker && <span className="text-xs text-fg-muted">{activeBlocker}</span>}
-                    <Button variant="primary" onClick={save} disabled={saving || !!activeBlocker}>
+                    <Button variant="primary" onClick={() => save()} disabled={saving || !!activeBlocker}>
                       {saving ? <Spinner /> : <Check size={12} />} Save
                     </Button>
                   </div>
@@ -508,7 +515,7 @@ export function BuilderWizard() {
               {saveError && <span className="max-w-md text-xs text-danger">{saveError}</span>}
               {!isLast && blocker[step] && <span className="text-xs text-fg-muted">{blocker[step]}</span>}
               {isLast ? (
-                <Button variant="primary" onClick={save} disabled={saving}>
+                <Button variant="primary" onClick={() => save()} disabled={saving}>
                   {saving ? <Spinner /> : <Check size={12} />} {editingName ? 'Save Builder' : 'Create Builder'}
                 </Button>
               ) : (

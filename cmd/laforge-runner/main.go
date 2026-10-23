@@ -54,6 +54,7 @@ func main() {
 	maxTasks := flag.Int("max-tasks", 0, "stop after completing this many tasks (0 = run until the queue is empty)")
 	workDelayMS := flag.Int("work-delay-ms", 0, "fake builder: simulated hoster API latency per call, in milliseconds")
 	pollInterval := flag.Duration("poll-interval", 200*time.Millisecond, "how often to check for work when the queue is empty")
+	taskTimeout := flag.Duration("task-timeout", envDurationDefaultRunner("RUNNER_TASK_TIMEOUT", 45*time.Minute), "the most one task may run before it is failed and retried; a hung builder call otherwise holds a concurrency slot forever (0 disables)")
 	concurrency := flag.Int("concurrency", envIntDefault("RUNNER_CONCURRENCY", 1), "how many tasks to lease and execute in PARALLEL. Each worker is an independent lease->execute loop; FOR UPDATE SKIP LOCKED makes concurrent leasing safe, so N workers deploy N hosts at once instead of one at a time. Default 1 (serial). The chaos/crash flags assume 1.")
 	crashAfterLease := flag.Int("crash-after-lease", -1, "os.Exit(9) immediately after leasing the Nth task this process leases (1-indexed; -1 = never), zero work done")
 	crashAfterBuilderCall := flag.Int("crash-after-builder-call", -1, "os.Exit(9) immediately after the Nth builder call this process makes succeeds, before recording the result (1-indexed; -1 = never)")
@@ -131,6 +132,7 @@ func main() {
 		Pool: pool, Builder: b, RepoRoot: *repoRoot, Checkouts: cache, ID: *id, Delivery: delivery,
 		LeaseDuration:     time.Duration(*leaseSeconds) * time.Second,
 		HeartbeatInterval: time.Duration(*heartbeatSeconds) * time.Second,
+		TaskTimeout:       *taskTimeout,
 	}
 	r.Builders = r.ResolveBuilderFromDB
 	if *buildID != "" {
@@ -451,4 +453,15 @@ func describeLimit(limit int) string {
 		return "unbounded"
 	}
 	return fmt.Sprint(limit)
+}
+
+// envDurationDefaultRunner reads a duration environment variable, falling
+// back to def when unset or unparseable.
+func envDurationDefaultRunner(name string, def time.Duration) time.Duration {
+	if v := os.Getenv(name); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
+		}
+	}
+	return def
 }
