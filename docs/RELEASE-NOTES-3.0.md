@@ -193,6 +193,19 @@ This note covers the whole 3.0 line.
   attempt and its duration; the api every operator action with who made it; the
   builders every hoster request, operation and destroy phase; the gateway every step.
   Long log lines open in place on the Logs tab.
+- **Concurrency limits hold.** A builder's limit (*Max concurrency* in the wizard) now
+  applies to the next task leased, not after a pool has drained, and a task is only
+  leased once a slot is free (before, one task per pool sat leased and unheartbeated
+  while waiting). The runner logs each pool's limit, every lease's slot, and "at its
+  limit, N waiting" every 30 s while saturated. A failed destroy — a rebuild's or a
+  content change's — is queued again (with its hoster reference) before anything is
+  redeployed in its place, and a host whose old instance can't be destroyed is stopped
+  with the error instead of sitting pending.
+- **Leaner MicroCloud destroys.** A destroy reads the instance once, stops and deletes
+  it, and then removes only what that instance actually had — its public NIC's ACL, its
+  per-host port ACL, its Windows config-drive volume — concurrently, instead of a blind
+  sequence of every cleanup plus a confirmation read. A plain Linux host is three hoster
+  requests rather than seven.
 
 - **A React operator console**: active builds grouped by repository on a home dashboard;
   per-build hosts/containers/networks with live status, infra power state, and agent

@@ -15,6 +15,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -261,12 +262,11 @@ func runBuilderPools(ctx context.Context, r *runner.Runner, id string, pollInter
 			if _, running := pools[name]; running {
 				continue
 			}
-			limit := builderConcurrency(ctx, q, name)
 			h := &poolHandle{}
 			pools[name] = h
 			builderName := name
 			go func() {
-				runBuilderPool(ctx, r, id, builderName, pollInterval, limit)
+				runBuilderPool(ctx, r, id, builderName, pollInterval)
 				mu.Lock()
 				if pools[builderName] == h { // don't delete a newer pool for the same builder
 					delete(pools, builderName)
@@ -295,25 +295,56 @@ func builderConcurrency(ctx context.Context, q *db.Queries, builderConfigName st
 	return int(bc.MaxConcurrency)
 }
 
-// runBuilderPool drains one configured builder's task queue, running up to
-// `limit` tasks in parallel (limit <= 0 = unbounded). It leases only this
-// builder's tasks, so it is fully independent of every other builder. Exits when
-// the builder has no leasable tasks left AND nothing is in flight; the
-// supervisor restarts it when work reappears. Exits promptly on context
-// cancellation (shutdown).
-func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName string, pollInterval time.Duration, limit int) {
+// runBuilderPool drains one configured builder's task queue, running up to the
+// builder's concurrency limit (builder_config.max_concurrency; 0 = unbounded)
+// in parallel. It leases only this builder's tasks, so it is fully independent
+// of every other builder. Exits when the builder has no leasable tasks left AND
+// nothing is in flight; the supervisor restarts it when work reappears. Exits
+// promptly on context cancellation (shutdown).
+//
+// Two things keep the limit honest. A slot is taken BEFORE a task is leased:
+// leasing first and then waiting for a slot left a leased task sitting with no
+// heartbeat, its lease quietly expiring (and, with a second runner, open to
+// being leased again and run twice). And the limit is re-read from the
+// database every few seconds rather than once: a limit set or changed while a
+// pool is alive -- during a competition, which is when it gets set -- applies
+// to the next lease, not after the queue has drained. The limit is per runner
+// process: run one laforge-runner per deployment.
+func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName string, pollInterval time.Duration) {
 	q := db.New(r.Pool)
-	var sem chan struct{}
-	if limit > 0 {
-		sem = make(chan struct{}, limit)
-	}
+	limit := builderConcurrency(ctx, q, builderConfigName)
+	limitRead := time.Now()
+	log.Printf("[%s] builder %q: worker pool started, concurrency limit %s", id, builderConfigName, describeLimit(limit))
 	var inFlight int64
 	var wg sync.WaitGroup
 	defer wg.Wait() // never leave tasks running past the pool
+	lastSaturated := time.Time{}
 
 	for {
 		if ctx.Err() != nil {
 			return
+		}
+		if time.Since(limitRead) > 10*time.Second {
+			if fresh := builderConcurrency(ctx, q, builderConfigName); fresh != limit {
+				log.Printf("[%s] builder %q: concurrency limit changed %s -> %s; applies to the next lease", id, builderConfigName, describeLimit(limit), describeLimit(fresh))
+				limit = fresh
+			}
+			limitRead = time.Now()
+		}
+		busy := atomic.LoadInt64(&inFlight)
+		if limit > 0 && busy >= int64(limit) {
+			// Every slot is taken: don't lease anything yet. Say so every 30s
+			// while it lasts, with how much is waiting, so a slow builder
+			// reads as "at its limit", not as "doing nothing".
+			if time.Since(lastSaturated) > 30*time.Second {
+				waiting, _ := q.CountLeasableTasksForBuilder(ctx, builderConfigName)
+				log.Printf("[%s] builder %q: at its concurrency limit (%d/%d tasks running, %d waiting to be leased)", id, builderConfigName, busy, limit, waiting)
+				lastSaturated = time.Now()
+			}
+			if sleepCtx(ctx, pollInterval) {
+				return
+			}
+			continue
 		}
 		task, err := r.LeaseOneForBuilder(ctx, builderConfigName)
 		if err != nil {
@@ -324,19 +355,13 @@ func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName
 			continue
 		}
 		if task != nil {
-			log.Printf("LEASED %s kind=%s attempt=%d", task.ID, task.Kind, task.Attempts)
-			if sem != nil {
-				sem <- struct{}{}
-			}
+			running := atomic.AddInt64(&inFlight, 1)
+			log.Printf("LEASED %s kind=%s attempt=%d builder=%q slot=%d/%s", task.ID, task.Kind, task.Attempts, builderConfigName, running, describeLimit(limit))
 			wg.Add(1)
-			atomic.AddInt64(&inFlight, 1)
 			t := *task
 			go func() {
 				defer wg.Done()
 				defer atomic.AddInt64(&inFlight, -1)
-				if sem != nil {
-					defer func() { <-sem }()
-				}
 				if err := r.ExecuteAndRecord(ctx, t); err != nil {
 					log.Printf("[%s] task %s error: %v", id, t.ID, err)
 				}
@@ -390,4 +415,12 @@ func envIntDefault(name string, def int) int {
 		}
 	}
 	return def
+}
+
+// describeLimit renders a concurrency limit for the log: "unbounded" for 0.
+func describeLimit(limit int) string {
+	if limit <= 0 {
+		return "unbounded"
+	}
+	return fmt.Sprint(limit)
 }
