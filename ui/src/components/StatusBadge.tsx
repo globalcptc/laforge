@@ -88,7 +88,7 @@ type Kind =
   // legacy aliases (pre-00023), kept so any stale value still renders:
   | 'deployed'
 
-type Anim = 'spin' | 'pulse' | 'slow-spin'
+type Anim = 'spin' | 'pulse' | 'slow-spin' | 'steady-spin'
 
 const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['tone']; label: string }> = {
   // Planned waits for the operator to click Deploy -- a gentle pulse, not a
@@ -129,10 +129,10 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   // resting, grey like the other history states.
   discarded: { icon: MinusCircle, tone: 'neutral', label: 'Discarded' },
   // A destroy is queued (a rebuild, a content change) but hasn't started: the
-  // instance is still there. A dusty pink, between Pending and Destroying, and
-  // pulsing like Pending -- waiting, not working.
-  destroy_queued: { icon: OctagonPause, anim: 'pulse', tone: 'mauve', label: 'Destroy Pending' },
-  destroying: { icon: OctagonX, anim: 'spin', tone: 'pink', label: 'Destroying' },
+  // instance is still there. A pale magenta, set apart from Destroying's pink,
+  // and pulsing like Pending -- waiting, not working.
+  destroy_queued: { icon: OctagonPause, anim: 'pulse', tone: 'magenta', label: 'Destroy Pending' },
+  destroying: { icon: OctagonX, anim: 'steady-spin', tone: 'pink', label: 'Destroying' },
   // The destroy-side twin of Creation Failed: the hoster refused to remove the
   // instance for a reason retrying cannot fix, so teardown stopped here. Terminal
   // and still until an operator retries the teardown or forces the build down. A
@@ -312,7 +312,8 @@ export function statusFillClass(status: string): string {
 
 // animClassFor maps a status's animation to its Tailwind class. 'slow-spin' is a
 // ~7s rotation (vs animate-spin's 1s) for the patient, held "Dependency Blocked"
-// state -- deliberately much slower than the active spinners.
+// state -- deliberately much slower than the active spinners. 'steady-spin' is
+// a 3s rotation, for work that's under way but slow (Destroying).
 function animClassFor(anim?: Anim): string | undefined {
   return anim === 'spin'
     ? 'animate-spin'
@@ -320,7 +321,9 @@ function animClassFor(anim?: Anim): string | undefined {
       ? 'animate-pulse'
       : anim === 'slow-spin'
         ? 'animate-[spin_7s_linear_infinite]'
-        : undefined
+        : anim === 'steady-spin'
+          ? 'animate-[spin_3s_linear_infinite]'
+          : undefined
 }
 
 // blockedStatusKey resolves the derived 'dependency_blocked' state the same way

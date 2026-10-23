@@ -12,7 +12,7 @@ export const STATUS_COLOR: Record<string, string> = {
   build_failed: '#d8622f',
   invalid: '#e0a021',
   dependency_blocked: '#e0a021',
-  destroy_queued: '#6b3a52',
+  destroy_queued: '#d98fd0',
   destroying: '#d4537e',
   destroy_failed: '#e04a49',
   torn_down: '#5f5e5a',
