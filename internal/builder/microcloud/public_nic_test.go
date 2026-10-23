@@ -83,6 +83,8 @@ func newPublicTestServer(t *testing.T) (*publicTestServer, *Builder, *memoryPubl
 		}
 		path := r.URL.Path
 		switch {
+		case path == "/1.0/operations" && r.Method == "GET":
+			ok(map[string]interface{}{}) // nothing running
 		case strings.HasPrefix(path, "/1.0/networks/") && r.Method == "GET":
 			ip := "172.16.0.1/24"
 			if strings.HasSuffix(path, "GUEST_GUAC_WAN") {

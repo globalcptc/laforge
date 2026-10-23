@@ -225,13 +225,35 @@ This note covers the whole 3.0 line.
   connection changed; a concurrency or size change saves at once. When images are
   re-checked, the snapshot reads run in parallel, and if the check still fails or times
   out the wizard offers *Save without verifying images*.
+- **No more stalls between deploys, destroys, rebuilds and teardowns.**
+  - A deploy that finds its instance already exists — an earlier attempt the cluster
+    accepted before the runner went away — waits for that creation to finish and adopts
+    it when it's this deployment's (every instance now records which deployment made it),
+    instead of failing; someone else's is refused, permanently. A destroy likewise waits
+    out an unfinished creation instead of racing it.
+  - Restarting or redeploying the runner hands its in-flight tasks back (pending, the
+    lease not counted as an attempt) instead of leaving them leased until they expire and
+    count as failures. The runner gets 30 s to stop.
+  - A rebuild of a host with a deploy queued withdraws that deploy; with one running, the
+    rebuild is recorded and carried out the moment it ends — it used to reset the host,
+    losing its hoster reference, and the request was then forgotten.
+  - A teardown withdraws deploys that haven't started rather than waiting for them to
+    create instances only to destroy them; while something is still running, it says
+    what.
+  - A host whose deploy failed is retried after a backoff (30 s doubling to 10 m) rather
+    than on every pass, and not after five failures in a row or a permanent failure — a
+    rebuild resets that.
 - **MicroCloud deploys no longer queue behind ACL rewrites.** Every external-access pass
   re-wrote every public host's ACL, unchanged, holding the builder's networking lock
   across the whole team — and on a loaded cluster an ACL write takes minutes, while
   Windows/public-NIC deploys need that lock for their own ACL. An ACL that already
   matches is now left alone (read first, no lock), the lock is taken only around a real
   write, and waiting on it is logged every 30 s, as is any hoster request still
-  unanswered after 30 s.
+  unanswered after 30 s. Opening/closing a team's access and configuring its network
+  access no longer hold the lock across the whole team either — each network change and
+  each ACL write takes it for itself — and a host's NIC isn't updated when its port ACL
+  is already attached. Access and network configuration tasks run in their own lane,
+  capped at the builder's limit (at least 4), beside its deploys.
 - **Lost agents fail the host instead of stalling it.** A host whose agent checked in and
   then went silent for `AGENT_LOST_AFTER` (30 m) with steps still to run, or whose agent
   never connected within `AGENT_NEVER_CHECKED_IN_AFTER` (60 m) of the instance coming

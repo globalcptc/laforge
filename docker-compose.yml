@@ -109,6 +109,9 @@ services:
         condition: service_completed_successfully
 
   runner:
+    # Time to hand back in-flight tasks on a redeploy (they're released, not
+    # counted as failed attempts) before Docker kills the process.
+    stop_grace_period: 30s
     build:
       context: .
       target: runner

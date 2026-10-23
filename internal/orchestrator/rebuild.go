@@ -83,19 +83,40 @@ func Rebuild(ctx context.Context, pool *pgxpool.Pool, build db.Build, content *l
 			return nil, fmt.Errorf("building rebuild destroy payload for %s: %w", o.ID.String(), err)
 		}
 		team := teamNumberByID[o.TeamID.String()]
+		// A deploy queued but not started is withdrawn: running it would
+		// adopt the very instance being rebuilt and make the rebuild a no-op.
+		if cancelled, err := q.CancelPendingDeployForObject(ctx, db.CancelPendingDeployForObjectParams{
+			DeployedObjectID: o.ID, Reason: "withdrawn: the host is being rebuilt",
+		}); err == nil {
+			decide(ctx, q, build.ID, o.ID, "rebuild.withdrew_deploy", fmt.Sprintf("%s: withdrew its queued deploy (not started) in favour of the rebuild", objectLabel(o, team)), map[string]any{"task_id": cancelled.ID.String()})
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("withdrawing %s's queued deploy: %w", o.ID.String(), err)
+		}
 		task, err := q.CreateTaskIfNoneOpen(ctx, db.CreateTaskIfNoneOpenParams{
 			BuildID: build.ID, DeployedObjectID: o.ID, Kind: "destroy_" + o.Kind, Payload: payload,
 		})
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Something is already in flight for it (a deploy, an earlier
-			// destroy): say so rather than fail the whole rebuild. The reset
-			// below still makes the next pass redeploy once that task ends.
-			decide(ctx, q, build.ID, o.ID, "rebuild.waiting", fmt.Sprintf("%s: rebuild requested, but it already has an open task; its destroy waits for that to finish", objectLabel(o, team)), nil)
+			// Something is running for it right now (a deploy mid-create, an
+			// earlier destroy). Record the request and leave the object as it
+			// is -- hoster reference included -- and the reconciler queues the
+			// destroy the moment that task ends. (Resetting it here, as this
+			// once did, lost both the reference and the request.)
+			if err := q.SetRebuildRequested(ctx, o.ID); err != nil {
+				return nil, fmt.Errorf("recording the rebuild request for %s: %w", o.ID.String(), err)
+			}
+			what := "a task"
+			if open, err := q.GetOpenTaskForObject(ctx, o.ID); err == nil {
+				what = fmt.Sprintf("a %s task (%s, attempt %d)", open.Kind, open.Status, open.Attempts)
+			}
+			decide(ctx, q, build.ID, o.ID, "rebuild.waiting", fmt.Sprintf("%s: rebuild recorded; it has %s running, and its destroy is queued the moment that ends", objectLabel(o, team), what), nil)
+			continue
 		} else if err != nil {
 			return nil, fmt.Errorf("enqueuing rebuild destroy for %s: %w", o.ID.String(), err)
-		} else {
-			decide(ctx, q, build.ID, o.ID, "rebuild.destroy", fmt.Sprintf("%s: destroy task queued for the rebuild (hoster ref %s); it redeploys once destroyed", objectLabel(o, team), db.StrOrEmpty(o.ExternalRef)),
-				map[string]any{"task_id": task.ID.String(), "external_ref": db.StrOrEmpty(o.ExternalRef)})
+		}
+		decide(ctx, q, build.ID, o.ID, "rebuild.destroy", fmt.Sprintf("%s: destroy task queued for the rebuild (hoster ref %s); it redeploys once destroyed", objectLabel(o, team), db.StrOrEmpty(o.ExternalRef)),
+			map[string]any{"task_id": task.ID.String(), "external_ref": db.StrOrEmpty(o.ExternalRef)})
+		if err := q.ClearRebuildRequested(ctx, o.ID); err != nil {
+			return nil, err
 		}
 		if _, err := q.ResetDeployedObjectForRedeploy(ctx, o.ID); err != nil {
 			return nil, fmt.Errorf("resetting %s for rebuild: %w", o.ID.String(), err)

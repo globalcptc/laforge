@@ -574,6 +574,31 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 // object deployed before infra_fingerprint existed has none recorded and is
 // recreated as before.
 func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, desiredFP, desiredInfraFP string, holdOnStepChange bool, priority int, deployTasks bool) (created bool, err error) {
+	// A rebuild recorded while the object was busy is carried out as soon as
+	// it isn't: destroy what's there (by its reference, or by name if it has
+	// none yet), and the runner resets it for a fresh deploy.
+	if obj.RebuildRequestedAt.Valid && deployTasks && obj.Status != "destroyed" {
+		payload, err := json.Marshal(map[string]any{"remove": false, "external_ref": db.StrOrEmpty(obj.ExternalRef)})
+		if err != nil {
+			return false, err
+		}
+		task, err := q.CreateTaskIfNoneOpen(ctx, db.CreateTaskIfNoneOpenParams{BuildID: buildID, DeployedObjectID: obj.ID, Kind: "destroy_" + obj.Kind, Payload: payload})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil // still busy; the request stays recorded
+		}
+		if err != nil {
+			return false, fmt.Errorf("queuing the recorded rebuild of %s: %w", objectLabel(obj, 0), err)
+		}
+		if err := q.ClearRebuildRequested(ctx, obj.ID); err != nil {
+			return false, err
+		}
+		if _, err := q.ResetDeployedObjectForRedeploy(ctx, obj.ID); err != nil {
+			return false, err
+		}
+		decide(ctx, q, buildID, obj.ID, "rebuild.destroy", fmt.Sprintf("%s: the task it was busy with ended; destroy queued for the rebuild recorded %s ago", objectLabel(obj, 0), time.Since(obj.RebuildRequestedAt.Time).Round(time.Second)),
+			map[string]any{"task_id": task.ID.String(), "external_ref": db.StrOrEmpty(obj.ExternalRef)})
+		return false, nil
+	}
 	if infraUp(obj.Status) {
 		if obj.Fingerprint == desiredFP {
 			return false, nil // already correct
@@ -627,6 +652,11 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 	// the way to deploy.
 	if proceed, err := settleLastDestroy(ctx, q, buildID, obj); err != nil || !proceed {
 		return false, err
+	}
+	if obj.Status == "deploy_failed" {
+		if proceed, err := settleLastDeploy(ctx, q, buildID, obj); err != nil || !proceed {
+			return false, err
+		}
 	}
 	if obj.Status == "destroying" {
 		// No destroy task is in flight (settleLastDestroy would have said), yet
@@ -936,6 +966,51 @@ func settleLastDestroy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 		}
 		decide(ctx, q, buildID, obj.ID, "reconcile.destroy_retry", fmt.Sprintf("%s: destroy queued again after %d failed attempt(s) (%s); the old instance must go before it's redeployed", objectLabel(obj, 0), last.FailedCount, errText),
 			map[string]any{"task_id": task.ID.String(), "failed_destroys": last.FailedCount, "last_error": errText})
+		return false, nil
+	}
+	return true, nil
+}
+
+// maxConsecutiveDeployFailures is how many deploys of one object may fail in
+// a row before the reconciler stops queueing new ones. Each deploy task has
+// its own retries already; past this the failure is the cluster's or the
+// content's to fix, and a rebuild (which resets the count) is the operator's
+// way to try again.
+const maxConsecutiveDeployFailures = 5
+
+// settleLastDeploy decides whether a deploy_failed object gets another
+// deploy now. It used to get one on every pass, immediately -- a loop that
+// kept a builder slot busy failing the same way (an instance that already
+// existed, a cluster that refused) for as long as the build lived. A
+// permanent failure stops; otherwise retries back off (the teardown's
+// schedule, 30 s doubling to 10 m) and stop after
+// maxConsecutiveDeployFailures, each decision recorded.
+func settleLastDeploy(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject) (bool, error) {
+	last, err := q.GetLatestDeployTaskForObject(ctx, obj.ID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return true, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("reading %s's last deploy task: %w", objectLabel(obj, 0), err)
+	}
+	if last.Status != "failed" {
+		return true, nil
+	}
+	errText := db.StrOrEmpty(last.LastError)
+	switch {
+	case last.Permanent:
+		decideRepeating(ctx, q, "deploy-permanent/"+obj.ID.String(), buildID, obj.ID, "reconcile.deploy_stopped",
+			fmt.Sprintf("%s: not retrying its deploy -- it failed with an error retrying can't fix: %s (fix it, then rebuild the host)", objectLabel(obj, 0), errText), nil)
+		return false, nil
+	case int(last.FailedCount) >= maxConsecutiveDeployFailures:
+		decideRepeating(ctx, q, "deploy-giveup/"+obj.ID.String(), buildID, obj.ID, "reconcile.deploy_stopped",
+			fmt.Sprintf("%s: not retrying its deploy -- it has failed %d times in a row (last: %s); rebuild the host to try again", objectLabel(obj, 0), last.FailedCount, errText), nil)
+		return false, nil
+	}
+	wait := teardownRequeueBackoff(int(last.FailedCount))
+	if since := time.Since(last.UpdatedAt.Time); since < wait {
+		decideRepeating(ctx, q, "deploy-backoff/"+obj.ID.String(), buildID, obj.ID, "reconcile.waiting",
+			fmt.Sprintf("%s: its deploy failed %d time(s) in a row (%s); trying again in %s", objectLabel(obj, 0), last.FailedCount, errText, (wait-since).Round(time.Second)), nil)
 		return false, nil
 	}
 	return true, nil

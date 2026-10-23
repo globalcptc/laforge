@@ -24,12 +24,13 @@ import (
 // (to-lport) attachment is what filters same-switch traffic too, not just routed
 // cross-network ingress. Idempotent. Mirrors incus; needs its own live smoke-test
 // against a real MicroCloud (the mechanics are Incus-verified with real packets).
+//
+// No lock is held across the whole configuration: peering and network config
+// changes are /1.0/networks mutations, which take the networking lock per
+// request in Client.do, and ACL writes take it in ensureACLObjectFull. The
+// per-host reads and NIC updates need no lock -- they're instance operations,
+// which the cluster runs concurrently.
 func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, networks []builder.NetworkAccess) error {
-	ctx, release, err := b.Client.lockNetworking(ctx)
-	if err != nil {
-		return err
-	}
-	defer release()
 	incusName := make(map[string]string, len(networks))
 	cidr := make(map[string]string, len(networks))
 	for _, na := range networks {
@@ -282,6 +283,9 @@ func (b *Builder) ensureHostPortACL(ctx context.Context, ownCIDR string, visible
 		}
 		if eth0["type"] != "nic" {
 			return fmt.Errorf("instance %s has no active primary NIC", h.ExternalRef)
+		}
+		if eth0["security.acls"] == name {
+			return nil // already attached: no instance update to make
 		}
 		eth0["security.acls"] = name
 		_, err = b.Client.do(ctx, "PATCH", "/1.0/instances/"+h.ExternalRef, map[string]interface{}{"devices": map[string]interface{}{"eth0": eth0}}, requestOptions{ifMatch: full.etag})

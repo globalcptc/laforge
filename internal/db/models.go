@@ -262,6 +262,7 @@ type DeployedObject struct {
 	InfraFingerprint        string             `json:"infra_fingerprint"`
 	StepsChangedAt          pgtype.Timestamptz `json:"steps_changed_at"`
 	StepsChangedFingerprint string             `json:"steps_changed_fingerprint"`
+	RebuildRequestedAt      pgtype.Timestamptz `json:"rebuild_requested_at"`
 }
 
 type Environment struct {

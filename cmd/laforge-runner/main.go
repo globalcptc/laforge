@@ -18,10 +18,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -77,7 +79,12 @@ func main() {
 	// lane mode, -concurrency / RUNNER_CONCURRENCY is the PER-BUILD parallelism.
 	legacyMode := *buildID != "" || *maxTasks > 0 || *crashAfterLease >= 0
 
-	ctx := context.Background()
+	// SIGTERM/SIGINT (a compose redeploy, a restart) cancels the root context:
+	// in-flight builder calls stop, and each task they belonged to is handed
+	// back (pending, the lease not counted as an attempt) instead of being
+	// left leased until its lease runs out and counted as a failure.
+	ctx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
+	defer stopSignals()
 	// Pool sizing. A worker/task holds a connection only briefly (the multi-minute
 	// deploy is an HTTP call to the hoster, no DB connection held), so a modest
 	// pool serves far more concurrent tasks than its size. Legacy: workers+8. Lane
@@ -306,10 +313,11 @@ func builderConcurrency(ctx context.Context, q *db.Queries, builderConfigName st
 //
 // The limit is "the most hosts LaForge deploys on this cluster at once" (the
 // wizard's words), so it counts the tasks that create or destroy instances
-// (deploy_*, destroy_*). Access and network configuration tasks -- ACL and
-// forwarding updates, seconds each -- run alongside without taking a slot:
-// otherwise a limit of 2 with a hundred queued deploys also made every
-// access change wait hours behind them.
+// (deploy_*, destroy_*). Access and network configuration tasks run alongside
+// in their own lane -- otherwise a limit of 2 with a hundred queued deploys
+// also made every access change wait hours behind them -- capped at the same
+// number (at least 4), because each one walks a team's hosts with requests of
+// its own: forty of them at once was a load on the cluster on its own.
 //
 // Two things keep the limit honest. A slot is taken BEFORE a task is leased:
 // leasing first and then waiting for a slot left a leased task sitting with no
@@ -351,11 +359,24 @@ func runBuilderPool(ctx context.Context, r *runner.Runner, id, builderConfigName
 			log.Printf("[%s] builder %q: at its concurrency limit (%d/%d deploy/destroy tasks running, %d waiting to be leased)", id, builderConfigName, busy, limit, waiting)
 			lastSaturated = time.Now()
 		}
+		lightLimit := int64(0)
+		if limit > 0 {
+			lightLimit = int64(max(limit, 4))
+		}
+		lightFull := lightLimit > 0 && atomic.LoadInt64(&inFlight)-atomic.LoadInt64(&heavyInFlight) >= lightLimit
 		var task *db.Task
 		var err error
-		if saturated {
+		switch {
+		case saturated && lightFull:
+			if sleepCtx(ctx, pollInterval) {
+				return
+			}
+			continue
+		case saturated:
 			task, err = r.LeaseOneLightForBuilder(ctx, builderConfigName)
-		} else {
+		case lightFull:
+			task, err = r.LeaseOneHeavyForBuilder(ctx, builderConfigName)
+		default:
 			task, err = r.LeaseOneForBuilder(ctx, builderConfigName)
 		}
 		if err != nil {

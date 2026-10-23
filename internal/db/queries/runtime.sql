@@ -1004,3 +1004,78 @@ LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
 WHERE coalesce(cb.builder_config_name, '') = $1
   AND (t.kind LIKE 'deploy\_%' OR t.kind LIKE 'destroy\_%')
   AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()));
+
+-- name: LeaseHeavyTaskForBuilder :one
+-- LeaseTaskForBuilder for deploy/destroy tasks only, for a pool whose light
+-- (access/network configuration) lane is full. Same order: destroys first,
+-- then the build with the fewest running, then priority, then age.
+UPDATE task
+SET status = 'leased', lease_owner = $1, lease_expires_at = now() + $2::interval,
+    attempts = attempts + 1, updated_at = now()
+WHERE id = (
+    SELECT t.id FROM task t
+    LEFT JOIN build b ON b.id = t.build_id
+    LEFT JOIN configured_build cb ON cb.id = b.configured_build_id
+    WHERE coalesce(cb.builder_config_name, '') = $3
+      AND (t.kind LIKE 'deploy\_%' OR t.kind LIKE 'destroy\_%')
+      AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now()))
+    ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             (SELECT count(*) FROM task x WHERE x.build_id = t.build_id AND x.status = 'leased'
+                AND x.lease_expires_at > now() AND (x.kind LIKE 'deploy\_%' OR x.kind LIKE 'destroy\_%')) ASC,
+             CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+                  THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
+             t.created_at
+    FOR UPDATE OF t SKIP LOCKED
+    LIMIT 1
+)
+RETURNING *;
+
+-- name: GetOpenTaskForObject :one
+-- The one open (pending or leased) task an object may have, if any -- what a
+-- destroy, a rebuild or a teardown is up against when it can't queue its own.
+SELECT * FROM task WHERE deployed_object_id = $1 AND status IN ('pending', 'leased')
+ORDER BY created_at DESC LIMIT 1;
+
+-- name: CancelPendingDeployForObject :one
+-- A deploy that hasn't started yet (pending, never leased or its lease long
+-- gone) is withdrawn when the object is being rebuilt or torn down instead:
+-- running it would create an instance only to destroy it, or -- worse --
+-- adopt the old one and make the rebuild a no-op.
+UPDATE task SET status = 'failed', last_error = sqlc.arg(reason)::text, updated_at = now()
+WHERE id = (SELECT t.id FROM task t WHERE t.deployed_object_id = sqlc.arg(deployed_object_id) AND t.kind LIKE 'deploy\_%'
+            AND (t.status = 'pending' OR (t.status = 'leased' AND t.lease_expires_at < now() - interval '2 minutes'))
+            ORDER BY t.created_at DESC LIMIT 1 FOR UPDATE SKIP LOCKED)
+RETURNING *;
+
+-- name: SetRebuildRequested :exec
+UPDATE deployed_object SET rebuild_requested_at = coalesce(rebuild_requested_at, now()), updated_at = now() WHERE id = $1;
+
+-- name: ClearRebuildRequested :exec
+UPDATE deployed_object SET rebuild_requested_at = NULL WHERE id = $1;
+
+-- name: GetLatestDeployTaskForObject :one
+-- The most recent deploy task for an object, with how many of its deploy
+-- tasks have failed -- what the reconciler decides a failed deploy's retry
+-- from (a backoff, and a stop after enough failures), instead of queueing a
+-- new deploy on every pass.
+-- failed_count counts consecutive failures: deploys that failed since the
+-- object's last task that succeeded (a destroy for a rebuild resets it).
+SELECT t.*,
+    (SELECT count(*) FROM task f
+     WHERE f.deployed_object_id = t.deployed_object_id
+       AND f.kind LIKE 'deploy\_%' AND f.status = 'failed'
+       AND f.created_at > coalesce((SELECT max(d.created_at) FROM task d
+                                    WHERE d.deployed_object_id = t.deployed_object_id AND d.status = 'done'), '-infinity'))::int AS failed_count
+FROM task t
+WHERE t.deployed_object_id = $1 AND t.kind LIKE 'deploy\_%'
+ORDER BY t.created_at DESC
+LIMIT 1;
+
+-- name: ReleaseTask :one
+-- A runner shutting down hands back a task it was running: pending again,
+-- this lease not counted as an attempt, so redeploying LaForge doesn't burn
+-- the retry budget of every deploy in flight.
+UPDATE task SET status = 'pending', lease_owner = NULL, lease_expires_at = NULL,
+    attempts = GREATEST(attempts - 1, 0), last_error = $3, updated_at = now()
+WHERE id = $1 AND lease_owner = $2
+RETURNING *;

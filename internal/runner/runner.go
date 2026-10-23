@@ -19,6 +19,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -217,6 +218,22 @@ func (r *Runner) LeaseOneLightForBuilder(ctx context.Context, builderConfigName 
 	return &task, nil
 }
 
+// LeaseOneHeavyForBuilder is LeaseOneForBuilder restricted to deploy/destroy
+// tasks, for a pool whose light lane is full.
+func (r *Runner) LeaseOneHeavyForBuilder(ctx context.Context, builderConfigName string) (*db.Task, error) {
+	q := db.New(r.Pool)
+	task, err := q.LeaseHeavyTaskForBuilder(ctx, db.LeaseHeavyTaskForBuilderParams{
+		LeaseOwner: db.StrPtr(r.ID), Column2: db.Interval(r.LeaseDuration), BuilderConfigName: builderConfigName,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("leasing a deploy/destroy task for builder %q: %w", builderConfigName, err)
+	}
+	return &task, nil
+}
+
 // LeaseAndExecuteOne leases the next available task, if any, executes it
 // against r.Builder, and records the result. Returns (false, nil) when
 // there was nothing leasable right now, distinct from an error, so a
@@ -245,7 +262,10 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 	// terminal lines. Fires per attempt, so retries are visible too.
 	r.logEvent(ctx, q, task.BuildID, task.ID, "task.started", fmt.Sprintf("%s (attempt %d of %d, object %s, lease %s)", task.Kind, task.Attempts, MaxAttempts, shortID(task.DeployedObjectID), r.LeaseDuration))
 	taskStarted := time.Now()
-	stopHeartbeat := make(chan struct{})
+	stopHeartbeatCh := make(chan struct{})
+	var stopOnce sync.Once
+	stopHeartbeat := stopHeartbeatCh
+	closeHeartbeat := func() { stopOnce.Do(func() { close(stopHeartbeatCh) }) }
 	go r.heartbeatLoop(ctx, task.ID, stopHeartbeat)
 	// A builder that times its phases (image copy, config drive, start, time
 	// queued for a host slot) records them here; they ride on this task's
@@ -258,10 +278,24 @@ func (r *Runner) ExecuteAndRecord(ctx context.Context, task db.Task) error {
 		defer cancel()
 	}
 	resolved, execErr := r.execute(execCtx, q, task)
+	if execErr != nil && ctx.Err() != nil {
+		// The runner is shutting down, not the task failing: hand it back.
+		// Its builder call may have been accepted by the hoster already; the
+		// next attempt adopts what it finds (builders' create is ensure-style).
+		closeHeartbeat()
+		rctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if _, err := db.New(r.Pool).ReleaseTask(rctx, db.ReleaseTaskParams{ID: task.ID, LeaseOwner: db.StrPtr(r.ID), LastError: db.StrPtr("handed back: the runner was shutting down")}); err != nil {
+			log.Printf("[%s] task %s: handing it back on shutdown failed (its lease will expire instead): %v", r.ID, shortID(task.ID), err)
+		} else {
+			log.Printf("[%s] build %s task %s: %s handed back on shutdown after %s; it will run again without counting as an attempt", r.ID, shortID(task.BuildID), shortID(task.ID), task.Kind, time.Since(taskStarted).Round(time.Millisecond))
+		}
+		return nil
+	}
 	if execErr != nil && r.TaskTimeout > 0 && errors.Is(execCtx.Err(), context.DeadlineExceeded) && ctx.Err() == nil {
 		execErr = fmt.Errorf("gave up after %s (RUNNER_TASK_TIMEOUT): %w", r.TaskTimeout, execErr)
 	}
-	close(stopHeartbeat)
+	closeHeartbeat()
 	phaseDetail := phasePayload(phases.Phases())
 	log.Printf("[%s] build %s task %s: %s returned after %s (error: %v)", r.ID, shortID(task.BuildID), shortID(task.ID), task.Kind, time.Since(taskStarted).Round(time.Millisecond), execErr)
 

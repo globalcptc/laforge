@@ -492,7 +492,7 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	if len(publicPlans) > 0 {
 		public = publicPlans[0]
 	}
-	config := map[string]string{teamConfigKey: team}
+	config := map[string]string{teamConfigKey: team, externalNameKey: externalName}
 	if nesting {
 		// A LaForge Docker container runs Docker INSIDE this LXD system
 		// container, which needs nested-container support enabled.
@@ -664,7 +664,7 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 			return name, err
 		}
 	}
-	if err := b.createInstance(ctx, name, request, b.clusterTarget(ctx)); err != nil {
+	if err := b.createInstance(ctx, name, request, b.clusterTarget(ctx), instanceOwner{externalName: externalName, team: team}); err != nil {
 		// A copy whose requested root disk is smaller than the source snapshot's
 		// block volume fails here with "Block volumes cannot be shrunk" -- a
 		// configuration mismatch retrying can't fix (and preflight catches when
@@ -782,6 +782,13 @@ func (b *Builder) destroyInstance(ctx context.Context, name string, options ...d
 	}
 	retain := opts.keepPublicAddress
 	destroyStarted := time.Now()
+
+	// A create the cluster is still carrying out (an interrupted deploy's) is
+	// waited out first: destroying around it would either miss the instance
+	// it's about to produce or fail against a busy one.
+	if err := b.Client.waitForInstanceCreation(ctx, name); err != nil {
+		slog.WarnContext(ctx, "MicroCloud destroy: couldn't check for an unfinished creation; going ahead", "instance", name, "error", err)
+	}
 
 	// One read first, always: it guards against deleting another deployment's
 	// box, and it says what this instance actually has -- a public NIC with

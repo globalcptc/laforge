@@ -109,7 +109,13 @@ type pendingOperationError struct {
 func (e *pendingOperationError) Error() string { return e.Err.Error() }
 func (e *pendingOperationError) Unwrap() error { return e.Err }
 
-func (b *Builder) createInstance(ctx context.Context, name string, body interface{}, target string) error {
+// An instance that already exists at this name -- an earlier attempt the
+// cluster accepted before its client went away -- is adopted after its
+// creation finishes, if it's this deployment's (adoptExisting), rather than
+// failing the deploy: the "already exists" answer can come back as an
+// operation failure (HTTP 200, code 409) or as a wait-endpoint error, and
+// both used to stop the deploy on its first attempt.
+func (b *Builder) createInstance(ctx context.Context, name string, body interface{}, target string, owner instanceOwner) error {
 	// Cluster-group placement (see placement.go): target is "@<group>" so LXD
 	// schedules the instance within that group, or "" to let LXD schedule with no
 	// explicit target. LaForge never names a specific member.
@@ -132,8 +138,8 @@ func (b *Builder) createInstance(ctx context.Context, name string, body interfac
 			// while the instance exists. A failed read never permits a POST.
 			_, err := b.Client.get(ctx, "/1.0/instances/"+name)
 			if err == nil {
-				slog.InfoContext(ctx, "MicroCloud instance found after uncertain create; adopting", "project", b.Client.Project, "instance", name)
-				return nil
+				slog.InfoContext(ctx, "MicroCloud instance found after uncertain create", "project", b.Client.Project, "instance", name)
+				return b.adoptExisting(ctx, name, owner)
 			}
 			var apiErr *APIError
 			if !errors.As(err, &apiErr) || apiErr.HTTPStatus != http.StatusNotFound {
@@ -142,11 +148,14 @@ func (b *Builder) createInstance(ctx context.Context, name string, body interfac
 		}
 		_, err := b.Client.post(ctx, path, body)
 		checkExisting = true
-		errors.As(err, &pending)
+		// Already exists, however the cluster said it (directly, as a failed
+		// operation, or wrapped as an unfinished one): adopt, don't fail.
 		var apiErr *APIError
-		if pending == nil && errors.As(err, &apiErr) && apiErr.AlreadyExists() {
-			_, err = b.Client.get(ctx, "/1.0/instances/"+name)
+		if err != nil && errors.As(err, &apiErr) && apiErr.AlreadyExists() {
+			pending = nil
+			return b.adoptExisting(ctx, name, owner)
 		}
+		errors.As(err, &pending)
 		return err
 	})
 }

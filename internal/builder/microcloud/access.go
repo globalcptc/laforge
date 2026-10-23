@@ -60,12 +60,12 @@ func (b *Builder) OpenAccess(ctx context.Context, team string) error {
 	return b.setAccess(ctx, team, false)
 }
 
+// No lock is held across the team: each network change (PATCH /1.0/networks/…)
+// takes the networking lock for itself in Client.do, and each ACL write in
+// ensureACLObjectFull. Holding it across the whole loop -- reads of every
+// instance included -- stalled every deploy on the cluster for as long as an
+// open/close took, and at competition start that's every team at once.
 func (b *Builder) setAccess(ctx context.Context, team string, closed bool) error {
-	ctx, release, err := b.Client.lockNetworking(ctx)
-	if err != nil {
-		return err
-	}
-	defer release()
 	instances, err := b.teamInstances(ctx, team)
 	if err != nil {
 		return err
