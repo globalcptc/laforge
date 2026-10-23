@@ -503,7 +503,11 @@ WHERE id = (
     -- deployTaskPayload), so every team's domain controller is leased ahead of
     -- the workstations waiting on it, then oldest first. Guarded so a
     -- non-numeric value can never break leasing.
-    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+    -- Destroys first: a destroy frees capacity, and a rebuild's or a
+    -- teardown's destroy is what an operator asked for -- behind a queue of
+    -- deploys it would otherwise wait hours for its turn.
+    ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
                   THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
              t.created_at
     FOR UPDATE OF t SKIP LOCKED
@@ -546,7 +550,11 @@ WHERE id = (
     -- deployTaskPayload), so every team's domain controller is leased ahead of
     -- the workstations waiting on it, then oldest first. Guarded so a
     -- non-numeric value can never break leasing.
-    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+    -- Destroys first: a destroy frees capacity, and a rebuild's or a
+    -- teardown's destroy is what an operator asked for -- behind a queue of
+    -- deploys it would otherwise wait hours for its turn.
+    ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
                   THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
              t.created_at
     FOR UPDATE OF t SKIP LOCKED
@@ -578,7 +586,11 @@ WHERE id = (
     -- deployTaskPayload), so every team's domain controller is leased ahead of
     -- the workstations waiting on it, then oldest first. Guarded so a
     -- non-numeric value can never break leasing.
-    ORDER BY CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
+    -- Destroys first: a destroy frees capacity, and a rebuild's or a
+    -- teardown's destroy is what an operator asked for -- behind a queue of
+    -- deploys it would otherwise wait hours for its turn.
+    ORDER BY CASE WHEN t.kind LIKE 'destroy\_%' THEN 1 ELSE 0 END DESC,
+             CASE WHEN jsonb_typeof(t.payload->'priority') = 'number'
                   THEN (t.payload->>'priority')::numeric ELSE 0 END DESC,
              t.created_at
     FOR UPDATE OF t SKIP LOCKED

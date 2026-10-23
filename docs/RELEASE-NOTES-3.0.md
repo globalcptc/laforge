@@ -225,6 +225,9 @@ This note covers the whole 3.0 line.
   connection changed; a concurrency or size change saves at once. When images are
   re-checked, the snapshot reads run in parallel, and if the check still fails or times
   out the wizard offers *Save without verifying images*.
+- **Destroys lease ahead of deploys.** A rebuild's or teardown's destroy no longer waits
+  behind a queue of deploys for one of the builder's slots: it frees capacity and is what
+  the operator asked for, so it goes first.
 - **The concurrency limit counts deploys and destroys.** A builder's *Max concurrency*
   is how many instances are created or destroyed at once; access and network
   configuration tasks (seconds each) run alongside instead of queueing behind a hundred
