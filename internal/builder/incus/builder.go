@@ -381,7 +381,7 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 		return "", fmt.Errorf("no size configured for %q", spec.Size)
 	}
 
-	config := map[string]string{teamConfigKey: spec.Team}
+	config := map[string]string{teamConfigKey: spec.Team, externalNameKey: spec.ExternalName}
 	if size.CPU != "" {
 		config["limits.cpu"] = size.CPU
 	}
@@ -428,7 +428,7 @@ func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpe
 	done := builder.StartPhase(ctx, "create")
 	err = b.Client.createInstance(ctx, name, map[string]interface{}{
 		"name": name, "type": "container", "source": source, "config": config, "devices": devices,
-	})
+	}, instanceOwner{externalName: spec.ExternalName, team: spec.Team})
 	done()
 	if err != nil {
 		return name, fmt.Errorf("creating OCI container %s (image %q from %s): %w", name, spec.Image, b.Config.ociRegistryOrDefault(), err)
@@ -525,7 +525,7 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	}
 	defer release()
 
-	config := map[string]string{teamConfigKey: team}
+	config := map[string]string{teamConfigKey: team, externalNameKey: externalName}
 	if nesting {
 		// A LaForge Docker container runs Docker INSIDE this LXD system
 		// container, which needs nested-container support enabled.
@@ -649,7 +649,7 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 		"source":  source,
 		"config":  config,
 		"devices": devices,
-	})
+	}, instanceOwner{externalName: externalName, team: team})
 	done()
 	if err != nil {
 		// A copy whose requested root disk is smaller than the source snapshot's

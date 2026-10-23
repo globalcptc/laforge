@@ -229,8 +229,10 @@ This note covers the whole 3.0 line.
   - A deploy that finds its instance already exists — an earlier attempt the cluster
     accepted before the runner went away — waits for that creation to finish and adopts
     it when it's this deployment's (every instance now records which deployment made it),
-    instead of failing; someone else's is refused, permanently. A destroy likewise waits
-    out an unfinished creation instead of racing it.
+    instead of failing; someone else's is refused, permanently. Both the MicroCloud and
+    Incus builders do this; instances created before deployment names were recorded
+    are matched by team. A destroy likewise waits out an unfinished creation instead of
+    racing it.
   - Restarting or redeploying the runner hands its in-flight tasks back (pending, the
     lease not counted as an attempt) instead of leaving them leased until they expire and
     count as failures. The runner gets 30 s to stop.

@@ -125,7 +125,7 @@ func TestCreationWaitFailureAndCancellation(t *testing.T) {
 			}))
 			defer srv.Close()
 			client := &Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: time.Second}
-			err := client.createInstance(ctx, "box", map[string]string{"name": "box"})
+			err := client.createInstance(ctx, "box", map[string]string{"name": "box"}, instanceOwner{})
 			if creates != 1 || err == nil {
 				t.Fatalf("creates=%d err=%v", creates, err)
 			}
@@ -184,7 +184,7 @@ func TestAdoptWaitsForExactInstanceCreation(t *testing.T) {
 			}))
 			defer srv.Close()
 			c := &Client{BaseURL: srv.URL, HTTPClient: srv.Client(), Project: "competition", OperationTimeout: time.Second}
-			err := c.createInstance(context.Background(), "box", map[string]string{"name": "box"})
+			err := c.createInstance(context.Background(), "box", map[string]string{"name": "box"}, instanceOwner{})
 			if (err != nil) != missing || waits != 1 || reads != 1 {
 				t.Fatalf("waits=%d reads=%d err=%v", waits, reads, err)
 			}
@@ -243,5 +243,48 @@ func TestCleanupWaitsForCreationBeforeMutating(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// TestAdoptOnlyOwnInstance: an instance found already existing at create time
+// is adopted only when it's this deployment's -- by the deployment name it
+// records, or, for one created before that was recorded, by its team -- and
+// refused permanently otherwise.
+func TestAdoptOnlyOwnInstance(t *testing.T) {
+	cases := []struct {
+		name   string
+		config map[string]string
+		owner  instanceOwner
+		adopt  bool
+	}{
+		{"same deployment", map[string]string{externalNameKey: "build-a-team-3-host-web", teamConfigKey: "3"}, instanceOwner{externalName: "build-a-team-3-host-web", team: "3"}, true},
+		{"another deployment", map[string]string{externalNameKey: "build-b-team-3-host-web", teamConfigKey: "3"}, instanceOwner{externalName: "build-a-team-3-host-web", team: "3"}, false},
+		{"legacy, same team", map[string]string{teamConfigKey: "3"}, instanceOwner{externalName: "build-a-team-3-host-web", team: "3"}, true},
+		{"legacy, another team", map[string]string{teamConfigKey: "4"}, instanceOwner{externalName: "build-a-team-3-host-web", team: "3"}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/1.0/instances":
+					configDriveResponse(w, 409, "Instance already exists")
+				case "/1.0/operations":
+					creationResponse(w, map[string]any{})
+				case "/1.0/instances/box":
+					creationResponse(w, map[string]any{"status": "Stopped", "config": tc.config})
+				default:
+					t.Errorf("unexpected %s", r.URL)
+				}
+			}))
+			defer srv.Close()
+			c := &Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: time.Second}
+			err := c.createInstance(context.Background(), "box", map[string]string{"name": "box"}, tc.owner)
+			if tc.adopt && err != nil {
+				t.Fatalf("own instance not adopted: %v", err)
+			}
+			if !tc.adopt && (err == nil || !errors.Is(err, builder.ErrPermanentConfig)) {
+				t.Fatalf("err = %v, want a permanent refusal", err)
+			}
+		})
 	}
 }

@@ -264,3 +264,38 @@ func TestCreateAdoptsOwnInstanceThatAlreadyExists(t *testing.T) {
 		})
 	}
 }
+
+// TestCreateAdoptsLegacyInstanceByTeam is the upgrade case: a deploy the old
+// runner had started when it was replaced left an instance created before
+// LaForge recorded deployment names on instances. The new runner's retry
+// adopts it by its team key -- and refuses one recorded for another team.
+func TestCreateAdoptsLegacyInstanceByTeam(t *testing.T) {
+	for _, team := range []string{"7", "8"} {
+		t.Run("team "+team, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.Method == "POST" && r.URL.Path == "/1.0/instances":
+					w.WriteHeader(409)
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "error", "error_code": 409, "error": `Instance "box" already exists`})
+				case r.URL.Path == "/1.0/operations":
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "metadata": map[string]interface{}{}})
+				case r.Method == "GET" && r.URL.Path == "/1.0/instances/box":
+					json.NewEncoder(w).Encode(map[string]interface{}{"type": "sync", "metadata": map[string]interface{}{
+						"name": "box", "config": map[string]string{teamConfigKey: "7"}}})
+				default:
+					t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+				}
+			}))
+			defer srv.Close()
+			b := New(&Client{BaseURL: srv.URL, HTTPClient: srv.Client(), OperationTimeout: time.Second}, Config{})
+			b.retryWait = func(context.Context, time.Duration) error { return nil }
+			err := b.createInstance(context.Background(), "box", map[string]interface{}{"name": "box"}, "", instanceOwner{externalName: "build-a-team-7-host-web", team: team})
+			if team == "7" && err != nil {
+				t.Fatalf("legacy instance of the same team not adopted: %v", err)
+			}
+			if team == "8" && (err == nil || !errors.Is(err, builder.ErrPermanentConfig)) {
+				t.Fatalf("legacy instance of another team: err = %v, want a permanent refusal", err)
+			}
+		})
+	}
+}
