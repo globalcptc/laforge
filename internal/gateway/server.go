@@ -380,7 +380,13 @@ func (s *Server) handleReportStatus(ctx context.Context, conn net.Conn, payload 
 		ok = false
 	} else if req.Status == "done" {
 		task, err := q.CompleteAgentTask(ctx, db.CompleteAgentTaskParams{ID: taskID, Output: db.StrPtr(req.Output)})
-		if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// The task was deleted under the agent -- a restart from a step
+			// re-queued the host's steps with new ids. Its result is stale;
+			// the agent moves on to what's queued now.
+			log.Printf("gateway: report-status: %s no longer exists (restarted from a step?); dropping its result", req.TaskID)
+			ok = false
+		} else if err != nil {
 			log.Printf("gateway: report-status: completing %s: %v", req.TaskID, err)
 			ok = false
 		} else {

@@ -399,10 +399,18 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	// Best-effort grouping: which authored step each materialized step_index
-	// belongs to. A failure here (content not resolvable, etc.) just leaves
-	// the steps ungrouped rather than failing the list.
+	// Which authored step each row belongs to: the row says (step_group,
+	// since migration 00072), and the content's expansion supplies the label.
+	// Rows from before that fall back to lining the expansion up by
+	// step_index. Best-effort: a failure here (content not resolvable, etc.)
+	// just leaves the steps ungrouped rather than failing the list.
 	groups := s.stepGroups(r.Context(), build, objectID)
+	labels := map[int]string{}
+	for _, g := range groups {
+		if g.label != "" {
+			labels[g.group] = g.label
+		}
+	}
 	views := make([]stepView, 0, len(tasks))
 	for _, t := range tasks {
 		results, err := s.Queries.ListValidatorResultsByTask(r.Context(), t.ID)
@@ -434,7 +442,10 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 		if t.FinishedAt.Valid {
 			v.FinishedAt = &t.FinishedAt.Time
 		}
-		if idx := int(t.StepIndex); idx >= 0 && idx < len(groups) {
+		if t.StepGroup != nil {
+			v.GroupIndex = int(*t.StepGroup)
+			v.GroupLabel = labels[v.GroupIndex]
+		} else if idx := int(t.StepIndex); idx >= 0 && idx < len(groups) {
 			v.GroupIndex = groups[idx].group
 			v.GroupLabel = groups[idx].label
 		}

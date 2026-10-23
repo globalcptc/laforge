@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert } from 'lucide-react'
+import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldX, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert, RotateCcw } from 'lucide-react'
 import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
@@ -48,6 +48,7 @@ export function ObjectLogPanel({
   teamNumber,
   initialTab,
   focusGroup,
+  onRestartFrom,
   onClose,
 }: {
   repoId: string
@@ -66,6 +67,11 @@ export function ObjectLogPanel({
   // group by its group_index.
   initialTab?: Tab
   focusGroup?: number
+  // Restart from step (docs/plans/restart-from-step.md): when set, each
+  // authored step group on the Steps tab offers "Restart from here" and this
+  // is called with the group's index. The caller decides when it applies
+  // (the host's state, the build not read-only).
+  onRestartFrom?: (group: number) => void
   onClose: () => void
 }) {
   const [tab, setTab] = useState<Tab>(initialTab ?? 'info')
@@ -223,7 +229,7 @@ export function ObjectLogPanel({
               hint="Steps appear here once the agent has checked in and they're queued to run."
             />
           )}
-          {buildSteps && buildSteps.length > 0 && <StepStatusList steps={buildSteps} focusGroup={focusGroup} />}
+          {buildSteps && buildSteps.length > 0 && <StepStatusList steps={buildSteps} focusGroup={focusGroup} onRestartFrom={onRestartFrom} />}
         </>
       )}
       {tab === 'render' && (
@@ -388,7 +394,7 @@ function formatStepDuration(ms: number): string {
   return mm ? `${h}h ${mm}m` : `${h}h`
 }
 
-function StepStatusList({ steps, focusGroup }: { steps: StepStatus[]; focusGroup?: number }) {
+function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatus[]; focusGroup?: number; onRestartFrom?: (group: number) => void }) {
   const [open, setOpen] = useState<Set<number>>(new Set())
   const groupRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const [flash, setFlash] = useState<number | null>(null)
@@ -436,6 +442,19 @@ function StepStatusList({ steps, focusGroup }: { steps: StepStatus[]; focusGroup
                 </span>
               )}
               <span className="h-px flex-1 bg-border" />
+              {onRestartFrom && g.label && (
+                <button
+                  type="button"
+                  onClick={() => onRestartFrom(g.key)}
+                  title="Run this step and every step after it again, in full, on the box as it is"
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1 rounded-token-sm px-1.5 py-0.5 text-[11px] hover:bg-surface-hover',
+                    g.steps.some((s) => s.status === 'failed') ? 'text-danger' : 'text-fg-subtle hover:text-fg',
+                  )}
+                >
+                  <RotateCcw size={11} /> Restart from here
+                </button>
+              )}
               {(() => {
                 const ms = groupDurationMs(g.steps)
                 return ms != null ? <span className="shrink-0 font-mono text-[11px] tabular-nums text-fg-subtle">{formatStepDuration(ms)}</span> : null

@@ -70,6 +70,8 @@ func main() {
 		err = runRegistries(os.Args[2:])
 	case "run":
 		err = runRun(os.Args[2:])
+	case "restart-steps":
+		err = runRestartSteps(os.Args[2:])
 	case "shell":
 		err = runShell(os.Args[2:])
 	case "schedule":
@@ -189,6 +191,14 @@ http://localhost:8080).
       command is 'execute' (the shell command after --); other kinds take
       --command <kind> --payload '<json>'. --dry-run shows the matched hosts.
       Needs manage access on the repo.
+
+  laforge restart-steps --build <id> --from <step> [targets] [--dry-run] [--force] [--no-dependents] [--yes]
+      Run a host's build again from an authored step (its index, or its label
+      as the steps panel shows it), on the box it already has -- every step from
+      there on runs again in full. Targets as for run, but they must all be the
+      same host definition; the dry run lists every team's copy of it. Hosts
+      failed for depending on it resume unless --no-dependents. Asks before
+      acting unless --yes. Needs manage access on the repo.
 
   laforge shell --build <id> (--id <object-id> | --team <n> --host <as>)
       Open a fully interactive root/admin shell on one host or container through

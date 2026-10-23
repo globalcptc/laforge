@@ -39,7 +39,12 @@ import (
 // -- the orchestrator passes a callback that writes build.phase timeline events
 // while a build is still preparing, so the startup gap shows where the time
 // goes. nil disables it (every test, and steady-state passes).
-func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID, onPhase func(label string, d time.Duration)) error {
+func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID pgtype.UUID, phase ...func(label string, d time.Duration)) error {
+	// Optional, so the many callers that don't time phases (tests) pass nothing.
+	var onPhase func(label string, d time.Duration)
+	if len(phase) > 0 {
+		onPhase = phase[0]
+	}
 	q := db.New(pool)
 
 	build, err := q.GetBuild(ctx, buildID)
@@ -92,6 +97,14 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 	// exists to prevent, since a "planned" build was never actually
 	// safe to look at and discard.
 	deployTasks := build.Status == "deploying"
+	// Hold hosts on step-only changes (docs/plans/restart-from-step.md §6): a
+	// per-configured-build switch read once per pass.
+	holdOnStepChange := false
+	if build.ConfiguredBuildID.Valid {
+		if cb, err := q.GetConfiguredBuild(ctx, build.ConfiguredBuildID); err == nil {
+			holdOnStepChange = cb.HoldOnStepChange
+		}
+	}
 	// Step materialization must continue through the "building" phase, not just
 	// "deploying": the build leaves "deploying" as soon as all infra is up and
 	// the first agent starts working, but dependents' steps are queued only as
@@ -155,7 +168,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 
 		for _, pl := range placements {
 			desired[pl.kind+"/"+pl.as] = true
-			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, build.ContentRevisionID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, pl.priority, deployTasks, materializeActive, anchors, placed, finishedDeps, failedDeps, gates, networkUp, networkFailed); err != nil {
+			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, build.ContentRevisionID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, pl.priority, deployTasks, materializeActive, holdOnStepChange, anchors, placed, finishedDeps, failedDeps, gates, networkUp, networkFailed); err != nil {
 				return fmt.Errorf("team %d, %s %q: %w", teamNum, pl.kind, pl.as, err)
 			}
 		}
@@ -403,11 +416,11 @@ func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, tea
 	if obj.Status == "deploy_failed" {
 		return nil
 	}
-	_, err = reconcileObject(ctx, q, buildID, obj, fp, networkDeployPriority, deployTasks)
+	_, err = reconcileObject(ctx, q, buildID, obj, fp, "", false, networkDeployPriority, deployTasks)
 	return err
 }
 
-func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID, contentRevID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, priority int, deployTasks, materializeActive bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool, gates *teamGates, networkUp, networkFailed map[string]bool) error {
+func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID, contentRevID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, priority int, deployTasks, materializeActive, holdOnStepChange bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool, gates *teamGates, networkUp, networkFailed map[string]bool) error {
 	rctx, err := render.Resolve(c, envName, asName, teamNum)
 	if err != nil {
 		return fmt.Errorf("resolving: %w", err)
@@ -451,6 +464,16 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 		}
 		fpCache.put(fpKey, fp)
 	}
+	// The infrastructure half on its own (what the hoster built), recorded
+	// with the deploy so a later change can be told apart as steps-only.
+	infraFP, cached := fpCache.get(fpKey + "\x00infra")
+	if !cached {
+		infraFP, err = InfraFingerprint(repoRoot, rctx, disk, ports, dependsOn)
+		if err != nil {
+			return fmt.Errorf("fingerprinting infrastructure: %w", err)
+		}
+		fpCache.put(fpKey+"\x00infra", infraFP)
+	}
 
 	obj, err := q.EnsureDeployedObject(ctx, db.EnsureDeployedObjectParams{
 		TeamID: teamID, Kind: kind, ObjectName: objectName,
@@ -489,7 +512,7 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	// handled instead by deploying roots-first (see orderedPlacements), and
 	// correctness by holding this object's STEP execution below until every
 	// dependency has actually finished.
-	created, err := reconcileObject(ctx, q, buildID, obj, fp, priority, deployTasks)
+	created, err := reconcileObject(ctx, q, buildID, obj, fp, infraFP, holdOnStepChange, priority, deployTasks)
 	if err != nil {
 		return err
 	}
@@ -532,10 +555,29 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 //
 // priority is recorded on the deploy task's payload (see deployTaskPayload) so
 // the runner leases, and the builder admits, critical-path objects first.
-func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, desiredFP string, priority int, deployTasks bool) (created bool, err error) {
+//
+// desiredInfraFP is the infrastructure half of desiredFP (InfraFingerprint).
+// With holdOnStepChange, an object whose fingerprint differs only in its
+// steps -- the infrastructure half still matches what it was deployed with --
+// is marked steps-changed and left alone for an operator to restart from a
+// step (docs/plans/restart-from-step.md §6), instead of being recreated. An
+// object deployed before infra_fingerprint existed has none recorded and is
+// recreated as before.
+func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, desiredFP, desiredInfraFP string, holdOnStepChange bool, priority int, deployTasks bool) (created bool, err error) {
 	if infraUp(obj.Status) {
 		if obj.Fingerprint == desiredFP {
 			return false, nil // already correct
+		}
+		if holdOnStepChange && obj.InfraFingerprint != "" && obj.InfraFingerprint == desiredInfraFP {
+			n, err := q.MarkDeployedObjectStepsChanged(ctx, db.MarkDeployedObjectStepsChangedParams{ID: obj.ID, StepsChangedFingerprint: desiredFP})
+			if err != nil {
+				return false, fmt.Errorf("marking steps changed: %w", err)
+			}
+			if n > 0 {
+				q.CreateEvent(ctx, db.CreateEventParams{BuildID: buildID, Kind: "steps.changed", Payload: []byte("{}"),
+					Message: fmt.Sprintf("%s: its steps or scripts changed in the content; held rather than recreated (this build holds hosts on step-only changes) -- restart it from a step to apply the change", db.StrOrEmpty(obj.AsName))})
+			}
+			return false, nil
 		}
 		// "rebuild means recreate": destroy first, not remove -- a later
 		// pass (once destroyed resets it to pending) will redeploy fresh.
@@ -554,7 +596,7 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 	// already leased/pending for this object, this is a no-op (and
 	// ErrNoRows, its own signal for "nothing inserted" -- ends up back
 	// here as created=false).
-	payload, err := deployTaskPayload(desiredFP, priority)
+	payload, err := deployTaskPayload(desiredFP, desiredInfraFP, priority)
 	if err != nil {
 		return false, err
 	}
@@ -579,8 +621,8 @@ const networkDeployPriority = 1 << 20
 // its critical-path priority. The lease queries order by payload->'priority'
 // (internal/db/queries/runtime.sql) and the runner hands it to the builder as
 // HostSpec/ContainerSpec.Priority. Omitted when 0, as on a destroy task.
-func deployTaskPayload(fingerprint string, priority int) ([]byte, error) {
-	p := map[string]any{"fingerprint": fingerprint}
+func deployTaskPayload(fingerprint, infraFingerprint string, priority int) ([]byte, error) {
+	p := map[string]any{"fingerprint": fingerprint, "infra_fingerprint": infraFingerprint}
 	if priority > 0 {
 		p["priority"] = priority
 	}

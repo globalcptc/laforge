@@ -54,6 +54,7 @@ import type {
   Team,
   UnapprovedInstalledRepository,
   UpcomingChanges,
+  RestartStepsResponse,
 } from './types'
 
 export function useMe() {
@@ -192,6 +193,18 @@ export function useSetConfiguredBuildAutoDeploy(repoId: string) {
   return useMutation({
     mutationFn: ({ configuredBuildId, enabled }: { configuredBuildId: string; enabled: boolean }) =>
       api.post<ConfiguredBuild>(`/configured-builds/${configuredBuildId}/auto-deploy`, { enabled }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['configured-builds', repoId] }),
+  })
+}
+
+// useSetConfiguredBuildHoldOnStepChange toggles "hold hosts on step-only
+// changes": on, a push that changes only a host's steps or scripts marks the
+// host (restart it from a step to apply) instead of recreating it.
+export function useSetConfiguredBuildHoldOnStepChange(repoId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ configuredBuildId, enabled }: { configuredBuildId: string; enabled: boolean }) =>
+      api.post<ConfiguredBuild>(`/configured-builds/${configuredBuildId}/hold-on-step-change`, { enabled }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['configured-builds', repoId] }),
   })
 }
@@ -920,6 +933,24 @@ export function usePowerAction(buildId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['objects', buildId] })
       qc.invalidateQueries({ queryKey: ['build', buildId] })
+    },
+  })
+}
+
+// useRestartSteps runs a host's build again from a chosen authored step on the
+// box it already has (docs/plans/restart-from-step.md): dry_run lists every
+// team's instance of the host with what would run again; a real call restarts
+// the chosen instances and refreshes the build and their steps.
+export function useRestartSteps(buildId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (req: { target: AdHocTarget; from_group: number; resume_dependents?: boolean; force?: boolean; dry_run?: boolean }) =>
+      api.post<RestartStepsResponse>(`/builds/${buildId}/restart-steps`, req),
+    onSuccess: (_res, req) => {
+      if (req.dry_run) return
+      qc.invalidateQueries({ queryKey: ['build', buildId] })
+      qc.invalidateQueries({ queryKey: ['objects', buildId] })
+      qc.invalidateQueries({ queryKey: ['object-steps'] })
     },
   })
 }

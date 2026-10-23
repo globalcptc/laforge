@@ -1,6 +1,7 @@
 # Plan: restart a host's build from a step
 
-**Status:** proposal for `3.0`. **Written:** 2026-10-23, against `3.0` at `87d2e5ba`.
+**Status:** implemented on `3.0` (2026-10-23; migration `00072`, `internal/orchestrator/restart_steps.go`,
+`POST /builds/{id}/restart-steps`, `laforge restart-steps`). **Written:** 2026-10-23, against `3.0` at `87d2e5ba`.
 
 A host whose build stopped — a step failed, a validator didn't pass — can today only be
 **rebuilt**: destroyed at the hoster and deployed again from nothing, every step re-run.

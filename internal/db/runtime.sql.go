@@ -639,7 +639,7 @@ const ensureDeployedObject = `-- name: EnsureDeployedObject :one
 INSERT INTO deployed_object (team_id, kind, object_name, as_name, network_name, fingerprint)
 VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (team_id, kind, (COALESCE(as_name, object_name))) DO UPDATE SET team_id = EXCLUDED.team_id
-RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint
 `
 
 type EnsureDeployedObjectParams struct {
@@ -689,6 +689,9 @@ func (q *Queries) EnsureDeployedObject(ctx context.Context, arg EnsureDeployedOb
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
 	)
 	return i, err
 }
@@ -896,7 +899,7 @@ func (q *Queries) GetBuildRepository(ctx context.Context, id pgtype.UUID) (Repos
 }
 
 const getDeployedObject = `-- name: GetDeployedObject :one
-SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at FROM deployed_object WHERE id = $1
+SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint FROM deployed_object WHERE id = $1
 `
 
 func (q *Queries) GetDeployedObject(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
@@ -923,6 +926,9 @@ func (q *Queries) GetDeployedObject(ctx context.Context, id pgtype.UUID) (Deploy
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
 	)
 	return i, err
 }
@@ -1734,7 +1740,7 @@ func (q *Queries) ListBuildsByStatus(ctx context.Context, statuses []string) ([]
 }
 
 const listDeployedObjectsByBuild = `-- name: ListDeployedObjectsByBuild :many
-SELECT deployed_object.id, deployed_object.team_id, deployed_object.kind, deployed_object.object_name, deployed_object.as_name, deployed_object.network_name, deployed_object.fingerprint, deployed_object.status, deployed_object.external_ref, deployed_object.last_error, deployed_object.updated_at, deployed_object.power_state, deployed_object.power_state_checked_at, deployed_object.tags, deployed_object.steps_materialized_at, deployed_object.blocked_on, deployed_object.public_address, deployed_object.deployed_at, deployed_object.agent_platform, deployed_object.agent_checkin_overdue_at FROM deployed_object
+SELECT deployed_object.id, deployed_object.team_id, deployed_object.kind, deployed_object.object_name, deployed_object.as_name, deployed_object.network_name, deployed_object.fingerprint, deployed_object.status, deployed_object.external_ref, deployed_object.last_error, deployed_object.updated_at, deployed_object.power_state, deployed_object.power_state_checked_at, deployed_object.tags, deployed_object.steps_materialized_at, deployed_object.blocked_on, deployed_object.public_address, deployed_object.deployed_at, deployed_object.agent_platform, deployed_object.agent_checkin_overdue_at, deployed_object.infra_fingerprint, deployed_object.steps_changed_at, deployed_object.steps_changed_fingerprint FROM deployed_object
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1
 `
@@ -1769,6 +1775,9 @@ func (q *Queries) ListDeployedObjectsByBuild(ctx context.Context, buildID pgtype
 			&i.DeployedAt,
 			&i.AgentPlatform,
 			&i.AgentCheckinOverdueAt,
+			&i.InfraFingerprint,
+			&i.StepsChangedAt,
+			&i.StepsChangedFingerprint,
 		); err != nil {
 			return nil, err
 		}
@@ -1781,7 +1790,7 @@ func (q *Queries) ListDeployedObjectsByBuild(ctx context.Context, buildID pgtype
 }
 
 const listDeployedObjectsByTeam = `-- name: ListDeployedObjectsByTeam :many
-SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at FROM deployed_object WHERE team_id = $1
+SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint FROM deployed_object WHERE team_id = $1
 `
 
 func (q *Queries) ListDeployedObjectsByTeam(ctx context.Context, teamID pgtype.UUID) ([]DeployedObject, error) {
@@ -1814,6 +1823,9 @@ func (q *Queries) ListDeployedObjectsByTeam(ctx context.Context, teamID pgtype.U
 			&i.DeployedAt,
 			&i.AgentPlatform,
 			&i.AgentCheckinOverdueAt,
+			&i.InfraFingerprint,
+			&i.StepsChangedAt,
+			&i.StepsChangedFingerprint,
 		); err != nil {
 			return nil, err
 		}
@@ -2287,7 +2299,7 @@ func (q *Queries) MarkAgentCheckinOverdue(ctx context.Context, id pgtype.UUID) (
 }
 
 const markDeployedObjectDeployFailed = `-- name: MarkDeployedObjectDeployFailed :one
-UPDATE deployed_object SET status = 'deploy_failed', last_error = $2, updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+UPDATE deployed_object SET status = 'deploy_failed', last_error = $2, updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint
 `
 
 type MarkDeployedObjectDeployFailedParams struct {
@@ -2322,12 +2334,15 @@ func (q *Queries) MarkDeployedObjectDeployFailed(ctx context.Context, arg MarkDe
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
 	)
 	return i, err
 }
 
 const markDeployedObjectDeploying = `-- name: MarkDeployedObjectDeploying :one
-UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint
 `
 
 func (q *Queries) MarkDeployedObjectDeploying(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
@@ -2354,13 +2369,16 @@ func (q *Queries) MarkDeployedObjectDeploying(ctx context.Context, id pgtype.UUI
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
 	)
 	return i, err
 }
 
 const markDeployedObjectDestroyFailed = `-- name: MarkDeployedObjectDestroyFailed :one
 UPDATE deployed_object SET status = 'destroy_failed', last_error = $2, updated_at = now()
-WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint
 `
 
 type MarkDeployedObjectDestroyFailedParams struct {
@@ -2396,12 +2414,15 @@ func (q *Queries) MarkDeployedObjectDestroyFailed(ctx context.Context, arg MarkD
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
 	)
 	return i, err
 }
 
 const markDeployedObjectDestroyed = `-- name: MarkDeployedObjectDestroyed :one
-UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint
 `
 
 // The real terminal destroy outcome, for a build teardown
@@ -2440,12 +2461,15 @@ func (q *Queries) MarkDeployedObjectDestroyed(ctx context.Context, id pgtype.UUI
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
 	)
 	return i, err
 }
 
 const markDeployedObjectDestroying = `-- name: MarkDeployedObjectDestroying :one
-UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint
 `
 
 func (q *Queries) MarkDeployedObjectDestroying(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
@@ -2472,20 +2496,24 @@ func (q *Queries) MarkDeployedObjectDestroying(ctx context.Context, id pgtype.UU
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
 	)
 	return i, err
 }
 
 const markDeployedObjectRunning = `-- name: MarkDeployedObjectRunning :one
-UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, last_error = NULL, updated_at = now(),
+UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, infra_fingerprint = $4, last_error = NULL, updated_at = now(),
     deployed_at = now(), agent_checkin_overdue_at = NULL
-WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint
 `
 
 type MarkDeployedObjectRunningParams struct {
-	ID          pgtype.UUID `json:"id"`
-	ExternalRef *string     `json:"external_ref"`
-	Fingerprint string      `json:"fingerprint"`
+	ID               pgtype.UUID `json:"id"`
+	ExternalRef      *string     `json:"external_ref"`
+	Fingerprint      string      `json:"fingerprint"`
+	InfraFingerprint string      `json:"infra_fingerprint"`
 }
 
 // Infra is up: the hoster created the instance. NOT "finished" -- the agent
@@ -2495,7 +2523,12 @@ type MarkDeployedObjectRunningParams struct {
 // deployed_at restarts the never-checked-in watchdog's clock, and a redeploy
 // clears any earlier overdue flag.
 func (q *Queries) MarkDeployedObjectRunning(ctx context.Context, arg MarkDeployedObjectRunningParams) (DeployedObject, error) {
-	row := q.db.QueryRow(ctx, markDeployedObjectRunning, arg.ID, arg.ExternalRef, arg.Fingerprint)
+	row := q.db.QueryRow(ctx, markDeployedObjectRunning,
+		arg.ID,
+		arg.ExternalRef,
+		arg.Fingerprint,
+		arg.InfraFingerprint,
+	)
 	var i DeployedObject
 	err := row.Scan(
 		&i.ID,
@@ -2518,8 +2551,33 @@ func (q *Queries) MarkDeployedObjectRunning(ctx context.Context, arg MarkDeploye
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
 	)
 	return i, err
+}
+
+const markDeployedObjectStepsChanged = `-- name: MarkDeployedObjectStepsChanged :execrows
+UPDATE deployed_object SET steps_changed_at = coalesce(steps_changed_at, now()), steps_changed_fingerprint = $2, updated_at = now()
+WHERE id = $1 AND steps_changed_fingerprint IS DISTINCT FROM $2
+`
+
+type MarkDeployedObjectStepsChangedParams struct {
+	ID                      pgtype.UUID `json:"id"`
+	StepsChangedFingerprint string      `json:"steps_changed_fingerprint"`
+}
+
+// The reconciler, for a build holding hosts on step-only changes: the object's
+// steps or scripts changed under it, and this is the fingerprint it would
+// have if recreated. Updates only when the target fingerprint is new, so a
+// settled pass writes nothing and the caller logs an event only once.
+func (q *Queries) MarkDeployedObjectStepsChanged(ctx context.Context, arg MarkDeployedObjectStepsChangedParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markDeployedObjectStepsChanged, arg.ID, arg.StepsChangedFingerprint)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const markDeployedObjectStepsMaterialized = `-- name: MarkDeployedObjectStepsMaterialized :exec
@@ -2538,8 +2596,9 @@ func (q *Queries) MarkDeployedObjectStepsMaterialized(ctx context.Context, id pg
 }
 
 const resetDeployedObjectForRedeploy = `-- name: ResetDeployedObjectForRedeploy :one
-UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', last_error = NULL, steps_materialized_at = NULL, updated_at = now()
-WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', infra_fingerprint = '', last_error = NULL,
+    steps_materialized_at = NULL, steps_changed_at = NULL, steps_changed_fingerprint = '', updated_at = now()
+WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint
 `
 
 // Used after a destroy that happened only because the fingerprint changed
@@ -2572,6 +2631,9 @@ func (q *Queries) ResetDeployedObjectForRedeploy(ctx context.Context, id pgtype.
 		&i.DeployedAt,
 		&i.AgentPlatform,
 		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
 	)
 	return i, err
 }
@@ -2580,7 +2642,7 @@ const resetDestroyFailedObjectsForBuild = `-- name: ResetDestroyFailedObjectsFor
 UPDATE deployed_object SET status = 'destroying', last_error = NULL, updated_at = now()
 WHERE status = 'destroy_failed'
   AND team_id IN (SELECT id FROM team WHERE build_id = $1)
-RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at
+RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint
 `
 
 // The explicit operator retry after fixing the builder: every destroy_failed
@@ -2616,6 +2678,9 @@ func (q *Queries) ResetDestroyFailedObjectsForBuild(ctx context.Context, buildID
 			&i.DeployedAt,
 			&i.AgentPlatform,
 			&i.AgentCheckinOverdueAt,
+			&i.InfraFingerprint,
+			&i.StepsChangedAt,
+			&i.StepsChangedFingerprint,
 		); err != nil {
 			return nil, err
 		}
@@ -2625,6 +2690,22 @@ func (q *Queries) ResetDestroyFailedObjectsForBuild(ctx context.Context, buildID
 		return nil, err
 	}
 	return items, nil
+}
+
+const resumeDependentForRestart = `-- name: ResumeDependentForRestart :execrows
+UPDATE deployed_object SET status = 'running', last_error = NULL, updated_at = now()
+WHERE id = $1 AND status = 'build_failed' AND steps_materialized_at IS NULL
+`
+
+// A dependent that was failed before its steps ever ran ("dependency X failed
+// to configure") goes back to running; materializeStepsIfReady queues its
+// steps once the restarted dependency finishes, as on a first deploy.
+func (q *Queries) ResumeDependentForRestart(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, resumeDependentForRestart, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const retryTask = `-- name: RetryTask :one
@@ -2881,6 +2962,51 @@ type SetDeployedObjectPublicAddressParams struct {
 func (q *Queries) SetDeployedObjectPublicAddress(ctx context.Context, arg SetDeployedObjectPublicAddressParams) error {
 	_, err := q.db.Exec(ctx, setDeployedObjectPublicAddress, arg.ID, arg.PublicAddress)
 	return err
+}
+
+const setDeployedObjectRestarting = `-- name: SetDeployedObjectRestarting :one
+UPDATE deployed_object SET status = 'building', last_error = NULL,
+    fingerprint = CASE WHEN steps_changed_fingerprint <> '' THEN steps_changed_fingerprint ELSE fingerprint END,
+    steps_changed_at = NULL, steps_changed_fingerprint = '', updated_at = now()
+WHERE id = $1 AND (status IN ('build_failed', 'invalid') OR (status = 'finished' AND steps_changed_at IS NOT NULL))
+RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint
+`
+
+// Restart from a step: a host whose build stopped (build_failed, invalid) --
+// or a finished one marked steps-changed -- goes back to building with its
+// steps re-queued. If the content had changed under it (steps_changed_*), its
+// fingerprint becomes the one it would have if recreated now: its steps are
+// the current revision's after the restart, and its infrastructure never
+// changed. Only from those states, so two restarts can't race.
+func (q *Queries) SetDeployedObjectRestarting(ctx context.Context, id pgtype.UUID) (DeployedObject, error) {
+	row := q.db.QueryRow(ctx, setDeployedObjectRestarting, id)
+	var i DeployedObject
+	err := row.Scan(
+		&i.ID,
+		&i.TeamID,
+		&i.Kind,
+		&i.ObjectName,
+		&i.AsName,
+		&i.NetworkName,
+		&i.Fingerprint,
+		&i.Status,
+		&i.ExternalRef,
+		&i.LastError,
+		&i.UpdatedAt,
+		&i.PowerState,
+		&i.PowerStateCheckedAt,
+		&i.Tags,
+		&i.StepsMaterializedAt,
+		&i.BlockedOn,
+		&i.PublicAddress,
+		&i.DeployedAt,
+		&i.AgentPlatform,
+		&i.AgentCheckinOverdueAt,
+		&i.InfraFingerprint,
+		&i.StepsChangedAt,
+		&i.StepsChangedFingerprint,
+	)
+	return i, err
 }
 
 const setDeployedObjectTags = `-- name: SetDeployedObjectTags :exec

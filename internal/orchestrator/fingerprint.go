@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"sort"
 
 	"github.com/globalcptc/laforge/internal/compose"
@@ -46,28 +47,9 @@ import (
 // work" -- they're correctly excluded, not missed).
 func Fingerprint(repoRoot string, c *loader.Content, ctx *render.Context, disk int, ports loader.Ports, dependsOn []string) (string, error) {
 	h := sha256.New()
-
-	fmt.Fprintf(h, "os=%s\nimage=%s\nsize=%s\ndisk=%d\n", ctx.OS, ctx.Image, ctx.Size, disk)
-
-	// A compose container is its project: editing the compose file, or any file
-	// shipped with it, rebuilds it.
-	if ctx.Compose != "" {
-		b, err := compose.Load(repoRoot, ctx.Compose, nil)
-		if err != nil {
-			return "", fmt.Errorf("loading compose project for fingerprint: %w", err)
-		}
-		fmt.Fprintf(h, "compose=%s:%x\n", ctx.Compose, sha256.Sum256(b.Archive))
+	if err := writeInfraFingerprint(h, repoRoot, ctx, disk, ports, dependsOn); err != nil {
+		return "", err
 	}
-
-	tcp := append([]string(nil), ports.TCP...)
-	udp := append([]string(nil), ports.UDP...)
-	sort.Strings(tcp)
-	sort.Strings(udp)
-	fmt.Fprintf(h, "tcp=%v\nudp=%v\n", tcp, udp)
-
-	deps := append([]string(nil), dependsOn...)
-	sort.Strings(deps)
-	fmt.Fprintf(h, "depends_on=%v\n", deps)
 
 	stepsJSON, err := json.Marshal(ctx.Steps)
 	if err != nil {
@@ -109,6 +91,47 @@ func Fingerprint(repoRoot string, c *loader.Content, ctx *render.Context, disk i
 	}
 
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// InfraFingerprint is the part of Fingerprint the hoster built -- os, image,
+// size, disk, the compose project, ports, depends_on -- and nothing about the
+// steps or scripts. Recorded beside the full fingerprint when an instance
+// comes up (deployed_object.infra_fingerprint): when the full fingerprint
+// later differs and this one doesn't, only the steps changed, which a
+// configured build can choose to hold rather than recreate (restart from a
+// step; docs/plans/restart-from-step.md §6). Byte-for-byte the prefix of what
+// Fingerprint hashes, so Fingerprint's values are unchanged by its existence.
+func InfraFingerprint(repoRoot string, ctx *render.Context, disk int, ports loader.Ports, dependsOn []string) (string, error) {
+	h := sha256.New()
+	if err := writeInfraFingerprint(h, repoRoot, ctx, disk, ports, dependsOn); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func writeInfraFingerprint(h io.Writer, repoRoot string, ctx *render.Context, disk int, ports loader.Ports, dependsOn []string) error {
+	fmt.Fprintf(h, "os=%s\nimage=%s\nsize=%s\ndisk=%d\n", ctx.OS, ctx.Image, ctx.Size, disk)
+
+	// A compose container is its project: editing the compose file, or any file
+	// shipped with it, rebuilds it.
+	if ctx.Compose != "" {
+		b, err := compose.Load(repoRoot, ctx.Compose, nil)
+		if err != nil {
+			return fmt.Errorf("loading compose project for fingerprint: %w", err)
+		}
+		fmt.Fprintf(h, "compose=%s:%x\n", ctx.Compose, sha256.Sum256(b.Archive))
+	}
+
+	tcp := append([]string(nil), ports.TCP...)
+	udp := append([]string(nil), ports.UDP...)
+	sort.Strings(tcp)
+	sort.Strings(udp)
+	fmt.Fprintf(h, "tcp=%v\nudp=%v\n", tcp, udp)
+
+	deps := append([]string(nil), dependsOn...)
+	sort.Strings(deps)
+	fmt.Fprintf(h, "depends_on=%v\n", deps)
+	return nil
 }
 
 // networkFingerprint is Fingerprint's much simpler counterpart for a

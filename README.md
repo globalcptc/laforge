@@ -133,6 +133,12 @@ is underway before its dependents), and only step execution waits -- a
 workstation's domain-join runs once its domain controller is a working DC, not
 merely a booted Windows box.
 
+When a step fails on a box that's otherwise fine, the host's build can be **restarted
+from that step** rather than rebuilt: the step and every one after it run again in
+full, on the box as it is, for every team's copy of the host at once. A per-build
+switch, *hold on step change*, makes a push that changes only steps or scripts mark the
+affected hosts for such a restart instead of recreating them.
+
 ### Builders: one interface, many platforms
 
 Content is builder-agnostic. Each builder implements a single Go interface

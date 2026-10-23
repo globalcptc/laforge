@@ -40,6 +40,12 @@ SELECT * FROM configured_build WHERE repository_id = $1 AND branch = $2;
 -- deploy. Auto-build itself is always on -- see the reconciler.
 UPDATE configured_build SET auto_deploy_enabled = $2 WHERE id = $1 RETURNING *;
 
+-- name: SetConfiguredBuildHoldOnStepChange :one
+-- Hold hosts on step-only changes (docs/plans/restart-from-step.md §6): on, a
+-- content change that touches only a host's steps or scripts marks the host
+-- instead of recreating it, so an operator restarts it from the changed step.
+UPDATE configured_build SET hold_on_step_change = $2 WHERE id = $1 RETURNING *;
+
 -- name: SetConfiguredBuildCompetitionStarted :one
 -- "Marking the competition started locks automatic deploys" -- the flag
 -- itself is just this column; the lock behavior lives in the reconciler

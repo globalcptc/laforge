@@ -538,8 +538,9 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 	// deployTaskPayload); the priority rides on the spec so a builder that
 	// queues creates (Incus's per-host cap) admits the critical path first.
 	var payload struct {
-		Fingerprint string `json:"fingerprint"`
-		Priority    int    `json:"priority"`
+		Fingerprint      string `json:"fingerprint"`
+		InfraFingerprint string `json:"infra_fingerprint"`
+		Priority         int    `json:"priority"`
 	}
 	json.Unmarshal(task.Payload, &payload)
 
@@ -748,7 +749,7 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 	}
 
 	if _, err := q.MarkDeployedObjectRunning(ctx, db.MarkDeployedObjectRunningParams{
-		ID: obj.ID, ExternalRef: db.StrPtr(externalRef), Fingerprint: payload.Fingerprint,
+		ID: obj.ID, ExternalRef: db.StrPtr(externalRef), Fingerprint: payload.Fingerprint, InfraFingerprint: payload.InfraFingerprint,
 	}); err != nil {
 		return fmt.Errorf("recording running state: %w", err)
 	}

@@ -95,48 +95,9 @@ func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *lo
 	if len(blockedOn) > 0 {
 		status = "blocked"
 	}
-	// Stored registry credentials, for a `compose:` step's `docker login`.
-	registryAuth := gateway.WithRegistryAuth(func(host string) (gateway.RegistryAuth, bool) {
-		cred, err := q.GetRegistryCredentialByHost(ctx, host)
-		if err != nil {
-			return gateway.RegistryAuth{}, false
-		}
-		return gateway.RegistryAuth{Username: cred.Username, Secret: cred.Secret}, true
-	})
-	secret, err := db.RenderSecretForBuild(ctx, q, buildID)
+	authored, notes, err := queueSteps(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, status, gates, 0)
 	if err != nil {
-		return fmt.Errorf("loading the build's render secret: %w", err)
-	}
-	authored, notes, err := gateway.ExpandSteps(repoRoot, c, envName, asName, teamNum, registryAuth,
-		gateway.WithPublicAddress(obj.PublicAddress), gateway.WithRenderSecret(secret))
-	if err != nil {
-		return fmt.Errorf("expanding steps: %w", err)
-	}
-	next, err := q.NextStepIndexForHost(ctx, obj.ID)
-	if err != nil {
-		return fmt.Errorf("checking existing steps: %w", err)
-	}
-	for i, cmd := range authored {
-		payload, err := json.Marshal(cmd.Payload)
-		if err != nil {
-			return fmt.Errorf("encoding payload for step %d: %w", i, err)
-		}
-		var waitFor json.RawMessage
-		if len(cmd.WaitFor) > 0 {
-			status = "blocked" // this gate and every step after it
-			waitFor, _ = json.Marshal(cmd.WaitFor)
-			for _, w := range cmd.WaitFor {
-				if gates != nil && !gates.placed[w.Host] {
-					notes = append(notes, fmt.Sprintf("%s: wait_for %s skipped -- this environment doesn't place %q", asName, w.Label(), w.Host))
-				}
-			}
-		}
-		if _, err := q.CreateAgentTask(ctx, db.CreateAgentTaskParams{
-			DeployedObjectID: obj.ID, StepIndex: next + int32(i), Command: cmd.Command, Payload: payload, IgnoreErrors: cmd.IgnoreErrors, Reboots: cmd.Reboots, Status: status, MaxAttempts: cmd.MaxAttempts,
-			Milestone: optStr(cmd.Milestone), StepScript: optStr(cmd.StepScript), WaitFor: waitFor,
-		}); err != nil {
-			return fmt.Errorf("queuing step %d (%s): %w", i, cmd.Command, err)
-		}
+		return err
 	}
 	// Record what the (blocked) steps are waiting on, for the UI. Empty when not
 	// blocked -- SetDeployedObjectBlockedOn with nil clears it.
@@ -169,6 +130,75 @@ func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *lo
 		})
 	}
 	return nil
+}
+
+// queueSteps expands an object's authored steps from content and inserts the
+// commands of every authored step from fromGroup on as agent_task rows (0 is
+// all of them: a first materialization), starting at NextStepIndexForHost so
+// they never collide with what the host already has, each stamped with the
+// authored step it came from (step_group). status is the first rows' status
+// ('pending', or 'blocked' while a dependency is unfinished); from the first
+// command with a wait_for on, rows are 'blocked' until releaseStepGates lets
+// them through. It returns what it queued and ExpandSteps' notes. Restarting
+// from a step (RestartFromStep) queues the same rows a first deploy would,
+// just from a later step.
+func queueSteps(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, buildID pgtype.UUID, obj db.DeployedObject, teamNum int, asName string, status string, gates *teamGates, fromGroup int) ([]gateway.PlannedCommand, []string, error) {
+	// Stored registry credentials, for a `compose:` step's `docker login`.
+	registryAuth := gateway.WithRegistryAuth(func(host string) (gateway.RegistryAuth, bool) {
+		cred, err := q.GetRegistryCredentialByHost(ctx, host)
+		if err != nil {
+			return gateway.RegistryAuth{}, false
+		}
+		return gateway.RegistryAuth{Username: cred.Username, Secret: cred.Secret}, true
+	})
+	secret, err := db.RenderSecretForBuild(ctx, q, buildID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("loading the build's render secret: %w", err)
+	}
+	expanded, notes, err := gateway.ExpandSteps(repoRoot, c, envName, asName, teamNum, registryAuth,
+		gateway.WithPublicAddress(obj.PublicAddress), gateway.WithRenderSecret(secret))
+	if err != nil {
+		return nil, nil, fmt.Errorf("expanding steps: %w", err)
+	}
+	authored := expanded[:0:0]
+	for _, cmd := range expanded {
+		if cmd.Group >= fromGroup {
+			authored = append(authored, cmd)
+		}
+	}
+	next, err := q.NextStepIndexForHost(ctx, obj.ID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("checking existing steps: %w", err)
+	}
+	for i, cmd := range authored {
+		payload, err := json.Marshal(cmd.Payload)
+		if err != nil {
+			return nil, nil, fmt.Errorf("encoding payload for step %d: %w", i, err)
+		}
+		var waitFor json.RawMessage
+		if len(cmd.WaitFor) > 0 {
+			status = "blocked" // this gate and every step after it
+			waitFor, _ = json.Marshal(cmd.WaitFor)
+			for _, w := range cmd.WaitFor {
+				if gates != nil && !gates.placed[w.Host] {
+					notes = append(notes, fmt.Sprintf("%s: wait_for %s skipped -- this environment doesn't place %q", asName, w.Label(), w.Host))
+				}
+			}
+		}
+		if _, err := q.CreateAgentTask(ctx, db.CreateAgentTaskParams{
+			DeployedObjectID: obj.ID, StepIndex: next + int32(i), Command: cmd.Command, Payload: payload, IgnoreErrors: cmd.IgnoreErrors, Reboots: cmd.Reboots, Status: status, MaxAttempts: cmd.MaxAttempts,
+			Milestone: optStr(cmd.Milestone), StepScript: optStr(cmd.StepScript), WaitFor: waitFor, StepGroup: optInt32(cmd.Group),
+		}); err != nil {
+			return nil, nil, fmt.Errorf("queuing step %d (%s): %w", i, cmd.Command, err)
+		}
+	}
+	return authored, notes, nil
+}
+
+// optInt32 stores an authored step index as the row's step_group.
+func optInt32(v int) *int32 {
+	n := int32(v)
+	return &n
 }
 
 // optStr is nil for "", so an unset milestone/script stores as NULL.

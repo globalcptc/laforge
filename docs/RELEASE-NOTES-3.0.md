@@ -120,6 +120,19 @@ This note covers the whole 3.0 line.
   [CONFIGURATION.md](../CONFIGURATION.md#waiting-on-another-host-wait_for-and-milestone).
 - **Force-rebuild** a host and all its downstream dependents from the UI, and **clean
   teardown** at the end of an event.
+- **Restart from step.** A host whose build stopped — a failed step, a validator that
+  didn't pass — can be restarted from any authored step instead of rebuilt: that step and
+  every one after it run again in full (downloads fetch again, scripts write and run
+  again, validators re-check) on the box as it is, nothing destroyed, no hoster call.
+  Picked once for a host definition and applied to the chosen teams' copies; hosts that
+  were failed for depending on it resume. From the host's Steps panel, the hosts page,
+  or `laforge restart-steps --build <id> --from <step>`. Steps should be safe to run
+  twice (CONFIGURATION.md → Steps).
+- **Hold hosts on step-only changes** (per configured build, off by default): a push
+  that changes only a host's steps or scripts marks the host *steps changed* instead of
+  recreating it, so the fix is applied with a restart from the changed step. Changes to
+  the image, size, disk, ports or dependencies still recreate the host; turning the
+  switch off recreates any held hosts.
 
 ## The Agent
 

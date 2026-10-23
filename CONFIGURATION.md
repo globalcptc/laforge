@@ -541,6 +541,12 @@ directly with the `people "employees"` function regardless of assignment.
 `validate:` block. Steps run once, in order, after the host is provisioned. (For
 recurring work, use [`schedule:`](#schedules) instead.)
 
+Write steps so they're **safe to run twice**: install if missing, write the whole file,
+idempotent commands. A rebuild runs them all again on a fresh box, and an operator can
+**restart a host's build from any step** on the box as it is — that step and every one
+after it run again in full (downloads fetch again, scripts write and run again,
+validators re-check), possibly on a box where they half-happened the first time.
+
 | Action | What it does |
 | --- | --- |
 | `script` | Runs a script definition (`scripts/<name>.yaml`) by name — the most common step. `- script: install-nginx` |

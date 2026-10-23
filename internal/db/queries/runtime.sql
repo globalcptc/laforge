@@ -259,7 +259,7 @@ UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $
 -- finished/build_failed/invalid from the real agent_task/validator rows.
 -- deployed_at restarts the never-checked-in watchdog's clock, and a redeploy
 -- clears any earlier overdue flag.
-UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, last_error = NULL, updated_at = now(),
+UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, infra_fingerprint = $4, last_error = NULL, updated_at = now(),
     deployed_at = now(), agent_checkin_overdue_at = NULL
 WHERE id = $1 RETURNING *;
 
@@ -406,8 +406,37 @@ WHERE status <> 'destroyed'
 -- deploy task with the new fingerprint. Also clears steps_materialized_at so
 -- the redeploy re-materializes this object's steps once its dependencies are
 -- finished again (its agent_task rows are deleted on the same path).
-UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', last_error = NULL, steps_materialized_at = NULL, updated_at = now()
+UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', infra_fingerprint = '', last_error = NULL,
+    steps_materialized_at = NULL, steps_changed_at = NULL, steps_changed_fingerprint = '', updated_at = now()
 WHERE id = $1 RETURNING *;
+
+-- name: SetDeployedObjectRestarting :one
+-- Restart from a step: a host whose build stopped (build_failed, invalid) --
+-- or a finished one marked steps-changed -- goes back to building with its
+-- steps re-queued. If the content had changed under it (steps_changed_*), its
+-- fingerprint becomes the one it would have if recreated now: its steps are
+-- the current revision's after the restart, and its infrastructure never
+-- changed. Only from those states, so two restarts can't race.
+UPDATE deployed_object SET status = 'building', last_error = NULL,
+    fingerprint = CASE WHEN steps_changed_fingerprint <> '' THEN steps_changed_fingerprint ELSE fingerprint END,
+    steps_changed_at = NULL, steps_changed_fingerprint = '', updated_at = now()
+WHERE id = $1 AND (status IN ('build_failed', 'invalid') OR (status = 'finished' AND steps_changed_at IS NOT NULL))
+RETURNING *;
+
+-- name: ResumeDependentForRestart :execrows
+-- A dependent that was failed before its steps ever ran ("dependency X failed
+-- to configure") goes back to running; materializeStepsIfReady queues its
+-- steps once the restarted dependency finishes, as on a first deploy.
+UPDATE deployed_object SET status = 'running', last_error = NULL, updated_at = now()
+WHERE id = $1 AND status = 'build_failed' AND steps_materialized_at IS NULL;
+
+-- name: MarkDeployedObjectStepsChanged :execrows
+-- The reconciler, for a build holding hosts on step-only changes: the object's
+-- steps or scripts changed under it, and this is the fingerprint it would
+-- have if recreated. Updates only when the target fingerprint is new, so a
+-- settled pass writes nothing and the caller logs an event only once.
+UPDATE deployed_object SET steps_changed_at = coalesce(steps_changed_at, now()), steps_changed_fingerprint = $2, updated_at = now()
+WHERE id = $1 AND steps_changed_fingerprint IS DISTINCT FROM $2;
 
 -- name: DeleteDeployedObject :exec
 -- Used after a destroy for an object no longer in desired state at all

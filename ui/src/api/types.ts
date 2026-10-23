@@ -62,6 +62,8 @@ export interface ConfiguredBuild {
   environment_path: string
   builder_config_name: string
   auto_deploy_enabled: boolean
+  /** Hold hosts on step-only content changes (mark them) instead of recreating them; off by default. */
+  hold_on_step_change: boolean
   competition_started: boolean
   current_content_revision_id: string | null
   created_at: string
@@ -152,6 +154,38 @@ export interface DeployedObject {
   // `wait_for:` -- that gate's targets ("bff-dc-01 · domain-ready"). Null/empty
   // while it has steps it can run. Drives the "Dependency Blocked" state.
   blocked_on?: string[] | null
+  /** Set when the build holds hosts on step-only changes and this host's steps changed in the content: restart it from a step to apply them. */
+  steps_changed_at?: string | null
+}
+
+/** One authored step a restart runs again (POST /builds/{id}/restart-steps). */
+export interface RestartStep {
+  group: number
+  label?: string
+  commands: number
+}
+
+/** One instance of the host in a restart-from-step request: eligible or not, and what happened. */
+export interface RestartHost {
+  id: string
+  object_name: string
+  as_name: string
+  team_number: number
+  status: ObjectStatus
+  eligible: boolean
+  running: boolean
+  content_changed: boolean
+  steps: RestartStep[]
+  dependents: RebuildAffected[]
+  restarted: boolean
+  skipped?: string
+}
+
+export interface RestartStepsResponse {
+  hosts: RestartHost[]
+  restarted: number
+  dry_run: boolean
+  from_group: number
 }
 
 export interface TeamSummary extends Team {
