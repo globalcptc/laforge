@@ -296,7 +296,7 @@ function HeartbeatCharts({ heartbeats, wide }: { heartbeats: AgentHeartbeat[]; w
   if (!series.some((s) => s.values.some((v) => v != null))) return null
   if (wide) {
     return (
-      <div className="mb-3 flex flex-col gap-3">
+      <div className="mb-3 grid grid-cols-3 gap-3">
         {series.map((s) => (
           <MetricChart key={s.label} title={s.label} times={times} series={[s]} height={120} />
         ))}
