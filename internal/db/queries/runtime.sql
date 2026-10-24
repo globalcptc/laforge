@@ -242,12 +242,17 @@ UPDATE deployed_object SET tags = $2 WHERE id = $1;
 SELECT * FROM deployed_object WHERE id = $1;
 
 -- name: ListDeployedObjectsByBuild :many
+-- Ordered by name (as_name for host/container copies, object_name for networks
+-- which have no as_name) so the build pages list hosts alphabetically; every
+-- caller gets a stable, deterministic order.
 SELECT deployed_object.* FROM deployed_object
 JOIN team ON team.id = deployed_object.team_id
-WHERE team.build_id = $1;
+WHERE team.build_id = $1
+ORDER BY COALESCE(deployed_object.as_name, deployed_object.object_name);
 
 -- name: ListDeployedObjectsByTeam :many
-SELECT * FROM deployed_object WHERE team_id = $1;
+SELECT * FROM deployed_object WHERE team_id = $1
+ORDER BY COALESCE(as_name, object_name);
 
 -- name: MarkDeployedObjectDeploying :one
 UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $1 RETURNING *;
