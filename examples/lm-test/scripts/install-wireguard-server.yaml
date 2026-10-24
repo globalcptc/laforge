@@ -1,0 +1,6 @@
+script:
+  name: install-wireguard-server
+  description: Installs and configures the WireGuard VPN server
+  language: bash
+  source: install-wireguard-server.sh
+  timeout: 180

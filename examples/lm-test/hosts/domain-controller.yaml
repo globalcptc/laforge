@@ -1,0 +1,18 @@
+# Referenced but never defined in the plan doc's own workstation.yaml
+# example -- added here so depends_on: [domain-controller, prod] resolves,
+# and so there's a real Windows host to exercise the registry validator on.
+host:
+  name: domain-controller
+  os: windows-server-2022
+  size: medium
+  disk: 120
+  ports: { tcp: ["389", "445", "3389"] }
+  tags: { role: dc }
+  findings:
+    - severity: 4
+      difficulty: 3
+      description: Domain controller reachable from every internal network
+  steps:
+    - script: harden-dc
+      validate:
+        - registry: { key: "HKLM\\SYSTEM\\CurrentControlSet\\Services\\LDAP", value: "LdapEnforceChannelBinding", expected: "2" }

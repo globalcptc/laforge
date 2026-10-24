@@ -1,0 +1,7 @@
+container:
+  name: scoreboard
+  image: laforge/scoreboard:latest
+  size: small
+  ports: { tcp: ["8080"] }
+  steps:
+    - script: scoreboard-seed

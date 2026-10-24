@@ -1,0 +1,4 @@
+network:
+  name: vpn
+  cidr: 10.0.255.0/24
+  visible_from: [vdi]

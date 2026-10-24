@@ -1,72 +1,209 @@
-version: "3.4"
+# The reference deployment and the way to run the whole system locally
+# with no cloud account and no hoster -- "Everything runs locally from
+# Compose, with a fake builder" (the README.md Contributing
+# section) and "A Compose file that actually works is part of the
+# deliverable" (its Deployment section).
+#
+# Quick start (see the root README.md for the fuller version):
+#   cp .env.example .env        # then set at least GITHUB_APP_WEBHOOK_SECRET to any
+#                                # non-empty value -- laforge-api won't start without it.
+#                                # Real GitHub App values: see USAGE.md.
+#   ./scripts/gen-certs.sh      # self-signed CA + gateway mTLS certs (see USAGE.md)
+#   docker compose up --build
+#
+# laforge-api:          http://localhost:8080
+# laforge-gateway (mTLS): localhost:8444
+# ui (static build):    http://localhost:8081
+# Postgres (for `psql` from the host, if you want it): localhost:5433
+
+name: laforge
 
 services:
-  ui:
-    build:
-      context: ./ui/ng-ui
-      dockerfile: ./Dockerfile
-    ports:
-      - 80:80
-    restart: unless-stopped
-    networks:
-      - laforge-backend-tier
-    depends_on:
-      - backend
-    volumes:
-      - /app/node_modules/
-
-  backend:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-    restart: unless-stopped
-    ports:
-      - 8080:8080
-      - 50051:50051
-    networks:
-      - laforge-backend-tier
-    depends_on:
-      - redis
-      - db
-    volumes:
-      - ./server/builds/:/app/builds
-      - ./server/logs/:/app/logs
-      - ./server/users/:/app/users
-      - ./server/repos/:/app/repos
-      - ./configs/:/app/configs
-      - ./grpc/agent/static/:/app/grpc/agent/static
-      - ./grpc/server/static/:/app/grpc/server/static
-
   db:
-    image: library/postgres:15-alpine
-    ports:
-      - 5432:5432
-    restart: unless-stopped
-    networks:
-      - laforge-backend-tier
+    image: postgres:16-alpine
+    # Raise the connection ceiling well above Postgres's default 100 so a
+    # high-concurrency runner pool (RUNNER_CONCURRENCY) plus the api/orchestrator/
+    # gateway pools all fit. Bump this further to push runner concurrency higher.
+    command: ["postgres", "-c", "max_connections=500"]
+    environment:
+      POSTGRES_DB: laforge_dev
+      POSTGRES_USER: laforge
+      POSTGRES_PASSWORD: laforge
     volumes:
       - laforge-db:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=laforger
-      - POSTGRES_PASSWORD=laforge
-      - POSTGRES_DB=laforge
-
-  redis:
-    image: library/redis:7-alpine
     ports:
-      - 6379:6379
-    restart: unless-stopped
-    networks:
-      - laforge-backend-tier
+      - "5433:5432" # host-side only, so a native Postgres on the default 5432 is untouched
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U laforge -d laforge_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    build:
+      context: .
+      target: migrate
+    command: ["host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable", "up"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      target: api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable
+      LISTEN_ADDR: ":8080"
+      API_MAX_CONNS: "${API_MAX_CONNS:-20}"
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      UI_BASE_URL: ${UI_BASE_URL:-http://localhost:8081}
+      REPO_ROOT: /content
+      # Read-only, only to report agent CA / gateway cert expiry via
+      # GET /cert-status (the .certs mount below). Same files the gateway uses.
+      GATEWAY_CA_CERT: /.certs/ca.crt
+      GATEWAY_SERVER_CERT: /.certs/server.crt
     volumes:
-      - laforge-redis:/data
+      - ./examples/lm-test:/content:ro
+      # Mounted at the container's own working directory (unset in the
+      # Dockerfile's api stage, so it defaults to "/") so a relative
+      # GITHUB_APP_PRIVATE_KEY_PATH in .env (e.g. ".certs/x.pem",
+      # matching how it'd resolve for `go run` from the repo root too)
+      # resolves the same way in both places, with no path translation
+      # needed between the two.
+      - ./.certs:/.certs:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  orchestrator:
+    build:
+      context: .
+      target: orchestrator
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./examples/lm-test:/content:ro
+      # Same GITHUB_APP_PRIVATE_KEY_PATH resolution as api's own volume
+      # (see its comment above) -- without this, a real GITHUB_APP_ID in
+      # .env would make internal/checkout.FromEnv try to read a private
+      # key file that doesn't exist inside this container at all, and
+      # fail loudly at startup.
+      - ./.certs:/.certs:ro
+      # Persist the per-{repository,commit} checkout cache across restarts
+      # (it defaults to /tmp inside the container -- an `up --build` would
+      # otherwise wipe it and force a full re-fetch, which means a GitHub
+      # token mint + clone for every build on the next pass). Shared with
+      # the runner on purpose: a commit SHA is immutable content, so one
+      # fetch serves both, and Dir()'s temp-dir-then-rename publish is
+      # race-safe for concurrent writers.
+      - laforge-checkouts:/tmp/laforge-checkouts
+    command: ["-db-url", "host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable", "-repo", "/content"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  runner:
+    # Time to hand back in-flight tasks on a redeploy (they're released, not
+    # counted as failed attempts) before Docker kills the process.
+    stop_grace_period: 30s
+    build:
+      context: .
+      target: runner
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./examples/lm-test:/content:ro
+      - ./.certs:/.certs:ro
+      # Shared checkout cache -- see the orchestrator service's own note.
+      - laforge-checkouts:/tmp/laforge-checkouts
+    environment:
+      # Agent auto-delivery (internal/agentdelivery): the addresses a
+      # DEPLOYED HOST reaches back on -- NOT localhost, but an address real
+      # instances on your hoster can route to (a LAN IP or a public hostname
+      # that resolves to this host). Set these in your .env when
+      # deploying to a real hoster; leave them empty (the default) to deploy
+      # without agents, exactly as the fake-builder default does. When you set
+      # GATEWAY_PUBLIC_ADDR to a non-localhost name, re-run gen-certs.sh with
+      # that address (its host, no port) so the gateway cert matches it.
+      GATEWAY_PUBLIC_ADDR: "${GATEWAY_PUBLIC_ADDR:-}"
+      API_PUBLIC_URL: "${API_PUBLIC_URL:-}"
+      GATEWAY_CA_CERT: /.certs/ca.crt
+      GATEWAY_CA_KEY: /.certs/ca.key
+      # The agent base binaries are baked into the runner image (Dockerfile's
+      # agent-build stage), not mounted from the host -- built on `up --build`,
+      # never committed. AGENT_BASE_DIR is already set to /agent-base in the
+      # image; restated here for visibility.
+      AGENT_BASE_DIR: /agent-base
+      # The runner runs ONE WORKER POOL PER CONFIGURED BUILDER: all builds on a
+      # builder share its pool, sized to that builder's own concurrency limit
+      # (builder_config.max_concurrency, set per builder in the UI; 0 =
+      # unbounded). Concurrency is a property of the hardware -- the
+      # cluster/account/host-pool -- not of a build, so different builders never
+      # contend and builds on the same builder share its capacity. There is no
+      # global concurrency knob: RUNNER_CONCURRENCY is now only the legacy/test
+      # (-build-id) path's worker count, not production. A task holds a DB
+      # connection only briefly (the multi-minute deploy is an HTTP call to the
+      # hoster), so every pool shares one modest Postgres pool. See
+      # cmd/laforge-runner.
+      RUNNER_MAX_CONNS: "50"
+    # The default builder is still the fake one (internal/builder/fake);
+    # a build with a real configured_build resolves its own real
+    # builder_config by name (ResolveBuilderFromDB) and deploys to that
+    # hoster instead.
+    command: ["-db-url", "host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable", "-repo", "/content", "-id", "compose-runner-1"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  gateway:
+    build:
+      context: .
+      target: gateway
+    environment:
+      DATABASE_URL: "host=db port=5432 user=laforge_gateway password=laforge_gateway_dev_only_do_not_use_in_prod dbname=laforge_dev sslmode=disable"
+      LISTEN_ADDR: ":8443"
+      GATEWAY_CA_CERT: /certs/ca.crt
+      GATEWAY_SERVER_CERT: /certs/server.crt
+      GATEWAY_SERVER_KEY: /certs/server.key
+    volumes:
+      - ./.certs:/certs:ro
+    ports:
+      # Host-side only -- 8443 was already taken by an unrelated,
+      # pre-existing Incus test container on this machine; the gateway
+      # itself still listens on :8443 inside its own container either
+      # way (LISTEN_ADDR above), so this is purely which host port
+      # reaches it from outside Docker.
+      - "8444:8443"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Builds the UI to a static bundle and serves it (see ui/Dockerfile). The
+  # API URL is inlined at BUILD time, so it is a build arg from PUBLIC_BASE_URL
+  # -- change that and rebuild with `docker compose up -d --build ui`. For UI
+  # development with hot reload, run `npm run dev` in ./ui directly instead.
+  ui:
+    build:
+      context: ./ui
+      args:
+        VITE_API_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      - api
 
 volumes:
   laforge-db:
-    driver: local
-  laforge-redis:
-    driver: local
-
-networks:
-  laforge-backend-tier:
-    driver: bridge
+  # Persistent per-{repository,commit} checkout cache, shared by the
+  # orchestrator and runner so GitHub is contacted only to fetch a commit
+  # not already on disk -- not on every reconcile pass.
+  laforge-checkouts:

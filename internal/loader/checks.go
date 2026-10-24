@@ -1,0 +1,867 @@
+package loader
+
+import (
+	"fmt"
+	"net"
+	"path"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/globalcptc/laforge/internal/schedule"
+)
+
+// crossCheck runs everything a single document's JSON Schema can't express
+// on its own, because it needs to see the whole loaded repository at once.
+// Per `laforge check`: "name collisions, depends_on
+// targets that exist, public ports being a subset of the host's ports, and
+// validators asking for the wrong platform."
+//
+// `extends:` bases are already folded into their children by resolveExtends
+// (see extends.go) before this runs, so every check below sees merged
+// objects. checkExtends still validates the reference itself (same-type
+// target, no self- or multi-node cycle), and checkResolvedRequired confirms
+// that after merging an extending object actually has the fields the schema
+// let it omit (os/size/disk, image/size, cidr, teams).
+func (c *Content) crossCheck() {
+	c.checkNameCollisions()
+	c.checkDependsOn()
+	c.checkEnvironmentTopology()
+	c.checkEnvironmentCIDR()
+	c.checkPublicPorts()
+	c.checkPeopleReferences()
+	c.checkNetworkVisibility()
+	c.checkScriptReferences()
+	c.checkStepWaits()
+	c.checkComposeContainers()
+	c.checkScheduleExpressions()
+	c.checkValidatorPlatforms()
+	c.checkExtends()
+	c.checkResolvedRequired()
+}
+
+// objectNames returns every host+container name (they share one namespace)
+// mapped to its source file, for existence and collision checks.
+func (c *Content) objectNames() map[string]string {
+	m := make(map[string]string)
+	for _, h := range c.Hosts {
+		m[h.Name] = h.SourceFile
+	}
+	for _, ct := range c.Containers {
+		m[ct.Name] = ct.SourceFile
+	}
+	return m
+}
+
+func (c *Content) networkNames() map[string]string {
+	m := make(map[string]string)
+	for _, n := range c.Networks {
+		m[n.Name] = n.SourceFile
+	}
+	return m
+}
+
+func (c *Content) checkNameCollisions() {
+	// Hosts and containers share one namespace -- "Names are unique per
+	// type. Hosts and containers share one namespace, because an
+	// environment refers to either by name."
+	seen := make(map[string]string)
+	check := func(name, file string) {
+		if first, dup := seen[name]; dup {
+			c.addf(file, 0, "host/container name %q collides with %s -- hosts and containers share one namespace", name, first)
+		}
+		seen[name] = file
+	}
+	for _, h := range c.Hosts {
+		check(h.Name, h.SourceFile)
+	}
+	for _, ct := range c.Containers {
+		check(ct.Name, ct.SourceFile)
+	}
+
+	seenNet := make(map[string]string)
+	for _, n := range c.Networks {
+		if first, dup := seenNet[n.Name]; dup {
+			c.addf(n.SourceFile, 0, "network name %q collides with %s", n.Name, first)
+		}
+		seenNet[n.Name] = n.SourceFile
+	}
+
+	seenScript := make(map[string]string)
+	for _, s := range c.Scripts {
+		if first, dup := seenScript[s.Name]; dup {
+			c.addf(s.SourceFile, 0, "script name %q collides with %s", s.Name, first)
+		}
+		seenScript[s.Name] = s.SourceFile
+	}
+
+	seenEnv := make(map[string]string)
+	for _, e := range c.Environments {
+		if first, dup := seenEnv[e.Name]; dup {
+			c.addf(e.SourceFile, 0, "environment name %q collides with %s", e.Name, first)
+		}
+		seenEnv[e.Name] = e.SourceFile
+	}
+}
+
+// checkDependsOn resolves every host/container's depends_on entries against
+// the combined host/container/network namespace. "A dependency naming
+// something not in the environment fails validation" -- here "the
+// environment" is read as "the repository," since depends_on names an
+// object, not a placement, and objects are repository-wide.
+func (c *Content) checkDependsOn() {
+	objects := c.objectNames()
+	networks := c.networkNames()
+
+	resolve := func(file, name string) {
+		if name == "" {
+			return
+		}
+		if _, ok := objects[name]; ok {
+			return
+		}
+		if _, ok := networks[name]; ok {
+			return
+		}
+		c.addf(file, 0, "depends_on references %q, which is not a host, container, or network in this repository", name)
+	}
+	for _, h := range c.Hosts {
+		for _, d := range h.DependsOn {
+			resolve(h.SourceFile, d)
+		}
+	}
+	for _, ct := range c.Containers {
+		for _, d := range ct.DependsOn {
+			resolve(ct.SourceFile, d)
+		}
+	}
+	c.checkDependsOnCycles()
+}
+
+// checkDependsOnCycles rejects a waiting cycle among hosts/containers, through
+// depends_on, step-level wait_for, or a mix of the two. Each holds a host's
+// steps until another host makes progress, so a cycle would wedge every object
+// on it, each waiting on the other. The check is per host, not per step: A
+// waiting on B's milestone while B waits on A's is rejected even when the two
+// points could in principle be reached, which keeps the rule easy to explain.
+// Networks are ignored here -- they have no outgoing depends_on, so they can't
+// be on a cycle. Reports each object that sits on a cycle.
+func (c *Content) checkDependsOnCycles() {
+	// adjacency + source file, over the shared host/container namespace.
+	deps := make(map[string][]string)
+	file := make(map[string]string)
+	objects := c.objectNames()
+	add := func(name, src string, dependsOn []string) {
+		file[name] = src
+		for _, d := range dependsOn {
+			if _, ok := objects[d]; ok { // object dep only (skip networks/unknowns)
+				deps[name] = append(deps[name], d)
+			}
+		}
+	}
+	for _, h := range c.Hosts {
+		add(h.Name, h.SourceFile, append(append([]string{}, h.DependsOn...), waitTargets(h.Name, h.Steps, false)...))
+	}
+	for _, ct := range c.Containers {
+		add(ct.Name, ct.SourceFile, append(append([]string{}, ct.DependsOn...), waitTargets(ct.Name, ct.Steps, false)...))
+	}
+
+	const (
+		white = 0 // unvisited
+		gray  = 1 // on the current DFS stack
+		black = 2 // done
+	)
+	color := make(map[string]int)
+	var dfs func(name string) bool // returns true if a cycle was found through name
+	dfs = func(name string) bool {
+		color[name] = gray
+		for _, d := range deps[name] {
+			if color[d] == gray {
+				c.addf(file[name], 0, "host/container %q is part of a depends_on/wait_for cycle (via %q)", name, d)
+				return true
+			}
+			if color[d] == white && dfs(d) {
+				return true
+			}
+		}
+		color[name] = black
+		return false
+	}
+	for name := range deps {
+		if color[name] == white {
+			if dfs(name) {
+				return // one clear cycle error is enough
+			}
+		}
+	}
+}
+
+// checkEnvironmentTopology resolves every environment's `networks:` block:
+// network names must exist, object names must exist, and `as` names must be
+// unique within the environment (they become hostnames).
+func (c *Content) checkEnvironmentTopology() {
+	networks := c.networkNames()
+	objects := c.objectNames()
+
+	for _, e := range c.Environments {
+		asNames := make(map[string]bool)
+		for netName, objMap := range e.Networks {
+			if _, ok := networks[netName]; !ok {
+				c.addf(e.SourceFile, 0, "environment %q uses network %q, which does not exist in this repository", e.Name, netName)
+			}
+			for objName, copies := range objMap {
+				if _, ok := objects[objName]; !ok {
+					c.addf(e.SourceFile, 0, "environment %q places %q on network %q, but no host or container named %q exists", e.Name, objName, netName, objName)
+					continue
+				}
+				for _, cp := range copies {
+					if cp.As != "" {
+						if asNames[cp.As] {
+							c.addf(e.SourceFile, 0, "environment %q has two copies named %q -- `as` becomes the hostname and must be unique within the environment", e.Name, cp.As)
+						}
+						asNames[cp.As] = true
+					}
+				}
+			}
+		}
+	}
+}
+
+// checkEnvironmentCIDR enforces the environment-level `cidr:` supernet when one
+// is set: it must parse, and every network the environment places must fit
+// inside it. This is what lets a cloud builder host a whole team in one VPC
+// (AWS) -- the networks have to share one address range. It is builder-agnostic
+// here (no VPC-size limit; that is the AWS builder's own rule), and skipped
+// entirely when an environment declares no cidr, since the on-prem builders
+// don't need one.
+func (c *Content) checkEnvironmentCIDR() {
+	nets := make(map[string]string, len(c.Networks)) // network name -> cidr
+	for _, n := range c.Networks {
+		nets[n.Name] = n.CIDR
+	}
+	for _, e := range c.Environments {
+		if e.CIDR == "" {
+			continue
+		}
+		_, super, err := net.ParseCIDR(e.CIDR)
+		if err != nil {
+			c.addf(e.SourceFile, 0, "environment %q cidr %q is not a valid CIDR: %v", e.Name, e.CIDR, err)
+			continue
+		}
+		// Deterministic order so the error list is stable across runs.
+		used := make([]string, 0, len(e.Networks))
+		for netName := range e.Networks {
+			used = append(used, netName)
+		}
+		sort.Strings(used)
+		for _, netName := range used {
+			cidr, ok := nets[netName]
+			if !ok || cidr == "" {
+				continue // missing network / cidr is reported by other checks
+			}
+			if !cidrContains(super, cidr) {
+				c.addf(e.SourceFile, 0, "environment %q cidr %q does not contain network %q (%s) -- every network in an environment with a cidr must fit within it", e.Name, e.CIDR, netName, cidr)
+			}
+		}
+	}
+}
+
+// cidrContains reports whether the network inner (a CIDR string) fits entirely
+// within outer: inner's base address is inside outer and inner is the same size
+// or smaller. A malformed inner is treated as "doesn't fit" (its own format is
+// caught by the per-document schema).
+func cidrContains(outer *net.IPNet, inner string) bool {
+	innerIP, innerNet, err := net.ParseCIDR(inner)
+	if err != nil {
+		return false
+	}
+	if !outer.Contains(innerIP) {
+		return false
+	}
+	oo, _ := outer.Mask.Size()
+	io, _ := innerNet.Mask.Size()
+	return io >= oo
+}
+
+// portInterval parses one port token -- a single port ("80") or an inclusive
+// range ("1-65535") -- into [lo, hi]. ok is false when it is not a valid port
+// or range (non-numeric, outside 1-65535, or reversed). A port list and a
+// public list use the SAME token format (see common.schema.json portsBlock), so
+// both are parsed through here.
+func portInterval(tok string) (lo, hi int, ok bool) {
+	tok = strings.TrimSpace(tok)
+	a, b, isRange := strings.Cut(tok, "-")
+	if !isRange {
+		n, err := strconv.Atoi(tok)
+		if err != nil || n < 1 || n > 65535 {
+			return 0, 0, false
+		}
+		return n, n, true
+	}
+	lo, err1 := strconv.Atoi(strings.TrimSpace(a))
+	hi, err2 := strconv.Atoi(strings.TrimSpace(b))
+	if err1 != nil || err2 != nil || lo < 1 || hi > 65535 || lo > hi {
+		return 0, 0, false
+	}
+	return lo, hi, true
+}
+
+// mergePortIntervals sorts and coalesces overlapping or adjacent intervals so a
+// public port can be tested against a single contiguous span. Unparseable
+// declared tokens are dropped by the caller before this, so they simply provide
+// no coverage (a public port they were meant to cover is then flagged).
+func mergePortIntervals(ivs [][2]int) [][2]int {
+	if len(ivs) == 0 {
+		return nil
+	}
+	sort.Slice(ivs, func(i, j int) bool { return ivs[i][0] < ivs[j][0] })
+	out := [][2]int{ivs[0]}
+	for _, iv := range ivs[1:] {
+		last := &out[len(out)-1]
+		if iv[0] <= last[1]+1 { // overlapping or touching -- extend
+			if iv[1] > last[1] {
+				last[1] = iv[1]
+			}
+		} else {
+			out = append(out, iv)
+		}
+	}
+	return out
+}
+
+// declaredIntervals turns a protocol's declared port tokens into merged
+// intervals, skipping any that don't parse.
+func declaredIntervals(tokens []string) [][2]int {
+	var ivs [][2]int
+	for _, t := range tokens {
+		if lo, hi, ok := portInterval(t); ok {
+			ivs = append(ivs, [2]int{lo, hi})
+		}
+	}
+	return mergePortIntervals(ivs)
+}
+
+// covers reports whether [lo,hi] fits entirely within one of the merged spans.
+func covers(spans [][2]int, lo, hi int) bool {
+	for _, s := range spans {
+		if s[0] <= lo && hi <= s[1] {
+			return true
+		}
+	}
+	return false
+}
+
+// checkPublicPorts validates that every host/container's `public:` ports are a
+// subset of its own declared `ports` -- you can only expose a port the host
+// actually serves. Both lists allow ranges ("1-65535"), so the check is on port
+// INTERVALS, not literal token strings: `public: ["3389"]` is correctly a
+// subset of `ports: ["1-65535"]`. `public:` is a property of the host (it lives
+// in the host file), so this is checked per definition, not per environment
+// placement.
+func (c *Content) checkPublicPorts() {
+	check := func(file, name string, declared Ports, public *Ports) {
+		if public == nil {
+			return
+		}
+		checkProto := func(proto string, declaredTokens, publicTokens []string) {
+			spans := declaredIntervals(declaredTokens)
+			for _, p := range publicTokens {
+				lo, hi, ok := portInterval(p)
+				if !ok {
+					c.addf(file, 0, "%q lists %q in `public` %s, which is not a valid port or range", name, p, proto)
+					continue
+				}
+				if !covers(spans, lo, hi) {
+					c.addf(file, 0, "%q publishes %s port %s in `public`, which is not in its own `ports`", name, proto, p)
+				}
+			}
+		}
+		checkProto("tcp", declared.TCP, public.TCP)
+		checkProto("udp", declared.UDP, public.UDP)
+	}
+	for _, h := range c.Hosts {
+		check(h.SourceFile, h.Name, h.Ports, h.Public)
+	}
+	for _, ct := range c.Containers {
+		check(ct.SourceFile, ct.Name, ct.Ports, ct.Public)
+	}
+}
+
+// checkPeopleReferences resolves every `people: [...]` list (on hosts,
+// containers, and scripts) against every loaded person's username, which
+// must be unique across all people sources for an unqualified reference
+// like `people: [jdoe]` to be unambiguous.
+func (c *Content) checkPeopleReferences() {
+	// A `people:` entry names a whole people/*.csv file (a source), optionally
+	// filtered to a subset of that file's usernames. So validation is
+	// file-scoped: the file must exist, and every filter username must exist in
+	// THAT file. (Usernames no longer need to be globally unique across files --
+	// a ref says which file it means, so the old cross-source uniqueness rule is
+	// gone.)
+	sourceUsers := make(map[string]map[string]bool) // source name -> set of usernames
+	for _, src := range c.People {
+		users := make(map[string]bool, len(src.People))
+		for _, p := range src.People {
+			users[p.Username] = true
+		}
+		sourceUsers[src.Name] = users
+	}
+
+	resolve := func(file string, refs []PeopleRef) {
+		for _, ref := range refs {
+			users, ok := sourceUsers[ref.File]
+			if !ok {
+				c.addf(file, 0, "people file %q does not match any people/*.csv (loaded: %s)", ref.File, peopleSourceList(c))
+				continue
+			}
+			for _, u := range ref.Filter {
+				if !users[u] {
+					c.addf(file, 0, "people filter %q is not a username in people/%s.csv", u, ref.File)
+				}
+			}
+		}
+	}
+	for _, h := range c.Hosts {
+		resolve(h.SourceFile, h.People)
+	}
+	for _, ct := range c.Containers {
+		resolve(ct.SourceFile, ct.People)
+	}
+	for _, s := range c.Scripts {
+		resolve(s.SourceFile, s.People)
+	}
+}
+
+// checkNetworkVisibility resolves every network's `visible_from:` allowlist:
+// each entry must name a defined network (the builder turns it into an ACL
+// rule allowing that network to reach this one), and a network can't list
+// itself (it always reaches itself; a self-entry is a mistake).
+func (c *Content) checkNetworkVisibility() {
+	names := make(map[string]bool, len(c.Networks))
+	for _, n := range c.Networks {
+		names[n.Name] = true
+	}
+	for _, n := range c.Networks {
+		for _, from := range n.VisibleFrom {
+			if from == n.Name {
+				c.addf(n.SourceFile, 0, "network %q lists itself in visible_from -- a network always reaches itself", n.Name)
+				continue
+			}
+			if !names[from] {
+				c.addf(n.SourceFile, 0, "network %q visible_from references %q, which is not a defined network", n.Name, from)
+			}
+		}
+	}
+}
+
+// peopleSourceList is a comma-joined list of loaded people source names, for a
+// "file does not match" error that tells the author what IS available.
+func peopleSourceList(c *Content) string {
+	if len(c.People) == 0 {
+		return "(no people/*.csv files)"
+	}
+	names := make([]string, 0, len(c.People))
+	for _, s := range c.People {
+		names = append(names, s.Name)
+	}
+	return strings.Join(names, ", ")
+}
+
+// checkScriptReferences resolves every step's `script:` action and every
+// schedule entry's `script:` action against the loaded Scripts. schedule
+// is its own top-level list now, not nested inside steps, so it gets its
+// own loop rather than a nested lookup inside the steps one.
+func (c *Content) checkScriptReferences() {
+	scripts := make(map[string]bool)
+	for _, s := range c.Scripts {
+		scripts[s.Name] = true
+	}
+
+	checkSteps := func(file string, steps []Step) {
+		for _, st := range steps {
+			if name, ok := st["script"].(string); ok && !scripts[name] {
+				c.addf(file, 0, "step references script %q, which does not exist", name)
+			}
+		}
+	}
+	checkSchedule := func(file string, entries []Step) {
+		for _, e := range entries {
+			if name, ok := e["script"].(string); ok && !scripts[name] {
+				c.addf(file, 0, "scheduled entry references script %q, which does not exist", name)
+			}
+		}
+	}
+	for _, h := range c.Hosts {
+		checkSteps(h.SourceFile, h.Steps)
+		checkSchedule(h.SourceFile, h.Schedule)
+	}
+	for _, ct := range c.Containers {
+		checkSteps(ct.SourceFile, ct.Steps)
+		checkSchedule(ct.SourceFile, ct.Schedule)
+	}
+}
+
+// milestoneNameRE is the shape of a `milestone:` name (the schema enforces the
+// same pattern; this keeps a schema-less load honest too).
+var milestoneNameRE = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+// objectSteps maps every host/container name to its (extends-merged) steps
+// and source file -- what a wait_for target is resolved against.
+func (c *Content) objectSteps() (map[string][]Step, map[string]string) {
+	steps := make(map[string][]Step)
+	files := make(map[string]string)
+	for _, h := range c.Hosts {
+		steps[h.Name], files[h.Name] = h.Steps, h.SourceFile
+	}
+	for _, ct := range c.Containers {
+		steps[ct.Name], files[ct.Name] = ct.Steps, ct.SourceFile
+	}
+	return steps, files
+}
+
+// checkStepWaits resolves every step's `wait_for:` against the repository and
+// checks every `milestone:` declaration. A wait that names a host, milestone
+// or step that doesn't exist would block its host forever at build time, so
+// it is a content error here instead. Loops through wait_for are caught by
+// checkDependsOnCycles, which walks both kinds of edge.
+func (c *Content) checkStepWaits() {
+	steps, files := c.objectSteps()
+	names := make([]string, 0, len(steps))
+	for n := range steps {
+		names = append(names, n)
+	}
+	sort.Strings(names) // deterministic error order
+
+	// Milestones declared per object, and how often each script step appears
+	// (a `step:` target must be unambiguous).
+	milestones := make(map[string]map[string]bool, len(steps))
+	scriptCount := make(map[string]map[string]int, len(steps))
+	for _, n := range names {
+		milestones[n] = map[string]bool{}
+		scriptCount[n] = map[string]int{}
+		for _, st := range steps[n] {
+			if s, ok := st["script"].(string); ok {
+				scriptCount[n][s]++
+			}
+			m := st.Milestone()
+			if m == "" {
+				continue
+			}
+			if !milestoneNameRE.MatchString(m) {
+				c.addf(files[n], 0, "milestone %q on %q may only use letters, digits, - and _", m, n)
+				continue
+			}
+			if milestones[n][m] {
+				c.addf(files[n], 0, "%q declares milestone %q on more than one step", n, m)
+			}
+			milestones[n][m] = true
+		}
+	}
+
+	for _, n := range names {
+		for _, st := range steps[n] {
+			for _, w := range st.WaitFor() {
+				file := files[n]
+				if _, ok := steps[w.Host]; !ok {
+					c.addf(file, 0, "wait_for on %q references %q, which is not a host or container in this repository", n, w.Host)
+					continue
+				}
+				if w.Host == n {
+					c.addf(file, 0, "wait_for on %q waits on itself (%q)", n, w.Host)
+					continue
+				}
+				switch {
+				case w.Milestone != "" && w.Step != "":
+					c.addf(file, 0, "wait_for on %q sets both milestone %q and step %q -- use one", n, w.Milestone, w.Step)
+				case w.Milestone != "":
+					if !milestones[w.Host][w.Milestone] {
+						c.addf(file, 0, "wait_for on %q: %q declares no milestone %q", n, w.Host, w.Milestone)
+					}
+				case w.Step != "":
+					switch scriptCount[w.Host][w.Step] {
+					case 0:
+						c.addf(file, 0, "wait_for on %q: %q has no script step %q", n, w.Host, w.Step)
+					case 1:
+					default:
+						c.addf(file, 0, "wait_for on %q: %q runs script %q more than once -- mark the one you mean with a milestone and wait on that", n, w.Host, w.Step)
+					}
+				}
+			}
+		}
+	}
+}
+
+// checkScheduleExpressions validates every schedule entry's `when:`
+// against internal/schedule's grammar -- a phrasing outside the grammar
+// fails validation at commit time, naming the file, the same as any
+// other content mistake this pass catches.
+func (c *Content) checkScheduleExpressions() {
+	check := func(file string, entries []Step) {
+		for _, e := range entries {
+			when, _ := e["when"].(string)
+			if _, err := schedule.Parse(when); err != nil {
+				c.addf(file, 0, "%s", err.Error())
+			}
+		}
+	}
+	for _, h := range c.Hosts {
+		check(h.SourceFile, h.Schedule)
+	}
+	for _, ct := range c.Containers {
+		check(ct.SourceFile, ct.Schedule)
+	}
+}
+
+// checkValidatorPlatforms catches the one validator the plan calls out by
+// name as platform-specific: "registry" only makes sense on Windows.
+// "Wrong platform is a validation error, not a runtime surprise... before
+// the build starts." This checks validate blocks authored directly on a
+// step; a script's own validate block propagating to whatever host runs it
+// is a many-to-many check not yet implemented here (see crossCheck's
+// doc comment).
+// isWindowsOS recognizes an os name as Windows for the registry-validator
+// platform check. Matches both the descriptive form ("windows-server-2022")
+// and the short form a builder image map often uses ("win2019", "win2022").
+func isWindowsOS(os string) bool {
+	lower := strings.ToLower(os)
+	return strings.Contains(lower, "windows") || strings.HasPrefix(lower, "win")
+}
+
+func (c *Content) checkValidatorPlatforms() {
+	check := func(file, os string, steps []Step) {
+		windows := isWindowsOS(os)
+		for _, st := range steps {
+			validate, _ := st["validate"].([]interface{})
+			for _, v := range validate {
+				vm, ok := v.(Step)
+				if !ok {
+					continue
+				}
+				if _, ok := vm["registry"]; ok && !windows {
+					c.addf(file, 0, "step uses the `registry` validator on a host whose os is %q -- registry is Windows-only", os)
+				}
+			}
+		}
+	}
+	for _, h := range c.Hosts {
+		check(h.SourceFile, h.OS, h.Steps)
+	}
+	// Containers don't have a meaningful Windows/Linux distinction the same
+	// way (image-based, not os-based) -- skipped deliberately, not an
+	// oversight.
+}
+
+// checkExtends validates every `extends:` reference: the target must be
+// another object of the SAME type (a host extends a host, not a container),
+// and the chain must not loop (self-reference or a longer A->B->A cycle). The
+// actual field merge is done in extends.go before this runs; a bad reference
+// here means the merge was skipped, so checkResolvedRequired will also flag any
+// field the object was then left missing.
+func (c *Content) checkExtends() {
+	// Per-type name sets: hosts and containers share one namespace for
+	// collisions, but extends is type-specific (a host can only extend a host).
+	hostNames := make(map[string]bool, len(c.Hosts))
+	for _, h := range c.Hosts {
+		hostNames[h.Name] = true
+	}
+	containerNames := make(map[string]bool, len(c.Containers))
+	for _, ct := range c.Containers {
+		containerNames[ct.Name] = true
+	}
+	netNames := c.networkNames()
+	envNames := make(map[string]bool, len(c.Environments))
+	for _, e := range c.Environments {
+		envNames[e.Name] = true
+	}
+
+	for _, n := range c.Networks {
+		c.checkExtendsRef(n.SourceFile, "network", n.Name, n.Extends, func(s string) bool { _, ok := netNames[s]; return ok },
+			func(name string) string { return c.networkExtendsTarget(name) })
+	}
+	for _, h := range c.Hosts {
+		c.checkExtendsRef(h.SourceFile, "host", h.Name, h.Extends, func(s string) bool { return hostNames[s] },
+			func(name string) string { return c.hostExtendsTarget(name) })
+	}
+	for _, ct := range c.Containers {
+		c.checkExtendsRef(ct.SourceFile, "container", ct.Name, ct.Extends, func(s string) bool { return containerNames[s] },
+			func(name string) string { return c.containerExtendsTarget(name) })
+	}
+	for _, e := range c.Environments {
+		c.checkExtendsRef(e.SourceFile, "environment", e.Name, e.Extends, func(s string) bool { return envNames[s] },
+			func(name string) string { return c.environmentExtendsTarget(name) })
+	}
+}
+
+// checkExtendsRef validates one object's extends: exists (same type), isn't a
+// self-reference, and isn't part of a multi-node cycle. next walks one hop
+// along the chain (returns "" at the end or on a broken link).
+func (c *Content) checkExtendsRef(file, kind, name, extends string, exists func(string) bool, next func(string) string) {
+	if extends == "" {
+		return
+	}
+	if extends == name {
+		c.addf(file, 0, "%s %q extends itself", kind, name)
+		return
+	}
+	if !exists(extends) {
+		c.addf(file, 0, "%s %q extends %q, which is not a defined %s", kind, name, extends, kind)
+		return
+	}
+	// Walk the chain from this node; if we return to it, it's a cycle.
+	seen := map[string]bool{name: true}
+	for cur := extends; cur != ""; cur = next(cur) {
+		if seen[cur] {
+			c.addf(file, 0, "%s %q is part of an extends cycle (via %q)", kind, name, cur)
+			return
+		}
+		seen[cur] = true
+	}
+}
+
+func (c *Content) hostExtendsTarget(name string) string {
+	for _, h := range c.Hosts {
+		if h.Name == name {
+			return h.Extends
+		}
+	}
+	return ""
+}
+
+func (c *Content) containerExtendsTarget(name string) string {
+	for _, ct := range c.Containers {
+		if ct.Name == name {
+			return ct.Extends
+		}
+	}
+	return ""
+}
+
+func (c *Content) networkExtendsTarget(name string) string {
+	for _, n := range c.Networks {
+		if n.Name == name {
+			return n.Extends
+		}
+	}
+	return ""
+}
+
+func (c *Content) environmentExtendsTarget(name string) string {
+	for _, e := range c.Environments {
+		if e.Name == name {
+			return e.Extends
+		}
+	}
+	return ""
+}
+
+// checkResolvedRequired confirms that after extends-merging, an object that
+// used `extends:` to skip a schema-required field actually ended up with one
+// (from its base chain). Without this, `host: {name: web, extends: base}` where
+// base never supplied os would validate against the schema (which relaxes
+// os/size/disk when extends is present) and then resolve to a broken, empty
+// object. Only objects that used extends can reach here missing a field --
+// non-extending ones are already caught by the per-document schema.
+func (c *Content) checkResolvedRequired() {
+	for _, h := range c.Hosts {
+		if h.Extends == "" {
+			continue
+		}
+		for _, m := range missingHostFields(h) {
+			c.addf(h.SourceFile, 0, "host %q extends %q but still has no %s (its extends chain provides none)", h.Name, h.Extends, m)
+		}
+	}
+	for _, ct := range c.Containers {
+		if ct.Extends == "" {
+			continue
+		}
+		if ct.Image == "" && ct.Compose == "" {
+			c.addf(ct.SourceFile, 0, "container %q extends %q but still has no image or compose (its extends chain provides none)", ct.Name, ct.Extends)
+		}
+		if ct.Size == "" {
+			c.addf(ct.SourceFile, 0, "container %q extends %q but still has no size (its extends chain provides none)", ct.Name, ct.Extends)
+		}
+	}
+	for _, n := range c.Networks {
+		if n.Extends == "" {
+			continue
+		}
+		if n.CIDR == "" {
+			c.addf(n.SourceFile, 0, "network %q extends %q but still has no cidr (its extends chain provides none)", n.Name, n.Extends)
+		}
+	}
+	for _, e := range c.Environments {
+		if e.Extends == "" {
+			continue
+		}
+		if e.Teams == 0 {
+			c.addf(e.SourceFile, 0, "environment %q extends %q but still has no teams (its extends chain provides none)", e.Name, e.Extends)
+		}
+	}
+}
+
+// missingHostFields lists the schema-required host fields (os/size/disk) a host
+// still lacks after extends-merging.
+func missingHostFields(h Host) []string {
+	var out []string
+	if h.OS == "" {
+		out = append(out, "os")
+	}
+	if h.Size == "" {
+		out = append(out, "size")
+	}
+	if h.Disk == 0 {
+		out = append(out, "disk")
+	}
+	return out
+}
+
+// Summary is a quick human-readable count, used by cmd/laforge's minimal
+// validate command (see cmd/laforge/main.go) ahead of the real `laforge
+// check`.
+func (c *Content) Summary() string {
+	return fmt.Sprintf(
+		"%d environment(s), %d network(s), %d host(s), %d container(s), %d script(s), %d people source(s), %d error(s)",
+		len(c.Environments), len(c.Networks), len(c.Hosts), len(c.Containers), len(c.Scripts), len(c.People), len(c.Errors),
+	)
+}
+
+// checkComposeContainers covers what the schema can't say about a container
+// that runs a Compose project: the path stays inside the repo, the fields that
+// only mean something for a single image aren't set, and the project's own
+// files aren't being read as LaForge content.
+func (c *Content) checkComposeContainers() {
+	for _, ct := range c.Containers {
+		if ct.Compose == "" {
+			if ct.Disk != 0 {
+				c.addf(ct.SourceFile, 0, "container %q sets disk, which only applies with compose", ct.Name)
+			}
+			continue
+		}
+		if ct.Image != "" {
+			c.addf(ct.SourceFile, 0, "container %q sets both image and compose; it runs one or the other", ct.Name)
+		}
+		if len(ct.Env) > 0 || len(ct.Command) > 0 {
+			c.addf(ct.SourceFile, 0, "container %q sets env/command, which apply to a single image; with compose, put them in the compose file", ct.Name)
+		}
+		if path.IsAbs(ct.Compose) || ct.ComposeFile == ".." || strings.HasPrefix(ct.ComposeFile, "../") {
+			c.addf(ct.SourceFile, 0, "container %q: compose %q must be a path inside the content repo, relative to this file", ct.Name, ct.Compose)
+			continue
+		}
+		// The compose project's YAML is Compose's, not LaForge's. If any of it
+		// was read as content, say how to fix it rather than leaving the author
+		// with a bare "no type header" on a file that is perfectly valid.
+		dir := path.Dir(ct.ComposeFile)
+		if dir == "." || dir == path.Dir(filepath.ToSlash(ct.SourceFile)) {
+			c.addf(ct.SourceFile, 0, "container %q: compose file %q must be in its own directory (the whole directory is shipped with it), not alongside LaForge content", ct.Name, ct.Compose)
+			continue
+		}
+		for _, e := range c.Errors {
+			if strings.HasPrefix(filepath.ToSlash(e.File), dir+"/") {
+				c.addf(ct.SourceFile, 0, "container %q: %s/ is a Compose project, not LaForge content -- add \"%s/\" to %s at the repo root", ct.Name, dir, dir, IgnoreFile)
+				break
+			}
+		}
+	}
+}

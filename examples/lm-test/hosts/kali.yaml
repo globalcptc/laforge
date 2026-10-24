@@ -1,0 +1,9 @@
+host:
+  name: kali
+  os: kali
+  size: large
+  disk: 256
+  ports: { tcp: ["1-65535"], udp: ["1-65535"] }
+  tags: { role: student-vdi }
+  steps:
+    - script: prepare-kali

@@ -1,3 +1,0 @@
-# Any test files made in the "examples" directory directly.
-#   All test files should be created in their own subdirectory.
-/*.go

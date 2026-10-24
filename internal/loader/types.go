@@ -1,0 +1,365 @@
+// Package loader walks a content repository, classifies each document by its
+// `<type>: <name>` header, validates it against internal/schema, decodes it
+// into these typed structs, and runs the cross-file checks a single
+// document's JSON Schema can't express on its own (name collisions,
+// depends_on targets existing, public ports being a subset of a host's own
+// ports).
+package loader
+
+// Finding is deliberately three fields and nothing else — see
+// "Findings are just an inline list... No names, no IDs, no separate files."
+type Finding struct {
+	Severity    int    `yaml:"severity" json:"severity"`
+	Difficulty  int    `yaml:"difficulty" json:"difficulty"`
+	Description string `yaml:"description" json:"description"`
+}
+
+type Ports struct {
+	TCP []string `yaml:"tcp,omitempty" json:"tcp,omitempty"`
+	UDP []string `yaml:"udp,omitempty" json:"udp,omitempty"`
+}
+
+// Step is intentionally loose (map[string]interface{}) rather than a tagged
+// union in Go: the schema already enforces "exactly one action key," and a
+// generic map is what the future template/render engine and
+// the agent-command translation (later) both need to inspect without this
+// package having to know every action shape twice.
+type Step map[string]interface{}
+
+// ActionKey returns the step's one action key (e.g. "script", "download"),
+// ignoring "validate" and "when" -- "validate" may ride alongside any
+// step, and "when" is a schedule entry's own required timing field,
+// never an action itself.
+// The same Step type represents both a steps: entry and a schedule:
+// entry (identical shape, one more key), which is exactly why "when"
+// has to be excluded here too, not just where a schedule entry gets
+// parsed -- map iteration order is random, so silently returning "when"
+// as if it were the real action only shows up intermittently, not on
+// every run. Schema validation guarantees exactly one real action key
+// exists by the time a Step reaches here.
+func (s Step) ActionKey() string {
+	for k := range s {
+		if !stepModifierKeys[k] {
+			return k
+		}
+	}
+	return ""
+}
+
+// stepModifierKeys are the keys a step or schedule entry may carry beside its
+// one action: validate (checks after it), when (a schedule entry's timing),
+// wait_for (hold this step until another host is ready) and milestone (a name
+// other hosts' wait_for can point at). None of them is ever an action.
+var stepModifierKeys = map[string]bool{"validate": true, "when": true, "wait_for": true, "milestone": true}
+
+// WaitFor is one entry of a step's `wait_for:` -- hold this step, and every
+// step after it, until Host (the same team's copy, every copy of it) reaches
+// Milestone, or has run the script step named Step, or -- with neither -- has
+// finished all of its steps.
+type WaitFor struct {
+	Host      string `json:"host"`
+	Milestone string `json:"milestone,omitempty"`
+	Step      string `json:"step,omitempty"`
+	// Rebuild, when false, keeps this host out of the target's rebuild
+	// cascade. Nil means the default, true.
+	Rebuild *bool `json:"rebuild,omitempty"`
+}
+
+// RebuildsWithTarget reports whether rebuilding Host (with include dependents)
+// also rebuilds the host that waits on it -- `rebuild:` defaults to true.
+func (w WaitFor) RebuildsWithTarget() bool {
+	return w.Rebuild == nil || *w.Rebuild
+}
+
+// Label is the human name of what this wait is for, as the UI's Dependency
+// Blocked note shows it: "bff-dc-01 · domain-ready", "bff-dc-01 · step
+// win-domain-populate", or a bare "bff-dc-01" for a whole-host wait.
+func (w WaitFor) Label() string {
+	switch {
+	case w.Milestone != "":
+		return w.Host + " · " + w.Milestone
+	case w.Step != "":
+		return w.Host + " · step " + w.Step
+	default:
+		return w.Host
+	}
+}
+
+// Milestone is the step's `milestone:` name, or "" when it declares none.
+func (s Step) Milestone() string {
+	m, _ := s["milestone"].(string)
+	return m
+}
+
+// WaitFor decodes the step's `wait_for:` -- a single mapping or a list of
+// them -- into its entries. A step without one returns nil. Malformed entries
+// (the schema rejects them first) are skipped rather than guessed at.
+func (s Step) WaitFor() []WaitFor {
+	raw, ok := s["wait_for"]
+	if !ok || raw == nil {
+		return nil
+	}
+	var items []interface{}
+	if list, ok := raw.([]interface{}); ok {
+		items = list
+	} else {
+		items = []interface{}{raw}
+	}
+	var out []WaitFor
+	for _, it := range items {
+		var m map[string]interface{}
+		switch x := it.(type) {
+		case map[string]interface{}:
+			m = x
+		case Step:
+			m = map[string]interface{}(x)
+		default:
+			continue
+		}
+		w := WaitFor{}
+		w.Host, _ = m["host"].(string)
+		w.Milestone, _ = m["milestone"].(string)
+		w.Step, _ = m["step"].(string)
+		if b, ok := m["rebuild"].(bool); ok {
+			w.Rebuild = &b
+		}
+		if w.Host == "" {
+			continue
+		}
+		out = append(out, w)
+	}
+	return out
+}
+
+// Every SourceFile below is set by the loader after decode (see loader.go)
+// and is never present in the YAML/JSON itself, in either direction:
+// `yaml:"-"`/`json:"-"` keep it out of output too, which matters once
+// something (the converter in internal/hclconvert, a future `laforge fmt`,
+// internal/ingest persisting to Postgres, internal/api serving JSON) reuses
+// these types for output rather than only reading them.
+//
+// omitempty throughout is the same idea applied to every genuinely optional
+// field: a hand-authored file typically omits what it doesn't set, and
+// generated output should read the same way, not full of `findings: []` /
+// `tags: {}` / `extends: ""` noise on every object that doesn't use them.
+//
+// json tags mirror the yaml tags key-for-key rather than falling back to Go's
+// default (capitalized field name) JSON encoding, so a Postgres jsonb column
+// or an API response holding one of these looks exactly like the YAML a
+// person would have hand-authored, not a differently-cased shadow of it.
+
+type Network struct {
+	SourceFile string `yaml:"-" json:"-"`
+	Name       string `yaml:"name" json:"name"`
+	CIDR       string `yaml:"cidr" json:"cidr"`
+	// VisibleFrom is the ACL allowlist for this network: the other networks
+	// (by name) that are allowed to reach it. Enforced as ACLs on the OVN
+	// routing host by the builder. Replaces the old boolean `vdi_visible`,
+	// which could only say "the VDI network reaches this" -- an array lets any
+	// network's reachability be defined explicitly (`visible_from: [vdi, client]`).
+	VisibleFrom []string          `yaml:"visible_from,omitempty" json:"visible_from,omitempty"`
+	Vars        map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
+	Tags        map[string]string `yaml:"tags,omitempty" json:"tags,omitempty"`
+	Findings    []Finding         `yaml:"findings,omitempty" json:"findings,omitempty"`
+	Extends     string            `yaml:"extends,omitempty" json:"extends,omitempty"`
+}
+
+type Host struct {
+	SourceFile string   `yaml:"-" json:"-"`
+	Name       string   `yaml:"name" json:"name"`
+	OS         string   `yaml:"os" json:"os"`
+	Size       string   `yaml:"size" json:"size"`
+	Disk       int      `yaml:"disk" json:"disk"`
+	Ports      Ports    `yaml:"ports,omitempty" json:"ports,omitempty"`
+	// Public is the subset of Ports reachable from OUTSIDE the environment
+	// (RDP and the like). nil when absent or `false`. The builder realizes it
+	// (a public IP, or a port-NAT on a shared uplink IP) -- see
+	// internal/orchestrator.ReconcileExternalAccess. A property of the host, so
+	// it lives here, not on the environment placement.
+	Public     *Ports   `yaml:"public,omitempty" json:"public,omitempty"`
+	DependsOn  []string `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
+	Steps      []Step   `yaml:"steps,omitempty" json:"steps,omitempty"`
+	// Schedule is deliberately a separate list from Steps, not a step
+	// kind within it -- "steps run once, in order; schedule entries fire
+	// independently, on their own clock" (a real design mismatch in the
+	// old shape, where `schedule:` lived inside `steps:` despite never
+	// behaving like one). Each entry is the same loose Step shape plus a
+	// required `when:` natural-language expression (internal/schedule).
+	Schedule []Step            `yaml:"schedule,omitempty" json:"schedule,omitempty"`
+	Vars     map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
+	Tags     map[string]string `yaml:"tags,omitempty" json:"tags,omitempty"`
+	Findings []Finding         `yaml:"findings,omitempty" json:"findings,omitempty"`
+	People   []PeopleRef       `yaml:"people,omitempty" json:"people,omitempty"`
+	Extends  string            `yaml:"extends,omitempty" json:"extends,omitempty"`
+}
+
+type Container struct {
+	SourceFile string   `yaml:"-" json:"-"`
+	Name string `yaml:"name" json:"name"`
+	// Image is the OCI image ref the container runs, e.g. "nginx:alpine" or
+	// "registry.internal/team/app:1.2". LaForge runs it as a Docker container
+	// (inside a thin nesting LXD instance on Incus) -- see the builder.
+	Image string `yaml:"image" json:"image"`
+	// Compose runs a Docker Compose project instead of a single image: the
+	// path to its compose file, relative to this definition's own file (like a
+	// script's `source:`). The compose file's directory is the project and is
+	// shipped whole. Exactly one of Image and Compose is set.
+	Compose string `yaml:"compose,omitempty" json:"compose,omitempty"`
+	// ComposeFile is Compose resolved to a slash-separated path from the repo
+	// root, set by the loader -- what everything downstream reads, and what
+	// stays correct when Compose was inherited through `extends`.
+	ComposeFile string `yaml:"-" json:"-"`
+	Size        string `yaml:"size" json:"size"`
+	// Disk is the root disk, in GB, of the machine a Compose container runs
+	// on. Unused for an image container.
+	Disk int `yaml:"disk,omitempty" json:"disk,omitempty"`
+	// Env is passed to the container as environment variables (docker -e).
+	Env map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
+	// Command overrides the image's default command/entrypoint arguments.
+	Command   []string `yaml:"command,omitempty" json:"command,omitempty"`
+	Ports     Ports    `yaml:"ports,omitempty" json:"ports,omitempty"`
+	// Public: see Host.Public -- the subset of Ports reachable from outside the
+	// environment.
+	Public    *Ports   `yaml:"public,omitempty" json:"public,omitempty"`
+	DependsOn []string `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
+	Steps     []Step   `yaml:"steps,omitempty" json:"steps,omitempty"`
+	// Schedule: see Host.Schedule's own comment -- same shape, same reasoning.
+	Schedule []Step            `yaml:"schedule,omitempty" json:"schedule,omitempty"`
+	Vars     map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
+	Tags     map[string]string `yaml:"tags,omitempty" json:"tags,omitempty"`
+	Findings []Finding         `yaml:"findings,omitempty" json:"findings,omitempty"`
+	People   []PeopleRef       `yaml:"people,omitempty" json:"people,omitempty"`
+	Extends  string            `yaml:"extends,omitempty" json:"extends,omitempty"`
+}
+
+type Script struct {
+	SourceFile   string                   `yaml:"-" json:"-"`
+	Name         string                   `yaml:"name" json:"name"`
+	Description  string                   `yaml:"description,omitempty" json:"description,omitempty"`
+	Language     string                   `yaml:"language" json:"language"`
+	Source       string                   `yaml:"source" json:"source"`
+	Timeout      int                      `yaml:"timeout,omitempty" json:"timeout,omitempty"`
+	Args         []string                 `yaml:"args,omitempty" json:"args,omitempty"`
+	IgnoreErrors bool                     `yaml:"ignore_errors,omitempty" json:"ignore_errors,omitempty"`
+	// Retries overrides how many times a failed run of this script is retried
+	// (nil = the gateway default). `retries: 0` makes the first failure final,
+	// which suits a long deterministic script (a wait loop) that would only
+	// fail the same way again. A timeout is never retried either way.
+	Retries      *int                     `yaml:"retries,omitempty" json:"retries,omitempty"`
+	// Reboots marks a script that reboots the host itself (dcpromo, a driver
+	// install, a Windows feature that requires a restart). Such a script never
+	// reports a result -- the reboot kills the agent mid-command -- so LaForge
+	// must not re-run it on the way back (it would hit "already done" errors like
+	// "This server is already domain joined"). Instead the agent reconnecting
+	// after the reboot is treated as the step completing. See internal/gateway.
+	Reboots      bool                     `yaml:"reboots,omitempty" json:"reboots,omitempty"`
+	Tags         map[string]string        `yaml:"tags,omitempty" json:"tags,omitempty"`
+	Findings     []Finding                `yaml:"findings,omitempty" json:"findings,omitempty"`
+	People       []PeopleRef              `yaml:"people,omitempty" json:"people,omitempty"`
+	Validate     []map[string]interface{} `yaml:"validate,omitempty" json:"validate,omitempty"`
+}
+
+type DNSRecord struct {
+	Name     string `yaml:"name" json:"name"`
+	Type     string `yaml:"type" json:"type"`
+	Target   string `yaml:"target" json:"target"`
+	Priority int    `yaml:"priority,omitempty" json:"priority,omitempty"`
+}
+
+type DNS struct {
+	Type       string      `yaml:"type,omitempty" json:"type,omitempty"`
+	RootDomain string      `yaml:"root_domain,omitempty" json:"root_domain,omitempty"`
+	DNSServers []string    `yaml:"dns_servers,omitempty" json:"dns_servers,omitempty"`
+	NTPServers []string    `yaml:"ntp_servers,omitempty" json:"ntp_servers,omitempty"`
+	Records    []DNSRecord `yaml:"records,omitempty" json:"records,omitempty"`
+}
+
+type AccessWindow struct {
+	Open  string `yaml:"open" json:"open"`
+	Close string `yaml:"close" json:"close"`
+}
+
+type Copy struct {
+	As        string `yaml:"as" json:"as"`
+	LastOctet int    `yaml:"last_octet" json:"last_octet"`
+}
+
+type Environment struct {
+	SourceFile  string            `yaml:"-" json:"-"`
+	Name        string            `yaml:"name" json:"name"`
+	Schema      int               `yaml:"schema,omitempty" json:"schema,omitempty"`
+	Description string            `yaml:"description,omitempty" json:"description,omitempty"`
+	Teams       int               `yaml:"teams" json:"teams"`
+	// CIDR is the overall address space of one team's topology: the supernet
+	// that every network in this environment must fit inside. Optional and
+	// builder-agnostic -- the on-prem builders (Incus/MicroCloud) ignore it
+	// because they give each network its own bridge and never need a containing
+	// range. A cloud builder that puts a whole team in one VPC (AWS) uses it as
+	// that VPC's CIDR and carves each network's subnet out of it, which is why a
+	// team's networks must all live within one range there. When set, the loader
+	// enforces that every network this environment places fits within it (see
+	// checks.go checkEnvironmentCIDR); when unset, AWS falls back to inferring a
+	// containing /16 from the first network it deploys.
+	CIDR string `yaml:"cidr,omitempty" json:"cidr,omitempty"`
+	RootPass    string            `yaml:"root_password,omitempty" json:"root_password,omitempty"`
+	Start       string            `yaml:"start,omitempty" json:"start,omitempty"`
+	Stop        string            `yaml:"stop,omitempty" json:"stop,omitempty"`
+	DNS         *DNS              `yaml:"dns,omitempty" json:"dns,omitempty"`
+	Access      []AccessWindow    `yaml:"access,omitempty" json:"access,omitempty"`
+	Vars        map[string]string `yaml:"vars,omitempty" json:"vars,omitempty"`
+	Tags        map[string]string `yaml:"tags,omitempty" json:"tags,omitempty"`
+	Findings    []Finding         `yaml:"findings,omitempty" json:"findings,omitempty"`
+	// AgentDebug turns on the agent's local debug log (a file beside the agent
+	// binary) for every host/container in this environment. Off by default, and
+	// baked into each agent binary at deploy time so it can't be flipped on the
+	// box -- see internal/agentdelivery and agent/src/diag.rs. Default (false)
+	// means the agent is silent locally; only what it sends the servers leaves
+	// it.
+	AgentDebug bool `yaml:"agent-debug,omitempty" json:"agent-debug,omitempty"`
+	// ContainerLogs, when set, forwards every container's console output to an
+	// external log collector using each builder's NATIVE mechanism (a docker
+	// log driver on Incus/MicroCloud, the Docker daemon default before
+	// `docker compose up` for a compose project, a task logConfiguration on AWS
+	// Fargate, ...) -- LaForge never ships the bytes itself. driver + options
+	// pass straight through to that mechanism. Container-only (hosts are VMs
+	// with their own logging); nil disables it.
+	ContainerLogs *ContainerLogs `yaml:"container_logs,omitempty" json:"container_logs,omitempty"`
+	// Networks: network name -> object name (host or container) -> copies
+	Networks map[string]map[string][]Copy `yaml:"networks,omitempty" json:"networks,omitempty"`
+	Extends  string                       `yaml:"extends,omitempty" json:"extends,omitempty"`
+}
+
+// ContainerLogs is the environment's container log-forwarding config: a log
+// driver name and its driver-specific options (the exact keys the driver
+// expects, e.g. splunk-url/splunk-token for the "splunk" driver). Applied per
+// builder with that platform's native logging; see Environment.ContainerLogs.
+type ContainerLogs struct {
+	Driver  string            `yaml:"driver" json:"driver"`
+	Options map[string]string `yaml:"options,omitempty" json:"options,omitempty"`
+}
+
+// Person is one row of a people/*.csv file. Columns beyond username are
+// intentionally a free-form bag -- see "A people CSV is data, not
+// configuration" -- so a repo can add whatever columns its scripts need
+// without touching this package.
+type Person struct {
+	SourceFile string            `yaml:"-" json:"-"`
+	Username   string            `yaml:"username" json:"username"`
+	Attributes map[string]string `yaml:"attributes,omitempty" json:"attributes,omitempty"`
+}
+
+type PeopleSource struct {
+	SourceFile string   `yaml:"-" json:"-"`
+	Name       string   `yaml:"name" json:"name"` // "employees" from people/employees.csv
+	People     []Person `yaml:"people,omitempty" json:"people,omitempty"`
+}
+
+// PeopleRef is one entry in an object's `people:` list: a whole people/*.csv
+// file (by name, no extension) whose rows this object concerns, optionally
+// narrowed to a subset of usernames. An unfiltered ref means "everyone in that
+// file"; Filter, when set, means "just these usernames from that file." The
+// resolved set is what a script sees as `{{ .people }}` (see internal/render).
+type PeopleRef struct {
+	File   string   `yaml:"file" json:"file"`
+	Filter []string `yaml:"filter,omitempty" json:"filter,omitempty"`
+}

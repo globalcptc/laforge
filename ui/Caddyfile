@@ -1,0 +1,9 @@
+# In-container static server for the built SPA. Plain HTTP on :80 -- the
+# edge (your host Caddy + Cloudflare) terminates TLS and proxies to this.
+:80 {
+	root * /srv
+	encode gzip zstd
+	# SPA fallback: unknown paths return index.html so client-side routing works.
+	try_files {path} /index.html
+	file_server
+}

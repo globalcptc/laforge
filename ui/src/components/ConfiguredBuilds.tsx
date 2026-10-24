@@ -1,0 +1,560 @@
+import { useMemo, useState } from 'react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { ChevronDown, GitBranch, GitCommitHorizontal, Hammer, IterationCw, MousePointerClick, Plus, Rocket, Lock, Unlock, Star, Trash2, RefreshCw, RotateCcw } from 'lucide-react'
+import {
+  useBuilderConfigs,
+  useBuilds,
+  useConfiguredBuilds,
+  useCreateConfiguredBuild,
+  useTriggerBuild,
+  useSyncConfiguredBuild,
+  useDeleteConfiguredBuild,
+  useSetConfiguredBuildAutoDeploy,
+  useSetConfiguredBuildHoldOnStepChange,
+  useSetConfiguredBuildFavorite,
+  useSetLock,
+} from '../api/hooks'
+import { ApiError } from '../api/client'
+import { useTimeFormat } from '../lib/time'
+import { NewBuildModal } from './NewBuildModal'
+import { StatusBadge } from './StatusBadge'
+import type { Build, ConfiguredBuild } from '../api/types'
+import { Button, Card, CardHeader, cn, Spinner, Table, TableScroller, Td, Th } from '../ui'
+import { BuilderPill } from './BuilderPill'
+
+// Which branch cards are twisted open persists across navigation and
+// reloads (direct product feedback), keyed by the configured-build id
+// (globally unique). Per-viewer convenience only, so localStorage is the
+// right home; every access is guarded since it can be blocked or throw.
+const EXPANDED_KEY = 'laforge:configured-builds:expanded'
+
+function readExpandedIds(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(EXPANDED_KEY) ?? '[]') as string[])
+  } catch {
+    return new Set()
+  }
+}
+
+function persistExpanded(id: string, expanded: boolean) {
+  try {
+    const s = readExpandedIds()
+    if (expanded) s.add(id)
+    else s.delete(id)
+    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...s]))
+  } catch {
+    // Storage blocked (private mode): the twist state just won't persist.
+  }
+}
+
+// "A build is always configured explicitly: repository, branch,
+// environment file, builder config" -- the API for
+// this has existed for a while (internal/api/builds.go). Auto-deploy
+// (per branch) and lock toggles get their first UI surface
+// here too -- "auto-build is on by default, always... both can be turned
+// off per repository" and "marking the competition started locks
+// automatic deploys."
+//
+// Builds (the actual environments) are grouped *under* the configured
+// build that produced them (direct product feedback: a flat build list
+// "doesn't map to configured builds") -- each branch is a collapsible
+// section showing its last build's state and a small history strip inline,
+// expanding to that branch's own builds.
+export function ConfiguredBuilds({ repoId }: { repoId: string }) {
+  const { data: builds, isLoading } = useConfiguredBuilds(repoId)
+  const { data: allBuilds } = useBuilds(repoId)
+  const { data: builderConfigs } = useBuilderConfigs()
+  const kindByName = useMemo(() => new Map((builderConfigs ?? []).map((bc) => [bc.name, bc.kind])), [builderConfigs])
+  const colorByName = useMemo(() => new Map((builderConfigs ?? []).map((bc) => [bc.name, bc.color ?? ''])), [builderConfigs])
+  const create = useCreateConfiguredBuild(repoId)
+  const [showForm, setShowForm] = useState(false)
+
+  // Group every build under its configured build. Builds predating a
+  // configured build, or triggered outside one, have a null
+  // configured_build_id and fall into the "unassociated" bucket below so
+  // they never silently disappear.
+  const { byConfigured, unassociated } = useMemo(() => {
+    const byConfigured = new Map<string, Build[]>()
+    const unassociated: Build[] = []
+    for (const b of allBuilds ?? []) {
+      if (b.configured_build_id) {
+        const list = byConfigured.get(b.configured_build_id) ?? []
+        list.push(b)
+        byConfigured.set(b.configured_build_id, list)
+      } else {
+        unassociated.push(b)
+      }
+    }
+    // Newest first within each group.
+    const cmp = (a: Build, z: Build) => new Date(z.created_at).getTime() - new Date(a.created_at).getTime()
+    for (const list of byConfigured.values()) list.sort(cmp)
+    unassociated.sort(cmp)
+    return { byConfigured, unassociated }
+  }, [allBuilds])
+
+  return (
+    <Card className="mb-6">
+      <CardHeader
+        title={
+          <span className="flex items-center gap-1.5">
+            <Hammer size={14} /> Configured Builds
+          </span>
+        }
+        actions={
+          <Button variant="primary" size="sm" onClick={() => setShowForm(true)}>
+            <Plus size={12} /> New Build
+          </Button>
+        }
+      />
+
+      <NewBuildModal
+        repoId={repoId}
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        onCreate={async (req) => {
+          await create.mutateAsync(req)
+          setShowForm(false)
+        }}
+      />
+
+      {isLoading && (
+        <div className="flex items-center gap-2 p-4 text-sm text-fg-muted">
+          <Spinner /> Loading…
+        </div>
+      )}
+
+      {!isLoading && (!builds || builds.length === 0) && !showForm && (
+        <div className="p-4 text-sm text-fg-muted">
+          Nothing configured yet. A configured build ties a branch, an environment file, and a builder
+          together -- every CI-passing push to that branch then tracks a validated commit here, ready to build.
+        </div>
+      )}
+
+      {builds && builds.length > 0 && (
+        <div className="flex flex-col gap-2 p-3 pt-0">
+          {builds.map((cb) => (
+            <ConfiguredBuildRow
+              key={cb.id}
+              cb={cb}
+              repoId={repoId}
+              builds={byConfigured.get(cb.id) ?? []}
+              builderKind={kindByName.get(cb.builder_config_name)}
+              builderColor={colorByName.get(cb.builder_config_name)}
+            />
+          ))}
+          {unassociated.length > 0 && <UnassociatedBuilds repoId={repoId} builds={unassociated} />}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function ConfiguredBuildRow({
+  cb,
+  repoId,
+  builds,
+  builderKind,
+  builderColor,
+}: {
+  cb: ConfiguredBuild
+  repoId: string
+  builds: Build[]
+  builderKind?: string
+  builderColor?: string
+}) {
+  const fmt = useTimeFormat()
+  const navigate = useNavigate()
+  const trigger = useTriggerBuild(repoId)
+  const sync = useSyncConfiguredBuild(repoId)
+  const remove = useDeleteConfiguredBuild(repoId)
+  const setAutoDeploy = useSetConfiguredBuildAutoDeploy(repoId)
+  const setHold = useSetConfiguredBuildHoldOnStepChange(repoId)
+  const setLock = useSetLock(repoId)
+  const favorite = useSetConfiguredBuildFavorite(repoId)
+
+  // A configured build can't be removed while any of its builds owns or is
+  // acting on real infrastructure -- the same "live" set the server enforces.
+  const hasLiveBuild = builds.some((b) => ['deploying', 'building', 'finished', 'tearing_down'].includes(b.status))
+  const [error, setError] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState(() => readExpandedIds().has(cb.id))
+  // Only the two most recent builds show by default; older ones collapse behind a
+  // "show older" row so a long branch history doesn't fill the page.
+  const [showOlder, setShowOlder] = useState(false)
+
+  function toggleExpanded() {
+    setExpanded((v) => {
+      persistExpanded(cb.id, !v)
+      return !v
+    })
+  }
+
+  const lastBuild = builds[0] ?? null
+
+  async function onSync() {
+    setError(null)
+    try {
+      await sync.mutateAsync(cb.id)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Sync failed')
+    }
+  }
+
+  async function onRemove() {
+    if (!window.confirm(`Remove the configured build for ${cb.environment_path} on ${cb.branch}? Its planned builds are discarded; deployed builds are kept as history.`)) return
+    setError(null)
+    try {
+      await remove.mutateAsync(cb.id)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Remove failed')
+    }
+  }
+
+  async function onBuild() {
+    setError(null)
+    try {
+      const build = await trigger.mutateAsync(cb.id)
+      // Take the operator straight to the new build -- Build Now is a deliberate
+      // "I want to watch this deploy" action, so land on its page.
+      navigate({ to: '/repos/$repoId/builds/$buildId', params: { repoId, buildId: build.id } })
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Build failed')
+    }
+  }
+
+  async function onToggleAutoDeploy() {
+    setError(null)
+    try {
+      await setAutoDeploy.mutateAsync({ configuredBuildId: cb.id, enabled: !cb.auto_deploy_enabled })
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to change auto-deploy')
+    }
+  }
+
+  async function onToggleHold() {
+    setError(null)
+    try {
+      await setHold.mutateAsync({ configuredBuildId: cb.id, enabled: !cb.hold_on_step_change })
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to change the hold')
+    }
+  }
+
+  async function onToggleLock() {
+    setError(null)
+    try {
+      await setLock.mutateAsync({ configuredBuildId: cb.id, started: !cb.competition_started })
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to change lock')
+    }
+  }
+
+  return (
+    <div className="overflow-hidden rounded-token border border-border">
+      <div className="flex items-center gap-3 px-3 py-2.5">
+        <button
+          onClick={() => favorite.mutate({ configuredBuildId: cb.id, favorited: !cb.favorited })}
+          disabled={favorite.isPending}
+          title={cb.favorited ? 'Unfavorite — remove from the top of your list' : 'Favorite — pin to the top of your list'}
+          aria-label={cb.favorited ? 'Unfavorite this build' : 'Favorite this build'}
+          aria-pressed={cb.favorited ?? false}
+          className="shrink-0 text-fg-subtle hover:text-warning disabled:opacity-40"
+        >
+          <Star size={15} className={cn(cb.favorited && 'fill-warning text-warning')} />
+        </button>
+        <button
+          onClick={toggleExpanded}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          aria-expanded={expanded}
+          title={builds.length > 0 ? `${builds.length} build${builds.length === 1 ? '' : 's'}` : 'No builds yet'}
+        >
+          <ChevronDown size={14} className={cn('shrink-0 text-fg-subtle transition-transform', !expanded && '-rotate-90')} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              {/* Lead with the environment's own name (from the config YAML) --
+                  what the build actually is -- rather than the branch. It lives
+                  on the builds, so fall back to the file name until the first
+                  build exists. */}
+              <span className="truncate font-medium text-fg">{lastBuild?.environment_name ?? cb.environment_path}</span>
+              {lastBuild ? <StatusBadge status={lastBuild.status} /> : <span className="text-xs italic text-fg-subtle">no builds yet</span>}
+            </div>
+            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-fg-muted">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-surface-sunken px-1.5 py-0.5 font-mono text-[11px]" title={`Branch: ${cb.branch}`}>
+                <GitBranch size={10} className="text-fg-subtle" /> {cb.branch}
+              </span>
+              <span className="truncate">{cb.environment_path}</span>
+              <BuilderPill name={cb.builder_config_name} color={builderColor} kind={builderKind} size="xs" />
+            </div>
+          </div>
+        </button>
+
+        <BuildHistoryStrip builds={builds} repoId={repoId} />
+
+        <button
+          onClick={onToggleAutoDeploy}
+          disabled={setAutoDeploy.isPending}
+          title={
+            cb.auto_deploy_enabled
+              ? 'Auto-deploy on: every CI-passing push to this branch builds and deploys. Click for build-only.'
+              : 'Build-only: pushes still build (validated, free) but wait for a manual deploy. Click to auto-deploy.'
+          }
+          className={cn(
+            'flex shrink-0 items-center gap-1 rounded-token-sm border px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40',
+            cb.auto_deploy_enabled ? 'border-accent text-accent' : 'border-border text-fg-muted hover:bg-surface-hover',
+          )}
+        >
+          <Rocket size={12} /> {cb.auto_deploy_enabled ? 'Auto-deploy' : 'Build only'}
+        </button>
+
+        <button
+          onClick={onToggleHold}
+          disabled={setHold.isPending}
+          title={
+            cb.hold_on_step_change
+              ? 'Holding: a push that changes only a host’s steps or scripts marks the host (“steps changed”) instead of recreating it; restart it from a step to apply. Changes to its image, size, ports or dependencies still recreate it. Click to recreate on any change.'
+              : 'Recreating: a push that changes a host’s steps or scripts recreates the host from scratch, like any other change. Click to hold such hosts and restart them from the changed step instead.'
+          }
+          className={cn(
+            'flex shrink-0 items-center gap-1 rounded-token-sm border px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40',
+            cb.hold_on_step_change ? 'border-warning text-warning' : 'border-border text-fg-muted hover:bg-surface-hover',
+          )}
+        >
+          <RotateCcw size={12} /> {cb.hold_on_step_change ? 'Hold on step change' : 'Recreate on change'}
+        </button>
+
+        <button
+          onClick={onToggleLock}
+          disabled={setLock.isPending}
+          title={
+            cb.competition_started
+              ? 'Protected: automatic deploys are locked. Manual deploys, rebuilds, and ad-hoc tasks still work. Click to unprotect.'
+              : 'Not protected: automatic deploys are allowed. Click to protect before a live event.'
+          }
+          className={cn(
+            'flex shrink-0 items-center gap-1 rounded-token-sm border px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40',
+            cb.competition_started ? 'border-warning text-warning' : 'border-border text-fg-muted hover:bg-surface-hover',
+          )}
+        >
+          {cb.competition_started ? <Lock size={12} /> : <Unlock size={12} />}
+          {cb.competition_started ? 'Protected' : 'Not Protected'}
+        </button>
+
+        <div className="shrink-0 text-right">
+          {cb.current_content_revision_id ? (
+            <Button variant="pink" size="sm" onClick={onBuild} disabled={trigger.isPending}>
+              {trigger.isPending ? 'Building…' : 'Build Now'}
+            </Button>
+          ) : null}
+        </div>
+
+        {/* Force Pull: re-ingest the branch HEAD on demand (content is auto-pulled
+            when a build is added; this re-pulls after a later commit, or when a push
+            webhook hasn't landed). Always available; surfaces validation errors. */}
+        <button
+          onClick={onSync}
+          disabled={sync.isPending}
+          title="Force Pull: re-ingest the latest commit on this branch (no push needed)"
+          className="flex shrink-0 items-center rounded-token-sm border border-border p-1 text-fg-muted hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-fg-muted"
+          aria-label="Force pull latest commit"
+        >
+          <RefreshCw size={14} className={sync.isPending ? 'animate-spin' : undefined} />
+        </button>
+
+        <button
+          onClick={onRemove}
+          disabled={hasLiveBuild || remove.isPending}
+          title={
+            hasLiveBuild
+              ? 'Cannot remove: this build has live builds (deploying, building, finished, or tearing down). Tear them down first.'
+              : 'Remove this configured build. Its planned builds are discarded; deployed builds are kept as history.'
+          }
+          className="flex shrink-0 items-center rounded-token-sm border border-border p-1 text-fg-muted hover:border-danger hover:text-danger disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:text-fg-muted"
+          aria-label="Remove configured build"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+
+      {error && <div className="border-t border-border px-3 py-2 text-xs text-danger">{error}</div>}
+
+      {expanded && (
+        <div className="border-t border-border bg-surface-sunken/40">
+          {builds.length === 0 ? (
+            <div className="px-3 py-3 text-xs text-fg-muted">No builds yet for this branch.</div>
+          ) : (
+            <TableScroller contain={false}>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th className="pl-4">Environment</Th>
+                    <Th>Commit</Th>
+                    <Th>State</Th>
+                    <Th>Teams</Th>
+                    <Th className="pr-4">Created</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(showOlder ? builds : builds.slice(0, 2)).map((b) => (
+                    <tr key={b.id}>
+                      <Td className="pl-4">
+                        <span className="flex items-center gap-1.5">
+                          <Link to="/repos/$repoId/builds/$buildId" params={{ repoId, buildId: b.id }} className="font-medium text-accent hover:underline">
+                            {b.environment_name}
+                          </Link>
+                          {b.auto_built ? (
+                            <span title="Auto-built from a CI-passing push" className="inline-flex text-fg-subtle">
+                              <IterationCw size={13} />
+                            </span>
+                          ) : (
+                            <span title="Built manually (Build Now)" className="inline-flex text-fg-subtle">
+                              <MousePointerClick size={13} />
+                            </span>
+                          )}
+                        </span>
+                      </Td>
+                      <Td>
+                        {b.commit_sha ? (
+                          <span className="flex items-center gap-1.5 text-xs" title={b.commit_message ?? undefined}>
+                            <GitCommitHorizontal size={13} className="shrink-0 text-fg-subtle" />
+                            {b.commit_message ? (
+                              <span className="max-w-[36ch] truncate text-fg">
+                                {b.commit_message} <span className="font-mono text-fg-muted">({b.commit_sha.slice(0, 7)})</span>
+                              </span>
+                            ) : (
+                              <span className="font-mono text-fg-muted">{b.commit_sha.slice(0, 7)}</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-fg-subtle">—</span>
+                        )}
+                      </Td>
+                      <Td>
+                        <StatusBadge status={b.status} />
+                      </Td>
+                      <Td className="font-mono text-fg">{b.team_count ?? '—'}</Td>
+                      <Td className="pr-4 text-fg-muted">{fmt.dateTime(b.created_at)}</Td>
+                    </tr>
+                  ))}
+                  {builds.length > 2 && (
+                    <tr>
+                      <Td colSpan={5} className="pl-4">
+                        <button onClick={() => setShowOlder((v) => !v)} className="flex items-center gap-1 text-xs text-accent hover:underline">
+                          <ChevronDown size={13} className={cn('transition-transform', showOlder && 'rotate-180')} />
+                          {showOlder ? 'Show fewer' : `Show ${builds.length - 2} older build${builds.length - 2 === 1 ? '' : 's'}`}
+                        </button>
+                      </Td>
+                    </tr>
+                  )}
+                </tbody>
+              </Table>
+            </TableScroller>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// A compact per-branch history strip: one cell per build, newest on the
+// right, coloured by outcome -- the "inline chart per branch" that turns a
+// branch's build record into an at-a-glance trend (a run of red means this
+// branch keeps failing) without opening anything.
+function BuildHistoryStrip({ builds, repoId }: { builds: Build[]; repoId: string }) {
+  const fmt = useTimeFormat()
+  if (builds.length === 0) return null
+  // Oldest -> newest, capped, so the strip reads left-to-right like a timeline.
+  const recent = builds.slice(0, 16).reverse()
+  return (
+    <div className="hidden shrink-0 items-end gap-0.5 sm:flex" aria-hidden={false}>
+      {recent.map((b) => (
+        <Link
+          key={b.id}
+          to="/repos/$repoId/builds/$buildId"
+          params={{ repoId, buildId: b.id }}
+          title={`${b.environment_name} — ${b.status} — ${fmt.dateTime(b.created_at)}`}
+          className={cn('h-5 w-1.5 rounded-sm transition-opacity hover:opacity-70', buildStatusColor(b.status))}
+        />
+      ))}
+    </div>
+  )
+}
+
+function buildStatusColor(status: Build['status']): string {
+  switch (status) {
+    case 'finished':
+      return 'bg-success' // the only green: everything done
+    case 'failed':
+      return 'bg-danger'
+    case 'deploying':
+    case 'building':
+      return 'bg-accent' // in progress -- infra or agents, never green yet
+    case 'planned':
+      return 'bg-fg-subtle'
+    case 'tearing_down':
+    case 'torn_down':
+    case 'purged':
+    case 'discarded':
+    default:
+      return 'bg-border-strong'
+  }
+}
+
+// Builds with no configured build behind them (older builds, or ones
+// triggered before the branch was configured) -- kept visible in their own
+// collapsible bucket rather than dropped.
+// shortBranch trims a `refs/heads/` prefix for display; '' when unknown.
+function shortBranch(ref?: string | null): string {
+  return ref ? ref.replace(/^refs\/heads\//, '') : ''
+}
+
+function UnassociatedBuilds({ builds, repoId }: { builds: Build[]; repoId: string }) {
+  const fmt = useTimeFormat()
+  const key = `unassociated:${repoId}`
+  const [expanded, setExpanded] = useState(() => readExpandedIds().has(key))
+  return (
+    <div className="overflow-hidden rounded-token border border-dashed border-border">
+      <button
+        onClick={() => setExpanded((v) => { persistExpanded(key, !v); return !v })}
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
+        aria-expanded={expanded}
+      >
+        <ChevronDown size={14} className={cn('shrink-0 text-fg-subtle transition-transform', !expanded && '-rotate-90')} />
+        <span className="text-xs font-medium text-fg-muted">Unassociated builds</span>
+        <span className="text-xs text-fg-subtle">({builds.length})</span>
+      </button>
+      {expanded && (
+        <div className="border-t border-border bg-surface-sunken/40">
+          <TableScroller contain={false}>
+            <Table>
+              <thead>
+                <tr>
+                  <Th className="pl-4">Environment</Th>
+                  <Th>Branch</Th>
+                  <Th>State</Th>
+                  <Th>Teams</Th>
+                  <Th className="pr-4">Created</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {builds.map((b) => (
+                  <tr key={b.id}>
+                    <Td className="pl-4">
+                      <Link to="/repos/$repoId/builds/$buildId" params={{ repoId, buildId: b.id }} className="font-medium text-accent hover:underline">
+                        {b.environment_name}
+                      </Link>
+                    </Td>
+                    <Td className="font-mono text-xs text-fg-muted">{shortBranch(b.branch) || '—'}</Td>
+                    <Td>
+                      <StatusBadge status={b.status} />
+                    </Td>
+                    <Td className="font-mono text-fg">{b.team_count ?? '—'}</Td>
+                    <Td className="pr-4 text-fg-muted">{fmt.dateTime(b.created_at)}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </TableScroller>
+        </div>
+      )}
+    </div>
+  )
+}

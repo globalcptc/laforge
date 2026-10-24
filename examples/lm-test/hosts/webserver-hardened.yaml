@@ -1,0 +1,8 @@
+# The plan's own extends example. The loader checks that "webserver" exists
+# and this isn't a self-reference; it does not (yet) perform the actual
+# additive merge -- see loader/checks.go's crossCheck doc comment.
+host:
+  name: webserver-hardened
+  extends: webserver
+  steps:
+    - script: harden-web

@@ -1,8 +1,0 @@
-identity "npr" {
-  on_conflict {
-    do = ""
-  }
-  firstname = "jamis"
-  lastname = ""
-  email = "winston@football.com"
-}

@@ -1,0 +1,5 @@
+container:
+  name: m7-scoreboard
+  image: alpine
+  size: small
+  ports: { tcp: ["8080"] }

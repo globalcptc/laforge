@@ -1,83 +1,250 @@
-# Laforge
+# LaForge
 
-> Security Competition Infrastructure Automation Framework
+**Infrastructure-as-content for cyber competitions.** LaForge turns a plain-language
+YAML description of a competition environment — networks, hosts, containers, the
+software on them, and who can reach what — into real, running infrastructure on
+whatever platform you have (a private Incus/LXD cluster, a public cloud, or a lab
+machine), identically replicated for every team.
 
-## ![Laforge Image](https://i.etsystatic.com/6782226/r/il/89b846/1006866306/il_570xN.1006866306_680f.jpg)
+It is built for the [Collegiate Penetration Testing Competition](https://globalcptc.org)
+(CPTC) and events like it, where dozens of teams each need an identical copy of a
+realistic target environment, deployed reliably, opened and closed on a schedule,
+and torn down cleanly afterward.
 
-Laforge enables rapid development of infrastructure for the purpose of information security competitions. Using a simple and intuitive configuration language, Laforge manages a dependency graph and state management and allows for highly productive remote collaboration. The Laforge engine uses a custom loader to do multi-dimensional, non-destructive configuration overlay. A good analogy to this is Docker - when you build a Docker container, it builds it up layers at a time. It's this power that has inspired us to build Laforge. It's certainly a niche project, but we certainly have found an incredible use for it.
+---
 
+## What it does
 
-## Table of Contents
+- **Content lives in Git.** You describe an environment in YAML — the same way you'd
+  describe application config — and commit it to a repository. A push builds and
+  (optionally) deploys it. No clicking through a cloud console, no per-team copy-paste.
+- **The same content runs anywhere.** Content never names a hoster, an image ID, or an
+  IP pool. A *builder* maps abstract concepts (`os: ubuntu22`, `size: small`) to a
+  specific platform's primitives, so the identical environment deploys on Incus,
+  MicroCloud/LXD, AWS, or OpenStack.
+- **Every team gets an identical, isolated copy.** You write the topology once; LaForge
+  replicates it per team and keeps teams from reaching each other.
+- **Hosts configure themselves.** Each deployed host runs a small agent that pulls its
+  ordered setup steps (install software, create users, drop files, run scripts) and
+  reports results — so "the environment is ready" is a real, observable state, not a
+  hope.
+- **Access is a schedule, not a firewall you babysit.** Competition access windows open
+  and close on their own; per-network reachability and per-host firewalls are declared
+  in content and enforced for you.
 
-- [Features](#features)
-- [FAQ](#faq)
-- [Acknowledgements](#acknowledgements)
+## How you use it
 
-## Features
+1. Write your environment as YAML in a Git repo (see **[CONFIGURATION.md](CONFIGURATION.md)**).
+2. Connect the repo to LaForge (a GitHub App) and point a *configured build* at a branch,
+   an environment file, and a builder.
+3. Push. LaForge validates the content, builds it, and — on your go — deploys it for
+   every team.
+4. Watch it come up in the UI: per-host status, live logs, findings, and access controls.
+5. Tear it down when the event ends.
 
-- Cross platform
-- Portable - installs as a stand alone native executable.
-- Use what you enjoy - Bring Your Own Scripting Language (Y)
-- Fast.
-- Build once, clone to _n_ number of teams (security competitions paradigm)
-- Collaborative - makes working in distributed groups very efficient
+Authoring is helped by a **VS Code extension** (`editors/vscode/`) that provides
+schema-aware completion, hover docs, and live `laforge check` diagnostics as you type.
 
-## FAQ
+---
 
-### What is Laforge?
+## Architecture
 
-Laforge is a framework that lets you design and implement security competitions in a scalable, collaborative, and fun way! You write configurations in _Laforge Config Language_ and use the  tool to inspect, validate, build, and connect to remote infrastructure with. Historically, Terraform was used as the "backend" (generates sophisticated terraform configurations), but this has changed over the last two years with LaForge now directly working with cloud and virtualization services to build hosts, deploy an agent, and configure those hosts in a consistent manner. Laforge currently powers all of the infrastructure management for the Collegiate Penetration Testing Competition and has supported game deployments of >4000 unique nodes.
+LaForge is a small set of Go services around a Postgres database, a React UI, and a
+Rust agent that runs on the deployed hosts. The services are deliberately thin and
+single-purpose.
 
-### Why was it created?
+```mermaid
+flowchart TB
+    subgraph GH["GitHub"]
+      repo["Content repo (YAML)"]
+    end
 
-Three reasons:
+    subgraph LaForge["LaForge (docker compose)"]
+      api["laforge-api\nHTTP API + UI backend\nGitHub webhook / OAuth\ncontent ingest"]
+      orch["laforge-orchestrator\nreconcile loop:\ndesired state -> tasks"]
+      runner["laforge-runner\nleases tasks,\ncalls builders"]
+      gw["laforge-gateway\nmTLS endpoint\nfor agents"]
+      ui["ui\nReact app"]
+      db[("Postgres")]
+    end
 
-- Security professionals aren't the most well versed with operations/infrastructure/devops tools. They have a steeper than most learning curve, especially when asking volunteers to try and figure it out in their off work time. To make it easier for people, we wanted to make a tool that basically did the hard part for them.
-- As we dug in, we noticed that the commonly used automation frameworks available had a number of painpoints when it came to building security competition infrastructure. There are things that have to occur in security competitions that aren't supported in the real world:
-  - wide compatibility with lots of operating systems and software
-  - Mass "clone" ability - snapshot a game infra and clone it 10-20x - one for each team, including networks and not just flag boxes.
-  - Flexibility to deploy the same stacks to a wide set of possible infrastructure - VMWare, AWS, GCP, etc.
-- Because competitions deserve it! We work with some of the most passionate people on these projects and anything that can make our shared experience better is a win win in our book.
+    subgraph Hoster["Hoster (Incus / MicroCloud / AWS / OpenStack)"]
+      net["networks"]
+      host["hosts + containers\n(each runs the agent)"]
+    end
 
-### Why not current DevOps tools?
+    repo -- "push webhook" --> api
+    ui <--> api
+    api <--> db
+    orch <--> db
+    runner <--> db
+    gw <--> db
+    runner -- "builder API calls" --> Hoster
+    host -- "mTLS check-in, pull steps,\nreport results, heartbeat" --> gw
+```
 
-No need to go into a flame war over this tool or that. We frankly like them. Our biggest complaint across the board is that given how fragmented they are, it's hard to ever be really _good_ at any one of them. We needed something that volunteers could pick up quickly (like shell scripts) without having to learn a new toolset.  We also needed something that could build networks, hosts, and configurations consistently across multiple teams.  
+### The services
 
-### How does it scale?
+| Service | Binary | Responsibility |
+| --- | --- | --- |
+| **API** | `laforge-api` | The HTTP API, the UI's backend, GitHub App webhooks and OAuth sign-in. Ingests and validates pushed content, creates builds, exposes everything the UI shows. |
+| **Orchestrator** | `laforge-orchestrator` | The reconcile loop. On a timer it compares each live build's desired state to reality and enqueues tasks (deploy, destroy, open/close access, configure network access, dispatch scheduled work). Talks only to Postgres. |
+| **Runner** | `laforge-runner` | Leases tasks and executes them by calling a *builder*. This is the only service that talks to a hoster. Deploys in parallel across a worker pool. |
+| **Gateway** | `laforge-gateway` | The mutually-authenticated (mTLS) endpoint the on-host agents connect to. Hands each agent its next step, receives results, tracks heartbeats. Nothing else is exposed to the deployed hosts. |
+| **UI** | (Vite dev server / static build) | The React operator console. |
+| **Database** | Postgres | The single source of truth for content revisions, builds, deployed objects, tasks, events, and access state. |
+| **Migrate** | `laforge-migrate` | Applies schema migrations (goose) on startup. |
 
-We have used the various iterations of LaForge to generate competition environments with thousands of total hosts.  In short, it can scale as large as your imagination (and budget / resources) allows.  Furthermore, we have used this tool across teams of volunteer developers each working on their own components and have used that feedback in the most recent versions.  
+### The deploy lifecycle
 
-### What about performance?
+```mermaid
+sequenceDiagram
+    participant Dev as Author
+    participant GH as GitHub
+    participant API as laforge-api
+    participant Orch as orchestrator
+    participant Run as runner
+    participant Bld as builder
+    participant Host as host + agent
+    participant GW as gateway
 
-Depending on the complexity of your environment, building LaForge output may take seconds or minutes.  In the end you will spend more time spinning up systems in the environment of your choice with Terraform or Vagrant than you will generating the relevant configurations for either of them.  
+    Dev->>GH: git push (YAML content)
+    GH->>API: push webhook
+    API->>API: fetch commit, validate (laforge check)
+    API-->>API: content_revision stored
+    Dev->>API: create build + deploy
+    loop every ~2s
+        Orch->>Orch: reconcile: desired vs actual
+        Orch-->>Run: enqueue deploy tasks (roots first)
+    end
+    Run->>Bld: DeployNetwork / DeployHost / DeployContainer
+    Bld->>Host: create instance (+ cloud-init installs the agent)
+    Host->>GW: mTLS check-in
+    Orch->>Orch: materialize host steps once its dependencies finish
+    Host->>GW: pull next step, run it, report result, heartbeat
+    Orch->>Bld: ConfigureNetworkAccess, Open/CloseAccess (on schedule)
+```
 
-### Is it production-ready?
+Ordering falls out of two simple mechanisms rather than a dependency engine:
+deterministic resource names let any task be retried safely (create-or-adopt), and
+`depends_on` holds a host's *steps* until the things it needs have finished
+configuring. The box itself deploys ahead of time (roots first, so a dependency
+is underway before its dependents), and only step execution waits -- a
+workstation's domain-join runs once its domain controller is a working DC, not
+merely a booted Windows box.
 
-If by production, you mean developing live competition environments, LaForge has been used for over six years in a "production" capacity.  If you mean live systems at your company or organization, it will probably work well, but use at your own risk.
+When a step fails on a box that's otherwise fine, the host's build can be **restarted
+from that step** rather than rebuilt: the step and every one after it run again in
+full, on the box as it is, for every team's copy of the host at once. A per-build
+switch, *hold on step change*, makes a push that changes only steps or scripts mark the
+affected hosts for such a restart instead of recreating them.
 
-## Hall of Fame
+### Builders: one interface, many platforms
 
-This project was dreamed, birthed, and originally developed by Alex Levinson (@gen0cide) for the Collegiate Penetration Testing Competition.
+Content is builder-agnostic. Each builder implements a single Go interface
+(`internal/builder.Builder`) that maps LaForge's abstract concepts to a platform.
 
-#### mentors, contributors, and great friends of Laforge
+```mermaid
+flowchart LR
+    content["Builder-agnostic content\n(os, size, image, ports, visible_from)"]
+    iface["builder.Builder interface\nDeployHost / DeployNetwork / DeployContainer\nOpen/CloseAccess / PowerAction\nConfigureNetworkAccess / Inspect"]
+    content --> iface
+    iface --> incus["incus\n(Incus, native OCI)"]
+    iface --> mc["microcloud\n(LXD + Ceph + OVN)"]
+    iface --> pool["incuspool\n(pool of Incus hosts)"]
+    iface --> aws["aws\n(EC2/VPC, draft)"]
+    iface --> os["openstack\n(Nova/Neutron, draft)"]
+    iface --> fake["fake\n(simulated, for tests)"]
+```
 
-- @1njecti0n
-- @emperorcow
-- @vyrus001
-- @bstax
-- @cmbits
-- @tomk
-- @brianc
-- @rossja
-- @kos
-- @dcam
-- @davehughes
-- @mbm
-- @maus
-- @javuto
+There is no "capabilities" opt-out: every builder implements the whole contract for
+real, so an environment can't silently behave differently on a different platform.
+Writing a new builder is documented in **[docs/builder-authoring.md](docs/builder-authoring.md)**.
 
-## Acknowledgements
+### The agent
 
-- [Gen0cide](https://github.com/gen0cide) who created the very first version of LaForge.
-- [CPTC](https://cp.tc) and the CPTC Advisory Board who's been so patient with us over the years as we developed this tool.
-- [Rochester Institute of Technology](https://www.rit.edu) For giving us a place to expiriment and advance both the technology as well as the workforce of our industry.
+A deployed host installs a small **Rust agent** on first boot (via cloud-init). The
+agent carries its own identity, connects out to the gateway over mTLS, pulls its
+ordered steps, runs them (installing packages, writing files, creating users, running
+scripts, rebooting), and heartbeats. It's built as a static binary and cross-compiled
+for Linux and Windows targets; a container gets the same agent as its supervising
+entrypoint, so containers configure and report exactly like hosts. A container that runs
+a Docker Compose project gets a machine of its own, and the agent on it starts the
+project before running the container's steps.
+
+---
+
+## The content model
+
+Everything an author writes is one of a few object types, each in its own directory of
+the content repo:
+
+```
+your-content-repo/
+  <environment>.yaml     # the game: teams, schedule, and the network topology
+  networks/*.yaml        # a CIDR shared identically by every team
+  hosts/*.yaml           # a VM: os, size, disk, ports, setup steps
+  containers/*.yaml      # the same idea, deployed as a container: one image,
+                         #   or a whole Docker Compose project (compose: app/compose.yaml)
+  scripts/*.yaml         # a templated script + its source file
+  people/*.csv           # rosters (users/accounts) referenced by hosts and scripts
+  .laforgeignore         # optional: paths whose YAML isn't LaForge content
+```
+
+An **environment** wires them together: it declares how many teams there are, the
+access schedule, and — in its `networks:` topology — which hosts and containers sit on
+which networks, how many copies, and at which addresses. Hosts and scripts are reusable
+across environments; the environment is the only place they're connected.
+
+A container can run a single image or a **Docker Compose project** kept next to it in the
+repo — the same compose file developers run locally, deployed on one machine with one
+address. Every `.yaml` in the repo is read as LaForge content, so a compose project's
+directory (or any other tool's YAML) is listed in **`.laforgeignore`**, which
+`laforge check`, the server, and the editor all honor.
+
+Builder setup and the permissions LaForge needs on your hoster are in
+**[docs/builders/](docs/builders/)** ([Incus](docs/builders/incus.md),
+[MicroCloud](docs/builders/microcloud.md)).
+
+See **[CONFIGURATION.md](CONFIGURATION.md)** for the full YAML reference, with worked
+examples from a one-host environment to a complete multi-network game.
+
+---
+
+## Getting started
+
+**[USAGE.md](USAGE.md)** covers the whole setup:
+
+- building and running the stack with Docker Compose,
+- the `.env` file and generating dev certificates,
+- registering and installing the GitHub App that connects your repos,
+- and building, packaging, and installing the VS Code authoring extension.
+
+## Repository layout
+
+```
+cmd/            entrypoints for each service + the laforge CLI and LSP
+internal/       the implementation, one package per concern:
+  api           HTTP API, UI backend, webhooks, OAuth
+  orchestrator  reconcile loop, scheduling, access enforcement
+  runner        task execution against builders
+  gateway       mTLS agent endpoint
+  builder/*     the Builder interface and each platform's implementation
+  loader        parse + validate content (the laforge check engine)
+  render        per-host/per-team template rendering
+  ingest        persist a validated content revision
+  schedule      natural-language schedule grammar
+  schema        the JSON Schemas content is validated against
+  db            sqlc-generated database access
+  ...
+agent/          the Rust on-host agent
+ui/             the React operator console
+editors/vscode/ the VS Code authoring extension
+migrations/     goose database migrations
+examples/       example content repositories
+docs/           builder-authoring guide
+```
+
+## License
+
+See the repository's license file. LaForge is developed for and by the CPTC community.

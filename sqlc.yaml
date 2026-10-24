@@ -1,0 +1,23 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "internal/db/queries"
+    schema: "internal/db/schema.sql"
+    gen:
+      go:
+        package: "db"
+        out: "internal/db"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_pointers_for_null_types: true
+        emit_exact_table_names: false
+        # jsonb columns as json.RawMessage, not []byte: encoding/json
+        # writes []byte as a base64 string, so every JSON column a handler
+        # returned straight from a row (builder images/hosts, event
+        # payloads, scheduled-task targets, ...) reached the UI as base64.
+        overrides:
+          - db_type: "jsonb"
+            go_type: "encoding/json.RawMessage"
+          - db_type: "jsonb"
+            go_type: "encoding/json.RawMessage"
+            nullable: true

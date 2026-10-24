@@ -1,0 +1,23 @@
+# A minimal real two-team build from a branch. Deliberately small and Linux-only (no Windows/VM host), so it
+# exercises the real Incus builder end to end -- network, host, and
+# container, for two teams -- without hitting this test environment's
+# known, documented limitation (no /dev/kvm inside nested Docker).
+# examples/lm-test is the fuller, 5-team
+# fixture with Windows; this one exists purely to keep the real two-team
+# run fast and reproducible. All names below are prefixed m7- to avoid
+# colliding with examples/lm-test's own (names are unique per type,
+# repo-wide).
+environment:
+  name: m7-two-team
+  schema: 1
+  description: Minimal real two-team build against the live Incus builder
+  teams: 2
+
+  networks:
+    m7-prod:
+      m7-webserver:
+        - as: web01
+          last_octet: 12
+      m7-scoreboard:
+        - as: scoreboard
+          last_octet: 50

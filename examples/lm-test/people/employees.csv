@@ -1,0 +1,4 @@
+username,first_name,last_name,email,password,title,department,domain_admin,sudo,enabled
+arivera3,Aaron,Rivera,aaron.rivera@allports.tours,818815997,Receptionist,Administration,false,false,true
+aroberts,Abigail,Roberts,abigail.roberts@allports.tours,nixiewater,Casino Dealer,Entertainment,false,true,true
+jdoe,Jane,Doe,jdoe@allports.local,Winter2024!,Sysadmin,IT,true,true,true

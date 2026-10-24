@@ -1,5 +1,0 @@
-competition {
-  dns "disabled" {
-    base_fqdn = "google.com"
-  }
-}

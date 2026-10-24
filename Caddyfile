@@ -1,3 +1,0 @@
-laforge.cp.tc {
-	reverse_proxy ui:80
-}

@@ -1,0 +1,6 @@
+script:
+  name: join-domain
+  description: Joins the host to the AD domain
+  language: powershell
+  source: join-domain.ps1
+  timeout: 300

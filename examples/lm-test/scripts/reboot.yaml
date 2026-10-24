@@ -1,0 +1,4 @@
+script:
+  name: reboot
+  language: bash
+  source: reboot.sh

@@ -1,0 +1,215 @@
+package orchestrator
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/jackc/pgx/v5/pgtype"
+
+	"github.com/globalcptc/laforge/internal/db"
+	"github.com/globalcptc/laforge/internal/gateway"
+	"github.com/globalcptc/laforge/internal/loader"
+)
+
+// materializeStepsIfReady queues a host/container's authored `steps:` as real
+// agent_task rows as soon as its box is up -- even while it is still waiting on
+// a dependency. That is the real meaning of depends_on ("a domain controller
+// must be CONFIGURED as a domain controller, not just running Windows"), but the
+// wait no longer hides the steps: while a dependency is unfinished the steps are
+// queued with status 'blocked' -- visible in the UI, counted as open, but never
+// leased by an agent -- and the object records what it's blocked_on. Once every
+// dependency finishes, the blocked steps flip to 'pending' and run in order. So
+// the box deploys ahead, the operator sees the queued steps and WHY they wait,
+// and the agent still never runs a step against a half-built dependency.
+//
+// A step's own `wait_for:` is the finer-grained version of the same hold: the
+// steps before it are queued 'pending' and run at once, and only that step and
+// the ones after it are 'blocked' until the target host reaches the named
+// milestone/step (see step_gates.go). gates is this team's readiness for those
+// points; nil when the content uses no wait_for.
+//
+// Idempotent across reconcile passes: steps_materialized_at is stamped once per
+// deploy (even with zero authored steps, so the lifecycle advancer can finish a
+// stepless object); after that, each pass only releases what the dependencies
+// and gates now allow. A redeploy clears the stamp
+// (ResetDeployedObjectForRedeploy) so steps re-materialize for the rebuilt box.
+func materializeStepsIfReady(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, buildID pgtype.UUID, obj db.DeployedObject, teamNum int, asName string, dependsOn []string, placed, finishedDeps, failedDeps map[string]bool, gates *teamGates, active bool) error {
+	if !active {
+		return nil // planned/terminal build: never queue real agent work
+	}
+	if obj.Kind != "host" && obj.Kind != "container" {
+		return nil // networks have no agent and no steps
+	}
+	// Only a box that actually came up can run steps. A box still being
+	// created (pending/deploying), already failed, or being torn down is not
+	// eligible -- try again on a later pass if it reaches running.
+	if obj.Status != "running" && obj.Status != "building" {
+		return nil
+	}
+	// A dependency that failed terminally can never be a correct prerequisite:
+	// don't run this object's steps against a broken DC/database -- fail it with
+	// a clear reason instead of waiting on a dependency that will never finish.
+	// (A dependency not placed in this environment can't be ordered on, so it's
+	// ignored, matching reconcile's depends_on handling.)
+	for _, d := range dependsOn {
+		if placed[d] && failedDeps[d] {
+			msg := fmt.Sprintf("dependency %q failed to configure", d)
+			if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{ID: obj.ID, LastError: db.StrPtr(msg)}); err != nil {
+				return err
+			}
+			decide(ctx, q, buildID, obj.ID, "lifecycle.build_failed", fmt.Sprintf("%s: %s; its steps never ran (restart %s from a step, or rebuild it, and this host resumes)", asName, msg, d), map[string]any{"dependency": d})
+			return nil
+		}
+	}
+	// Which placed dependencies haven't finished yet -- what this object is
+	// blocked on (empty = free to run).
+	var blockedOn []string
+	for _, d := range dependsOn {
+		if placed[d] && !finishedDeps[d] {
+			blockedOn = append(blockedOn, d)
+		}
+	}
+
+	if obj.StepsMaterializedAt.Valid {
+		// Already materialized. The only thing left is to release steps as
+		// their dependencies finish and their gates are satisfied: flip blocked
+		// steps to pending and keep the reason current. No-ops once released,
+		// so this is cheap every pass.
+		return releaseStepGates(ctx, q, obj, blockedOn, gates)
+	}
+	return materializeSteps(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, blockedOn, gates)
+}
+
+// materializeSteps expands an object's authored steps into agent_task rows and
+// stamps steps_materialized_at. Reuses the exact same internal/gateway.
+// ExpandSteps translation the ad-hoc task endpoint and the schedule dispatcher
+// use, so a step queued here and one queued by hand produce byte-identical
+// commands. New rows start at NextStepIndexForHost so they never collide with
+// an ad-hoc/scheduled command that happened to land first.
+func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, buildID pgtype.UUID, obj db.DeployedObject, teamNum int, asName string, blockedOn []string, gates *teamGates) error {
+	// Steps queued while a dependency is still unfinished start 'blocked':
+	// visible and counted as open, but never leased until released. Without
+	// one, steps start 'pending' up to the first step with a wait_for, and
+	// 'blocked' from there on; releaseStepGates below lets through whatever
+	// the gates already allow.
+	status := "pending"
+	if len(blockedOn) > 0 {
+		status = "blocked"
+	}
+	authored, notes, err := queueSteps(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, status, gates, 0)
+	if err != nil {
+		return err
+	}
+	// Record what the (blocked) steps are waiting on, for the UI. Empty when not
+	// blocked -- SetDeployedObjectBlockedOn with nil clears it.
+	var blockedJSON []byte
+	if len(blockedOn) > 0 {
+		blockedJSON, _ = json.Marshal(blockedOn)
+	}
+	if err := q.SetDeployedObjectBlockedOn(ctx, db.SetDeployedObjectBlockedOnParams{ID: obj.ID, BlockedOn: blockedJSON}); err != nil {
+		return fmt.Errorf("recording blocked_on: %w", err)
+	}
+	obj.BlockedOn = blockedJSON
+	// Let through whatever the step gates already allow (all of it, when no
+	// step waits), and name the gate the host is held at.
+	if err := releaseStepGates(ctx, q, obj, blockedOn, gates); err != nil {
+		return err
+	}
+	// Stamp even for zero steps: it is what lets the lifecycle advancer finish
+	// a stepless object instead of treating it as still waiting.
+	if err := q.MarkDeployedObjectStepsMaterialized(ctx, obj.ID); err != nil {
+		return fmt.Errorf("marking steps materialized: %w", err)
+	}
+	for _, n := range notes {
+		q.CreateEvent(ctx, db.CreateEventParams{BuildID: buildID, Kind: "steps.note", Message: n, Payload: []byte("{}")})
+	}
+	if len(authored) > 0 {
+		msg := fmt.Sprintf("%d step command(s) queued for %s", len(authored), asName)
+		if len(blockedOn) > 0 {
+			msg += fmt.Sprintf("; blocked until %s finish configuring", strings.Join(blockedOn, ", "))
+		}
+		decide(ctx, q, buildID, obj.ID, "steps.materialized", msg, map[string]any{"commands": len(authored), "blocked_on": blockedOn})
+	} else {
+		decide(ctx, q, buildID, obj.ID, "steps.materialized", fmt.Sprintf("%s has no steps; it finishes once its agent checks in", asName), nil)
+	}
+	return nil
+}
+
+// queueSteps expands an object's authored steps from content and inserts the
+// commands of every authored step from fromGroup on as agent_task rows (0 is
+// all of them: a first materialization), starting at NextStepIndexForHost so
+// they never collide with what the host already has, each stamped with the
+// authored step it came from (step_group). status is the first rows' status
+// ('pending', or 'blocked' while a dependency is unfinished); from the first
+// command with a wait_for on, rows are 'blocked' until releaseStepGates lets
+// them through. It returns what it queued and ExpandSteps' notes. Restarting
+// from a step (RestartFromStep) queues the same rows a first deploy would,
+// just from a later step.
+func queueSteps(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, buildID pgtype.UUID, obj db.DeployedObject, teamNum int, asName string, status string, gates *teamGates, fromGroup int) ([]gateway.PlannedCommand, []string, error) {
+	// Stored registry credentials, for a `compose:` step's `docker login`.
+	registryAuth := gateway.WithRegistryAuth(func(host string) (gateway.RegistryAuth, bool) {
+		cred, err := q.GetRegistryCredentialByHost(ctx, host)
+		if err != nil {
+			return gateway.RegistryAuth{}, false
+		}
+		return gateway.RegistryAuth{Username: cred.Username, Secret: cred.Secret}, true
+	})
+	secret, err := db.RenderSecretForBuild(ctx, q, buildID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("loading the build's render secret: %w", err)
+	}
+	expanded, notes, err := gateway.ExpandSteps(repoRoot, c, envName, asName, teamNum, registryAuth,
+		gateway.WithPublicAddress(obj.PublicAddress), gateway.WithRenderSecret(secret))
+	if err != nil {
+		return nil, nil, fmt.Errorf("expanding steps: %w", err)
+	}
+	authored := expanded[:0:0]
+	for _, cmd := range expanded {
+		if cmd.Group >= fromGroup {
+			authored = append(authored, cmd)
+		}
+	}
+	next, err := q.NextStepIndexForHost(ctx, obj.ID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("checking existing steps: %w", err)
+	}
+	for i, cmd := range authored {
+		payload, err := json.Marshal(cmd.Payload)
+		if err != nil {
+			return nil, nil, fmt.Errorf("encoding payload for step %d: %w", i, err)
+		}
+		var waitFor json.RawMessage
+		if len(cmd.WaitFor) > 0 {
+			status = "blocked" // this gate and every step after it
+			waitFor, _ = json.Marshal(cmd.WaitFor)
+			for _, w := range cmd.WaitFor {
+				if gates != nil && !gates.placed[w.Host] {
+					notes = append(notes, fmt.Sprintf("%s: wait_for %s skipped -- this environment doesn't place %q", asName, w.Label(), w.Host))
+				}
+			}
+		}
+		if _, err := q.CreateAgentTask(ctx, db.CreateAgentTaskParams{
+			DeployedObjectID: obj.ID, StepIndex: next + int32(i), Command: cmd.Command, Payload: payload, IgnoreErrors: cmd.IgnoreErrors, Reboots: cmd.Reboots, Status: status, MaxAttempts: cmd.MaxAttempts,
+			Milestone: optStr(cmd.Milestone), StepScript: optStr(cmd.StepScript), WaitFor: waitFor, StepGroup: optInt32(cmd.Group),
+		}); err != nil {
+			return nil, nil, fmt.Errorf("queuing step %d (%s): %w", i, cmd.Command, err)
+		}
+	}
+	return authored, notes, nil
+}
+
+// optInt32 stores an authored step index as the row's step_group.
+func optInt32(v int) *int32 {
+	n := int32(v)
+	return &n
+}
+
+// optStr is nil for "", so an unset milestone/script stores as NULL.
+func optStr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}

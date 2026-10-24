@@ -1,0 +1,15 @@
+host:
+  name: webserver
+  os: ubuntu22
+  size: small
+  disk: 40
+  ports: { tcp: ["80", "443"] }
+  depends_on: [database]
+  steps:
+    - script: base
+    - download: { from: https://files.cp.tc/site.tar.gz, to: /var/www/site.tar.gz }
+    - extract: { src: /var/www/site.tar.gz, dest: /var/www }
+    - script: vuln-sqli
+  schedule:
+    - when: Every 30 minutes
+      script: reboot

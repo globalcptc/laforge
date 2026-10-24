@@ -1,0 +1,112 @@
+-- name: UpsertAccount :one
+-- Re-fetched from GitHub on every login (see migrations/00005's own doc
+-- comment) -- login/avatar can drift (renamed, changed picture), github_id
+-- never does, so it's the real identity key.
+INSERT INTO account (github_id, github_login, avatar_url)
+VALUES ($1, $2, $3)
+ON CONFLICT (github_id) DO UPDATE SET
+    github_login = EXCLUDED.github_login,
+    avatar_url = EXCLUDED.avatar_url,
+    updated_at = now()
+RETURNING *;
+
+-- name: GetAccount :one
+SELECT * FROM account WHERE id = $1;
+
+-- name: SetAccountTimezone :exec
+-- The per-user timezone preference the UI renders every timestamp in.
+-- Validated as a real IANA name by the caller (time.LoadLocation) before
+-- it gets here; "" is allowed and means "follow the viewer's browser."
+UPDATE account SET timezone = $2, updated_at = now() WHERE id = $1;
+
+-- name: GetAccountByLogin :one
+-- Revoking access shouldn't depend on a live GitHub API call succeeding
+-- the way granting does (handleSetRepositoryAccess's own GetUserByLogin
+-- -- it needs to look the identity up to create the account row in the
+-- first place) -- a grantee's account row already exists by the time
+-- there's anything to revoke, so this is a pure DB lookup.
+SELECT * FROM account WHERE github_login = $1;
+
+-- name: CreateSession :one
+INSERT INTO session (account_id, token_hash, github_token, expires_at, github_token_expires_at, github_refresh_token, github_refresh_expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING *;
+
+-- name: UpdateSessionGithubToken :exec
+-- Store a freshly-refreshed GitHub access token (and the rotated refresh token
+-- + new expiries) on a session, so subsequent requests use the live token.
+UPDATE session
+SET github_token = $2, github_token_expires_at = $3, github_refresh_token = $4, github_refresh_expires_at = $5
+WHERE id = $1;
+
+-- name: GetSessionByTokenHash :one
+-- The join is the whole point: one round trip from "cookie value" to
+-- "who is this and what's their live GitHub token," which every
+-- authenticated request needs.
+SELECT session.*, account.github_id, account.github_login, account.avatar_url, account.timezone
+FROM session
+JOIN account ON account.id = session.account_id
+WHERE session.token_hash = $1 AND session.expires_at > now();
+
+-- name: DeleteSession :exec
+DELETE FROM session WHERE token_hash = $1;
+
+-- name: DeleteExpiredSessions :execrows
+-- Unbounded growth otherwise: a session row is never deleted anywhere
+-- else once it expires (GetSessionByTokenHash's own WHERE just stops
+-- matching it). Same "time-bounded retention policy" shape as
+-- DeleteAgentHeartbeatsOlderThan (migrations/00007's own doc comment),
+-- just with no configurable window -- expires_at is already the
+-- retention boundary, set once at CreateSession time.
+DELETE FROM session WHERE expires_at <= now();
+
+-- name: UpsertRepositoryAccess :one
+INSERT INTO repository_access (repository_id, account_id, level, granted_by)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (repository_id, account_id) DO UPDATE SET level = EXCLUDED.level
+RETURNING *;
+
+-- name: GetRepositoryAccess :one
+SELECT * FROM repository_access WHERE repository_id = $1 AND account_id = $2;
+
+-- name: ListRepositoryAccessByRepository :many
+SELECT repository_access.*, account.github_login, account.avatar_url
+FROM repository_access
+JOIN account ON account.id = repository_access.account_id
+WHERE repository_id = $1
+ORDER BY account.github_login;
+
+-- name: ListRepositoryAccessByAccount :many
+-- Every repository an account has an explicit grant on, including 'none'
+-- (an admin taking away what GitHub would give) -- callers that mean
+-- "has access somewhere" skip those.
+SELECT repository_access.*, repository.github_owner, repository.github_repo
+FROM repository_access
+JOIN repository ON repository.id = repository_access.repository_id
+WHERE account_id = $1;
+
+-- name: DeleteRepositoryAccess :exec
+DELETE FROM repository_access WHERE repository_id = $1 AND account_id = $2;
+
+-- name: ListInstanceAdmins :many
+-- avatar_url is only known once the person has signed in at least once.
+SELECT instance_admin.*, account.avatar_url
+FROM instance_admin
+LEFT JOIN account ON lower(account.github_login) = lower(instance_admin.github_login)
+ORDER BY lower(instance_admin.github_login);
+
+-- name: CountInstanceAdmins :one
+SELECT count(*) FROM instance_admin;
+
+-- name: AddInstanceAdmin :execrows
+-- Adding someone who is already an admin changes nothing (0 rows).
+INSERT INTO instance_admin (github_login, added_by)
+VALUES ($1, $2)
+ON CONFLICT (lower(github_login)) DO NOTHING;
+
+-- name: DeleteInstanceAdmin :execrows
+-- Refuses to remove the last admin: with none left nobody could add another
+-- from the UI.
+DELETE FROM instance_admin
+WHERE lower(instance_admin.github_login) = lower(sqlc.arg(github_login)::text)
+  AND (SELECT count(*) FROM instance_admin) > 1;

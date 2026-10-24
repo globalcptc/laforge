@@ -1,0 +1,6 @@
+script:
+  name: base
+  description: Baseline hardening and agent check-in, run first on every host
+  language: bash
+  source: base.sh
+  timeout: 120

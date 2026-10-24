@@ -1,0 +1,654 @@
+// laforge-agent: "a single fully-embedded binary with no external
+// configuration... opens a TLS connection to the gateway... and presents
+// its client certificate; the gateway presents a certificate the agent
+// pinned at build time." This file is only ever the connection loop --
+// framing lives in protocol.rs, identity in identity.rs, command
+// execution in commands.rs and validators.rs.
+
+mod antitamper;
+mod applog;
+mod chaff;
+mod commands;
+mod diag;
+mod identity;
+mod metrics;
+mod obfuscate;
+mod protocol;
+mod selfhash;
+mod shell;
+mod validators;
+#[cfg(windows)]
+mod winsvc;
+
+use protocol::{GetTaskResponsePayload, HeartbeatResponsePayload, LogBatchRequestPayload, MessageType, ReportStatusRequestPayload};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer, ServerName};
+use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned};
+use std::collections::HashSet;
+use std::io;
+use std::io::{BufRead, BufReader, Read, Write};
+use std::net::TcpStream;
+use std::sync::{mpsc, Arc, Mutex};
+use std::time::{Duration, Instant};
+
+// Bounds for container console-log forwarding: how many lines the agent buffers
+// before dropping the oldest (memory cap), and the most it ships in one frame.
+const LOG_BUFFER_CAP: usize = 10_000;
+const LOG_BATCH_MAX: usize = 500;
+
+fn main() {
+    // On Windows the agent is installed as a service (see internal/agentdelivery).
+    // When the SCM launches it, speak the service protocol; a plain console run
+    // (dev, or the OCI container entrypoint) falls through to the ordinary path.
+    #[cfg(windows)]
+    {
+        if winsvc::is_launched_by_scm() {
+            return; // ran (and finished) as a service
+        }
+    }
+    run_agent()
+}
+
+// run_agent is the ordinary (console) entry: identity-driven host or supervised
+// container. Diverges -- it loops forever or exits the process on a fatal error.
+fn run_agent() -> ! {
+    // Decide where our own diagnostics go BEFORE emitting a single line. A real
+    // (patched) build is SILENT by default -- nothing to stdout/stderr, so a
+    // captured box leaks nothing locally; only what the agent sends the servers
+    // ever leaves it. A dev build (unpatched identity, `cargo run`) logs to
+    // stderr so it's usable while iterating. A patched build whose baked
+    // identity carries agent-debug upgrades to a file beside the binary once the
+    // identity is loaded (see load_agent). See diag.rs.
+    if identity::is_dev_build() {
+        diag::init_stderr();
+    } else {
+        diag::init_silent();
+    }
+    // Make panics visible in the debug log. The release profile is
+    // panic="abort", so a panic anywhere (notably the shell relay's PTY threads)
+    // takes the whole agent down with no unwinding and no trace otherwise; the
+    // hook writes one line through the sink first. It reads the sink at panic
+    // time, so it still logs to the file once agent-debug upgrades the sink
+    // below, and stays silent on a production build.
+    diag::install_panic_hook();
+
+    // Basic anti-debug/anti-tamper self-checks -- see antitamper.rs's own
+    // doc comment for exactly what's real here and what's scoped out.
+    // Deliberately non-load-bearing: log and
+    // continue, never refuse to start or change behavior on a finding.
+    for finding in antitamper::self_check() {
+        dlog!("laforge-agent: self-check: {finding}");
+    }
+
+    // Native OCI container supervisor mode: when LAFORGE_SUPERVISE is set, the
+    // agent is the container's entrypoint (the Incus builder sets it to the
+    // image's original command). It supervises that command and runs the normal
+    // gateway loop alongside, so a container checks in and runs steps/validators
+    // exactly like a host. On a host, LAFORGE_SUPERVISE is unset.
+    match std::env::var("LAFORGE_SUPERVISE").ok().filter(|s| !s.trim().is_empty()) {
+        Some(cmd) => run_container(cmd),
+        None => run_host(),
+    }
+}
+
+// run_host is the ordinary agent: an identity is required to do anything.
+// load_agent already logs the specific reason it couldn't connect (missing
+// identity vs. a bad TLS config -- distinct causes that must not be conflated),
+// so this just exits on failure.
+fn run_host() -> ! {
+    match load_agent() {
+        // A host has no supervised app, so no console log queue -- host log
+        // collection (journald/services) is a separate follow-up.
+        Some((identity, tls_config, host_only)) => agent_loop(&identity, &host_only, tls_config, None),
+        None => std::process::exit(1),
+    }
+}
+
+// run_container starts the gateway loop in the background (if the agent can
+// connect) and then supervises the image's real command. The command runs
+// regardless of the gateway -- the container's service must be up even if agent
+// management can't connect -- so a broken/absent identity never takes the
+// service down, it only means no check-in. load_agent logs why, if it can't.
+fn run_container(cmd: String) -> ! {
+    // Container log forwarding is NATIVE-FIRST: by default the platform ships
+    // the container's logs (a docker log driver, a Fargate logConfiguration,
+    // ...), so the agent just supervises and lets the app's stdout/stderr pass
+    // straight through -- it captures NOTHING and sends the gateway no log
+    // traffic. That keeps the gateway out of the data path even at thousands of
+    // containers.
+    //
+    // Only when the builder sets LAFORGE_LOG_FORWARD (the fallback builders that
+    // have no native driver -- Incus native-OCI, OpenStack Zun) does the agent
+    // capture the app's output and ship it to the gateway, which forwards it to
+    // the environment's container_logs sink.
+    let forward = std::env::var("LAFORGE_LOG_FORWARD").ok().filter(|s| !s.trim().is_empty()).is_some();
+    let logq = if forward { Some(Arc::new(applog::LogQueue::new(LOG_BUFFER_CAP))) } else { None };
+    if let Some((identity, tls_config, host_only)) = load_agent() {
+        let lq = logq.clone();
+        std::thread::spawn(move || agent_loop(&identity, &host_only, tls_config, lq));
+    }
+    supervise_app(cmd, logq)
+}
+
+// load_agent loads the embedded/dev identity and builds its TLS config, or None
+// -- logging the SPECIFIC reason (no identity, or a TLS-config failure), which
+// are different causes a caller must not conflate: a patched binary whose cert
+// fails to parse has an identity, it just can't build a client, and reporting
+// that as "no identity" would be wrong.
+fn load_agent() -> Option<(identity::Identity, Arc<ClientConfig>, String)> {
+    let identity = match identity::load() {
+        Some(id) => id,
+        None => {
+            dlog!("laforge-agent: no identity available (binary is unpatched and no LAFORGE_DEV_* env vars set)");
+            return None;
+        }
+    };
+    // A real build with agent-debug baked in upgrades the diagnostic sink from
+    // silent to a file beside the binary, now that we know the flag. Done here
+    // (before TLS setup) so even a TLS-config failure is captured in debug mode.
+    if identity.debug {
+        diag::init_file_next_to_binary();
+    }
+    let tls_config = match build_tls_config(&identity) {
+        Ok(cfg) => Arc::new(cfg),
+        Err(e) => {
+            dlog!("laforge-agent: building TLS config: {e}");
+            return None;
+        }
+    };
+    let host_only = identity.gateway_addr.split(':').next().unwrap_or(&identity.gateway_addr).to_string();
+    // Startup summary so every debug session opens with the context that matters
+    // for the common failures (which gateway we talk to, whether we're a
+    // container supervisor). No secrets -- the cert/key are never logged.
+    dlog!(
+        "laforge-agent: identity loaded; gateway={} supervise={}",
+        identity.gateway_addr,
+        std::env::var("LAFORGE_SUPERVISE").is_ok()
+    );
+    Some((identity, tls_config, host_only))
+}
+
+// truncate caps a string at `max` chars for the debug log, noting the full
+// length when it cuts. Char-boundary safe, so it never panics on multibyte input
+// (which, under panic="abort", would take the whole agent down).
+fn truncate(s: &str, max: usize) -> String {
+    let total = s.chars().count();
+    if total <= max {
+        return s.to_string();
+    }
+    let cut: String = s.chars().take(max).collect();
+    format!("{cut}… ({total} chars total)")
+}
+
+// agent_loop is the steady-state connection loop: connect to the gateway, run a
+// session, reconnect with a short delay. Never returns.
+fn agent_loop(identity: &identity::Identity, host_only: &str, tls_config: Arc<ClientConfig>, logq: Option<Arc<applog::LogQueue>>) -> ! {
+    // "Agents tolerate it being down. They retry with backoff and keep their
+    // current work." Exponential backoff between reconnects: start at BASE and
+    // double up to MAX, so a brief blip retries almost immediately but a long
+    // gateway outage doesn't hammer it every few seconds. A session that
+    // actually connected and ran for a while (>= RESET_AFTER) resets the
+    // backoff, so only genuinely-failing reconnects escalate -- a normal
+    // heartbeat session that ends is not a "failure" to back off from.
+    const BASE: Duration = Duration::from_secs(2);
+    const MAX: Duration = Duration::from_secs(60);
+    const RESET_AFTER: Duration = Duration::from_secs(10);
+    let mut backoff = BASE;
+    // One metrics collector for the agent's whole life (not per session): CPU and
+    // network are deltas since the last sample, so it must persist across
+    // reconnects to keep producing real averages. Both hosts and containers
+    // report metrics -- the collector is here, above the host/container split.
+    let mut metrics = metrics::Collector::new();
+    // Shell sessions this agent is already serving (or spawning), so a session
+    // id re-advertised on a later heartbeat before its attach completes is not
+    // started twice. Lives across reconnects; ids are unique per open.
+    let shell_handled: Arc<Mutex<HashSet<String>>> = Arc::new(Mutex::new(HashSet::new()));
+    // The running task and any finished-but-unacknowledged result, kept across
+    // reconnects -- see TaskState.
+    let mut tasks = TaskState::default();
+    loop {
+        let started = Instant::now();
+        match run_session(&identity.gateway_addr, host_only, tls_config.clone(), logq.as_ref(), &mut metrics, &shell_handled, &mut tasks) {
+            Ok(()) => {}
+            Err(e) => dlog!("laforge-agent: session ended: {e}"),
+        }
+        if started.elapsed() >= RESET_AFTER {
+            backoff = BASE; // it was really connected; next reconnect starts fast again
+        } else {
+            backoff = std::cmp::min(backoff * 2, MAX);
+        }
+        // Jitter (0-511ms, from chaff::perturb) is added on top so many hosts
+        // don't reconnect in lockstep -- and so the per-team chaff module (see
+        // chaff.rs/build.rs, item 4) keeps one genuine runtime use and can't be
+        // dead-code-eliminated, the same way every chaff_N function it calls
+        // needs a real caller to survive LTO.
+        let jitter = Duration::from_millis(chaff::perturb(obfuscate::runtime_seed()) & 0x1ff);
+        std::thread::sleep(backoff + jitter);
+    }
+}
+
+// supervise_app starts the image's original command (cmd, the captured OCI
+// entrypoint) as a child and waits on it, exiting the container with the app's
+// status when it exits. cmd is run through `sh -c` so a shell-quoted OCI
+// entrypoint works as-is; an image with no shell is a documented follow-up
+// (parse the argv instead). Incus provides the container's real PID 1 and reaps
+// orphans itself, so the agent only has to wait on its own child -- no libc/init
+// duties needed. Never returns.
+//
+// The child's stdout/stderr are piped so the agent can capture the app's console
+// for forwarding (logq). Each line is TEED: re-printed to the agent's own
+// stdout/stderr (which is the container console, so `docker logs`/`incus
+// console` still work live) AND pushed onto the bounded queue the gateway loop
+// ships. Capture is best-effort: a read error on a stream just ends that
+// stream's tee, never the app.
+fn supervise_app(cmd: String, logq: Option<Arc<applog::LogQueue>>) -> ! {
+    use std::process::Stdio;
+    let mut command = std::process::Command::new("sh");
+    command.arg("-c").arg(&cmd);
+    // Forward mode captures the app's output (piped) to ship to the gateway.
+    // Native mode inherits the container's stdio so the app writes straight to
+    // the container's own console, where the platform's log driver collects it
+    // -- the agent never touches the bytes.
+    if logq.is_some() {
+        command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    } else {
+        command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    }
+    let mut child = match command.spawn() {
+        Ok(c) => c,
+        Err(e) => {
+            dlog!("laforge-agent: supervisor: failed to start app command {cmd:?}: {e}");
+            std::process::exit(1);
+        }
+    };
+    if let Some(logq) = &logq {
+        if let Some(out) = child.stdout.take() {
+            let q = logq.clone();
+            std::thread::spawn(move || tee_stream(out, "stdout", q));
+        }
+        if let Some(err) = child.stderr.take() {
+            let q = logq.clone();
+            std::thread::spawn(move || tee_stream(err, "stderr", q));
+        }
+    }
+    let status = child.wait().unwrap_or_else(|e| {
+        dlog!("laforge-agent: supervisor: waiting on app: {e}");
+        std::process::exit(1);
+    });
+    let code = status.code().unwrap_or(1);
+    dlog!("laforge-agent: supervised app exited (code {code}); stopping container");
+    std::process::exit(code);
+}
+
+// tee_stream reads one of the app's console streams line by line, echoes each
+// line to the agent's matching console stream (preserving the container's live
+// console), and pushes it onto the log queue for the gateway loop to ship.
+// Reads as UTF-8 lines; non-UTF-8 console output is a documented follow-up
+// (read raw bytes instead). Returns when the stream closes (app exit) or on a
+// read error.
+fn tee_stream<R: Read>(r: R, stream: &'static str, logq: Arc<applog::LogQueue>) {
+    let reader = BufReader::new(r);
+    for line in reader.lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => break,
+        };
+        // The app's own line is shipped to the gateway via the log queue (the
+        // only place it goes by default). It is NOT echoed to the agent's
+        // console -- that would be a local trace on the box; it only appears in
+        // the debug log when agent-debug is on.
+        dlog!("[{stream}] {line}");
+        logq.push(stream, line);
+    }
+}
+
+fn build_tls_config(identity: &identity::Identity) -> Result<ClientConfig, String> {
+    let mut roots = RootCertStore::empty();
+    for cert in rustls_pemfile::certs(&mut identity.ca_pem.as_slice()) {
+        let cert = cert.map_err(|e| format!("parsing CA cert: {e}"))?;
+        roots.add(cert).map_err(|e| format!("adding CA cert to root store: {e}"))?;
+    }
+
+    let certs: Vec<CertificateDer<'static>> = rustls_pemfile::certs(&mut identity.cert_pem.as_slice())
+        .collect::<Result<_, _>>()
+        .map_err(|e| format!("parsing client cert: {e}"))?;
+    let key: PrivateKeyDer<'static> = rustls_pemfile::private_key(&mut identity.key_pem.as_slice())
+        .map_err(|e| format!("parsing client key: {e}"))?
+        .ok_or_else(|| "no private key found in client key PEM".to_string())?;
+
+    ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_client_auth_cert(certs, key)
+        .map_err(|e| format!("building client config: {e}"))
+}
+
+// TaskState is the agent's task work that must OUTLIVE a session. A dropped TLS
+// connection used to restart run_session with nothing in flight while the old
+// worker thread kept running its script; the agent then asked for work, the
+// gateway re-leased the same (expired) step, and the script ran twice at once.
+// Keeping the in-flight receiver here means a reconnected session goes on
+// waiting for that worker -- heartbeating, but never asking for another task --
+// and reports its result when it lands. A result whose report was cut off by a
+// disconnect waits in `unreported` and is sent first on the next session.
+#[derive(Default)]
+struct TaskState {
+    inflight: Option<Inflight>,
+    unreported: Option<ReportStatusRequestPayload>,
+}
+
+// One task running on a worker thread: its id (named on every heartbeat so the
+// gateway keeps renewing its lease) and the channel its result arrives on.
+struct Inflight {
+    task_id: String,
+    rx: mpsc::Receiver<ReportStatusRequestPayload>,
+}
+
+// send_report ships the pending result and clears it once the gateway acks. If
+// the connection fails first, the result stays pending for the next session.
+fn send_report<S: Read + Write>(tls: &mut S, tasks: &mut TaskState) -> io::Result<()> {
+    let report = match tasks.unreported.as_ref() {
+        Some(r) => r,
+        None => return Ok(()),
+    };
+    let body = serde_json::to_vec(report)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding report-status: {e}")))?;
+    protocol::write_frame(tls, MessageType::ReportStatusRequest, &body)?;
+    let (mt, _body) = protocol::read_frame(tls)?;
+    expect(mt, MessageType::ReportStatusResponse)?;
+    tasks.unreported = None;
+    Ok(())
+}
+
+fn run_session(addr: &str, host_only: &str, tls_config: Arc<ClientConfig>, logq: Option<&Arc<applog::LogQueue>>, metrics: &mut metrics::Collector, shell_handled: &Arc<Mutex<HashSet<String>>>, tasks: &mut TaskState) -> io::Result<()> {
+    // Name the dial target: the "No such host is known" / connection-refused
+    // failures are far more actionable when the log says which address failed.
+    dlog!("laforge-agent: connecting to gateway {addr}");
+    let tcp = TcpStream::connect(addr)?;
+    tcp.set_nodelay(true).ok();
+
+    let server_name = ServerName::try_from(host_only.to_string())
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, format!("invalid server name {host_only:?}: {e}")))?;
+    // Keep a clone for spawning shell sessions, which each dial their own
+    // connection with the same client config -- ClientConnection::new consumes
+    // the Arc passed to it.
+    let shell_tls_config = tls_config.clone();
+    let conn = ClientConnection::new(tls_config, server_name).map_err(|e| io::Error::other(format!("starting TLS: {e}")))?;
+    let mut tls = StreamOwned::new(conn, tcp);
+
+    // tasks.inflight is the task executing on a worker thread, if any (possibly
+    // started in an earlier session). While it is Some, the loop keeps
+    // heartbeating (so shells still open and the agent stays healthy) but does
+    // NOT ask for another task -- one in flight at a time, preserving the
+    // gateway's ordered lease model.
+    if let Some(t) = tasks.inflight.as_ref() {
+        dlog!("laforge-agent: reconnected with task {} still running; waiting for its result", t.task_id);
+    }
+
+    loop {
+        // Sample basic host metrics and carry them on the heartbeat, along with
+        // the in-flight task's id (the gateway renews its lease). Best-effort:
+        // if serialization somehow fails, send an empty heartbeat rather than
+        // dropping the check-in.
+        let mut hb_req = metrics.sample();
+        hb_req.inflight_task_id = tasks.inflight.as_ref().map(|t| t.task_id.clone());
+        let hb_body = serde_json::to_vec(&hb_req).unwrap_or_default();
+        protocol::write_frame(&mut tls, MessageType::HeartbeatRequest, &hb_body)?;
+        let (mt, body) = protocol::read_frame(&mut tls)?;
+        expect(mt, MessageType::HeartbeatResponse)?;
+        let hb: HeartbeatResponsePayload = serde_json::from_slice(&body)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("decoding heartbeat response: {e}")))?;
+
+        // Open an interactive shell for any session a client is waiting on. Each
+        // runs on its own thread and its own mTLS connection. We reach this on
+        // every heartbeat -- INCLUDING while a task is running on the worker
+        // thread below -- so a shell can open even during a long or hung step.
+        if !hb.pending_sessions.is_empty() {
+            shell::maybe_spawn(&hb.pending_sessions, shell_handled, addr, host_only, &shell_tls_config);
+        }
+
+        // Ship any buffered console lines every iteration, task or not, so logs
+        // keep flowing at the poll cadence -- including while a task runs.
+        flush_logs(&mut tls, logq)?;
+
+        // A result the previous session finished but couldn't deliver goes
+        // first -- before any new task is asked for.
+        if tasks.unreported.is_some() {
+            send_report(&mut tls, tasks)?;
+            continue;
+        }
+
+        // If a task is running on the worker thread, WAIT for its result -- but
+        // bounded by one poll interval. recv_timeout wakes the instant the worker
+        // sends (so a trivial command reports in ~its real runtime, not a whole
+        // ~15-20s poll tick later), yet a genuinely long command still times out
+        // after one interval and loops back so we keep heartbeating at the poll
+        // cadence. This replaced a try_recv + full sleep(next_poll_ms), which made
+        // EVERY execute pay a dead ~15-20s before its (seconds-old) result was even
+        // noticed -- ~9-12 min of pure wait on a 40-execute host. Borrowing `rx`
+        // keeps `inflight` owned here; the arms clear it.
+        if let Some(t) = tasks.inflight.as_ref() {
+            match t.rx.recv_timeout(Duration::from_millis(hb.next_poll_ms)) {
+                Ok(report) => {
+                    tasks.inflight = None;
+                    dlog!("laforge-agent: task {} -> {}", report.task_id, report.status);
+                    // On a non-success, log the error so a failing step can be
+                    // debugged from the host's own log. Truncated, and the error
+                    // string only (not full stdout, which the server already stores
+                    // and which is likelier to carry sensitive command output).
+                    if report.status != "done" && !report.error.is_empty() {
+                        dlog!("laforge-agent: task {} error: {}", report.task_id, truncate(&report.error, 800));
+                    }
+                    // Held in TaskState until acked, so a disconnect mid-report
+                    // re-sends it on the next session instead of losing it.
+                    tasks.unreported = Some(report);
+                    send_report(&mut tls, tasks)?;
+                    // Known work may be queued -- poll again without waiting.
+                    continue;
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    // Task still running: recv_timeout already waited a full poll
+                    // interval, so loop straight back to heartbeat (no extra sleep)
+                    // and don't ask for another -- one in flight at a time.
+                    continue;
+                }
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    // The worker ended without sending a result (a panic in command
+                    // execution -- not expected). Drop it; the gateway's lease
+                    // expiry re-leases the task.
+                    tasks.inflight = None;
+                    dlog!("laforge-agent: task worker ended with no result; it will be re-leased on lease expiry");
+                    continue;
+                }
+            }
+        }
+
+        protocol::write_frame(&mut tls, MessageType::GetTaskRequest, &[])?;
+        let (mt, body) = protocol::read_frame(&mut tls)?;
+        expect(mt, MessageType::GetTaskResponse)?;
+        let gt: GetTaskResponsePayload = serde_json::from_slice(&body)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("decoding get-task response: {e}")))?;
+
+        if let Some(task) = gt.task {
+            // A reboot is special: the command tears down the very connection we
+            // would report its result on. Reporting AFTER running it races the
+            // reboot and loses -- the gateway never records the step done, the
+            // lease expires, the box boots, re-leases the SAME reboot task, and
+            // reboots again, forever (observed as a ~65s reboot loop). So ACK
+            // FIRST: report the step done and wait for the gateway's response
+            // BEFORE issuing the reboot. The gateway marks the task done the
+            // moment it receives the request (before it even sends the ack), so
+            // the completion is durable even if the ack is lost to the reboot.
+            // Then reboot, then STOP leasing -- the next step must wait until the
+            // agent reconnects on the fresh boot, not run in the shutdown window.
+            if task.command == "reboot" {
+                dlog!("laforge-agent: reboot task {} -- acking done before rebooting", task.id);
+                let report = ReportStatusRequestPayload {
+                    task_id: task.id.clone(),
+                    status: "done".to_string(),
+                    output: "reboot initiated by agent".to_string(),
+                    error: String::new(),
+                    validator_results: Vec::new(),
+                };
+                let body = serde_json::to_vec(&report)
+                    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding reboot report: {e}")))?;
+                protocol::write_frame(&mut tls, MessageType::ReportStatusRequest, &body)?;
+                let (mt, _body) = protocol::read_frame(&mut tls)?;
+                expect(mt, MessageType::ReportStatusResponse)?;
+                // Now actually reboot (forced + idempotent -- see commands::cmd_reboot).
+                let outcome = commands::run("reboot", &task.payload);
+                dlog!("laforge-agent: reboot command -> {} {}", outcome.status, outcome.error);
+                // Barrier: the box is going down. Do NOT loop back for more work;
+                // sleep well past the reboot so the next step runs only after a
+                // fresh boot. If the reboot somehow didn't take, fall through.
+                std::thread::sleep(Duration::from_secs(300));
+                continue;
+            }
+            // Run the task on a WORKER thread, not here, so a slow or hung
+            // command never stops this loop from heartbeating. The worker only
+            // touches the command and the result channel -- this loop stays the
+            // sole owner of the TLS connection.
+            dlog!("laforge-agent: running task {} ({})", task.id, task.command);
+            let task_id = task.id.clone();
+            let (tx, rx) = mpsc::channel();
+            std::thread::spawn(move || {
+                let outcome = if task.command == "validate" {
+                    validators::run(&task.payload)
+                } else {
+                    commands::run(&task.command, &task.payload)
+                };
+                let report = ReportStatusRequestPayload {
+                    task_id: task.id,
+                    status: outcome.status.to_string(),
+                    output: outcome.output,
+                    error: outcome.error,
+                    validator_results: outcome.validator_results,
+                };
+                // The receiver lives in TaskState across reconnects, so this
+                // only fails if the agent itself is going away.
+                let _ = tx.send(report);
+            });
+            tasks.inflight = Some(Inflight { task_id, rx });
+            // Come back next iteration to heartbeat and poll for the result.
+            continue;
+        }
+
+        std::thread::sleep(Duration::from_millis(hb.next_poll_ms));
+    }
+}
+
+// flush_logs drains buffered console lines and ships them as one LogBatch,
+// in-band on the same mTLS session (request/response, like every other verb).
+// A no-op when there is no queue (a host) or nothing buffered. The gateway acks
+// and the agent reads that ack to keep the stream framed; the records
+// themselves are fire-and-ack -- the agent does not resend on a non-ok.
+fn flush_logs<S: Read + Write>(tls: &mut S, logq: Option<&Arc<applog::LogQueue>>) -> io::Result<()> {
+    let q = match logq {
+        Some(q) => q,
+        None => return Ok(()),
+    };
+    let records = q.drain_batch(LOG_BATCH_MAX);
+    if records.is_empty() {
+        return Ok(());
+    }
+    let body = serde_json::to_vec(&LogBatchRequestPayload { records })
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("encoding log batch: {e}")))?;
+    protocol::write_frame(tls, MessageType::LogBatchRequest, &body)?;
+    let (mt, _body) = protocol::read_frame(tls)?;
+    expect(mt, MessageType::LogBatchResponse)?;
+    Ok(())
+}
+
+fn expect(got: MessageType, want: MessageType) -> io::Result<()> {
+    if got != want {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, format!("got message type {got:?}, want {want:?}")));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    // A fake gateway connection: reads come from a canned buffer, writes are
+    // captured. An empty read buffer behaves like a connection that dropped
+    // before the gateway answered.
+    struct FakeConn {
+        input: Cursor<Vec<u8>>,
+        output: Vec<u8>,
+    }
+
+    impl Read for FakeConn {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            self.input.read(buf)
+        }
+    }
+
+    impl Write for FakeConn {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.output.write(buf)
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    fn report() -> ReportStatusRequestPayload {
+        ReportStatusRequestPayload {
+            task_id: "t-1".to_string(),
+            status: "done".to_string(),
+            output: "ok".to_string(),
+            error: String::new(),
+            validator_results: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn report_cleared_once_acked() {
+        let mut ack = Vec::new();
+        protocol::write_frame(&mut ack, MessageType::ReportStatusResponse, br#"{"ok":true}"#).unwrap();
+        let mut conn = FakeConn { input: Cursor::new(ack), output: Vec::new() };
+        let mut tasks = TaskState { inflight: None, unreported: Some(report()) };
+        send_report(&mut conn, &mut tasks).unwrap();
+        assert!(tasks.unreported.is_none());
+        let (mt, body) = protocol::read_frame(&mut Cursor::new(conn.output)).unwrap();
+        assert_eq!(mt, MessageType::ReportStatusRequest);
+        assert!(String::from_utf8(body).unwrap().contains("\"task_id\":\"t-1\""));
+    }
+
+    #[test]
+    fn report_kept_when_connection_drops_before_ack() {
+        let mut conn = FakeConn { input: Cursor::new(Vec::new()), output: Vec::new() };
+        let mut tasks = TaskState { inflight: None, unreported: Some(report()) };
+        assert!(send_report(&mut conn, &mut tasks).is_err());
+        assert_eq!(tasks.unreported.as_ref().map(|r| r.task_id.as_str()), Some("t-1"));
+    }
+
+    #[test]
+    fn inflight_receiver_survives_a_dropped_session() {
+        // The worker's result arrives on a receiver owned by TaskState, not by
+        // the session -- so it is still there after the session that started it
+        // has returned.
+        let mut tasks = TaskState::default();
+        let (tx, rx) = mpsc::channel();
+        tasks.inflight = Some(Inflight { task_id: "t-2".to_string(), rx });
+        // (session ends here; tasks lives on in agent_loop)
+        tx.send(report()).unwrap();
+        let got = tasks.inflight.as_ref().unwrap().rx.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert_eq!(got.task_id, "t-1");
+    }
+
+    #[test]
+    fn heartbeat_names_inflight_task_and_boot_times() {
+        let mut m = metrics::Collector::new();
+        let mut hb = m.sample();
+        hb.inflight_task_id = Some("t-3".to_string());
+        let v: serde_json::Value = serde_json::from_slice(&serde_json::to_vec(&hb).unwrap()).unwrap();
+        assert_eq!(v["inflight_task_id"], "t-3");
+        assert!(v["agent_started_at"].as_i64().unwrap() > 1_600_000_000);
+        // boot_time is best-effort, but every CI/dev OS reports one.
+        assert!(v["boot_time"].as_i64().unwrap() <= v["agent_started_at"].as_i64().unwrap());
+        // No in-flight task: the field is omitted entirely.
+        let idle = serde_json::to_value(m.sample()).unwrap();
+        assert!(idle.get("inflight_task_id").is_none());
+    }
+}

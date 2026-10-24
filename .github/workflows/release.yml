@@ -1,0 +1,45 @@
+# Builds the volunteer release artifacts and attaches them to the GitHub
+# Release when a version tag is pushed. Run `make release` locally for the
+# same result.
+#
+#   git tag v3.0.0 && git push origin v3.0.0
+#
+# produces, on the v3.0.0 Release: the laforge CLI and laforge-lsp for
+# Linux/Windows/macOS, the .vsix, and SHA256SUMS.txt.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build release artifacts
+        run: make release VERSION=${{ github.ref_name }}
+
+      - name: Publish to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            gh release upload "${{ github.ref_name }}" dist/* --clobber
+          else
+            gh release create "${{ github.ref_name }}" dist/* \
+              --title "${{ github.ref_name }}" --generate-notes
+          fi

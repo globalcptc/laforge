@@ -1,0 +1,484 @@
+// laforge is the CLI foundation:
+// "laforge context, laforge render, and laforge check against a checkout,
+// since authors need them from the first content they write, and check is
+// the same code the server runs per commit."
+//
+// This is deliberately still small. The rest of the real CLI (build,
+// deploy, the GitHub-backed commands) comes with the services, which
+// don't exist yet -- these three commands work entirely
+// against a local checkout, no server involved, matching "in a second,
+// with no build and no infrastructure."
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/globalcptc/laforge/internal/hclconvert"
+	"github.com/globalcptc/laforge/internal/loader"
+	"github.com/globalcptc/laforge/internal/render"
+	"github.com/globalcptc/laforge/internal/updatecheck"
+)
+
+// version is the CLI's build version, stamped in at release time via
+// -ldflags "-X main.version=<tag>" (see the Makefile). "dev" for a plain
+// `go build`/`go install`.
+var version = "dev"
+
+func main() {
+	if len(os.Args) < 2 {
+		usage()
+		os.Exit(2)
+	}
+	warnIfOutdated()
+	var err error
+	switch os.Args[1] {
+	case "version", "-v", "--version":
+		fmt.Println("laforge", version)
+		return
+	case "context":
+		err = runContext(os.Args[2:])
+	case "render":
+		err = runRender(os.Args[2:])
+	case "check":
+		err = runCheck(os.Args[2:])
+	case "stats":
+		err = runStats(os.Args[2:])
+	case "networks":
+		err = runNetworks(os.Args[2:])
+	case "convert":
+		err = runConvert(os.Args[2:])
+	case "login":
+		err = runLogin(os.Args[2:])
+	case "repo":
+		err = runRepo(os.Args[2:])
+	case "build":
+		err = runBuild(os.Args[2:])
+	case "builders":
+		err = runBuilders(os.Args[2:])
+	case "images":
+		err = runImages(os.Args[2:])
+	case "registries":
+		err = runRegistries(os.Args[2:])
+	case "run":
+		err = runRun(os.Args[2:])
+	case "restart-steps":
+		err = runRestartSteps(os.Args[2:])
+	case "shell":
+		err = runShell(os.Args[2:])
+	case "schedule":
+		err = runSchedule(os.Args[2:])
+	case "cert-status":
+		err = runCertStatus(os.Args[2:])
+	case "access":
+		err = runAccess(os.Args[2:])
+	case "passwords":
+		err = runPasswords(os.Args[2:])
+	case "-h", "--help", "help":
+		usage()
+		return
+	default:
+		fmt.Fprintf(os.Stderr, "unknown command %q\n", os.Args[1])
+		usage()
+		os.Exit(2)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
+	}
+}
+
+// warnIfOutdated prints a one-line nudge to stderr when a newer LaForge
+// release exists on GitHub. Best-effort and throttled: the GitHub API is hit
+// at most once a day (cached under ~/.laforge), a dev build or
+// LAFORGE_NO_UPDATE_CHECK skips it entirely, and any error (offline,
+// rate-limited) is silently ignored -- it must never get in the way of the
+// command the person actually ran. stderr, never stdout, so machine-readable
+// output (e.g. `laforge access --json`) stays clean.
+func warnIfOutdated() {
+	if updatecheck.Disabled() || !updatecheck.IsRelease(version) {
+		return
+	}
+	cachePath := ""
+	if dir, err := laforgeDir(); err == nil {
+		cachePath = filepath.Join(dir, "update-check.json")
+	}
+	res, _ := updatecheck.CheckCached(context.Background(), version, cachePath, 24*time.Hour)
+	if msg := res.Message(); msg != "" {
+		fmt.Fprintln(os.Stderr, msg)
+	}
+}
+
+func usage() {
+	fmt.Fprintln(os.Stderr, `laforge -- CLI foundations
+
+  laforge context <environment> --host <as> --team <n> [--repo <path>]
+      Print the full template context for one host/container copy, as YAML.
+
+  laforge render <script-source-path> --host <as> --team <n> [--environment <name>] [--repo <path>]
+      Render one script's real source file against a resolved context and print it.
+      Generated passwords ({{ passphrase 3 }}, wordchain, randompassword) render
+      as stand-in values here -- a real build derives its own.
+
+  laforge check [--repo <path>]
+      Validate and render everything: every file against its schema, every
+      cross-file reference, and every script against every host in every
+      team. Exit code is non-zero if anything failed.
+
+  laforge stats [--environment <name>] [--repo <path>]
+      Profile what an environment deploys: hosts/containers counts, broken
+      down by os image, size and network, and how many are public -- per team
+      and in total. Defaults to every environment.
+
+  laforge networks [--environment <name>] [--repo <path>]
+      Print the networking layout as a tree: the environment cidr, each network
+      with its cidr, and under it every placed host/container with its last
+      octet and resolved address. Flags any network outside the environment
+      cidr. Defaults to every environment.
+
+  laforge convert <old-hcl-repo> <new-repo-out>
+      One-shot: convert an existing HCL content repository into the new
+      YAML format. Prints every judgment call and everything it could not
+      translate, then exits non-zero if anything needs manual review.
+
+Server-backed commands: talk to a running laforge-api (LAFORGE_API_URL, default
+http://localhost:8080).
+
+  laforge login
+      Sign in via GitHub device flow. Saves the token to ~/.laforge/token
+      for the commands below.
+
+  laforge repo add <owner>/<repo>
+  laforge repo list
+      Register a repository, or list registered ones.
+
+  laforge build configure <owner>/<repo> --branch <b> --env <path> --builder <name>
+  laforge build list <owner>/<repo>
+  laforge build status <configured-build-id>
+  laforge build follow <configured-build-id> <on|off>
+  laforge build lock <configured-build-id> <on|off>
+      Configure a build (branch + environment file + builder config),
+      inspect it, and toggle follow mode / the competition-started lock.
+  laforge build teardown <build-id> [--retry | --force]
+      Tear down a build's infrastructure. --retry resumes a teardown that
+      stopped on a permanent builder error (after fixing the builder);
+      --force marks a wedged teardown torn down with no hoster call (admin).
+
+  laforge builders
+      List every configured builder: name, kind, hoster URL, and image count.
+
+  laforge images <builder> [--available]
+      List the os -> image mappings a builder provides (the names content's
+      os: field must match) -- use it to diagnose a "builder has no image for
+      X" deploy block. With --available, instead list every image the builder's
+      hoster actually holds, discovered live: what you could map an os to.
+
+  laforge registries
+      List the stored private-registry credentials (host + username).
+
+  laforge run --build <id> [targets] [--dry-run] -- <command>
+      Run a command on the matched hosts now, through their agents. Targets:
+      --team <n>, --id <object-id> (repeatable), --tag <k[=v]> (repeatable),
+      --kind host|container, --search <text>, --network <name>. The default
+      command is 'execute' (the shell command after --); other kinds take
+      --command <kind> --payload '<json>'. --dry-run shows the matched hosts.
+      Needs manage access on the repo.
+
+  laforge restart-steps --build <id> --from <step> [targets] [--dry-run] [--force] [--no-dependents] [--yes]
+      Run a host's build again from an authored step (its index, or its label
+      as the steps panel shows it), on the box it already has -- every step from
+      there on runs again in full. Targets as for run, but they must all be the
+      same host definition; the dry run lists every team's copy of it. Hosts
+      failed for depending on it resume unless --no-dependents. Asks before
+      acting unless --yes. Needs manage access on the repo.
+
+  laforge shell --build <id> (--id <object-id> | --team <n> --host <as>)
+      Open a fully interactive root/admin shell on one host or container through
+      its agent -- encrypted end to end, a real PTY (vim, colors, Ctrl-C,
+      resize). Resolve the target with --id, or with --team plus the host's "as"
+      name. Needs manage access on the repo; only one or two run at once.
+
+  laforge schedule --build <id> --when "<phrase>" [targets] -- <command>
+      Schedule a command with a natural-language time ("every 30 minutes",
+      "45 minutes after competition start"). Same targets and command flags
+      as 'run'. Needs manage access on the repo.
+
+  laforge cert-status
+      Show the agent mTLS CA and gateway certificate expiry. Exits non-zero if
+      either is expired or within 3 months of expiring (handy for a monitor).
+
+  laforge access --build <id> [--csv | --json]
+      List the external endpoints a build exposes -- for each team/host, the
+      public address:port to connect to for its public: ports (e.g. RDP). With
+      --csv or --json, export the full connection detail (team, host, IP, port,
+      and the login username/password) for handing to teams.
+  laforge access --build <id> --scoring --season <s> --competition <c>
+                 [--team-offset <n>] [--exclude <host,...>] [--instructions-file <md>]
+      Export the scoring app's Team Connections import JSON (Admin -> Tools ->
+      Connections): per team, each public endpoint as ip:port with the host's
+      current admin login. --exclude leaves host names out of every team (e.g.
+      OutOfScope); --team-offset shifts team numbers. Same output as the
+      External Access page's Export for Scoring.
+
+  laforge passwords --build <id> [--team <n>] [--host <as>] [--csv | --json]
+      List every account LaForge set a password for on the build's hosts (the
+      admin account and every set_password / create_user, generated or
+      written), with whether its step has run on the box yet.
+
+  laforge version
+      Print the build version.
+
+Every command checks GitHub once a day for a newer release and prints a one-line
+nudge to stderr if this build is behind. Set LAFORGE_NO_UPDATE_CHECK=1 to turn
+it off (e.g. in CI or air-gapped runs).`)
+}
+
+func repoFlag(fs *flag.FlagSet) *string {
+	return fs.String("repo", ".", "path to a content repository checkout")
+}
+
+// splitArgs separates positional arguments from flags, because Go's
+// stdlib flag package stops parsing at the first non-flag token -- it
+// cannot handle the documented invocation form,
+// "laforge context lm-test --host web01 --team 3", where the positional
+// environment name comes *before* the flags. Every flag used by these
+// three commands takes a value (none are booleans), so each recognized
+// flag token consumes the next token as its value; everything else is
+// positional.
+func splitArgs(args []string, flagNames map[string]bool) (positionals, flagArgs []string) {
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		name := strings.TrimLeft(a, "-")
+		if eq := strings.IndexByte(name, '='); eq >= 0 {
+			name = name[:eq]
+		}
+		if strings.HasPrefix(a, "-") && flagNames[name] {
+			flagArgs = append(flagArgs, a)
+			if !strings.Contains(a, "=") && i+1 < len(args) {
+				i++
+				flagArgs = append(flagArgs, args[i])
+			}
+			continue
+		}
+		positionals = append(positionals, a)
+	}
+	return positionals, flagArgs
+}
+
+func runContext(args []string) error {
+	fs := flag.NewFlagSet("context", flag.ExitOnError)
+	repo := repoFlag(fs)
+	host := fs.String("host", "", "the `as` name of the host/container copy (required)")
+	team := fs.Int("team", 0, "team number, 1-indexed (required)")
+	positionals, flagArgs := splitArgs(args, map[string]bool{"repo": true, "host": true, "team": true})
+	fs.Parse(flagArgs)
+
+	if len(positionals) != 1 {
+		return fmt.Errorf("usage: laforge context <environment> --host <as> --team <n>")
+	}
+	if *host == "" || *team == 0 {
+		return fmt.Errorf("--host and --team are required")
+	}
+	envName := positionals[0]
+
+	c, err := loadOrExplain(*repo)
+	if err != nil {
+		return err
+	}
+	ctx, err := render.Resolve(c, envName, *host, *team)
+	if err != nil {
+		return err
+	}
+
+	out := render.NewContextView(ctx)
+	enc := yaml.NewEncoder(os.Stdout)
+	enc.SetIndent(2)
+	defer enc.Close()
+	return enc.Encode(out)
+}
+
+func runRender(args []string) error {
+	fs := flag.NewFlagSet("render", flag.ExitOnError)
+	repo := repoFlag(fs)
+	host := fs.String("host", "", "the `as` name of the host/container copy (required)")
+	team := fs.Int("team", 0, "team number, 1-indexed (required)")
+	envFlag := fs.String("environment", "", "environment name (required if the repo has more than one)")
+	positionals, flagArgs := splitArgs(args, map[string]bool{"repo": true, "host": true, "team": true, "environment": true})
+	fs.Parse(flagArgs)
+
+	if len(positionals) != 1 {
+		return fmt.Errorf("usage: laforge render <script-source-path> --host <as> --team <n>")
+	}
+	if *host == "" || *team == 0 {
+		return fmt.Errorf("--host and --team are required")
+	}
+	scriptPath := positionals[0]
+
+	c, err := loadOrExplain(*repo)
+	if err != nil {
+		return err
+	}
+	envName, err := resolveEnvironmentName(c, *envFlag)
+	if err != nil {
+		return err
+	}
+
+	script, err := findScriptByPathOrName(*repo, c, scriptPath)
+	if err != nil {
+		return err
+	}
+
+	ctx, err := render.Resolve(c, envName, *host, *team)
+	if err != nil {
+		return err
+	}
+	out, err := render.RenderScript(*repo, script, ctx, c)
+	if err != nil {
+		return err
+	}
+	fmt.Print(out)
+	return nil
+}
+
+// findScriptByPathOrName supports the exact form the documented
+// example uses ("laforge render scripts/create-linux-users.sh ...", a path
+// to the real source file), with a fallback to the script's logical name
+// (its `script:` header value) for convenience -- the example doesn't specify
+// which form the CLI should accept, so both are supported rather than
+// guessing wrong.
+func findScriptByPathOrName(repo string, c *loader.Content, arg string) (*loader.Script, error) {
+	for i := range c.Scripts {
+		s := &c.Scripts[i]
+		full := filepath.Join(filepath.Dir(s.SourceFile), s.Source)
+		if full == arg || filepath.Base(full) == arg {
+			return s, nil
+		}
+	}
+	for i := range c.Scripts {
+		if c.Scripts[i].Name == arg {
+			return &c.Scripts[i], nil
+		}
+	}
+	return nil, fmt.Errorf("no script matches %q (tried matching it as a source file path and as a script name)", arg)
+}
+
+func resolveEnvironmentName(c *loader.Content, flagVal string) (string, error) {
+	if flagVal != "" {
+		return flagVal, nil
+	}
+	if len(c.Environments) == 1 {
+		return c.Environments[0].Name, nil
+	}
+	var names []string
+	for _, e := range c.Environments {
+		names = append(names, e.Name)
+	}
+	sort.Strings(names)
+	return "", fmt.Errorf("this repository has %d environments (%v); pass --environment to pick one", len(c.Environments), names)
+}
+
+func runCheck(args []string) error {
+	fs := flag.NewFlagSet("check", flag.ExitOnError)
+	repo := repoFlag(fs)
+	fs.Parse(args)
+
+	c, err := loader.Load(*repo)
+	if err != nil {
+		return err
+	}
+	fmt.Println(c.Summary())
+	for _, e := range c.Errors {
+		if e.Line > 0 {
+			fmt.Printf("%s:%d: %s\n", e.File, e.Line, e.Message)
+		} else {
+			fmt.Printf("%s: %s\n", e.File, e.Message)
+		}
+	}
+	if len(c.Errors) > 0 {
+		return fmt.Errorf("%d schema/reference error(s), not rendering until these are fixed", len(c.Errors))
+	}
+
+	renderErrs := render.CheckAll(*repo, c)
+	for _, e := range renderErrs {
+		fmt.Println(e.String())
+	}
+	if len(renderErrs) > 0 {
+		return fmt.Errorf("%d render error(s)", len(renderErrs))
+	}
+	fmt.Println("check passed: every script rendered clean for every host in every team")
+	return nil
+}
+
+func runConvert(args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("usage: laforge convert <old-hcl-repo> <new-repo-out>")
+	}
+	src, dst := args[0], args[1]
+
+	result, err := hclconvert.Convert(src)
+	if err != nil {
+		return err
+	}
+	if err := hclconvert.Write(result, dst); err != nil {
+		return err
+	}
+
+	warn, info := 0, 0
+	for _, n := range result.Notes {
+		fmt.Printf("[%s] %s: %s\n", n.Severity, n.File, n.Message)
+		if n.Severity == "warn" {
+			warn++
+		} else {
+			info++
+		}
+	}
+	fmt.Printf("\nconverted: %d networks, %d hosts, %d scripts, %d environments, %d people sources\n",
+		len(result.Networks), len(result.Hosts), len(result.Scripts), len(result.Environments), len(result.People))
+	fmt.Printf("%d note(s): %d for review (warn), %d informational\n", len(result.Notes), warn, info)
+
+	if warn > 0 {
+		return fmt.Errorf("%d item(s) need manual review, see [warn] lines above", warn)
+	}
+	return nil
+}
+
+func loadOrExplain(repo string) (*loader.Content, error) {
+	c, err := loader.Load(repo)
+	if err != nil {
+		return nil, err
+	}
+	if len(c.Errors) > 0 {
+		// When nothing parsed as content and every error is just "this YAML has
+		// no LaForge type header", the directory isn't a content repo at all --
+		// say that once instead of listing every stray file (you ran it in the
+		// wrong place, or a non-content repo).
+		allNoTypeHeader := true
+		for _, e := range c.Errors {
+			if !strings.HasPrefix(e.Message, "no type header found") {
+				allNoTypeHeader = false
+				break
+			}
+		}
+		if isEmptyContent(c) && allNoTypeHeader {
+			return nil, fmt.Errorf("%s doesn't look like a LaForge content repository -- no environment/network/host/container/script documents found. Run this inside a content repo (or pass --repo), and add a %s for any non-content YAML it should skip", repo, loader.IgnoreFile)
+		}
+		for _, e := range c.Errors {
+			fmt.Fprintf(os.Stderr, "%s: %s\n", e.File, e.Message)
+		}
+		return nil, fmt.Errorf("%d schema/reference error(s) in %s -- run `laforge check` for details", len(c.Errors), repo)
+	}
+	return c, nil
+}
+
+func isEmptyContent(c *loader.Content) bool {
+	return len(c.Environments) == 0 && len(c.Networks) == 0 && len(c.Hosts) == 0 &&
+		len(c.Containers) == 0 && len(c.Scripts) == 0 && len(c.People) == 0
+}

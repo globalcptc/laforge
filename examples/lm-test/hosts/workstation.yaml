@@ -1,0 +1,11 @@
+# depends_on names an object (domain-controller) and a network (prod), per
+# the plan's own example -- both now resolve, see lm-test.yaml's comment.
+host:
+  name: workstation
+  os: windows-server-2022
+  size: medium
+  disk: 100
+  ports: { tcp: ["3389"] }
+  depends_on: [domain-controller, prod]
+  steps:
+    - script: join-domain

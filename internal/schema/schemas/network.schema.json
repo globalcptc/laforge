@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://laforge.dev/schema/network.json",
+  "$comment": "See host.schema.json's own $comment for why every field lives inside the `network:` object, name included. cidr is required only when there is no `extends`.",
+  "type": "object",
+  "required": ["network"],
+  "additionalProperties": false,
+  "properties": {
+    "network": {
+      "type": "object",
+      "description": "A network: one CIDR shared identically by every team -- never templated per team. Hosts and containers are attached to it from an environment's topology, not from here; a network file never mentions what's on it.",
+      "required": ["name"],
+      "if": { "not": { "required": ["extends"] } },
+      "then": { "required": ["cidr"] },
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique name for this network, referenced from an environment's topology and from other objects' `depends_on`."
+        },
+        "cidr": {
+          "type": "string",
+          "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+          "description": "The network's CIDR (e.g. \"10.0.1.0/24\"), identical for every team. Combined with each copy's `last_octet` to produce that copy's address."
+        },
+        "visible_from": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "The other networks (by name) allowed to reach this one, enforced as ACLs on the OVN routing host. Default-deny: with no `visible_from`, no other network can reach this one. E.g. a client network with `visible_from: [vdi]` is reachable from the VDI network and nothing else. Each entry must be a defined network.",
+          "example": "visible_from: [vdi]"
+        },
+        "vars": {
+          "$ref": "common.json#/$defs/varsMap",
+          "description": "Key/value data cascaded down to every host and container on this network.",
+          "example": "vars:\n  company: Allports\n  authoritative_dns_ip: 10.0.1.6"
+        },
+        "tags": {
+          "$ref": "common.json#/$defs/tagsMap",
+          "description": "Labels for searching, grouping, and ad-hoc targeting.",
+          "example": "tags:\n  scope: in"
+        },
+        "findings": {
+          "$ref": "common.json#/$defs/findingsList",
+          "description": "Findings that belong to this network specifically.",
+          "example": "findings:\n  - severity: 3\n    difficulty: 2\n    description: Flat network, no segmentation between servers"
+        },
+        "extends": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of another network this one extends. The base is deep-merged in: `cidr` the child sets wins, otherwise it's inherited; vars/tags merge key-by-key (child wins a clash); visible_from is the base's plus the child's (de-duplicated). `cidr` becomes optional here since it's inherited."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://laforge.dev/schema/container.json",
+  "$comment": "See host.schema.json's own $comment for why every field lives inside the `container:` object, name included. size and one of image/compose are required only when there is no `extends`.",
+  "type": "object",
+  "required": ["container"],
+  "additionalProperties": false,
+  "properties": {
+    "container": {
+      "type": "object",
+      "description": "A container: the same idea as a host, but deployed as a container instead of a VM. Every builder supports this -- natively where the hoster has a container primitive, by running the image on a small host otherwise -- and an author never chooses which. Lives in `hosts/` alongside hosts, sharing one name namespace with them.",
+      "required": ["name"],
+      "if": { "not": { "required": ["extends"] } },
+      "then": { "required": ["size"], "oneOf": [{ "required": ["image"] }, { "required": ["compose"] }] },
+      "allOf": [
+        { "$comment": "disk sizes the machine a compose project runs on; a single image has no disk to size.", "if": { "required": ["image"] }, "then": { "not": { "required": ["disk"] } } }
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique name for this container, referenced from an environment's topology and from other objects' `depends_on`. Not a hostname -- the environment's `as` field on each copy sets the actual hostname."
+        },
+        "image": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The OCI image ref to run, e.g. \"nginx:alpine\" or \"registry.internal/team/scoreboard:latest\". Pulled from Docker Hub, or from a configured private registry when the ref names one. Run as a container by whatever primitive the builder has (native OCI, or a nested runtime) -- you never pick the runtime.",
+          "example": "image: registry.internal/cptc/scoreboard:latest"
+        },
+        "compose": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Runs a Docker Compose project instead of a single image: the path to its compose file, relative to this file (like a script's `source:`). The compose file's whole directory is shipped and run with real `docker compose` on one machine with one address, reached through the ports the compose file publishes -- list the same ports in `ports:`. Images are pulled, never built: a service may keep `build:` for local use but must name an `image:`. Set either `image` or `compose`, not both; `env` and `command` belong in the compose file. Add the project's directory to `.laforgeignore` so its YAML isn't read as LaForge content.",
+          "example": "compose: flakyframes/compose.yaml"
+        },
+        "disk": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Root disk in GB for the machine a `compose` container runs on (default 40) -- room for its images and volumes. Not used with `image`.",
+          "example": "disk: 60"
+        },
+        "size": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Abstract size name (e.g. \"small\", \"medium\", \"large\"). Each builder config maps this to concrete CPU/memory for its hoster."
+        },
+        "env": {
+          "type": "object",
+          "description": "Environment variables passed to the container.",
+          "example": "env: { LOG_LEVEL: debug, PORT: \"8080\" }",
+          "additionalProperties": { "type": "string" }
+        },
+        "command": {
+          "type": "array",
+          "description": "Overrides the image's default command arguments.",
+          "example": "command: [\"--config\", \"/etc/app.toml\"]",
+          "items": { "type": "string" }
+        },
+        "ports": {
+          "$ref": "common.json#/$defs/portsBlock",
+          "description": "TCP/UDP ports this container listens on.",
+          "example": "ports: { tcp: [\"8080\"] }"
+        },
+        "public": {
+          "$ref": "common.json#/$defs/publicBlock",
+          "example": "public: { tcp: [\"3389\"] }"
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "Other hosts, containers, or networks that must be fully configured (finished building) before this container's own steps run. The container is still started ahead of time -- only its steps wait. Names the object, not one specific copy: every copy of that object within the same team is waited on. This container's own network is always waited on implicitly.",
+          "example": "depends_on: [database]",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "steps": {
+          "$ref": "common.json#/$defs/stepsList",
+          "description": "The ordered steps this container runs after it's provisioned. Each one is exactly one of the action kinds below, plus an optional `validate` block. They run INSIDE the container (its agent is the container's entrypoint on every builder), so they describe the application itself -- not the container runtime underneath it: a check like `process_running: nginx` or `port_listening: 80` is right, `process_running: dockerd` is not. For anything recurring or time-based, use `schedule:` instead -- steps run once, in order; they were never meant to hold recurring work.",
+          "example": "steps:\n  - script: base\n  - write_file: { path: /etc/motd, content: \"Property of Allports\" }\n  - service: { name: nginx, action: restart }"
+        },
+        "schedule": {
+          "$ref": "common.json#/$defs/scheduleList",
+          "description": "Recurring or anchor-relative triggers for this container, independent of `steps:`'s own order -- each entry fires on its own clock, per its `when:`.",
+          "example": "schedule:\n  - when: Every 30 minutes\n    script: reboot\n  - when: 30 minutes before access closes\n    run: systemctl restart nginx"
+        },
+        "vars": {
+          "$ref": "common.json#/$defs/varsMap",
+          "description": "Key/value data available to this container's own scripts, on top of whatever cascades down from its environment and network.",
+          "example": "vars:\n  company: Allports\n  authoritative_dns_ip: 10.0.1.6"
+        },
+        "tags": {
+          "$ref": "common.json#/$defs/tagsMap",
+          "description": "Labels for searching, grouping, and ad-hoc targeting.",
+          "example": "tags:\n  role: db\n  scope: in"
+        },
+        "findings": {
+          "$ref": "common.json#/$defs/findingsList",
+          "description": "Findings that belong to this container specifically.",
+          "example": "findings:\n  - severity: 4\n    difficulty: 2\n    description: SQL injection in the login form"
+        },
+        "people": {
+          "$ref": "common.json#/$defs/peopleList",
+          "description": "People (from a `people/*.csv`) this container concerns.",
+          "example": "people: [jdoe]"
+        },
+        "extends": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of another container this one extends. The base is deep-merged in: scalar fields (image/size) the child sets win, otherwise they're inherited; env/vars/tags merge key-by-key (child wins a clash); steps, people, command and ports are the base's followed by the child's. `image`/`size` become optional here since they're inherited."
+        }
+      }
+    }
+  }
+}

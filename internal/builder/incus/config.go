@@ -1,0 +1,181 @@
+package incus
+
+// Config is a builder config's Incus-specific half: "each builder config
+// maps abstract names to concrete images/sizes/container templates."
+// Never exposed to content authors, never taking vars -- server-side only,
+// same as every other builder config in the plan.
+type Config struct {
+	// Images maps a content Host's `os` or Container's `image` field to
+	// where Incus should actually pull it from. A missing entry is a
+	// validation failure before a build starts ("an environment using
+	// [an unlisted os] fails validation"), not a runtime surprise.
+	Images map[string]ImageRef
+	// Sizes maps a content `size` field to concrete resource limits.
+	Sizes map[string]SizeSpec
+	// NetworkType selects native host-routed bridges or legacy OVN networks.
+	// Empty preserves old configurations with an OVN uplink; without one it uses bridges.
+	NetworkType string
+	// OVNUplinkNetwork is only used with OVN networking.
+	OVNUplinkNetwork string
+	// StoragePool is the Incus storage pool a host's root disk device is
+	// created on -- defaults to "default" (this package's own single-node
+	// test daemon's real pool name, and Incus's own out-of-the-box
+	// default) when left unset, so every existing builder config and test
+	// keeps working unchanged. A real MicroCloud cluster's own storage
+	// pool is very often NOT named "default" -- found live against a real
+	// cluster: a
+	// MicroCeph-backed MicroCloud names its pool "remote" by convention,
+	// and deployInstance's root device previously hardcoded "default"
+	// unconditionally, failing every host with a real disk size against
+	// that cluster with "Failed loading storage pool: Storage pool not
+	// found." Per-cluster, like OVNUplinkNetwork above, not a constant.
+	StoragePool string
+	// ExternalAccessIP is the single external IP that content's `public:` ports
+	// are NAT'd in on -- shared across every team, since a MicroCloud/Incus
+	// cluster typically has one external address, with a distinct external port
+	// per (team, host, port). Empty means external access isn't configured for
+	// this builder, and ConfigureExternalAccess returns a clear error rather than
+	// silently exposing nothing. Per-cluster builder config, like OVNUplinkNetwork.
+	ExternalAccessIP string
+	// ExternalPortMin/Max bound the external ports allocated on ExternalAccessIP.
+	// Defaults apply when unset -- see externalPortRange.
+	ExternalPortMin int
+	ExternalPortMax int
+	// DockerBaseFingerprint is non-empty once this builder's docker base image
+	// has been built (the per-builder image-build job). Only a compose
+	// container uses it -- a single-image `container:` runs as a native OCI
+	// application container -- and it is booted by alias
+	// (builder.DockerBaseAlias), since each host in a pool builds its own copy;
+	// this field only records that the build has happened.
+	DockerBaseFingerprint string
+	// OCIRegistry is the OCI/Docker registry a container's image is pulled from,
+	// as an Incus image `server` with `protocol: oci`. Defaults to
+	// https://docker.io. A container's `image` is the alias within it
+	// (e.g. "nginx:alpine", "library/alpine:latest").
+	OCIRegistry string
+	// MaxConcurrentDeploys caps how many instance deploys (create/copy, config
+	// drive, first start) run on this Incus host at once; the rest queue and are
+	// admitted highest-priority first. 0 = unbounded. From builder_config
+	// incus_host_max_concurrency -- see admission.go.
+	MaxConcurrentDeploys int
+	// GatewayAddr is the host:port a deployed agent dials for heartbeats, tasks
+	// and the interactive shell relay -- the same value the runner bakes into
+	// every agent (GATEWAY_PUBLIC_ADDR). CloseAccess pins it as the ONLY
+	// external egress a closed team keeps: locking a closed instance's outbound
+	// to just the gateway preserves telemetry through the pre-competition window
+	// while denying a team any other outbound path (so a planted implant can't
+	// phone home). Resolved to an IP at close time and re-resolved each pass, so
+	// a gateway DNS change is picked up. Empty means close can't pin it and
+	// errors rather than silently cutting telemetry or leaving a team open.
+	GatewayAddr string
+}
+
+// ociRegistryOrDefault is deployOCIContainer's resolution of Config.OCIRegistry
+// -- Docker Hub when unset, so an existing config keeps working.
+func (c Config) ociRegistryOrDefault() string {
+	if c.OCIRegistry != "" {
+		return c.OCIRegistry
+	}
+	return "https://docker.io"
+}
+
+// storagePoolOrDefault is deployInstance's own resolution of
+// Config.StoragePool -- see that field's own doc comment for why "default"
+// is the fallback, not an empty string (an empty pool name would fail
+// instance creation outright, and every builder config written before
+// this field existed implicitly meant "default").
+func (c Config) storagePoolOrDefault() string {
+	if c.StoragePool != "" {
+		return c.StoragePool
+	}
+	return "default"
+}
+
+// HostConfig is one pool member's full connection info -- everything
+// NewClient needs, plus the same per-cluster Config fields a single-host
+// builder_config already carries (OVNUplinkNetwork, StoragePool,
+// OperationTimeoutSeconds), since two genuinely independent hosts can
+// each need their own of these just as easily as their own credentials.
+// This is internal/builder/incuspool's own wire format for a
+// builder_config row's incus_hosts JSONB array (migration 00014) -- one
+// element per independent, non-clustered Incus host in the pool, as
+// opposed to kind="microcloud"'s single set of incus_* columns for one
+// real (clustered) endpoint.
+type HostConfig struct {
+	// CredentialID names a builder_credential row (migration 00016) made by
+	// enrolling with an Incus trust token -- when set, it supplies the
+	// connection and APIURL/ClientCertPath/ClientKeyPath/ServerCertPEM are
+	// left empty. Those older fields remain for hosts configured before
+	// enrollment existed.
+	CredentialID            string `json:"credential_id,omitempty"`
+	APIURL                  string `json:"api_url"`
+	ClientCertPath          string `json:"client_cert_path"`
+	ClientKeyPath           string `json:"client_key_path"`
+	ServerCertPEM           string `json:"server_cert_pem"`
+	NetworkType             string `json:"network_type,omitempty"`
+	OVNUplinkNetwork        string `json:"ovn_uplink_network,omitempty"`
+	StoragePool             string `json:"storage_pool"`
+	OperationTimeoutSeconds int    `json:"operation_timeout_seconds,omitempty"`
+}
+
+// ImageRef and SizeSpec carry JSON tags so a builder_config row's
+// incus_images/incus_sizes JSONB columns (internal/builderconfig.Resolve)
+// round-trip directly into Config.Images/Config.Sizes with no separate,
+// duplicate wire-format struct needed.
+type ImageRef struct {
+	// Fingerprint, when set, names one exact image already on the Incus
+	// host(s) -- the same image content has the same fingerprint on every
+	// host it was imported to, so a pool deploys the identical image
+	// everywhere, and an image with no alias is still usable. Alias/Server/
+	// Protocol are the fallback for configs that name an image by alias
+	// (optionally on a remote simplestreams server).
+	Fingerprint string `json:"fingerprint,omitempty"`
+	Alias       string `json:"alias"`    // e.g. "ubuntu/22.04", "windows-server-2022"
+	Server      string `json:"server"`   // e.g. "https://images.linuxcontainers.org"
+	Protocol    string `json:"protocol"` // "simplestreams"
+	// VM marks an abstract os name as needing a real virtual machine
+	// instance (kernel isolation from the host) rather than an LXC
+	// container -- required for Windows, since a Windows guest can't
+	// share a Linux host's kernel the way an LXC container does. Not
+	// everything on the VM path could be verified in this session's test
+	// environment (no /dev/kvm, no licensed Windows image available).
+	VM bool `json:"vm"`
+	// Source is what an instance is created from: "" (an image, above) or
+	// "snapshot" -- a copy of an existing instance's snapshot. Copying a
+	// stopped template's snapshot is a cheap clone on storage like Ceph, and
+	// far faster than unpacking an image. Instance/Snapshot name it;
+	// SourceProject is the project it lives in, when not the builder's own.
+	// VM must match the template's type.
+	Source        string `json:"source,omitempty"`
+	Instance      string `json:"instance,omitempty"`
+	Snapshot      string `json:"snapshot,omitempty"`
+	SourceProject string `json:"source_project,omitempty"`
+}
+
+// SourceSnapshot is the Source value for an ImageRef that copies a snapshot.
+const SourceSnapshot = "snapshot"
+
+// IsSnapshot reports whether instances are created by copying a snapshot.
+func (r ImageRef) IsSnapshot() bool { return r.Source == SourceSnapshot }
+
+type SizeSpec struct {
+	CPU    string `json:"cpu"`    // Incus limits.cpu, e.g. "2"
+	Memory string `json:"memory"` // Incus limits.memory, e.g. "4GiB"
+	// Type is the cloud instance type / flavor this size maps to on the
+	// non-Incus builders (an EC2 instance type like "t3.medium", an OpenStack
+	// flavor id/name). Ignored by the Incus builders, which use CPU/Memory.
+	// The image/size maps are shared columns across every builder kind, so
+	// this rides alongside CPU/Memory rather than in a separate column.
+	Type string `json:"type,omitempty"`
+}
+
+// NetworkMode resolves legacy configurations without silently migrating an existing deployment.
+func (c Config) NetworkMode() string {
+	if c.NetworkType != "" {
+		return c.NetworkType
+	}
+	if c.OVNUplinkNetwork != "" {
+		return "ovn"
+	}
+	return "bridge"
+}

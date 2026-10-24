@@ -1,0 +1,404 @@
+import type { AwsConfig, Discovery, MicrocloudPublicAccess } from "../../api/types"
+import type {
+  BuilderConfig,
+  BuilderConfigRequest,
+  BuilderConnection,
+  ImageInfo,
+  IncusHostConfig,
+  IncusImageRef,
+  IncusSizeSpec,
+  NetworkInfo,
+  SnapshotInfo,
+} from '../../api/types'
+
+// The builder workflow's own state. A draft is built step by step and only
+// turned into a BuilderConfigRequest at the end -- nothing is saved until
+// the admin reviews it.
+
+export type Kind = 'microcloud' | 'incus' | 'fake' | 'aws' | 'openstack'
+
+// The cloud kinds reuse the shared image/size columns (os -> AMI/Glance id,
+// size -> instance type/flavor). AWS enrolls a credential and picks its region
+// in the wizard (multi-step, discovery-driven); OpenStack still reads both from
+// the runner's OS_* environment.
+export const isCloud = (k: Kind): boolean => k === 'aws' || k === 'openstack'
+
+export interface HostDraft {
+  key: string
+  credentialId?: string
+  connection?: BuilderConnection
+  // A host set up with cert files before token enrollment existed. Kept
+  // working as-is; the admin can switch it to a token at any time.
+  legacy?: IncusHostConfig
+  storagePool: string
+  uplink: string
+  networkType?: 'bridge' | 'ovn'
+  // MicroCloud only: the LXD project everything is created in; '' is `default`.
+  project?: string
+  timeoutSeconds: number
+}
+
+// One image this builder offers: the name content uses for it (a host's os
+// or a container's image) and the exact image on the hosts, by fingerprint.
+export interface ImageDraft {
+  name: string
+  fingerprint: string
+  alias: string
+  vm: boolean
+  // Set only for older configs that pull by alias from a remote server.
+  server: string
+  // A snapshot source instead of an image: instances are copies of
+  // instance/snapshot (in sourceProject when that's not the builder's own).
+  source?: 'snapshot'
+  instance?: string
+  snapshot?: string
+  sourceProject?: string
+}
+
+export const isSnapshotDraft = (i: ImageDraft): boolean => i.source === 'snapshot'
+export const snapshotKey = (instance: string, snapshot: string, project = ''): string => `${project}|${instance}/${snapshot}`
+
+export interface SizeDraft {
+  name: string
+  cpu: string
+  memory: string
+  // Cloud instance type / flavor (e.g. "t3.medium"); used only by the cloud
+  // kinds, where cpu/memory don't apply.
+  type?: string
+}
+
+export interface Draft {
+  oneTeamPerHost?: boolean
+  name: string
+  kind: Kind
+  hosts: HostDraft[]
+  images: ImageDraft[]
+  sizes: SizeDraft[]
+  // External access (Incus/MicroCloud): the single external IP content `public:`
+  // ports are NAT'd in on, and the external-port window allocated on it. Empty
+  // IP = external access off; 0 ports = builder defaults.
+  microcloudPublicAccess?: MicrocloudPublicAccess
+  // AWS only: account infrastructure, plus the id of the enrolled access-key
+  // credential (set by the Connect step; the secret itself never lives here).
+  awsConfig?: AwsConfig
+  awsCredentialId?: string
+  // AWS discovery for the current region (regions, instance types, AMIs),
+  // refetched as the region / AMI-search changes. Powers the wizard's pickers.
+  awsDiscovery?: Discovery
+  externalAccessIp: string
+  externalPortMin?: number
+  externalPortMax?: number
+  // User-chosen display color ("" = none, else a "#rrggbb" hex), shown as a pill
+  // wherever the builder name appears.
+  color?: string
+  // MicroCloud only: the LXD cluster group instances are created into; LXD
+  // schedules across its members. "default" is the whole cluster.
+  clusterGroup?: string
+  // Cap on how many of this builder's tasks deploy at once, below the global
+  // runner pool -- a knob to turn down a capacity-limited hoster. 0 = unlimited.
+  maxConcurrency?: number
+  // Incus pools: cap on concurrent instance deploys on EACH host, admitted
+  // critical-path (depends_on roots) first. 0 = unlimited.
+  incusHostMaxConcurrency?: number
+}
+
+let seq = 0
+export const newKey = () => `host-${++seq}`
+
+export const defaultTimeoutSeconds = (kind: Kind): number => kind === 'microcloud' ? 600 : 120
+
+export const emptyHost = (kind: Kind = 'incus'): HostDraft => ({ key: newKey(), storagePool: '', uplink: '', timeoutSeconds: defaultTimeoutSeconds(kind) })
+
+export const CPU_OPTIONS = ['1', '2', '4', '8', '16']
+export const MEMORY_OPTIONS = ['512MiB', '1GiB', '2GiB', '4GiB', '8GiB', '16GiB', '32GiB']
+export const TIMEOUT_OPTIONS = [60, 120, 300, 600, 1200]
+
+export const KIND_LABEL: Record<Kind, string> = {
+  microcloud: 'MicroCloud cluster',
+  incus: 'Incus hosts',
+  fake: 'Simulated',
+  aws: 'AWS (EC2)',
+  openstack: 'OpenStack',
+}
+
+// The standard sizes a new builder starts with.
+export const DEFAULT_SIZES: SizeDraft[] = [
+  { name: 'tiny', cpu: '1', memory: '1GiB' },
+  { name: 'small', cpu: '1', memory: '2GiB' },
+  { name: 'medium', cpu: '2', memory: '4GiB' },
+  { name: 'large', cpu: '4', memory: '8GiB' },
+  { name: 'x-large', cpu: '8', memory: '16GiB' },
+]
+
+export function defaultSize(name: string): { cpu: string; memory: string } {
+  return DEFAULT_SIZES.find((d) => d.name === name) ?? { cpu: '2', memory: '4GiB' }
+}
+
+export function imageLabel(img: ImageInfo): string {
+  const alias = img.aliases[0] ?? img.fingerprint.slice(0, 12)
+  const desc = [img.properties.os, img.properties.release].filter(Boolean).join(' ') || img.properties.description
+  return desc ? `${alias} — ${desc}` : alias
+}
+
+export function uplinkCandidates(networks: NetworkInfo[]): NetworkInfo[] {
+  return networks.filter((n) => n.managed && (n.type === 'physical' || n.type === 'bridge'))
+}
+
+// Sensible first choices once a server is connected: its "default" pool and
+// a network named UPLINK (the MicroCloud convention), else the only
+// physical network.
+export function placementDefaults(conn: BuilderConnection, kind: Kind = 'microcloud'): Pick<HostDraft, 'storagePool' | 'uplink' | 'networkType'> {
+  const pools = conn.discovery.storage_pools
+  const storagePool = pools.find((p) => p.name === 'default')?.name ?? pools[0]?.name ?? ''
+  const candidates = uplinkCandidates(conn.discovery.networks)
+  const physical = candidates.filter((n) => n.type === 'physical')
+  const uplink =
+    candidates.find((n) => n.name.toLowerCase() === 'uplink')?.name ??
+    (conn.discovery.network_names ?? []).find((n) => n.toLowerCase() === 'uplink') ??
+    (physical.length === 1 ? physical[0].name : '')
+  return { storagePool, uplink, networkType: kind === 'incus' ? (conn.discovery.native_bridge_supported === false ? 'ovn' : 'bridge') : undefined }
+}
+
+// Every image on every connected host, deduplicated, with which hosts have
+// it -- for a pool, an image missing from some hosts is worth a warning.
+export interface AvailableImage {
+  image: ImageInfo
+  alias: string
+  hostKeys: string[]
+}
+
+export function availableImages(hosts: HostDraft[]): AvailableImage[] {
+  const byFingerprint = new Map<string, AvailableImage>()
+  for (const h of hosts) {
+    for (const img of h.connection?.discovery.images ?? []) {
+      const existing = byFingerprint.get(img.fingerprint)
+      if (existing) existing.hostKeys.push(h.key)
+      else byFingerprint.set(img.fingerprint, { image: img, alias: img.aliases[0] ?? '', hostKeys: [h.key] })
+    }
+  }
+  return [...byFingerprint.values()].sort((a, b) => (a.alias || '~').localeCompare(b.alias || '~'))
+}
+
+// The name an image is offered under by default: its alias, else its OS
+// and release, else a short fingerprint.
+export function defaultImageName(img: ImageInfo): string {
+  if (img.aliases[0]) return img.aliases[0]
+  const slug = [img.properties.os, img.properties.release]
+    .filter(Boolean)
+    .join('-')
+    .toLowerCase()
+    .replace(/[^a-z0-9.-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug || img.fingerprint.slice(0, 12)
+}
+
+export function isHostConnected(h: HostDraft): boolean {
+  return !!h.connection || !!h.legacy
+}
+
+export function isHostPlaced(h: HostDraft): boolean {
+  return !!h.storagePool && (h.networkType === 'bridge'
+    ? h.connection?.discovery.native_bridge_supported !== false
+    : !!h.uplink)
+}
+
+export function imagesFromConfig(existing: Record<string, IncusImageRef>): ImageDraft[] {
+  return Object.entries(existing)
+    .map(([name, ref]): ImageDraft =>
+      ref.source === 'snapshot'
+        ? { name, fingerprint: '', alias: '', vm: ref.vm, server: '', source: 'snapshot', instance: ref.instance ?? '', snapshot: ref.snapshot ?? '', sourceProject: ref.source_project ?? '' }
+        : { name, fingerprint: ref.fingerprint ?? '', alias: ref.alias, vm: ref.vm, server: ref.server ?? '' },
+    )
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// Every template snapshot on every connected host, with which hosts have it --
+// like availableImages, a pool can only offer one every host has.
+export interface AvailableSnapshot {
+  snapshot: SnapshotInfo
+  hostKeys: string[]
+}
+
+export function availableSnapshots(hosts: HostDraft[]): AvailableSnapshot[] {
+  const byKey = new Map<string, AvailableSnapshot>()
+  for (const h of hosts) {
+    for (const s of h.connection?.discovery.snapshots ?? []) {
+      const key = snapshotKey(s.instance, s.snapshot)
+      const existing = byKey.get(key)
+      if (existing) existing.hostKeys.push(h.key)
+      else byKey.set(key, { snapshot: s, hostKeys: [h.key] })
+    }
+  }
+  return [...byKey.values()].sort((a, b) => `${a.snapshot.instance}/${a.snapshot.snapshot}`.localeCompare(`${b.snapshot.instance}/${b.snapshot.snapshot}`))
+}
+
+export function sizesFromConfig(existing: Record<string, IncusSizeSpec>): SizeDraft[] {
+  const rows = Object.entries(existing).map(([name, s]) => ({ name, cpu: s.cpu, memory: s.memory, type: s.type }))
+  return rows.length ? rows : DEFAULT_SIZES.map((d) => ({ ...d }))
+}
+
+export function draftFromConfig(bc: BuilderConfig): Draft {
+  const hosts: HostDraft[] = []
+  if (bc.kind === 'microcloud') {
+    const h: HostDraft = {
+      key: newKey(),
+      storagePool: bc.incus_storage_pool ?? '',
+      uplink: bc.incus_ovn_uplink_network ?? '',
+      project: bc.incus_project ?? '',
+      timeoutSeconds: (bc.incus_operation_timeout_seconds ?? 0) > 0 ? bc.incus_operation_timeout_seconds! : defaultTimeoutSeconds('microcloud'),
+    }
+    if (bc.incus_credential_id) h.credentialId = bc.incus_credential_id
+    else if (bc.incus_api_url)
+      h.legacy = {
+        api_url: bc.incus_api_url,
+        client_cert_path: bc.incus_client_cert_path ?? '',
+        client_key_path: bc.incus_client_key_path ?? '',
+        server_cert_pem: bc.incus_server_cert_pem ?? '',
+      }
+    hosts.push(h)
+  } else if (bc.kind === 'incus') {
+    for (const hc of bc.incus_hosts) {
+      hosts.push({
+        key: newKey(),
+        credentialId: hc.credential_id || undefined,
+        legacy: hc.credential_id ? undefined : hc,
+        storagePool: hc.storage_pool ?? '',
+        uplink: hc.ovn_uplink_network ?? '',
+        networkType: hc.network_type ?? (hc.ovn_uplink_network ? 'ovn' : 'bridge'),
+        timeoutSeconds: hc.operation_timeout_seconds ?? 120,
+      })
+    }
+  }
+  return {
+    name: bc.name,
+    oneTeamPerHost: bc.incus_one_team_per_host ?? false,
+    kind: bc.kind,
+    hosts,
+    images: [],
+    sizes: [],
+    microcloudPublicAccess: bc.microcloud_public_access ?? undefined,
+    awsConfig: bc.aws_config ?? undefined,
+    awsCredentialId: bc.aws_credential_id ?? undefined,
+    externalAccessIp: bc.external_access_ip ?? '',
+    externalPortMin: bc.external_port_min ?? undefined,
+    externalPortMax: bc.external_port_max ?? undefined,
+    color: bc.color ?? '',
+    clusterGroup: bc.microcloud_cluster_group ?? 'default',
+    maxConcurrency: bc.max_concurrency ?? 0,
+    incusHostMaxConcurrency: bc.incus_host_max_concurrency ?? 0,
+  }
+}
+
+// toRequest adds the display color (common to every kind) on top of the
+// kind-specific body built by requestBody. An empty color is sent as undefined;
+// the server treats a missing color as "none", which also clears a prior color.
+export function toRequest(d: Draft): BuilderConfigRequest {
+  return { ...requestBody(d), color: d.color || undefined }
+}
+
+function requestBody(d: Draft): BuilderConfigRequest {
+  if (d.kind === 'fake') return { kind: 'fake' }
+
+  if (isCloud(d.kind)) {
+    // Cloud kinds reuse the shared image/size columns: the image id (AMI /
+    // Glance id) rides in the ImageRef fingerprint, the instance type/flavor
+    // in the SizeSpec type. AWS adds its credential + region/account via
+    // aws_config/aws_credential_id below; OpenStack reads them from the runner env.
+    const images: Record<string, IncusImageRef> = {}
+    for (const img of d.images) if (img.name && img.fingerprint) images[img.name] = { fingerprint: img.fingerprint, alias: '', server: '', protocol: '', vm: false }
+    const sizes: Record<string, IncusSizeSpec> = {}
+    for (const s of d.sizes) if (s.name && s.type) sizes[s.name] = { cpu: '', memory: '', type: s.type }
+    const req: BuilderConfigRequest = { kind: d.kind, incus_images: images, incus_sizes: sizes }
+    if (d.kind === 'aws' && d.awsConfig) req.aws_config = cleanAwsConfig(d.awsConfig)
+    if (d.kind === 'aws' && d.awsCredentialId) req.aws_credential_id = d.awsCredentialId
+    return req
+  }
+
+  const incus_images: Record<string, IncusImageRef> = {}
+  for (const img of d.images) {
+    incus_images[img.name] = isSnapshotDraft(img)
+      ? {
+          alias: '',
+          vm: img.vm,
+          source: 'snapshot',
+          instance: img.instance,
+          snapshot: img.snapshot,
+          source_project: img.sourceProject || undefined,
+        }
+      : {
+          fingerprint: img.fingerprint || undefined,
+          alias: img.alias,
+          server: img.server,
+          protocol: img.server ? 'simplestreams' : '',
+          vm: img.vm,
+        }
+  }
+  const incus_sizes: Record<string, IncusSizeSpec> = {}
+  for (const s of d.sizes) incus_sizes[s.name] = { cpu: s.cpu, memory: s.memory }
+
+  // Builder-level external access -- shared across the whole builder, not per host.
+  const externalAccess = {
+    external_access_ip: d.externalAccessIp || undefined,
+    external_port_min: d.externalPortMin || undefined,
+    external_port_max: d.externalPortMax || undefined,
+  }
+
+  if (d.kind === 'microcloud') {
+    const h = d.hosts[0]
+    const placement = {
+      microcloud_public_access: d.microcloudPublicAccess ? { ...d.microcloudPublicAccess, dns: d.microcloudPublicAccess.dns?.map((v) => v.trim()).filter(Boolean) } : undefined,
+      microcloud_cluster_group: (d.clusterGroup ?? '').trim() || 'default',
+      incus_storage_pool: h.storagePool,
+      incus_ovn_uplink_network: h.uplink,
+      incus_project: h.project || undefined,
+      incus_operation_timeout_seconds: h.timeoutSeconds,
+      max_concurrency: d.maxConcurrency || undefined,
+    }
+    if (h.credentialId) return { kind: 'microcloud', incus_credential_id: h.credentialId, ...placement, ...externalAccess, incus_images, incus_sizes }
+    return {
+      kind: 'microcloud',
+      incus_api_url: h.legacy?.api_url,
+      incus_client_cert_path: h.legacy?.client_cert_path,
+      incus_client_key_path: h.legacy?.client_key_path,
+      incus_server_cert_pem: h.legacy?.server_cert_pem,
+      ...placement,
+      ...externalAccess,
+      incus_images,
+      incus_sizes,
+    }
+  }
+
+  const incus_hosts: IncusHostConfig[] = d.hosts.map((h) => {
+    const placement = { storage_pool: h.storagePool, network_type: h.networkType ?? 'bridge', ovn_uplink_network: (h.networkType ?? 'bridge') === 'bridge' ? undefined : h.uplink, operation_timeout_seconds: h.timeoutSeconds }
+    if (h.credentialId)
+      return { credential_id: h.credentialId, api_url: '', client_cert_path: '', client_key_path: '', server_cert_pem: '', ...placement }
+    return { ...(h.legacy as IncusHostConfig), ...placement }
+  })
+  return {
+    kind: 'incus',
+    incus_hosts,
+    incus_one_team_per_host: d.oneTeamPerHost ?? false,
+    incus_host_max_concurrency: d.incusHostMaxConcurrency || undefined,
+    ...externalAccess,
+    incus_images,
+    incus_sizes,
+  }
+}
+
+// cleanAwsConfig drops empty-string fields so they fall back to the runner's
+// AWS_* env vars rather than being stored as "".
+function cleanAwsConfig(c: AwsConfig): AwsConfig {
+  const out: AwsConfig = {}
+  if (c.region?.trim()) out.region = c.region.trim()
+  if (c.ecs_cluster?.trim()) out.ecs_cluster = c.ecs_cluster.trim()
+  if (c.execution_role_arn?.trim()) out.execution_role_arn = c.execution_role_arn.trim()
+  if (c.log_group?.trim()) out.log_group = c.log_group.trim()
+  if (c.agent_init_image?.trim()) out.agent_init_image = c.agent_init_image.trim()
+  if (c.key_name?.trim()) out.key_name = c.key_name.trim()
+  if (c.account?.trim()) out.account = c.account.trim()
+  return out
+}
+
+export function shortFingerprint(fp: string): string {
+  return (fp.match(/.{1,4}/g) ?? []).slice(0, 4).join(' ')
+}
