@@ -524,13 +524,16 @@ func scriptCompletion(content *loader.Content, script *loader.Script, text strin
 
 // templateFuncDocs documents the password generator template functions
 // (render/passwords.go) -- the one list completion and hover both read.
-var templateFuncDocs = []struct{ name, example, doc string }{
-	{"passphrase", "passphrase 3", "Generated password: capitalized 4-7 letter words and a 4-digit number, e.g. `Patch-Session-Query-4484`. Size is the word count (1-12)."},
-	{"wordchain", "wordchain 5", "Generated password: 3-5 letter words, each randomly capitalized, e.g. `fork-Brick-Spoon-Snail-test`. Size is the word count (1-12)."},
-	{"randompassword", "randompassword 16", "Generated password: random characters with at least one upper, lower, digit and symbol. Size is the length (8-128)."},
+var templateFuncDocs = []struct{ name, example, doc, stability string }{
+	{"passphrase", "passphrase 3", "Generated password: capitalized 4-7 letter words and a 4-digit number, e.g. `Patch-Session-Query-4484`. Size is the word count (1-12).", templateFuncStability},
+	{"wordchain", "wordchain 5", "Generated password: 3-5 letter words, each randomly capitalized, e.g. `fork-Brick-Spoon-Snail-test`. Size is the word count (1-12).", templateFuncStability},
+	{"randompassword", "randompassword 16", "Generated password: random characters with at least one upper, lower, digit and symbol. Size is the length (8-128).", templateFuncStability},
+	{"sshkey", `sshkey "team:pair-01"`, "Generated Ed25519 SSH key pair: `.private` (OpenSSH private key file), `.public` (`ssh-ed25519 AAAA...`, for authorized_keys or known_hosts) and `.fingerprint` (`SHA256:...`). Use it as `{{ $k := sshkey \"team:pair-01\" }}{{ $k.public }}`.", sshKeyStability},
 }
 
 const templateFuncStability = "Stable for the build: the same host, size and label always give the same value, and match `generate:` on set_password/create_user. An optional label (`passphrase 3 \"svc\"`) picks another value; prefix it `team:` to share across the team's hosts, `build:` across every team."
+
+const sshKeyStability = "Stable for the build: the same host and label always give the same key, and a host rebuilt within the build gets it back. With no label it's the host's own key; prefix a label `team:` to give every host in the team the same key (one holds the private key, another trusts the public half), `build:` to share it across every team."
 
 // generatorCompletionItems are the password generators as completion items.
 func generatorCompletionItems() []protocol.CompletionItem {
@@ -541,7 +544,7 @@ func generatorCompletionItems() []protocol.CompletionItem {
 			InsertText:    protocol.NewOptional(f.example),
 			Kind:          protocol.CompletionItemKindFunction,
 			Detail:        protocol.NewOptional(f.doc),
-			Documentation: &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: f.doc + "\n\n" + templateFuncStability},
+			Documentation: &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: f.doc + "\n\n" + f.stability},
 		})
 	}
 	return items

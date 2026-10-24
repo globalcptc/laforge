@@ -138,6 +138,8 @@ export interface DeployedObject {
   public_address: string
   id: string
   team_id: string
+  /** The human team number (1..N); sent by the flat host list (GET /builds/{id}/objects). */
+  team_number?: number
   kind: ObjectKind
   object_name: string
   as_name: string | null

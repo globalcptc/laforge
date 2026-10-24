@@ -2942,7 +2942,7 @@ func (q *Queries) MarkDeployedObjectDestroying(ctx context.Context, id pgtype.UU
 
 const markDeployedObjectRunning = `-- name: MarkDeployedObjectRunning :one
 UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, infra_fingerprint = $4, last_error = NULL, updated_at = now(),
-    deployed_at = now(), agent_checkin_overdue_at = NULL
+    deployed_at = now(), agent_checkin_overdue_at = NULL, power_state = ''
 WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 
@@ -2959,6 +2959,8 @@ type MarkDeployedObjectRunningParams struct {
 // finished/build_failed/invalid from the real agent_task/validator rows.
 // deployed_at restarts the never-checked-in watchdog's clock, and a redeploy
 // clears any earlier overdue flag.
+// power_state is cleared: what the last poll saw belongs to the instance this
+// one replaced; the next poll reports the new one.
 func (q *Queries) MarkDeployedObjectRunning(ctx context.Context, arg MarkDeployedObjectRunningParams) (DeployedObject, error) {
 	row := q.db.QueryRow(ctx, markDeployedObjectRunning,
 		arg.ID,
@@ -3089,7 +3091,7 @@ func (q *Queries) ReleaseTask(ctx context.Context, arg ReleaseTaskParams) (Task,
 
 const resetDeployedObjectForRedeploy = `-- name: ResetDeployedObjectForRedeploy :one
 UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', infra_fingerprint = '', last_error = NULL,
-    steps_materialized_at = NULL, steps_changed_at = NULL, steps_changed_fingerprint = '', updated_at = now()
+    steps_materialized_at = NULL, steps_changed_at = NULL, steps_changed_fingerprint = '', power_state = '', updated_at = now()
 WHERE id = $1 RETURNING id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at
 `
 

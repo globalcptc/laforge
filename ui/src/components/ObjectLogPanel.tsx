@@ -108,8 +108,12 @@ export function ObjectLogPanel({
             <Link
               to="/repos/$repoId/builds/$buildId/hosts/$objectId/terminal"
               params={{ repoId, buildId, objectId }}
+              // Its own browser tab, so several shells can sit side by side and
+              // the build page stays where it was.
+              target="_blank"
+              rel="noopener"
               className={buttonClass({ variant: 'secondary', size: 'sm' })}
-              title="Open an interactive root/admin shell on this host"
+              title="Open an interactive root/admin shell on this host in a new tab"
             >
               <Terminal size={14} /> Open Terminal
             </Link>

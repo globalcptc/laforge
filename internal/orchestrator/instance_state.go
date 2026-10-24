@@ -76,11 +76,12 @@ func PollInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.
 	if err != nil {
 		return err
 	}
+	snapshotAt := time.Now()
 	resources, err := bldr.Inspect(ctx)
 	if err != nil {
 		return fmt.Errorf("inspecting hoster: %w", err)
 	}
-	return applyInstanceStates(ctx, pool, buildID, inspectStateMap(resources))
+	return applyInstanceStates(ctx, pool, buildID, inspectStateMap(resources), snapshotAt)
 }
 
 // PollInstanceStatesForBuilds refreshes power states for many builds while doing
@@ -98,6 +99,7 @@ func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildI
 	type cached struct {
 		stateByRef map[string]string
 		ok         bool
+		snapshotAt time.Time
 	}
 	// Which builder each build is on, and one representative build per
 	// builder to resolve it through.
@@ -123,7 +125,9 @@ func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildI
 			ictx, cancel := context.WithTimeout(ctx, inspectTimeout)
 			defer cancel()
 			started := time.Now()
-			c := inspectBuilder(ictx, pool, id, name)
+			c := cached{snapshotAt: started}
+			r := inspectBuilder(ictx, pool, id, name)
+			c.stateByRef, c.ok = r.stateByRef, r.ok
 			if d := time.Since(started); d > 10*time.Second {
 				log.Printf("orchestrator: inspecting builder %q for power states took %s (ok=%v)", name, d.Round(time.Millisecond), c.ok)
 			}
@@ -138,7 +142,7 @@ func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildI
 		if !ok || !c.ok {
 			continue
 		}
-		if err := applyInstanceStates(ctx, pool, id, c.stateByRef); err != nil {
+		if err := applyInstanceStates(ctx, pool, id, c.stateByRef, c.snapshotAt); err != nil {
 			log.Printf("recording power states for build %s: %v", id.String(), err)
 		}
 	}
@@ -177,7 +181,13 @@ func inspectStateMap(resources []builder.Resource) map[string]string {
 // applyInstanceStates records each host/container's power state from a builder's
 // already-fetched resource map (ref -> state). An object whose ref the hoster no
 // longer lists is "missing".
-func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, stateByRef map[string]string) error {
+//
+// snapshotAt is when the hoster listing began. An object deployed after that
+// can't be in the listing -- on a busy cluster the listing takes up to a minute,
+// and hosts finish deploying meanwhile -- so its absence means nothing and its
+// state is left for the next pass. Judging it against the older listing marked
+// freshly deployed, running hosts "missing" until the poll came round again.
+func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, stateByRef map[string]string, snapshotAt time.Time) error {
 	q := db.New(pool)
 	objs, err := q.ListDeployedObjectsByBuild(ctx, buildID)
 	if err != nil {
@@ -194,6 +204,9 @@ func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype
 			continue // never got far enough at the hoster to have a ref
 		}
 		state, present := stateByRef[*o.ExternalRef]
+		if !present && o.DeployedAt.Valid && !o.DeployedAt.Time.Before(snapshotAt) {
+			continue // deployed after the listing began; checked next pass
+		}
 		switch {
 		case !present:
 			state = "missing" // the hoster no longer has it

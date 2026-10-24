@@ -62,6 +62,12 @@ This note covers the whole 3.0 line.
   and `randompassword`. Values are stable for the build (derived from a per-build secret),
   so a script can use `{{ passphrase 3 }}` to write out the password a step set; a `team:`
   or `build:` label shares one value across a team or every team.
+- **Generated SSH keys.** `{{ sshkey "team:label" }}` gives an Ed25519 key pair
+  (`.private`, `.public`, `.fingerprint`), stable for the build and scoped like generated
+  passwords. Two hosts rendering the same `team:` label get the same key, so one can hold
+  the private key while the other trusts it, or one can pin the other's host key, with no
+  handshake at deploy time; either host can be rebuilt on its own. See
+  [Generated SSH keys](../CONFIGURATION.md#generated-ssh-keys).
 - **Credentials are tracked per host.** Every password LaForge sets — the automatic admin
   step, `set_password`, `create_user` — is recorded per account and shown on the host's
   Info tab (with whether its step has run yet), listed by `laforge passwords`, and used

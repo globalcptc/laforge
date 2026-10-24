@@ -117,6 +117,8 @@ func funcMap(ctx *Context, content *loader.Content) template.FuncMap {
 	for name, fn := range generatorFuncs(ctx) {
 		fm[name] = fn
 	}
+	// sshkey (sshkey.go): a generated Ed25519 key pair, stable for the build.
+	fm["sshkey"] = sshkeyFunc(ctx)
 	return fm
 }
 
