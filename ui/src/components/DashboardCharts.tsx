@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { DashboardData, ResourceBucket } from '../api/types'
 import { useTimeFormat } from '../lib/time'
-import { StatusBadge, statusFillClass, statusLabel } from './StatusBadge'
+import { StatusBadge, statusFillClass, statusLabel, EFFECTIVE_HEALTH_STATES } from './StatusBadge'
 import { Card, CardHeader, cn } from '../ui'
 
 // The environment dashboard's real charts -- "Build → Overview: health
@@ -12,20 +12,25 @@ import { Card, CardHeader, cn } from '../ui'
 // specific shapes the plan names, not a general-purpose chart kit.
 
 // Colours and labels come from StatusBadge (statusFillClass/statusLabel), so
-// the bar and its legend always match the badges on the host rows.
-const STATUS_ORDER = [
+// the bar and its legend always match the badges on the host rows. The
+// effective agent/infra health states (EFFECTIVE_HEALTH_STATES) sit with the
+// other problem states, so the Overview bars fold in "up but agent/infra down"
+// exactly like the per-team bars on the Hosts page (effectiveStatusKey).
+const STATUS_ORDER: string[] = [
   'pending',
   'deploying',
   'running',
   'building',
+  'dependency_blocked',
   'finished',
   'deploy_failed',
   'build_failed',
   'invalid',
+  ...EFFECTIVE_HEALTH_STATES,
   'destroy_queued',
   'destroying',
   'destroyed',
-] as const
+]
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -39,26 +44,30 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 // "Provisioning progress: a stacked bar across the whole build: pending
 // -> running -> provisioned, with failed called out. Fills in live
 // during a deploy."
-export function ProvisioningProgress({ data }: { data: DashboardData }) {
-  const total = Object.values(data.provisioning_by_status).reduce((a, b) => a + b, 0)
+// counts is keyed by effective status (state folded with agent/infra health),
+// computed in BuildOverview from the build's objects exactly as the Hosts
+// page's team bars are -- so a host that is up but whose agent/infra is down
+// shows as a problem here too, not as provisioned.
+export function ProvisioningProgress({ counts }: { counts: Record<string, number> }) {
+  const total = Object.values(counts).reduce((a, b) => a + b, 0)
   if (total === 0) return null
   return (
     <ChartCard title="Provisioning Progress">
       <div className="flex h-4 overflow-hidden rounded-full bg-surface-sunken">
-        {STATUS_ORDER.filter((s) => data.provisioning_by_status[s] > 0).map((status) => (
+        {STATUS_ORDER.filter((s) => counts[s] > 0).map((status) => (
           <div
             key={status}
             className={statusFillClass(status)}
-            style={{ width: `${(data.provisioning_by_status[status] / total) * 100}%` }}
-            title={`${statusLabel(status)}: ${data.provisioning_by_status[status]}`}
+            style={{ width: `${(counts[status] / total) * 100}%` }}
+            title={`${statusLabel(status)}: ${counts[status]}`}
           />
         ))}
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-muted">
-        {STATUS_ORDER.filter((s) => data.provisioning_by_status[s] > 0).map((status) => (
+        {STATUS_ORDER.filter((s) => counts[s] > 0).map((status) => (
           <span key={status} className="flex items-center gap-1">
             <span className={cn('h-2 w-2 rounded-full', statusFillClass(status))} />
-            {statusLabel(status)} ({data.provisioning_by_status[status]})
+            {statusLabel(status)} ({counts[status]})
           </span>
         ))}
       </div>
@@ -73,17 +82,19 @@ export function ProvisioningProgress({ data }: { data: DashboardData }) {
 // StatusBadge), so a red Creation-Failed slice here is the exact red of the
 // badge you'll find when you drill in. Fed by the server-side per-team
 // `by_status` aggregate (dashboard.go), not re-derived in the browser.
-export function StateByTeam({ data }: { data: DashboardData }) {
-  // by_team can be absent on a freshly-planned build that has deployed
-  // nothing yet -- guard rather than crashing the whole Overview.
-  if (!data.by_team || data.by_team.length === 0) return null
+export function StateByTeam({ teams }: { teams: { team_number: number; by_status: Record<string, number> }[] }) {
+  // teams can be empty on a freshly-planned build that has deployed nothing
+  // yet -- guard rather than crashing the whole Overview. Counts are the
+  // effective-status fold (state + agent + infra) BuildOverview computes, the
+  // same worst-of the Hosts page's team bars use.
+  if (!teams || teams.length === 0) return null
   // Only the statuses that actually occur, in lifecycle order, so a clean
   // build doesn't show a row of empty failure swatches.
-  const present = STATUS_ORDER.filter((s) => data.by_team.some((t) => (t.by_status?.[s] ?? 0) > 0))
+  const present = STATUS_ORDER.filter((s) => teams.some((t) => (t.by_status?.[s] ?? 0) > 0))
   return (
     <ChartCard title="State by Team">
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-        {data.by_team.map((t) => {
+        {teams.map((t) => {
           const counts = t.by_status ?? {}
           const total = STATUS_ORDER.reduce((a, s) => a + (counts[s] ?? 0), 0)
           return (

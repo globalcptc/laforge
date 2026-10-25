@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
 import { useParams } from '@tanstack/react-router'
 import { AlertTriangle } from 'lucide-react'
 import { useBuild, useDashboard, useUpcomingChanges } from '../api/hooks'
+import { effectiveStatusKey } from '../components/StatusBadge'
 import {
   ProvisioningProgress,
   StateByTeam,
@@ -26,6 +28,31 @@ export function BuildOverview() {
   const { data: build } = useBuild(buildId)
   const { data: dash } = useDashboard(buildId)
   const { data: upcoming } = useUpcomingChanges(buildId)
+
+  // Per-team and build-wide status counts, folding each host/container's agent
+  // and infra health into its state (effectiveStatusKey) exactly as the Hosts
+  // page's team bars do -- so "up but agent/infra down" shows as a problem here,
+  // not as provisioned. Networks (no agent/power) are excluded, matching the
+  // Hosts bars' scope. Computed from the build's objects, not the server's
+  // lifecycle-only aggregate.
+  const byTeam = useMemo(
+    () =>
+      (build?.teams ?? []).map((t) => {
+        const by_status: Record<string, number> = {}
+        for (const o of t.objects ?? []) {
+          if (o.kind === 'network') continue
+          const k = effectiveStatusKey(o)
+          by_status[k] = (by_status[k] ?? 0) + 1
+        }
+        return { team_number: t.team_number, by_status }
+      }),
+    [build],
+  )
+  const provisioning = useMemo(() => {
+    const c: Record<string, number> = {}
+    for (const t of byTeam) for (const [k, n] of Object.entries(t.by_status)) c[k] = (c[k] ?? 0) + n
+    return c
+  }, [byTeam])
 
   if (!build || !dash)
     return (
@@ -76,11 +103,11 @@ export function BuildOverview() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ProvisioningProgress data={dash} />
+        <ProvisioningProgress counts={provisioning} />
         <AgentActivity data={dash} />
       </div>
       <FailuresByCause data={dash} />
-      <StateByTeam data={dash} />
+      <StateByTeam teams={byTeam} />
     </div>
   )
 }
