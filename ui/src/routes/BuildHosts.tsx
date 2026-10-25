@@ -2,7 +2,7 @@ import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useRef, useState } from 'react'
 import { Box, CalendarClock, Check, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCcw, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
-import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES } from '../components/StatusBadge'
+import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES, effectiveStatusKey, EFFECTIVE_HEALTH_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
 import { ObjectLogPanel } from '../components/ObjectLogPanel'
 import { RestartStepsDialog, canRestartSteps } from '../components/RestartStepsDialog'
@@ -40,7 +40,7 @@ function KindBadge({ kind }: { kind: string }) {
 // Canonical order for the team-row status bars -- the same lifecycle order
 // (and, via statusFillClass, the same colours) the Overview charts and host
 // badges use, with any unexpected status appended so nothing is dropped.
-const TEAM_BAR_ORDER: string[] = [...LIFECYCLE_STATES, 'destroyed', 'planned']
+const TEAM_BAR_ORDER: string[] = [...LIFECYCLE_STATES, ...EFFECTIVE_HEALTH_STATES, 'destroyed', 'planned']
 
 // TeamNetworkBars renders one compact stacked status bar PER NETWORK on a team
 // header row: each network's hosts/containers split by their standard status,
@@ -54,7 +54,10 @@ function TeamNetworkBars({ networks, className }: { networks: { name: string; ho
     <div className={cn('flex flex-nowrap items-center gap-3', className)}>
       {nets.map((net) => {
         const counts = new Map<string, number>()
-        for (const h of net.hosts) counts.set(h.status, (counts.get(h.status) ?? 0) + 1)
+        for (const h of net.hosts) {
+          const k = effectiveStatusKey(h)
+          counts.set(k, (counts.get(k) ?? 0) + 1)
+        }
         const ordered = [...TEAM_BAR_ORDER.filter((s) => counts.has(s)), ...[...counts.keys()].filter((s) => !TEAM_BAR_ORDER.includes(s))]
         const total = net.hosts.length
         const legend = ordered.map((s) => `${statusLabel(s)}: ${counts.get(s)}`).join(' · ')
@@ -350,7 +353,10 @@ export function BuildHosts() {
   const hostTagList = (h: DeployedObject) => Object.entries(memberByObjId.get(h.id)?.tags ?? {}).map(([k, v]) => `${k}=${v}`)
   // Distinct values present, for the Type/OS/State/Tag filter dropdowns.
   const osOptions = useMemo(() => [...new Set(hosts.map(hostOs).filter(Boolean))].sort(), [hosts, memberByObjId])
-  const stateOptions = useMemo(() => [...new Set(hosts.map((h) => h.status))].sort(), [hosts])
+  // The State filter folds in agent/infra health (same worst-of key the team
+  // bars use), so you can filter to e.g. "Agent Missing" or "Powered Off", not
+  // just the raw build state. Options are the effective keys that actually occur.
+  const stateOptions = useMemo(() => [...new Set(hosts.map((h) => effectiveStatusKey(h)))].sort(), [hosts])
   const tagOptions = useMemo(() => [...new Set(hosts.flatMap(hostTagList))].sort(), [hosts, memberByObjId])
 
   // Free-text search across everything shown (name, kind, network, state,
@@ -361,7 +367,7 @@ export function BuildHosts() {
     const q = filter.trim().toLowerCase()
     return hosts.filter((h) => {
       if (typeFilter.size && !typeFilter.has(h.kind)) return false
-      if (stateFilter.size && !stateFilter.has(h.status)) return false
+      if (stateFilter.size && !stateFilter.has(effectiveStatusKey(h))) return false
       if (osFilter.size && !osFilter.has(hostOs(h))) return false
       if (tagFilter.size && !hostTagList(h).some((t) => tagFilter.has(t))) return false
       if (!q) return true

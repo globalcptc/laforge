@@ -165,7 +165,138 @@ fn run_session_piped(session_id: &str, tls_out: TlsConn, tls_in: TlsConn) -> io:
     let reader: Box<dyn Read + Send> = Box::new(ChannelReader { rx, buf: Vec::new(), pos: 0 });
     let writer: Box<dyn Write + Send> = Box::new(stdin);
     let child: Arc<Mutex<dyn ShellChild>> = Arc::new(Mutex::new(child));
-    relay(session_id, tls_out, tls_in, reader, writer, None, child)
+    relay_cooked(session_id, tls_out, tls_in, reader, writer, child)
+}
+
+// relay_cooked is the pipe-fallback relay with a minimal terminal line
+// discipline, for a shell with no PTY (Windows without ConPTY). A raw pipe gives
+// the client no local echo, no backspace, and cmd reads lines terminated by
+// CRLF -- so the user sees nothing they type, backspace does nothing, and Enter
+// doesn't run the command. This shim restores the basics a PTY would give for
+// free: it echoes keystrokes back to the client, edits a line buffer on
+// backspace, and on Enter forwards the whole line to the shell with a trailing
+// CRLF. Shell output has lone LFs promoted to CRLF so it doesn't staircase.
+//
+// Echo and shell output both become ShellData frames, so the single OUT
+// connection is shared behind a mutex (write_frame is atomic under the lock).
+// Teardown mirrors relay().
+fn relay_cooked(
+    session_id: &str,
+    tls_out: TlsConn,
+    mut tls_in: TlsConn,
+    mut reader: Box<dyn Read + Send>,
+    mut writer: Box<dyn Write + Send>,
+    child: Arc<Mutex<dyn ShellChild>>,
+) -> io::Result<()> {
+    let out_sd = tls_out.sock.try_clone()?;
+    let in_sd = tls_in.sock.try_clone()?;
+    let out = Arc::new(Mutex::new(tls_out));
+    dlog!("laforge-agent: shell {session_id}: relaying (cooked, no PTY)");
+
+    // Shell output -> client, with lone LF -> CRLF so a pipe's output (and any
+    // tool that emits bare \n) lands at column 0 instead of staircasing.
+    let out_child = Arc::clone(&child);
+    let out_sid = session_id.to_string();
+    let out_for_shell = Arc::clone(&out);
+    let out_thread = std::thread::spawn(move || {
+        let mut buf = [0u8; PTY_READ_BUF];
+        let mut prev_cr = false;
+        let reason = loop {
+            match reader.read(&mut buf) {
+                Ok(0) => break "shell exited",
+                Ok(n) => {
+                    let mut norm = Vec::with_capacity(n + 8);
+                    for &b in &buf[..n] {
+                        if b == b'\n' && !prev_cr {
+                            norm.push(b'\r');
+                        }
+                        norm.push(b);
+                        prev_cr = b == b'\r';
+                    }
+                    let mut g = out_for_shell.lock().unwrap();
+                    if protocol::write_frame(&mut *g, MessageType::ShellData, &norm).is_err() {
+                        break "client disconnected";
+                    }
+                }
+                Err(_) => break "shell exited",
+            }
+        };
+        let body = serde_json::to_vec(&ShellClosePayload { reason: reason.to_string() }).unwrap_or_default();
+        {
+            let mut g = out_for_shell.lock().unwrap();
+            let _ = protocol::write_frame(&mut *g, MessageType::ShellClose, &body);
+        }
+        dlog!("laforge-agent: shell {out_sid}: output side ended ({reason})");
+        out_child.lock().unwrap().kill();
+        let _ = in_sd.shutdown(Shutdown::Both);
+    });
+
+    // Client input -> shell, cooked. echo() sends bytes straight back to the
+    // client as its local echo.
+    let echo = |bytes: &[u8]| {
+        let mut g = out.lock().unwrap();
+        let _ = protocol::write_frame(&mut *g, MessageType::ShellData, bytes);
+    };
+    let mut line: Vec<u8> = Vec::new();
+    let mut prev_cr = false;
+    let in_reason = loop {
+        match protocol::read_frame(&mut tls_in) {
+            Ok((MessageType::ShellData, payload)) => {
+                let mut closed = false;
+                for &b in &payload {
+                    match b {
+                        b'\r' | b'\n' => {
+                            // One Enter per CR or LF; swallow the LF of a CRLF pair.
+                            if b == b'\n' && prev_cr {
+                                prev_cr = false;
+                                continue;
+                            }
+                            prev_cr = b == b'\r';
+                            echo(b"\r\n");
+                            if writer.write_all(&line).is_err() || writer.write_all(b"\r\n").is_err() {
+                                closed = true;
+                                break;
+                            }
+                            writer.flush().ok();
+                            line.clear();
+                        }
+                        0x7f | 0x08 => {
+                            prev_cr = false;
+                            if !line.is_empty() {
+                                line.pop();
+                                echo(b"\x08 \x08"); // move back, erase, move back
+                            }
+                        }
+                        0x03 => {
+                            // Ctrl-C: no real signal over a pipe, but discard the
+                            // partial line and show it, like a terminal would.
+                            prev_cr = false;
+                            echo(b"^C\r\n");
+                            line.clear();
+                        }
+                        _ => {
+                            prev_cr = false;
+                            line.push(b);
+                            echo(&[b]);
+                        }
+                    }
+                }
+                if closed {
+                    break "shell closed";
+                }
+            }
+            Ok((MessageType::ShellResize, _)) => {} // no PTY to resize
+            Ok((MessageType::ShellClose, _)) => break "closed by client",
+            Ok(_) => {}
+            Err(_) => break "client disconnected",
+        }
+    };
+    dlog!("laforge-agent: shell {session_id}: input side ended ({in_reason})");
+    child.lock().unwrap().kill();
+    let _ = out_sd.shutdown(Shutdown::Both);
+    out_thread.join().ok();
+    child.lock().unwrap().wait();
+    Ok(())
 }
 
 // relay is the backend-independent pump: it bridges the two one-directional

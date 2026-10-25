@@ -397,6 +397,18 @@ type ReadinessChecker interface {
 	CheckReadiness(ctx context.Context, d Demand) (Readiness, error)
 }
 
+// BuildScoper is an optional interface a builder implements when its hoster is
+// shared across builds (e.g. an Incus/MicroCloud project that holds several
+// environments at once). The runner calls ScopeToBuild with the task's build id
+// before using the builder, so team-scoped operations (open/close access) act
+// only on THIS build's instances -- not on another environment's same-numbered
+// team that happens to share the project. Builders whose hoster is already
+// per-build (AWS VPC-per-team, the fake builder) don't implement it. The id is
+// the build's UUID string; "" clears the scope (team-only, legacy behaviour).
+type BuildScoper interface {
+	ScopeToBuild(buildID string)
+}
+
 // Builder is the contract. Every Deploy*/Destroy* call must be an
 // "ensure": safe to call more than once for the same ExternalName /
 // externalRef without creating a second resource or erroring on a

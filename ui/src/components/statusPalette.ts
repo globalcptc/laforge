@@ -12,6 +12,12 @@ export const STATUS_COLOR: Record<string, string> = {
   build_failed: '#d8622f',
   invalid: '#e0a021',
   dependency_blocked: '#e0a021',
+  // Composite effective states (an up host with unhealthy agent/infra), folded
+  // in by effectiveStatusKey so the board shows a problem, not green.
+  agent_missing: '#e04a49',
+  agent_late: '#e0a021',
+  powered_off: '#d8622f',
+  instance_gone: '#e04a49',
   destroy_queued: '#d98fd0',
   destroying: '#d4537e',
   destroy_failed: '#e04a49',
@@ -47,6 +53,10 @@ export const BOARD_STATUS_ORDER = [
   'running',
   'building',
   'dependency_blocked',
+  'agent_late',
+  'agent_missing',
+  'powered_off',
+  'instance_gone',
   'finished',
   'deploy_failed',
   'build_failed',

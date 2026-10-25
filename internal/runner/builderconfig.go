@@ -48,5 +48,17 @@ func (r *Runner) ResolveBuilderFromDB(ctx context.Context, task db.Task) (builde
 		}
 		return nil, fmt.Errorf("loading builder config %q: %w", cb.BuilderConfigName, err)
 	}
-	return builderconfig.Resolve(r.Pool, row)
+	b, err := builderconfig.Resolve(r.Pool, row)
+	if err != nil {
+		return nil, err
+	}
+	// Scope team operations (open/close access) to THIS build. An Incus/
+	// MicroCloud project is shared across environments, so without this a team's
+	// access op would also hit another environment's same-numbered team in the
+	// same project -- the duplicate-ACL failures that broke open/close. Builders
+	// whose hoster is already per-build don't implement BuildScoper.
+	if scoper, ok := b.(builder.BuildScoper); ok {
+		scoper.ScopeToBuild(task.BuildID.String())
+	}
+	return b, nil
 }

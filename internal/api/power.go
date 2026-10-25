@@ -66,11 +66,37 @@ func (s *Server) handlePowerAction(w http.ResponseWriter, r *http.Request) {
 	if req.Force {
 		kind = "force " + kind
 	}
-	s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
-		BuildID: build.ID, Kind: "power." + strings.ReplaceAll(kind, " ", "_"),
-		Message: powerMessage(kind, len(results), failed),
-		Payload: []byte("{}"),
-	})
+	eventKind := "power." + strings.ReplaceAll(kind, " ", "_")
+	// Attribute an event to each host the action hit, so it shows on that host's
+	// own Events timeline (ListEventsByDeployedObject) -- not just the build-wide
+	// Logs tab. A build-level CreateEvent carries no object and never reaches a
+	// host's panel, which is why a forced reboot was invisible there.
+	for _, res := range results {
+		objID, perr := parseUUID(res.ObjectID)
+		if perr != nil {
+			continue
+		}
+		msg := kind
+		payload := []byte("{}")
+		if res.Err != "" {
+			msg = kind + " — failed: " + res.Err
+			if p, merr := json.Marshal(map[string]any{"error": res.Err}); merr == nil {
+				payload = p
+			}
+		}
+		s.Queries.CreateObjectEvent(r.Context(), db.CreateObjectEventParams{
+			BuildID: build.ID, DeployedObjectID: objID, Kind: eventKind, Message: msg, Payload: payload,
+		})
+	}
+	// A rollup on the build log for a bulk action across several hosts; a
+	// single-host action is already covered by its own per-object event above.
+	if len(results) > 1 {
+		s.Queries.CreateEvent(r.Context(), db.CreateEventParams{
+			BuildID: build.ID, Kind: eventKind,
+			Message: powerMessage(kind, len(results), failed),
+			Payload: []byte("{}"),
+		})
+	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"results": results, "failed": failed})
 }

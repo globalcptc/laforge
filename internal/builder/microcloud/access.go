@@ -84,9 +84,15 @@ func (b *Builder) setAccess(ctx context.Context, team string, closed bool) error
 		gw = nil
 	}
 	nets := b.teamNetworks(ctx, instances)
+	// Dedup CIDRs: with two environments running at once, same-numbered teams
+	// share a per-team LXD project, so teamNetworks can gather two networks with
+	// the SAME CIDR. An ACL built from duplicate CIDRs has duplicate egress rules,
+	// which LXD rejects ("Duplicate of egress rule N") -- failing every open/close.
 	cidrs := make([]string, 0, len(nets))
+	seenCIDR := make(map[string]bool, len(nets))
 	for _, n := range nets {
-		if n.cidr != "" {
+		if n.cidr != "" && !seenCIDR[n.cidr] {
+			seenCIDR[n.cidr] = true
 			cidrs = append(cidrs, n.cidr)
 		}
 	}
@@ -128,7 +134,7 @@ func (b *Builder) applyNetworkEgress(ctx context.Context, netName string, gatewa
 		ingress = append(ingress, map[string]interface{}{"action": "allow", "state": "enabled", "source": c})
 		egress = append(egress, map[string]interface{}{"action": "allow", "state": "enabled", "destination": c})
 	}
-	if err := b.ensureACLObjectFull(ctx, name, "LaForge access lockdown for "+netName, ingress, egress); err != nil {
+	if err := b.ensureACLObjectFull(ctx, name, "LaForge access lockdown for "+netName, dedupRules(ingress), dedupRules(egress)); err != nil {
 		return err
 	}
 	if err := b.attachNetworkACL(ctx, netName, name); err != nil {
@@ -231,7 +237,30 @@ func publicEgressRules(gatewayAllows []map[string]interface{}, teamCIDRs []strin
 		st = "enabled"
 	}
 	rules = append(rules, map[string]interface{}{"action": "drop", "state": st, "destination": "0.0.0.0/0"})
-	return rules
+	return dedupRules(rules)
+}
+
+// dedupRules drops byte-identical ACL rules, preserving order. LXD rejects an
+// ACL whose rule list contains a duplicate ("Duplicate of egress rule N"), so
+// any path that could assemble the same rule twice (a gateway allow equal to a
+// CIDR allow, overlapping networks on a shared per-team project) would otherwise
+// fail the whole open/close. Keyed on the rule's canonical JSON.
+func dedupRules(rules []map[string]interface{}) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(rules))
+	seen := make(map[string]bool, len(rules))
+	for _, r := range rules {
+		key, err := json.Marshal(r)
+		if err != nil {
+			out = append(out, r) // unmarshalable: keep it rather than drop silently
+			continue
+		}
+		if seen[string(key)] {
+			continue
+		}
+		seen[string(key)] = true
+		out = append(out, r)
+	}
+	return out
 }
 
 // attachNetworkACL adds name to the network's security.acls (idempotent merge).
@@ -262,7 +291,13 @@ func (b *Builder) attachNetworkACL(ctx context.Context, netName, name string) er
 	return err
 }
 
-// teamInstances is every instance tagged with this team.
+// teamInstances is every instance tagged with this team AND, when a build scope
+// is set, belonging to that build. A MicroCloud project is shared across
+// environments, so filtering on team alone pulled in another environment's
+// same-numbered team -- their identical CIDRs then produced duplicate ACL rules
+// that LXD rejected, failing every open/close. Each instance's external-name
+// config key is deterministically "build-<buildID>-team-...", so the build
+// prefix scopes without a new config key or a redeploy of existing instances.
 func (b *Builder) teamInstances(ctx context.Context, team string) ([]mcInstance, error) {
 	all, err := b.ourInstances(ctx)
 	if err != nil {
@@ -270,11 +305,22 @@ func (b *Builder) teamInstances(ctx context.Context, team string) ([]mcInstance,
 	}
 	out := make([]mcInstance, 0, len(all))
 	for _, inst := range all {
-		if inst.Config[teamConfigKey] == team {
-			out = append(out, inst)
+		if inst.Config[teamConfigKey] != team {
+			continue
 		}
+		if !inBuildScope(inst.Config[externalNameKey], b.buildScope) {
+			continue
+		}
+		out = append(out, inst)
 	}
 	return out, nil
+}
+
+// inBuildScope reports whether an instance (by its deterministic external name,
+// "build-<buildID>-team-...") belongs to buildScope. An empty scope matches
+// everything (team-only, legacy/test behaviour).
+func inBuildScope(externalName, buildScope string) bool {
+	return buildScope == "" || strings.HasPrefix(externalName, "build-"+buildScope+"-")
 }
 
 // teamNetworks is the set of networks the given instances' eth0 NICs sit on,

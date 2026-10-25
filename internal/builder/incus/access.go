@@ -275,17 +275,30 @@ func (b *Builder) detachNetworkACL(ctx context.Context, netName, name string) er
 	return err
 }
 
-// teamInstances is every instance tagged with this team.
+// teamInstances is every instance tagged with this team AND, when a build scope
+// is set, belonging to that build. An Incus project is shared across
+// environments, so filtering on team alone pulled in another environment's
+// same-numbered team. Each instance's external-name config key is
+// deterministically "build-<buildID>-team-...", so the build prefix scopes
+// without a new config key or a redeploy of existing instances.
 func (b *Builder) teamInstances(ctx context.Context, team string) ([]incusInstance, error) {
 	all, err := b.ourInstances(ctx)
 	if err != nil {
 		return nil, err
 	}
+	prefix := ""
+	if b.buildScope != "" {
+		prefix = "build-" + b.buildScope + "-"
+	}
 	out := make([]incusInstance, 0, len(all))
 	for _, inst := range all {
-		if inst.Config[teamConfigKey] == team {
-			out = append(out, inst)
+		if inst.Config[teamConfigKey] != team {
+			continue
 		}
+		if prefix != "" && !strings.HasPrefix(inst.Config[externalNameKey], prefix) {
+			continue
+		}
+		out = append(out, inst)
 	}
 	return out, nil
 }
