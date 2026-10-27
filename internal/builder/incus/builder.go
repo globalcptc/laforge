@@ -765,7 +765,8 @@ func (b *Builder) PowerAction(ctx context.Context, team, externalRef, action str
 	if !force && incusAction != "start" {
 		// Give a graceful shutdown/reboot a real window to complete before
 		// Incus gives up; a hard action needs none.
-		body["timeout"] = 30
+		// Windows guests regularly need well over 30 seconds to shut down cleanly.
+		body["timeout"] = 120
 	}
 	_, err := b.Client.put(ctx, "/1.0/instances/"+externalRef+"/state", body)
 	if err != nil {

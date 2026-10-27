@@ -483,7 +483,12 @@ export interface PowerResult {
   error?: string
 }
 
+// A bulk power action is started in the background (POST /builds/{id}/power
+// answers at once): started is how many hosts it is acting on, failed how many
+// matched hosts were skipped because they aren't deployed (listed in results
+// with their error). Each host's outcome lands on its Events tab.
 export interface PowerActionResponse {
+  started: number
   results: PowerResult[]
   failed: number
 }

@@ -738,8 +738,10 @@ func (b *Builder) PowerAction(ctx context.Context, team, externalRef, action str
 	body := map[string]interface{}{"action": lxdAction, "force": force}
 	if !force && lxdAction != "start" {
 		// Give a graceful shutdown/reboot a real window to complete before
-		// Incus gives up; a hard action needs none.
-		body["timeout"] = 30
+		// Incus gives up; a hard action needs none. Windows guests on a busy
+		// cluster regularly need well over 30 seconds, and a stop that runs
+		// out of time is reported as failed while the guest is still running.
+		body["timeout"] = 120
 	}
 	_, err := b.Client.put(ctx, "/1.0/instances/"+externalRef+"/state", body)
 	if err != nil {
