@@ -306,6 +306,17 @@ const (
 	PowerStateOther   = "other" // exists but neither cleanly running nor stopped (frozen, error, starting...)
 )
 
+// InstanceStater is an optional builder ability: read ONE instance's power
+// state straight from the hoster. The power-state poll uses it to confirm an
+// instance its full listing left out before calling it missing -- a clustered
+// hoster's listing can come back without instances a busy member didn't answer
+// for in time, and one incomplete listing must not mark running hosts missing.
+// exists is false only when the hoster says the instance isn't there; any
+// other failure is an error, and the caller leaves the state as it was.
+type InstanceStater interface {
+	InstanceState(ctx context.Context, externalRef string) (state string, exists bool, err error)
+}
+
 // Metric is one self-describing stat a builder publishes about its own backend
 // (the hoster/stack, NOT the deployed guests). The UI renders generically from
 // these, so a builder can add a metric and have it appear with no UI change:

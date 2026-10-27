@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/url"
 	"strings"
 	"time"
 
@@ -860,6 +861,24 @@ func powerStateFromIncus(status string) string {
 type incusNetwork struct {
 	Name    string `json:"name"`
 	Managed bool   `json:"managed"`
+}
+
+// InstanceState reads one instance's power state directly (builder.InstanceStater),
+// for confirming an instance the full listing left out.
+func (b *Builder) InstanceState(ctx context.Context, externalRef string) (string, bool, error) {
+	raw, err := b.Client.get(ctx, "/1.0/instances/"+url.PathEscape(externalRef))
+	if err != nil {
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.NotFound() {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	var inst incusInstance
+	if err := json.Unmarshal(raw, &inst); err != nil {
+		return "", false, fmt.Errorf("decoding instance %s: %w", externalRef, err)
+	}
+	return powerStateFromIncus(inst.Status), true, nil
 }
 
 func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {

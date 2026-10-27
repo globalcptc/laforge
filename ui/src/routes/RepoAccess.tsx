@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from '@tanstack/react-router'
-import { RefreshCw, RotateCcw, Search, ShieldCheck } from 'lucide-react'
+import { Check, Minus, RefreshCw, RotateCcw, Search, ShieldCheck } from 'lucide-react'
 import { useDeleteRepositoryAccess, useMe, useRepoAccess, useSetRepositoryAccess } from '../api/hooks'
 import { ApiError } from '../api/client'
 import { EmptyState } from '../components/EmptyState'
@@ -17,13 +17,36 @@ const LEVEL_LABEL: Record<RepoLevel, string> = {
   admin: 'Admin',
 }
 
-const LEVEL_HINT: Record<RepoLevel, string> = {
-  none: 'no access to this repository',
-  read: 'see builds and logs',
-  build: 'create and deploy builds',
-  manage: 'teardown, access windows, ad-hoc tasks',
-  admin: 'everything, including this page',
-}
+// What each level allows, as the API enforces it (internal/api: the level each
+// handler's requireLevel asks for). min is the lowest level that can do it;
+// every level above it can too.
+const GUIDE_LEVELS: { level: RepoLevel; github: string }[] = [
+  { level: 'read', github: 'Read, Triage' },
+  { level: 'build', github: 'Write, Maintain' },
+  { level: 'manage', github: 'Set here only' },
+  { level: 'admin', github: 'Admin' },
+]
+
+const ACTIONS: { action: string; min: RepoLevel }[] = [
+  { action: 'See builds, hosts and logs', min: 'read' },
+  { action: 'See host passwords', min: 'read' },
+  { action: 'See external access endpoints', min: 'read' },
+  { action: 'Start a build', min: 'build' },
+  { action: 'Deploy a build', min: 'build' },
+  { action: 'Apply content changes', min: 'build' },
+  { action: 'Change configured build settings', min: 'build' },
+  { action: 'Rebuild a host', min: 'manage' },
+  { action: 'Restart a host’s steps', min: 'manage' },
+  { action: 'Power hosts on or off', min: 'manage' },
+  { action: 'Open a terminal', min: 'manage' },
+  { action: 'Run ad-hoc and scheduled tasks', min: 'manage' },
+  { action: 'Change team access windows', min: 'manage' },
+  { action: 'Check drift, purge artifacts', min: 'manage' },
+  { action: 'Destroy a build', min: 'manage' },
+  { action: 'Change access on this page', min: 'admin' },
+]
+
+const LEVEL_RANK: Record<RepoLevel, number> = { none: 0, read: 1, build: 2, manage: 3, admin: 4 }
 
 // One repository's access. GitHub decides who is listed (everyone with
 // access to the repository there) and where each person starts (their
@@ -120,13 +143,7 @@ export function RepoAccess() {
               </TableScroller>
             )}
 
-            <div className="text-xs text-fg-subtle">
-              GitHub roles start at: admin → Admin, write or maintain → Build, anything else → Read. Levels:{' '}
-              {LEVELS.filter((l) => l !== 'none')
-                .map((l) => `${LEVEL_LABEL[l]} — ${LEVEL_HINT[l]}`)
-                .join(' · ')}
-              .
-            </div>
+            <LevelGuide />
           </>
         )}
       </div>
@@ -203,5 +220,58 @@ function PersonRow({ repoId, person, isMe }: { repoId: string; person: RepoAcces
         )}
       </Td>
     </tr>
+  )
+}
+
+// LevelGuide is the levels as a grid: one row per action, one column per level,
+// a check where that level can do it. The first row names the GitHub role that
+// starts someone at each level.
+function LevelGuide() {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="text-sm font-semibold text-fg">What each level can do</h2>
+      <TableScroller contain={false}>
+        <Table>
+          <thead>
+            <tr>
+              <Th>Action</Th>
+              {GUIDE_LEVELS.map((g) => (
+                <Th key={g.level} className="w-28 text-center">
+                  {LEVEL_LABEL[g.level]}
+                </Th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {/* Where people start: the level each GitHub role gives them. */}
+            <tr className="bg-info-soft text-xs text-info">
+              <Td className="text-[11px] font-medium italic text-info">GitHub Default</Td>
+              {GUIDE_LEVELS.map((g) => (
+                <Td key={g.level} className="text-center text-xs text-info">
+                  {g.github}
+                </Td>
+              ))}
+            </tr>
+            {ACTIONS.map((a, i) => (
+              <tr key={a.action} className={i % 2 === 1 ? 'bg-surface-sunken' : undefined}>
+                <Td className="text-fg">{a.action}</Td>
+                {GUIDE_LEVELS.map((g) => (
+                  <Td key={g.level} className="text-center">
+                    {LEVEL_RANK[g.level] >= LEVEL_RANK[a.min] ? (
+                      <Check size={16} className="inline text-brand" aria-label="Yes" />
+                    ) : (
+                      <Minus size={14} className="inline text-fg-subtle" aria-label="No" />
+                    )}
+                  </Td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </TableScroller>
+      <p className="text-xs text-fg-muted">
+        No access can’t see the repository. Instance admins have Admin on every repository.
+      </p>
+    </section>
   )
 }

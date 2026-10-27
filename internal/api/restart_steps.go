@@ -147,7 +147,10 @@ func (s *Server) handleSetConfiguredBuildHoldOnStepChange(w http.ResponseWriter,
 		writeError(w, http.StatusNotFound, err)
 		return
 	}
-	if err := s.requirePush(r.Context(), r, repo.GithubOwner, repo.GithubRepo); err != nil {
+	// Configured build settings follow the repository's access levels
+	// (Build and up), like the builds they start -- not GitHub write access
+	// directly, so a level set on the Access page applies here too.
+	if _, err := s.requireLevel(r.Context(), r, repo, levelBuild); err != nil {
 		writeAuthError(w, err)
 		return
 	}
