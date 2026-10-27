@@ -43,6 +43,12 @@ export function AccessCountdown({
 
   const at = formatAt ?? ((d: Date) => d.toLocaleString())
   const override = overrideUntil ? new Date(overrideUntil) : null
+  // An open override whose end is still in the future is a live manual extension
+  // holding access open (possibly past the schedule). This must be honored even
+  // when every authored window edge is already in the past -- otherwise the
+  // extend vanished from the UI at the last window's close while the team was
+  // still open until the override end (the bug this fixes).
+  const activeExtend = overrideState === 'open' && override !== null && override > now
 
   // The soonest window boundary (open or close) strictly after now.
   const events: { time: Date; verb: 'opens' | 'closes' }[] = []
@@ -51,7 +57,19 @@ export function AccessCountdown({
     events.push({ time: new Date(w.close), verb: 'closes' })
   }
   const future = events.filter((e) => e.time > now).sort((a, b) => a.time.getTime() - b.time.getTime())
+
   if (future.length === 0) {
+    // No scheduled edges left. If a manual extension is still holding access
+    // open, show when it ends; otherwise there's genuinely nothing upcoming.
+    if (activeExtend) {
+      return (
+        <span className="flex items-center gap-1.5 text-xs text-fg-muted">
+          <Clock size={12} className="text-success" />
+          Access ends at {at(override!)} in {formatDuration(override!.getTime() - now.getTime())}
+          <span className="text-warning"> (extended)</span>
+        </span>
+      )
+    }
     return (
       <span className="flex items-center gap-1.5 text-xs text-fg-muted">
         <Clock size={12} />
@@ -63,8 +81,8 @@ export function AccessCountdown({
   let { time, verb } = future[0]
   // An open override that reaches past the next close extends it.
   let extended = false
-  if (verb === 'closes' && overrideState === 'open' && override && override > time) {
-    time = override
+  if (verb === 'closes' && activeExtend && override! > time) {
+    time = override!
     extended = true
   }
 

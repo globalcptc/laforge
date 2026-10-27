@@ -73,7 +73,17 @@ type Builder struct {
 	Config          Config
 	PublicAddresses PublicAddressAllocator
 	retryWait       func(context.Context, time.Duration) error
+	// buildScope, when set, limits team-scoped operations (OpenAccess/
+	// CloseAccess) to instances of one build -- a MicroCloud project is shared
+	// across environments, so team "5" of two environments otherwise collide.
+	// Set per task by the runner (see builder.BuildScoper); "" is team-only.
+	buildScope string
 }
+
+// ScopeToBuild implements builder.BuildScoper: limit team operations to one
+// build's instances. The runner sets this per task so a team's open/close
+// doesn't reach another environment's same-numbered team sharing the project.
+func (b *Builder) ScopeToBuild(buildID string) { b.buildScope = buildID }
 
 func New(client *Client, config Config) *Builder {
 	return &Builder{Client: client, Config: config}

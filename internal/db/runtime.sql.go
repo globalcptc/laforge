@@ -2093,8 +2093,12 @@ const listDeployedObjectsByBuild = `-- name: ListDeployedObjectsByBuild :many
 SELECT deployed_object.id, deployed_object.team_id, deployed_object.kind, deployed_object.object_name, deployed_object.as_name, deployed_object.network_name, deployed_object.fingerprint, deployed_object.status, deployed_object.external_ref, deployed_object.last_error, deployed_object.updated_at, deployed_object.power_state, deployed_object.power_state_checked_at, deployed_object.tags, deployed_object.steps_materialized_at, deployed_object.blocked_on, deployed_object.public_address, deployed_object.deployed_at, deployed_object.agent_platform, deployed_object.agent_checkin_overdue_at, deployed_object.infra_fingerprint, deployed_object.steps_changed_at, deployed_object.steps_changed_fingerprint, deployed_object.rebuild_requested_at FROM deployed_object
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1
+ORDER BY COALESCE(deployed_object.as_name, deployed_object.object_name)
 `
 
+// Ordered by name (as_name for host/container copies, object_name for networks
+// which have no as_name) so the build pages list hosts alphabetically; every
+// caller gets a stable, deterministic order.
 func (q *Queries) ListDeployedObjectsByBuild(ctx context.Context, buildID pgtype.UUID) ([]DeployedObject, error) {
 	rows, err := q.db.Query(ctx, listDeployedObjectsByBuild, buildID)
 	if err != nil {
@@ -2142,6 +2146,7 @@ func (q *Queries) ListDeployedObjectsByBuild(ctx context.Context, buildID pgtype
 
 const listDeployedObjectsByTeam = `-- name: ListDeployedObjectsByTeam :many
 SELECT id, team_id, kind, object_name, as_name, network_name, fingerprint, status, external_ref, last_error, updated_at, power_state, power_state_checked_at, tags, steps_materialized_at, blocked_on, public_address, deployed_at, agent_platform, agent_checkin_overdue_at, infra_fingerprint, steps_changed_at, steps_changed_fingerprint, rebuild_requested_at FROM deployed_object WHERE team_id = $1
+ORDER BY COALESCE(as_name, object_name)
 `
 
 func (q *Queries) ListDeployedObjectsByTeam(ctx context.Context, teamID pgtype.UUID) ([]DeployedObject, error) {

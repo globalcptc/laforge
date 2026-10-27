@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { X, Boxes, Network as NetworkIcon } from 'lucide-react'
 import { useBuild, useLiveEvents, useTopology } from '../api/hooks'
 import type { DeployedObject, ObjectKind } from '../api/types'
-import { statusIcon, statusLabel, statusAnimClass, blockedStatusKey } from './StatusBadge'
+import { statusIcon, statusLabel, statusAnimClass, effectiveStatusKey } from './StatusBadge'
 import { ObjectLogPanel } from './ObjectLogPanel'
 import { EmptyState } from './EmptyState'
 import { STATUS_COLOR, isGhostStatus as isGhost, BOARD_STATUS_ORDER as LEGEND_ORDER } from './statusPalette'
@@ -23,7 +23,7 @@ type Group = { net: string; cidr?: string; cols: Col[] }
 
 function bucketOf(key: string): 'done' | 'prog' | 'fail' | 'wait' | 'gone' {
   if (key === 'finished' || key === 'open' || key === 'deployed') return 'done'
-  if (['deploy_failed', 'build_failed', 'invalid', 'destroy_failed', 'failed'].includes(key)) return 'fail'
+  if (['deploy_failed', 'build_failed', 'invalid', 'destroy_failed', 'failed', 'agent_missing', 'agent_late', 'powered_off', 'instance_gone'].includes(key)) return 'fail'
   if (key === 'pending' || key === 'planned') return 'wait'
   if (['torn_down', 'destroyed', 'purged', 'discarded'].includes(key)) return 'gone'
   return 'prog'
@@ -100,7 +100,7 @@ export function EnvironmentBoard({ repoId, buildId, onClose }: { repoId: string;
 
   const counts = useMemo(() => {
     const c = { done: 0, prog: 0, fail: 0, wait: 0, gone: 0 }
-    for (const team of teams) for (const o of team.objects) c[bucketOf(blockedStatusKey(o.status, o.blocked_on))]++
+    for (const team of teams) for (const o of team.objects) c[bucketOf(effectiveStatusKey(o))]++
     return c
   }, [teams])
 
@@ -185,7 +185,7 @@ export function EnvironmentBoard({ repoId, buildId, onClose }: { repoId: string;
                       if (!obj) {
                         return <div key={`${team.id}-${g.net}-${c.name}`} className={cn('rounded-md border border-dashed border-[#241f33]', sep && 'ml-0.5')} />
                       }
-                      const key = blockedStatusKey(obj.status, obj.blocked_on)
+                      const key = effectiveStatusKey(obj)
                       const ghost = isGhost(key)
                       const Icon = statusIcon(key)
                       return (

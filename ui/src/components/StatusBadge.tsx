@@ -77,6 +77,13 @@ type Kind =
   | 'healthy'
   | 'late'
   | 'missing'
+  // Composite "effective" states (not stored): a host that is up by its build
+  // state but whose agent or infra is unhealthy. effectiveStatusKey folds these
+  // in so the matrix/team bars show a problem instead of a reassuring green.
+  | 'agent_late'
+  | 'agent_missing'
+  | 'powered_off'
+  | 'instance_gone'
   | 'fired'
   | 'canceled'
   // agent_task run states (the Schedule page's per-team task runs + run modal):
@@ -147,6 +154,11 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   healthy: { icon: CircleCheck, tone: 'success', label: 'Agent Healthy' },
   late: { icon: ClockAlert, anim: 'pulse', tone: 'warning', label: 'Agent Late' },
   missing: { icon: PlugZap, anim: 'pulse', tone: 'danger', label: 'Agent Missing' },
+  // Composite effective states: an up host whose agent or infra is unhealthy.
+  agent_late: { icon: ClockAlert, anim: 'pulse', tone: 'warning', label: 'Agent Late' },
+  agent_missing: { icon: PlugZap, anim: 'pulse', tone: 'danger', label: 'Agent Missing' },
+  powered_off: { icon: PowerOff, tone: 'orange', label: 'Powered Off' },
+  instance_gone: { icon: ServerOff, tone: 'danger', label: 'Instance Missing' },
   fired: { icon: CircleCheck, tone: 'success', label: 'Fired' },
   canceled: { icon: MinusCircle, tone: 'neutral', label: 'Canceled' },
   // agent_task run states. 'leased' is in flight (the agent has it and is
@@ -333,6 +345,39 @@ export function blockedStatusKey(status: string, blockedOn?: string[] | null): s
   return status === 'building' && !!blockedOn && blockedOn.length > 0 ? 'dependency_blocked' : status
 }
 
+// Lifecycle states where the instance is expected to be up at the hoster with a
+// live agent -- the only states where a missing/stopped instance or a dark agent
+// is a problem (a pending/deploying/destroying/torn-down object has no agent to
+// miss). Mirrors the backend's effective-health gate in dashboard.go.
+const UP_STATES = new Set(['running', 'building', 'finished'])
+
+// effectiveStatusKey folds an object's build state together with its infra
+// (power) and agent health into ONE status key, worst-of: a host that is
+// "finished" by its build but whose agent has gone missing or whose instance is
+// powered off reads as the problem, not as green. Lifecycle failures and
+// gone/terminal states dominate (nothing to fold); otherwise, once the instance
+// should be up, an absent/stopped instance beats a dark agent beats the base
+// state. Used by the Matrix, the team bars, and the hosts State filter so all
+// three agree.
+export function effectiveStatusKey(obj: {
+  status: string
+  blocked_on?: string[] | null
+  power_state?: string
+  agent?: { agent_status?: string }
+}): string {
+  const base = blockedStatusKey(obj.status, obj.blocked_on)
+  if (GONE_STATES.has(obj.status) || base === 'deploy_failed' || base === 'build_failed' || base === 'destroy_failed' || base === 'invalid') {
+    return base
+  }
+  if (UP_STATES.has(obj.status)) {
+    if (obj.power_state === 'missing') return 'instance_gone'
+    if (obj.power_state === 'stopped') return 'powered_off'
+    if (obj.agent?.agent_status === 'missing') return 'agent_missing'
+    if (obj.agent?.agent_status === 'late') return 'agent_late'
+  }
+  return base
+}
+
 // statusIcon / statusAnimClass expose the badge's own icon and animation for a
 // status, for surfaces that render a bare glyph instead of a full badge (the
 // environment board's tiles and legend). One source of truth -- the STYLES map.
@@ -361,6 +406,10 @@ export const LIFECYCLE_STATES = [
   'torn_down',
 ] as const
 export const AGENT_STATES = ['healthy', 'late', 'missing'] as const
+
+// The composite agent/infra problem states effectiveStatusKey can derive, in
+// severity order -- for the hosts State filter and the team-bar/legend ordering.
+export const EFFECTIVE_HEALTH_STATES = ['agent_late', 'agent_missing', 'powered_off', 'instance_gone'] as const
 
 // Lifecycle states where the instance no longer exists at the hoster, so its
 // infra/power state is meaningless -- a destroyed object has no VM to be
