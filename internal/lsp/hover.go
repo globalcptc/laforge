@@ -13,7 +13,7 @@ var fieldTokenRE = regexp.MustCompile(`^([A-Za-z_][A-Za-z0-9_]*):`)
 
 // templateFuncTokenRE finds a password generator call inside a `{{ }}` (in a
 // script or a templated YAML value) -- see templateFuncDocs.
-var templateFuncTokenRE = regexp.MustCompile(`\{\{[^}]*?\b(passphrase|wordchain|randompassword)\b`)
+var templateFuncTokenRE = regexp.MustCompile(`\{\{[^}]*?\b(passphrase|wordchain|randompassword|sshkey)\b`)
 
 // Hover is "What a var holds and which file it came from in the
 // environment/network/host cascade" for a script file's `vars.<key>` reference, or the
@@ -31,7 +31,7 @@ func Hover(w *Workspace, relPath, text string, pos protocol.Position) *protocol.
 	if name, ok := templateFuncAt(line, pos.Character); ok {
 		for _, f := range templateFuncDocs {
 			if f.name == name {
-				md := fmt.Sprintf("**%s** `{{ %s }}`\n\n%s\n\n%s", f.name, f.example, f.doc, templateFuncStability)
+				md := fmt.Sprintf("**%s** `{{ %s }}`\n\n%s\n\n%s", f.name, f.example, f.doc, f.stability)
 				return &protocol.Hover{Contents: &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: md}}
 			}
 		}

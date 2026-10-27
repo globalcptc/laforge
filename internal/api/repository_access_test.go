@@ -1,11 +1,13 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/ghclient"
 )
 
@@ -269,5 +271,48 @@ func TestInstanceAdminReachesRepoEndpointsWithoutGitHubAccess(t *testing.T) {
 	// ...and the configured-builds list, which already worked, still does.
 	if got := getStatus(t, admin, env.httpURL+"/repos/"+env.repo.ID.String()+"/configured-builds"); got != http.StatusOK {
 		t.Fatalf("instance admin GET configured-builds: status = %d, want 200", got)
+	}
+}
+
+// TestConfiguredBuildSettingsFollowAccessLevels: changing a configured build's
+// settings needs Build on the Access page, not write access on GitHub. A GitHub
+// writer lowered to Read is refused; a GitHub reader raised to Build is let in.
+func TestConfiguredBuildSettingsFollowAccessLevels(t *testing.T) {
+	env := setupAPITest(t)
+	env.server.AdminLogins = []string{"exchanged-cb-root"}
+	root := signedInClient(t, env, "cb-root")
+	env.gh.pushTokens["exchanged-cb-writer"] = true
+	writer := signedInClient(t, env, "cb-writer")
+	reader := signedInClient(t, env, "cb-reader")
+	cb, err := env.q.CreateConfiguredBuild(context.Background(), db.CreateConfiguredBuildParams{
+		RepositoryID: env.repo.ID, Branch: "main", EnvironmentPath: "environments/test.yaml", BuilderConfigName: "fake",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { env.q.DeleteConfiguredBuild(context.Background(), cb.ID) })
+	autoDeploy := func(client *http.Client) int {
+		t.Helper()
+		resp, err := client.Do(mustRequest(t, http.MethodPost, env.httpURL+"/configured-builds/"+cb.ID.String()+"/auto-deploy", `{"enabled":false}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+
+	if got := autoDeploy(writer); got != http.StatusOK {
+		t.Fatalf("GitHub writer (Build): status %d, want 200", got)
+	}
+	if got := autoDeploy(reader); got != http.StatusForbidden {
+		t.Fatalf("GitHub reader (Read): status %d, want 403", got)
+	}
+	grantLevel(t, env, root, "exchanged-cb-writer", "read")
+	if got := autoDeploy(writer); got != http.StatusForbidden {
+		t.Fatalf("GitHub writer lowered to Read: status %d, want 403", got)
+	}
+	grantLevel(t, env, root, "exchanged-cb-reader", "build")
+	if got := autoDeploy(reader); got != http.StatusOK {
+		t.Fatalf("GitHub reader raised to Build: status %d, want 200", got)
 	}
 }

@@ -909,6 +909,40 @@ is keyed by host, generator, size and label, so:
 `laforge check`, `laforge render` and the editor preview have no build, so they render
 stand-in values with the same shape.
 
+### Generated SSH keys
+
+`sshkey` generates an Ed25519 key pair the same way: stable for the build, scoped to the
+host unless the label starts `team:` or `build:`. Its result has three parts:
+
+| Field | What it is |
+| --- | --- |
+| `.private` | The private key as an OpenSSH key file (unencrypted, LF line endings) |
+| `.public` | The public key, `ssh-ed25519 AAAA…`, ready for `authorized_keys` or `known_hosts` |
+| `.fingerprint` | `SHA256:…`, as `ssh-keygen -l` prints it and PuTTY's `-hostkey` takes it |
+
+Because two hosts that render the same `team:` label get the same key, one host can hold
+a private key while another trusts its public half, **with no contact between them at
+deploy time**, and either can be rebuilt without the other noticing. Name the pair in the
+label; Go's built-in `printf` and `slice` can build it from the host's own name:
+
+```bash
+# On vdi-kali-NN: trust the paired Windows desktop's key, and present a fixed host key
+{{ $pair := sshkey (printf "team:vdi-pair-%s" (slice .host.hostname 9)) }}
+{{ $hostKey := sshkey (printf "team:vdi-kali-host-%s" (slice .host.hostname 9)) }}
+echo '{{ $pair.public }}' > /home/pentester/.ssh/authorized_keys.laforge
+```
+
+```powershell
+# On vdi-win-NN: the private half, and Kali's host key pinned in advance
+$key = @'
+{{ (sshkey (printf "team:vdi-pair-%s" (slice .host.hostname 8))).private }}'@
+$kaliHostKey = '{{ (sshkey (printf "team:vdi-kali-host-%s" (slice .host.hostname 8))).public }}'
+```
+
+A key never shares a value with a password of the same label. Rendered private keys
+reach the host only inside its step's script, which the agent deletes as soon as the
+script exits.
+
 ---
 
 ## `extends`

@@ -125,8 +125,9 @@ func usage() {
 
   laforge render <script-source-path> --host <as> --team <n> [--environment <name>] [--repo <path>]
       Render one script's real source file against a resolved context and print it.
-      Generated passwords ({{ passphrase 3 }}, wordchain, randompassword) render
-      as stand-in values here -- a real build derives its own.
+      Generated passwords ({{ passphrase 3 }}, wordchain, randompassword) and SSH
+      keys ({{ sshkey "label" }}) render as stand-in values here -- a real build
+      derives its own.
 
   laforge check [--repo <path>]
       Validate and render everything: every file against its schema, every
