@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldOff, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert, RotateCcw } from 'lucide-react'
 import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
-import type { RenderedStep, CloudInitView, StepStatus, ObjectKind, DeployedObject, HostCredential } from '../api/types'
+import type { RenderedStep, CloudInitView, StepStatus, ObjectKind, DeployedObject, HostCredential, AgentHeartbeat } from '../api/types'
 import { EmptyState } from './EmptyState'
 import { Badge, Button, buttonClass, cn, InspectorPanel, Spinner } from '../ui'
 import { StatusBadge, PowerBadge, GONE_STATES } from './StatusBadge'
@@ -76,6 +76,11 @@ export function ObjectLogPanel({
 }) {
   const [tab, setTab] = useState<Tab>(initialTab ?? 'info')
   const [wide, setWide] = useState(false)
+  // When a step in the Steps tab is clicked, jump to the Render tab and scroll
+  // its rendered script into view (RenderedStep.index). Carries a nonce so
+  // clicking the same step twice still re-scrolls.
+  const [renderFocus, setRenderFocus] = useState<{ index: number; n: number } | null>(null)
+
   const fmt = useTimeFormat()
   // A network is provisioned by the builder, not by an in-guest agent, so
   // it has a log (events) and findings but no steps/heartbeats/render --
@@ -187,7 +192,9 @@ export function ObjectLogPanel({
             />
           )}
           {heartbeats && heartbeats.length > 0 && (
-            <div className="overflow-x-auto">
+            <>
+              <HeartbeatCharts heartbeats={heartbeats} wide={wide} />
+              <div className="overflow-x-auto">
               <table className="w-full border-collapse font-mono text-xs">
                 <thead>
                   <tr className="border-b border-border text-left text-fg-subtle">
@@ -219,7 +226,8 @@ export function ObjectLogPanel({
                   })}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </>
           )}
         </>
       )}
@@ -233,7 +241,17 @@ export function ObjectLogPanel({
               hint="Steps appear here once the agent has checked in and they're queued to run."
             />
           )}
-          {buildSteps && buildSteps.length > 0 && <StepStatusList steps={buildSteps} focusGroup={focusGroup} onRestartFrom={onRestartFrom} />}
+          {buildSteps && buildSteps.length > 0 && (
+            <StepStatusList
+              steps={buildSteps}
+              focusGroup={focusGroup}
+              onRestartFrom={onRestartFrom}
+              onOpenRendered={(index) => {
+                setRenderFocus({ index, n: Date.now() })
+                setTab('render')
+              }}
+            />
+          )}
         </>
       )}
       {tab === 'render' && (
@@ -242,27 +260,172 @@ export function ObjectLogPanel({
           {renderLoading && <LoadingRow />}
           {renderError && <div className="text-sm text-danger">{renderError instanceof ApiError ? renderError.message : 'Failed to render'}</div>}
           {renderedSteps && renderedSteps.length === 0 && <EmptyState icon={FileCode} title="No steps on this object" hint="Nothing to render." />}
-          {renderedSteps && renderedSteps.length > 0 && <RenderedSteps steps={renderedSteps} />}
+          {renderedSteps && renderedSteps.length > 0 && <RenderedSteps steps={renderedSteps} focus={renderFocus} />}
         </>
       )}
     </InspectorPanel>
   )
 }
 
+// Per-host resource charts at the top of the Heartbeats tab: CPU, memory and
+// disk over this object's own heartbeat history. One combined chart in the
+// narrow drawer; three larger independent charts when the panel is expanded.
+// Colours match the Overview dashboard's resource charts (DashboardCharts):
+// CPU = accent, memory = purple, disk = warning.
+const HB_METRICS = [
+  { key: 'cpu_pct', label: 'CPU', color: 'var(--color-accent)' },
+  { key: 'mem_pct', label: 'Memory', color: 'var(--color-purple)' },
+  { key: 'disk_pct', label: 'Disk', color: 'var(--color-warning)' },
+] as const
+
+function HeartbeatCharts({ heartbeats, wide }: { heartbeats: AgentHeartbeat[]; wide: boolean }) {
+  // Heartbeats come newest-first; a time series reads oldest -> newest.
+  const chrono = useMemo(() => [...heartbeats].reverse(), [heartbeats])
+  const times = chrono.map((h) => h.created_at)
+  const series = HB_METRICS.map((m) => ({ values: chrono.map((h) => h[m.key]), color: m.color, label: m.label }))
+  // Nothing to plot until at least one check-in carried a metric (older agents
+  // report null); skip the charts rather than drawing flat lines at zero.
+  if (!series.some((s) => s.values.some((v) => v != null))) return null
+  if (wide) {
+    return (
+      <div className="mb-3 grid grid-cols-3 gap-3">
+        {series.map((s) => (
+          <MetricChart key={s.label} title={s.label} times={times} series={[s]} height={120} />
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div className="mb-3">
+      <MetricChart title="CPU · Memory · Disk" times={times} series={series} height={96} />
+    </div>
+  )
+}
+
+// MetricChart is a small 0-100% line chart over the heartbeat timeline, drawn
+// the same way as the dashboard's ResourceLineChart (shared axis/gridline
+// layout and tokens). A null sample breaks the line rather than reading as a
+// drop to zero.
+function MetricChart({ title, times, series, height = 96 }: {
+  title: string
+  times: string[]
+  series: { values: (number | null)[]; color: string; label: string }[]
+  height?: number
+}) {
+  const fmt = useTimeFormat()
+  const width = 400
+  const max = 100
+  const n = times.length
+  const stepX = n > 1 ? width / (n - 1) : 0
+  const midY = height / 2
+  const pathFor = (values: (number | null)[]) => {
+    let d = ''
+    let pen = false
+    values.forEach((v, i) => {
+      if (v == null) {
+        pen = false
+        return
+      }
+      const x = n > 1 ? i * stepX : width / 2
+      const y = height - (Math.min(Math.max(v, 0), max) / max) * height
+      d += `${pen ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)} `
+      pen = true
+    })
+    return d.trim()
+  }
+  const latest = (values: (number | null)[]) => {
+    for (let i = values.length - 1; i >= 0; i--) if (values[i] != null) return values[i] as number
+    return null
+  }
+  return (
+    <div className="rounded-token border border-border p-3">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">{title}</div>
+      <div className="flex gap-2">
+        <div className="flex shrink-0 flex-col justify-between text-right text-[10px] text-fg-subtle" style={{ height }}>
+          <span>100%</span>
+          <span>50%</span>
+          <span>0%</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full" style={{ height }}>
+            <line x1={0} y1={height} x2={width} y2={height} stroke="var(--color-border)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            <line x1={0} y1={midY} x2={width} y2={midY} stroke="var(--color-border)" strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+            {series.map((s) => (
+              <path key={s.label} d={pathFor(s.values)} fill="none" stroke={s.color} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+            ))}
+          </svg>
+          <div className="mt-1 flex justify-between text-[10px] text-fg-subtle">
+            <span>{n > 0 ? fmt.timeShort(times[0]) : ''}</span>
+            <span>{n > 0 ? fmt.timeShort(times[n - 1]) : ''}</span>
+          </div>
+        </div>
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-fg-muted">
+        {series.map((s) => {
+          const lv = latest(s.values)
+          return (
+            <span key={s.label} className="inline-flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full" style={{ background: s.color }} />
+              {s.label}
+              {lv != null ? ` ${Math.round(lv)}%` : ''}
+            </span>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // RenderedSteps lists a host's fully-resolved steps -- shared by the narrow
 // drawer preview and the wide expanded modal, so both show identical
 // content, just with different room.
-function RenderedSteps({ steps }: { steps: RenderedStep[] }) {
+function RenderedSteps({ steps, focus }: { steps: RenderedStep[]; focus?: { index: number; n: number } | null }) {
+  const hasTemplated = steps.some((s) => s.segments?.some((seg) => seg.templated))
+  const stepRefs = useRef<Record<number, HTMLDivElement | null>>({})
+  const [flash, setFlash] = useState<number | null>(null)
+  // Scroll the step the Steps tab linked to into view and briefly flash it.
+  // Keyed on focus.n so re-clicking the same step re-triggers.
+  useEffect(() => {
+    if (!focus) return
+    const el = stepRefs.current[focus.index]
+    if (!el) return
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setFlash(focus.index)
+    const t = setTimeout(() => setFlash(null), 1800)
+    return () => clearTimeout(t)
+  }, [focus])
   return (
     <div className="flex flex-col gap-3">
+      {hasTemplated && (
+        <div className="flex items-center gap-1.5 text-xs text-fg-subtle">
+          <span className="rounded-sm bg-accent-soft px-1 font-mono text-accent-fg">highlighted</span>
+          replaced by a template value
+        </div>
+      )}
       {steps.map((s) => (
-        <div key={s.index} className="overflow-hidden rounded-token border border-border">
+        <div
+          key={s.index}
+          ref={(el) => { stepRefs.current[s.index] = el }}
+          className={cn('overflow-hidden rounded-token border', flash === s.index ? 'border-accent ring-2 ring-accent/50 transition-colors' : 'border-border')}
+        >
           <div className="flex items-center gap-2 border-b border-border bg-surface-sunken px-2 py-1 text-xs">
             <span className="text-fg-muted">#{s.index}</span>
             <span className="font-medium text-fg">{s.action}</span>
             {s.script_name && <span className="text-accent">{s.script_name}</span>}
           </div>
-          {s.rendered ? (
+          {s.segments && s.segments.length > 0 ? (
+            <pre className="overflow-x-auto whitespace-pre-wrap p-2 font-mono text-xs text-fg">
+              {s.segments.map((seg, i) =>
+                seg.templated ? (
+                  <span key={i} className="rounded-sm bg-accent-soft text-accent-fg" title="Replaced by a template value">
+                    {seg.text}
+                  </span>
+                ) : (
+                  <span key={i}>{seg.text}</span>
+                ),
+              )}
+            </pre>
+          ) : s.rendered ? (
             <pre className="overflow-x-auto whitespace-pre-wrap p-2 font-mono text-xs text-fg">{s.rendered}</pre>
           ) : (
             <pre className="overflow-x-auto whitespace-pre-wrap p-2 font-mono text-xs text-fg-muted">{JSON.stringify(s.raw, null, 2)}</pre>
@@ -398,7 +561,7 @@ function formatStepDuration(ms: number): string {
   return mm ? `${h}h ${mm}m` : `${h}h`
 }
 
-function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatus[]; focusGroup?: number; onRestartFrom?: (group: number) => void }) {
+function StepStatusList({ steps, focusGroup, onRestartFrom, onOpenRendered }: { steps: StepStatus[]; focusGroup?: number; onRestartFrom?: (group: number) => void; onOpenRendered?: (renderIndex: number) => void }) {
   const [open, setOpen] = useState<Set<number>>(new Set())
   const groupRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const [flash, setFlash] = useState<number | null>(null)
@@ -423,11 +586,11 @@ function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatu
   // Group consecutive steps that came from the same authored step, so the
   // expanded sub-commands (write file, execute, validate) read as one step
   // under a named heading rather than a flat wall of rows.
-  const groups: { key: number; label?: string; steps: StepStatus[]; waitFor?: string[]; milestone?: string }[] = []
+  const groups: { key: number; label?: string; steps: StepStatus[]; waitFor?: string[]; milestone?: string; renderIndex?: number }[] = []
   for (const s of steps) {
     const last = groups[groups.length - 1]
     if (last && last.key === s.group_index) last.steps.push(s)
-    else groups.push({ key: s.group_index, label: s.group_label, steps: [s], waitFor: s.wait_for, milestone: s.milestone })
+    else groups.push({ key: s.group_index, label: s.group_label, steps: [s], waitFor: s.wait_for, milestone: s.milestone, renderIndex: s.render_index })
   }
   return (
     <div className="flex flex-col gap-3">
@@ -437,8 +600,16 @@ function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatu
           ref={(el) => { groupRefs.current[g.key] = el }}
           className={cn('flex flex-col gap-1.5 rounded-token', flash === g.key && 'bg-accent-soft/60 ring-2 ring-accent/50 -mx-1 px-1 py-1 transition-colors')}
         >
-          {g.label && (
-            <div className="flex items-center gap-2 px-0.5">
+          {g.label && (() => {
+            // Clicking the step heading jumps to its rendered script in the Render
+            // tab. Visually unchanged -- only the cursor becomes a pointer.
+            const canLink = !!onOpenRendered && g.renderIndex != null && g.renderIndex >= 0
+            return (
+            <div
+              className={cn('flex items-center gap-2 px-0.5', canLink && 'cursor-pointer')}
+              onClick={canLink ? () => onOpenRendered!(g.renderIndex!) : undefined}
+              title={canLink ? 'View the rendered script for this step' : undefined}
+            >
               <span className="text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">{g.label}</span>
               {g.milestone && (
                 <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-accent" title="Other hosts can wait_for this milestone">
@@ -449,7 +620,7 @@ function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatu
               {onRestartFrom && g.label && (
                 <button
                   type="button"
-                  onClick={() => onRestartFrom(g.key)}
+                  onClick={(e) => { e.stopPropagation(); onRestartFrom(g.key) }}
                   title="Run this step and every step after it again, in full, on the box as it is"
                   className={cn(
                     'inline-flex shrink-0 items-center gap-1 rounded-token-sm px-1.5 py-0.5 text-[11px] hover:bg-surface-hover',
@@ -464,7 +635,8 @@ function StepStatusList({ steps, focusGroup, onRestartFrom }: { steps: StepStatu
                 return ms != null ? <span className="shrink-0 font-mono text-[11px] tabular-nums text-fg-subtle">{formatStepDuration(ms)}</span> : null
               })()}
             </div>
-          )}
+            )
+          })()}
           {g.waitFor && g.waitFor.length > 0 && (
             <div
               className={cn(

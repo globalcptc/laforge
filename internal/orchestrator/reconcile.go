@@ -53,7 +53,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 	}
 
 	loadStart := time.Now()
-	c, err := loader.Load(repoRoot)
+	c, err := loader.LoadCached(repoRoot)
 	if err != nil {
 		return fmt.Errorf("loading content: %w", err)
 	}
@@ -112,6 +112,11 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 	// build still materializes nothing (it touches neither hoster nor agent).
 	materializeActive := build.Status == "deploying" || build.Status == "building"
 	anchors := anchorsFromEnvironment(env)
+	// Environment-wide People + DNS are identical for every object in every team,
+	// so compute them ONCE per pass and share them across all reconcileCopy calls
+	// instead of rebuilding them inside each per-object render.Resolve (which was
+	// O(objects^2) work -- a dominant cost of a reconcile pass).
+	envShared := render.NewEnvShared(c, env)
 	// Object + network names placed in this environment's topology -- the set
 	// depends_on ordering can actually wait on (a dependency not placed here
 	// can't be ordered on, so it's ignored rather than wedging the build).
@@ -168,7 +173,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 
 		for _, pl := range placements {
 			desired[pl.kind+"/"+pl.as] = true
-			if err := reconcileCopy(ctx, q, repoRoot, c, env.Name, team.ID, buildID, build.ContentRevisionID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, pl.priority, deployTasks, materializeActive, holdOnStepChange, anchors, placed, finishedDeps, failedDeps, gates, networkUp, networkFailed); err != nil {
+			if err := reconcileCopy(ctx, q, repoRoot, c, envShared, env.Name, team.ID, buildID, build.ContentRevisionID, teamNum, pl.kind, pl.objectName, pl.as, pl.networkName, pl.priority, deployTasks, materializeActive, holdOnStepChange, anchors, placed, finishedDeps, failedDeps, gates, networkUp, networkFailed); err != nil {
 				return fmt.Errorf("team %d, %s %q: %w", teamNum, pl.kind, pl.as, err)
 			}
 		}
@@ -427,8 +432,8 @@ func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, tea
 	return err
 }
 
-func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envName string, teamID, buildID, contentRevID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, priority int, deployTasks, materializeActive, holdOnStepChange bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool, gates *teamGates, networkUp, networkFailed map[string]bool) error {
-	rctx, err := render.Resolve(c, envName, asName, teamNum)
+func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, envShared *render.EnvShared, envName string, teamID, buildID, contentRevID pgtype.UUID, teamNum int, kind, objectName, asName, networkName string, priority int, deployTasks, materializeActive, holdOnStepChange bool, anchors schedule.Anchors, placed, finishedDeps, failedDeps map[string]bool, gates *teamGates, networkUp, networkFailed map[string]bool) error {
+	rctx, err := render.ResolveWith(c, envName, asName, teamNum, envShared)
 	if err != nil {
 		return fmt.Errorf("resolving: %w", err)
 	}

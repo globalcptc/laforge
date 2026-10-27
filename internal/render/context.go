@@ -99,10 +99,37 @@ type Context struct {
 	Schedule []loader.Step
 }
 
+// EnvShared holds the environment-wide pieces of a Context that are identical
+// for every object in every team -- the people-source summaries and the full
+// DNS record set. Computing them is non-trivial (DNSRecords walks the whole
+// topology; peopleSummaries scans every people source), and Resolve is called
+// once PER OBJECT, so recomputing them per call was O(objects^2) work on every
+// reconcile pass. A caller resolving many objects at once computes this once
+// with NewEnvShared and hands it to ResolveWith.
+type EnvShared struct {
+	People []PeopleSummary
+	DNS    []DNSRecord
+}
+
+// NewEnvShared precomputes the environment-wide context pieces once, for reuse
+// across every ResolveWith call in the same pass.
+func NewEnvShared(c *loader.Content, env *loader.Environment) *EnvShared {
+	dns, _ := DNSRecords(c, env)
+	return &EnvShared{People: peopleSummaries(c), DNS: dns}
+}
+
 // Resolve finds the copy named `as` in environment `envName`'s topology,
 // for `team`, and builds its full Context. team is 1-indexed, matching how
 // the plan's own CLI examples write it ("--team 3").
 func Resolve(c *loader.Content, envName, as string, team int) (*Context, error) {
+	return ResolveWith(c, envName, as, team, nil)
+}
+
+// ResolveWith is Resolve with an optional precomputed EnvShared (the env-wide
+// People + DNS). When shared is non-nil those are reused instead of recomputed;
+// nil computes them per call (the standalone path -- a single object, laforge
+// check/render, the LSP).
+func ResolveWith(c *loader.Content, envName, as string, team int, shared *EnvShared) (*Context, error) {
 	env := findEnvironment(c, envName)
 	if env == nil {
 		return nil, fmt.Errorf("no environment named %q in this repository", envName)
@@ -170,12 +197,19 @@ func Resolve(c *loader.Content, envName, as string, team int) (*Context, error) 
 		return nil, err
 	}
 	ctx.Vars = mergeVars(env.Vars, network.Vars, objVars)
-	ctx.People = peopleSummaries(c)
+	// People + DNS are environment-wide (identical for every object and team), so
+	// reuse the caller's precomputed set when given one; otherwise compute them
+	// here. Best-effort on DNS: a records-resolution problem (already caught by
+	// the loader on a real repo) leaves DNS empty rather than failing to render
+	// an object that doesn't use it.
+	if shared != nil {
+		ctx.People = shared.People
+		ctx.DNS = shared.DNS
+	} else {
+		ctx.People = peopleSummaries(c)
+		ctx.DNS, _ = DNSRecords(c, env)
+	}
 	ctx.ObjectPeople = resolveObjectPeople(c, objPeople)
-	// Best-effort: a records-resolution problem (already caught by the loader on
-	// a real repo) leaves DNS empty rather than failing to render an object that
-	// doesn't use it.
-	ctx.DNS, _ = DNSRecords(c, env)
 
 	return ctx, nil
 }

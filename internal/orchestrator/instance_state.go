@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -81,7 +82,8 @@ func PollInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.
 	if err != nil {
 		return fmt.Errorf("inspecting hoster: %w", err)
 	}
-	return applyInstanceStates(ctx, pool, buildID, inspectStateMap(resources), snapshotAt)
+	stater, _ := bldr.(builder.InstanceStater)
+	return applyInstanceStates(ctx, pool, buildID, inspectStateMap(resources), snapshotAt, stater)
 }
 
 // PollInstanceStatesForBuilds refreshes power states for many builds while doing
@@ -100,6 +102,7 @@ func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildI
 		stateByRef map[string]string
 		ok         bool
 		snapshotAt time.Time
+		bldr       builder.Builder
 	}
 	// Which builder each build is on, and one representative build per
 	// builder to resolve it through.
@@ -127,7 +130,7 @@ func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildI
 			started := time.Now()
 			c := cached{snapshotAt: started}
 			r := inspectBuilder(ictx, pool, id, name)
-			c.stateByRef, c.ok = r.stateByRef, r.ok
+			c.stateByRef, c.ok, c.bldr = r.stateByRef, r.ok, r.bldr
 			if d := time.Since(started); d > 10*time.Second {
 				log.Printf("orchestrator: inspecting builder %q for power states took %s (ok=%v)", name, d.Round(time.Millisecond), c.ok)
 			}
@@ -142,7 +145,8 @@ func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildI
 		if !ok || !c.ok {
 			continue
 		}
-		if err := applyInstanceStates(ctx, pool, id, c.stateByRef, c.snapshotAt); err != nil {
+		stater, _ := c.bldr.(builder.InstanceStater)
+		if err := applyInstanceStates(ctx, pool, id, c.stateByRef, c.snapshotAt, stater); err != nil {
 			log.Printf("recording power states for build %s: %v", id.String(), err)
 		}
 	}
@@ -154,6 +158,7 @@ const inspectTimeout = 60 * time.Second
 func inspectBuilder(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, name string) (c struct {
 	stateByRef map[string]string
 	ok         bool
+	bldr       builder.Builder
 }) {
 	bldr, err := resolveBuilderForBuild(ctx, pool, buildID)
 	if err != nil {
@@ -167,6 +172,7 @@ func inspectBuilder(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID
 	}
 	c.stateByRef = inspectStateMap(resources)
 	c.ok = true
+	c.bldr = bldr
 	return c
 }
 
@@ -187,12 +193,21 @@ func inspectStateMap(resources []builder.Resource) map[string]string {
 // and hosts finish deploying meanwhile -- so its absence means nothing and its
 // state is left for the next pass. Judging it against the older listing marked
 // freshly deployed, running hosts "missing" until the poll came round again.
-func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, stateByRef map[string]string, snapshotAt time.Time) error {
+//
+// An instance the listing left out is not called missing on the listing's
+// word alone. A clustered hoster's full listing can come back without
+// instances a busy member didn't answer for in time, which flickered running
+// hosts to "missing" between polls. When the builder can read one instance
+// (builder.InstanceStater; nil when it can't), each left-out instance is
+// checked directly, and only a hoster that says it isn't there marks it
+// missing; a failed check leaves the state as it was.
+func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, stateByRef map[string]string, snapshotAt time.Time, stater builder.InstanceStater) error {
 	q := db.New(pool)
 	objs, err := q.ListDeployedObjectsByBuild(ctx, buildID)
 	if err != nil {
 		return fmt.Errorf("loading deployed objects: %w", err)
 	}
+	confirmed := confirmAbsences(ctx, objs, stateByRef, snapshotAt, stater)
 	for _, o := range objs {
 		if o.Kind != "host" && o.Kind != "container" {
 			continue // networks/DNS have no power state
@@ -207,6 +222,15 @@ func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype
 		if !present && o.DeployedAt.Valid && !o.DeployedAt.Time.Before(snapshotAt) {
 			continue // deployed after the listing began; checked next pass
 		}
+		if !present {
+			c, checked := confirmed[*o.ExternalRef]
+			switch {
+			case checked && c.err != nil:
+				continue // couldn't tell; leave the state as it was
+			case checked && c.exists:
+				state, present = c.state, true
+			}
+		}
 		switch {
 		case !present:
 			state = "missing" // the hoster no longer has it
@@ -218,4 +242,71 @@ func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype
 		}
 	}
 	return nil
+}
+
+// absenceCheck is the hoster's direct answer for one instance the listing
+// left out.
+type absenceCheck struct {
+	state  string
+	exists bool
+	err    error
+}
+
+// confirmAbsences asks the hoster directly about each host/container the
+// listing left out (at most 8 at a time), when the builder can. Instances that
+// turn out to exist are logged: they're the listing's misses.
+func confirmAbsences(ctx context.Context, objs []db.DeployedObject, stateByRef map[string]string, snapshotAt time.Time, stater builder.InstanceStater) map[string]absenceCheck {
+	if stater == nil {
+		return nil
+	}
+	var refs []string
+	for _, o := range objs {
+		if (o.Kind != "host" && o.Kind != "container") || o.ExternalRef == nil || *o.ExternalRef == "" {
+			continue
+		}
+		if o.Status == "destroyed" || o.Status == "destroying" || o.Status == "destroy_queued" {
+			continue
+		}
+		if o.DeployedAt.Valid && !o.DeployedAt.Time.Before(snapshotAt) {
+			continue
+		}
+		if _, present := stateByRef[*o.ExternalRef]; !present {
+			refs = append(refs, *o.ExternalRef)
+		}
+	}
+	out := make(map[string]absenceCheck, len(refs))
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	slots := make(chan struct{}, 8)
+	for _, ref := range refs {
+		wg.Add(1)
+		slots <- struct{}{}
+		go func(ref string) {
+			defer wg.Done()
+			defer func() { <-slots }()
+			cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+			defer cancel()
+			state, exists, err := stater.InstanceState(cctx, ref)
+			mu.Lock()
+			out[ref] = absenceCheck{state: state, exists: exists, err: err}
+			mu.Unlock()
+		}(ref)
+	}
+	wg.Wait()
+	var omitted, failed []string
+	for ref, c := range out {
+		switch {
+		case c.err != nil:
+			failed = append(failed, ref)
+		case c.exists:
+			omitted = append(omitted, ref)
+		}
+	}
+	if len(omitted) > 0 {
+		log.Printf("orchestrator: power states: the hoster's listing left out %d instance(s) that exist (checked one by one; not marked missing): %s", len(omitted), strings.Join(omitted, ", "))
+	}
+	if len(failed) > 0 {
+		log.Printf("orchestrator: power states: couldn't confirm %d instance(s) the listing left out; their states are unchanged this pass: %s", len(failed), strings.Join(failed, ", "))
+	}
+	return out
 }

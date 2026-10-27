@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from '@tanstack/react-router'
-import { Terminal as TerminalIcon, ArrowLeft } from 'lucide-react'
+import { Link, useParams, useRouter } from '@tanstack/react-router'
+import { Terminal as TerminalIcon, ArrowLeft, Info } from 'lucide-react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -75,7 +75,22 @@ function agentTone(status: string): 'success' | 'warning' | 'danger' | 'neutral'
 // origin, or SameSite=None cross-origin), so no token handling is needed here.
 export function BuildTerminal() {
   const { repoId, buildId, objectId } = useParams({ from: '/repos/$repoId/builds/$buildId/hosts/$objectId/terminal' })
+  const router = useRouter()
   const mountRef = useRef<HTMLDivElement>(null)
+
+  // Pop this host's details (the inspector's Info tab) into its own window next
+  // to the shell: while debugging in the terminal you often want the host's IP,
+  // agent health and power state in view without leaving the session. Window
+  // features force a separate window rather than a tab; the ?inspect param deep-
+  // opens the panel on the hosts page (BuildHosts).
+  const openHostInfo = () => {
+    const href = router.buildLocation({
+      to: '/repos/$repoId/builds/$buildId/hosts',
+      params: { repoId, buildId },
+      search: { inspect: objectId },
+    }).href
+    window.open(href, `laforge-hostinfo-${objectId}`, 'noopener,width=520,height=760')
+  }
   const [status, setStatus] = useState<Status>('connecting')
 
   // A live agent decides whether a shell is even possible. undefined while the
@@ -218,9 +233,19 @@ export function BuildTerminal() {
             </Badge>
           )}
         </div>
-        <Link to="/repos/$repoId/builds/$buildId/hosts" params={{ repoId, buildId }} className={buttonClass({ variant: 'ghost', size: 'sm' })}>
-          <ArrowLeft size={14} /> Back to hosts
-        </Link>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={openHostInfo}
+            className={buttonClass({ variant: 'secondary', size: 'sm' })}
+            title="Open this host's details (Info) in a new window"
+          >
+            <Info size={14} /> Host Info
+          </button>
+          <Link to="/repos/$repoId/builds/$buildId/hosts" params={{ repoId, buildId }} className={buttonClass({ variant: 'ghost', size: 'sm' })}>
+            <ArrowLeft size={14} /> Back to hosts
+          </Link>
+        </div>
       </div>
       <p className="text-xs text-fg-muted">
         A live root/admin shell on this host through its agent, encrypted end to end. Closing this page ends the session.

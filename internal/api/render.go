@@ -27,8 +27,12 @@ type renderedStep struct {
 	// (run, write_file, download, ...) is shown as its own raw step JSON
 	// instead, same scope as internal/orchestrator.Fingerprint's own doc
 	// comment on what it does and doesn't render.
-	Rendered string      `json:"rendered,omitempty"`
-	Raw      loader.Step `json:"raw"`
+	Rendered string `json:"rendered,omitempty"`
+	// Segments is Rendered split into plain/templated runs (best-effort), so the
+	// Render tab can colorize the parts that came from a template substitution.
+	// Concatenating the segment texts reproduces Rendered.
+	Segments []render.Segment `json:"segments,omitempty"`
+	Raw      loader.Step      `json:"raw"`
 }
 
 // handleRenderObject resolves this deployed object's real Context
@@ -113,6 +117,11 @@ func (s *Server) handleRenderObject(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				rs.Rendered = rendered
+				// Best-effort: the colorized segment view is additive, so a
+				// marked-render hiccup just leaves the plain Rendered above.
+				if segs, serr := render.RenderScriptSegments(repoRoot, script, ctx, c); serr == nil {
+					rs.Segments = segs
+				}
 			}
 		}
 		steps = append(steps, rs)

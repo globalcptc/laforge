@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { ChevronDown, GitCommitHorizontal, Hammer, IterationCw, MousePointerClick, Plus, Rocket, Lock, Unlock, Star, Trash2, RefreshCw, RotateCcw } from 'lucide-react'
+import { ChevronDown, GitBranch, GitCommitHorizontal, Hammer, IterationCw, MousePointerClick, Plus, Rocket, Lock, Unlock, Star, Trash2, RefreshCw, RotateCcw } from 'lucide-react'
 import {
   useBuilderConfigs,
   useBuilds,
@@ -270,10 +270,17 @@ function ConfiguredBuildRow({
           <ChevronDown size={14} className={cn('shrink-0 text-fg-subtle transition-transform', !expanded && '-rotate-90')} />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-medium text-fg">{cb.branch}</span>
+              {/* Lead with the environment's own name (from the config YAML) --
+                  what the build actually is -- rather than the branch. It lives
+                  on the builds, so fall back to the file name until the first
+                  build exists. */}
+              <span className="truncate font-medium text-fg">{lastBuild?.environment_name ?? cb.environment_path}</span>
               {lastBuild ? <StatusBadge status={lastBuild.status} /> : <span className="text-xs italic text-fg-subtle">no builds yet</span>}
             </div>
             <div className="mt-0.5 flex items-center gap-1.5 text-xs text-fg-muted">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-surface-sunken px-1.5 py-0.5 font-mono text-[11px]" title={`Branch: ${cb.branch}`}>
+                <GitBranch size={10} className="text-fg-subtle" /> {cb.branch}
+              </span>
               <span className="truncate">{cb.environment_path}</span>
               <BuilderPill name={cb.builder_config_name} color={builderColor} kind={builderKind} size="xs" />
             </div>

@@ -1,4 +1,4 @@
-import { useParams } from '@tanstack/react-router'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useRef, useState } from 'react'
 import { Box, CalendarClock, Check, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCcw, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
@@ -228,6 +228,8 @@ function MultiFilter({ label, selected, onToggle, onClear, options }: { label: s
 // ImpactDialog below.
 export function BuildHosts() {
   const { repoId, buildId } = useParams({ from: '/repos/$repoId/builds/$buildId/hosts' })
+  const { inspect } = useSearch({ from: '/repos/$repoId/builds/$buildId/hosts' })
+  const navigate = useNavigate()
   const { data: build, isLoading } = useBuild(buildId)
   // A torn-down build is history: show it, but offer no actions (no selection,
   // no ad-hoc/power tasks). See buildIsReadOnly.
@@ -251,7 +253,7 @@ export function BuildHosts() {
   // Restart from step: the host(s) it was started from and the authored step;
   // RestartStepsDialog widens to every team's copy and confirms.
   const [restarting, setRestarting] = useState<{ ids: string[]; fromGroup: number } | null>(null)
-  const [logPanelFor, setLogPanelFor] = useState<{ id: string; label: string; kind: ObjectKind; object?: DeployedObject; teamNumber?: number; initialTab?: 'steps' } | null>(null)
+  const [logPanelFor, setLogPanelFor] = useState<{ id: string; label: string; kind: ObjectKind; object?: DeployedObject; teamNumber?: number; initialTab?: 'info' | 'steps' } | null>(null)
   const [boardOpen, setBoardOpen] = useState(false)
   const [graphOpen, setGraphOpen] = useState(false)
   const [filter, setFilter] = useState('')
@@ -273,6 +275,24 @@ export function BuildHosts() {
     for (const t of build?.teams ?? []) m.set(t.id, t.team_number)
     return m
   }, [build])
+
+  // Deep-open the inspector on the Info tab when arrived at with ?inspect=<id>
+  // (the standalone terminal window's "Host Info" button). Fires once the object
+  // is known; the param is cleared when the panel closes so it won't reopen.
+  useEffect(() => {
+    if (!inspect) return
+    if (logPanelFor?.id === inspect) return
+    const obj = objects.find((o) => o.id === inspect)
+    if (!obj) return
+    setLogPanelFor({
+      id: obj.id,
+      label: obj.as_name ?? obj.object_name,
+      kind: obj.kind,
+      object: obj,
+      teamNumber: teamNumberById.get(obj.team_id),
+      initialTab: 'info',
+    })
+  }, [inspect, objects, teamNumberById, logPanelFor?.id])
 
   // team_id -> whether that team's access is currently closed. A closed team is
   // firewalled down to the gateway (no general egress), so a rebuilt host can't
@@ -818,7 +838,10 @@ export function BuildHosts() {
           teamNumber={logPanelFor.teamNumber}
           initialTab={logPanelFor.initialTab}
           onRestartFrom={!readOnly && logPanelFor.object && canRestartSteps(logPanelFor.object) ? (group) => setRestarting({ ids: [logPanelFor.id], fromGroup: group }) : undefined}
-          onClose={() => setLogPanelFor(null)}
+          onClose={() => {
+            setLogPanelFor(null)
+            if (inspect) navigate({ to: '/repos/$repoId/builds/$buildId/hosts', params: { repoId, buildId }, search: {}, replace: true })
+          }}
         />
       )}
 

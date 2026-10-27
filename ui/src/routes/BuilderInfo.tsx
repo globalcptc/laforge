@@ -1,10 +1,11 @@
 import { Link, useParams } from '@tanstack/react-router'
 import { Pencil, TriangleAlert } from 'lucide-react'
 import { useBuilderStats, useBuilderUsage, useBuilderConfigs } from '../api/hooks'
-import type { MetricSeries, MetricGauge, UsageResource, UsagePublic, UsageBuild } from '../api/types'
+import type { MetricSeries, MetricPoint, MetricGauge, UsageResource, UsagePublic, UsageBuild } from '../api/types'
 import { BuilderKindBadge } from '../components/BuilderKindBadge'
 import { BuilderPill } from '../components/BuilderPill'
 import { StatusBadge } from '../components/StatusBadge'
+import { useTimeFormat } from '../lib/time'
 import { Card, CardHeader, PageHeader, EmptyState, buttonClass, cn } from '../ui'
 
 // The builder info page: backend-health charts + quota gauges, rendered
@@ -248,7 +249,7 @@ function GaugeBar({ gauge }: { gauge: MetricGauge }) {
 
 interface chartLine {
   node: string
-  points: number[]
+  points: MetricPoint[]
 }
 interface chartGroup {
   key: string
@@ -321,45 +322,76 @@ function groupByKey(series: MetricSeries[]): chartGroup[] {
       g = { key: s.key, label: s.label, unit: s.unit, lines: [] }
       byKey.set(s.key, g)
     }
-    g.lines.push({ node: s.node, points: s.points.map((p) => p.v) })
+    g.lines.push({ node: s.node, points: s.points })
   }
   return [...byKey.values()]
 }
 
-// MetricChart draws a small multi-line sparkline, one polyline per node, scaled
-// to the group's own min/max. Hand-rolled SVG, matching DashboardCharts (no chart
-// library). Latest value per line is listed below.
+// MetricChart draws a small multi-line chart, one polyline per node. Hand-rolled
+// SVG, matching DashboardCharts (no chart library). It shows a reference scale --
+// a labelled y-axis (max / mid / min) with baseline and midline gridlines, and
+// the time span on the x-axis -- so the magnitude is readable, not just the
+// shape. The y-axis spans the group's own min..max rather than anchoring at 0, so
+// small variation in a large value is still legible; the min label makes the
+// non-zero baseline explicit. Latest value per line is listed below.
 function MetricChart({ label, unit, lines }: { label: string; unit: string; lines: chartLine[] }) {
-  const all = lines.flatMap((l) => l.points)
+  const time = useTimeFormat()
+  const all = lines.flatMap((l) => l.points.map((p) => p.v))
   const min = all.length ? Math.min(...all) : 0
   const max = all.length ? Math.max(...all) : 1
   const span = max - min || 1
+  const mid = (max + min) / 2
   const width = 300
   const height = 80
+  const midY = height / 2
   const palette = ['var(--color-accent)', 'var(--color-brand)', 'var(--color-success)', 'var(--color-warning)', 'var(--color-info)']
 
-  const latest = (pts: number[]) => (pts.length ? pts[pts.length - 1] : 0)
+  const latest = (pts: MetricPoint[]) => (pts.length ? pts[pts.length - 1].v : 0)
+  // The time range covered, across every node's points, for the x-axis labels.
+  const stamps = lines.flatMap((l) => l.points.map((p) => p.t)).sort()
+  const first = stamps[0]
+  const lastStamp = stamps[stamps.length - 1]
 
   return (
     <Card>
       <CardHeader title={`${label}${unit ? ` (${unit})` : ''}`} />
       <div className="p-4 pt-3">
-        <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full" style={{ height }}>
-          {lines.map((l, i) => {
-            if (l.points.length === 0) return null
-            const y = (v: number) => (height - ((v - min) / span) * height).toFixed(1)
-            // A single sample (e.g. the first live reading before any history is
-            // collected) still gets a flat line across the card, so the block is
-            // visibly "here, currently N" rather than blank.
-            const d =
-              l.points.length === 1
-                ? `M 0 ${y(l.points[0])} L ${width} ${y(l.points[0])}`
-                : l.points
-                    .map((v, j) => `${j === 0 ? 'M' : 'L'} ${((j * width) / (l.points.length - 1)).toFixed(1)} ${y(v)}`)
-                    .join(' ')
-            return <path key={l.node || i} d={d} fill="none" stroke={palette[i % palette.length]} strokeWidth={2} vectorEffect="non-scaling-stroke" />
-          })}
-        </svg>
+        <div className="flex gap-2">
+          {/* Y-axis: max at top down to min, so a line's height reads as a value. */}
+          <div className="flex shrink-0 flex-col justify-between text-right text-[10px] text-fg-subtle" style={{ height }}>
+            <span>{fmt(max)}</span>
+            {mid !== max && mid !== min && <span>{fmt(mid)}</span>}
+            <span>{fmt(min)}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full" style={{ height }}>
+              {/* Baseline + midline gridlines so the curve reads against a scale. */}
+              <line x1={0} y1={height} x2={width} y2={height} stroke="var(--color-border)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              <line x1={0} y1={midY} x2={width} y2={midY} stroke="var(--color-border)" strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+              {lines.map((l, i) => {
+                if (l.points.length === 0) return null
+                const y = (v: number) => (height - ((v - min) / span) * height).toFixed(1)
+                // A single sample (e.g. the first live reading before any history is
+                // collected) still gets a flat line across the card, so the block is
+                // visibly "here, currently N" rather than blank.
+                const d =
+                  l.points.length === 1
+                    ? `M 0 ${y(l.points[0].v)} L ${width} ${y(l.points[0].v)}`
+                    : l.points
+                        .map((p, j) => `${j === 0 ? 'M' : 'L'} ${((j * width) / (l.points.length - 1)).toFixed(1)} ${y(p.v)}`)
+                        .join(' ')
+                return <path key={l.node || i} d={d} fill="none" stroke={palette[i % palette.length]} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+              })}
+            </svg>
+            {/* X-axis: the time span the points cover. */}
+            {first && (
+              <div className="mt-1 flex justify-between text-[10px] text-fg-subtle">
+                <span>{time.timeShort(first)}</span>
+                {lastStamp !== first && <span>{time.timeShort(lastStamp)}</span>}
+              </div>
+            )}
+          </div>
+        </div>
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
           {lines.map((l, i) => (
             <span key={l.node || i} className="inline-flex items-center gap-1.5">

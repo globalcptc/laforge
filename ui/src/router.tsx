@@ -89,7 +89,17 @@ const buildLayoutRoute = createRoute({
 })
 
 const buildIndexRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: '/', component: BuildOverview })
-const buildHostsRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'hosts', component: BuildHosts })
+const buildHostsRoute = createRoute({
+  getParentRoute: () => buildLayoutRoute,
+  path: 'hosts',
+  component: BuildHosts,
+  // ?inspect=<objectId> deep-opens that host's inspector on the Info tab -- used
+  // by the standalone terminal window's "Host Info" button to pop host details
+  // alongside the shell for debugging.
+  validateSearch: (s: Record<string, unknown>): { inspect?: string } => ({
+    inspect: typeof s.inspect === 'string' ? s.inspect : undefined,
+  }),
+})
 const buildAccessRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'access', component: BuildAccess })
 const buildExternalAccessRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'external-access', component: BuildExternalAccess })
 const buildLogsRoute = createRoute({ getParentRoute: () => buildLayoutRoute, path: 'logs', component: BuildLogs })

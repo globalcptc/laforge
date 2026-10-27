@@ -73,6 +73,13 @@ type PlannedCommand struct {
 	Payload    interface{}
 	Group      int
 	GroupLabel string
+	// AuthoredStep is the 0-based index of the authored step this command came
+	// from, matching the Render tab's rendered-step index (internal/api/render.go
+	// iterates the same resolved ctx.Steps in order). -1 for synthetic groups
+	// that have no authored step -- the admin-password prelude and a compose
+	// project's startup -- so a UI can link a step to its rendered script.
+	// ExpandSteps sets it; ExpandOneStep leaves it zero.
+	AuthoredStep int
 	// IgnoreErrors marks a command whose terminal failure must be tolerated --
 	// the step is allowed to fail without blocking later steps or failing the
 	// build (it becomes an `ignored` agent_task, not `failed`). Set from a
@@ -201,6 +208,7 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 				IgnoreErrors: true,
 				Group:        0,
 				GroupLabel:   "Set admin password",
+				AuthoredStep: -1,
 			})
 			groupOffset = 1
 		}
@@ -229,6 +237,7 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		for k := range cmds {
 			cmds[k].GroupLabel = ComposeGroupLabel
 			cmds[k].Group = groupOffset
+			cmds[k].AuthoredStep = -1
 		}
 		out = append(out, cmds...)
 		first = groupOffset + 1
@@ -245,6 +254,7 @@ func ExpandSteps(repoRoot string, c *loader.Content, envName, asName string, tea
 		for k := range cmds {
 			cmds[k].Group = first + i
 			cmds[k].GroupLabel = label
+			cmds[k].AuthoredStep = i
 			cmds[k].Milestone = step.Milestone()
 			cmds[k].StepScript = script
 		}

@@ -1,6 +1,6 @@
 import { useParams } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Globe, Check, Copy, FileJson } from 'lucide-react'
+import { Globe, Check, Copy, FileJson, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { useExternalAccess } from '../api/hooks'
 import { EmptyState } from '../components/EmptyState'
 import { ScoringExportWizard } from '../components/ScoringExportWizard'
@@ -17,6 +17,17 @@ export function BuildExternalAccess() {
   const { buildId } = useParams({ from: '/repos/$repoId/builds/$buildId/external-access' })
   const { data: entries, isLoading } = useExternalAccess(buildId)
   const [exporting, setExporting] = useState(false)
+  // One sort shared across every team's table, so they all order the same way.
+  // Defaults to host name ascending (more useful than the API's arrival order).
+  const [sortKey, setSortKey] = useState<SortKey>('host')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  function toggleSort(k: SortKey) {
+    if (k === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortKey(k)
+      setSortDir('asc')
+    }
+  }
 
   if (isLoading)
     return (
@@ -64,14 +75,14 @@ export function BuildExternalAccess() {
             <Table>
               <thead>
                 <tr>
-                  <Th>Host</Th>
-                  <Th>Protocol</Th>
-                  <Th>Port</Th>
-                  <Th>Connect to</Th>
+                  <SortTh label="Host" k="host" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortTh label="Protocol" k="protocol" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortTh label="Port" k="port" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortTh label="Connect to" k="address" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 </tr>
               </thead>
               <tbody>
-                {byTeam.get(team)!.map((e) => (
+                {[...byTeam.get(team)!].sort((a, b) => compareEntries(a, b, sortKey, sortDir)).map((e) => (
                   <tr key={`${e.deployed_object_id}:${e.protocol}:${e.internal_port}`}>
                     <Td className="font-medium text-fg">{e.as_name || e.object_name}</Td>
                     <Td>
@@ -91,6 +102,46 @@ export function BuildExternalAccess() {
         </Card>
       ))}
     </div>
+  )
+}
+
+type SortKey = 'host' | 'protocol' | 'port' | 'address'
+
+// Compare two endpoints by the active column. Host/address use a numeric-aware
+// collator so bff-ws-2 sorts before bff-ws-10 (and 10.0.0.9 before 10.0.0.10);
+// port is a plain numeric compare.
+function compareEntries(a: ExternalAccessEntry, b: ExternalAccessEntry, key: SortKey, dir: 'asc' | 'desc'): number {
+  let r = 0
+  switch (key) {
+    case 'host':
+      r = (a.as_name || a.object_name).localeCompare(b.as_name || b.object_name, undefined, { numeric: true })
+      break
+    case 'protocol':
+      r = a.protocol.localeCompare(b.protocol)
+      break
+    case 'port':
+      r = Number(a.internal_port) - Number(b.internal_port)
+      break
+    case 'address':
+      r = a.public_address.localeCompare(b.public_address, undefined, { numeric: true })
+      break
+  }
+  return dir === 'asc' ? r : -r
+}
+
+// SortTh is a clickable column header: click to sort by it, click again to flip
+// direction. The arrow shows the current sort (a faint up/down toggle when the
+// column isn't the active one).
+function SortTh({ label, k, sortKey, sortDir, onSort }: { label: string; k: SortKey; sortKey: SortKey; sortDir: 'asc' | 'desc'; onSort: (k: SortKey) => void }) {
+  const active = sortKey === k
+  const Icon = !active ? ArrowUpDown : sortDir === 'asc' ? ArrowUp : ArrowDown
+  return (
+    <Th aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" onClick={() => onSort(k)} className="inline-flex select-none items-center gap-1 hover:text-fg">
+        {label}
+        <Icon size={12} className={active ? 'text-fg-muted' : 'text-fg-subtle/50'} />
+      </button>
+    </Th>
   )
 }
 
