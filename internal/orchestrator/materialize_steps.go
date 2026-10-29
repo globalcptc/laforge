@@ -77,7 +77,7 @@ func materializeStepsIfReady(ctx context.Context, q *db.Queries, repoRoot string
 		// their dependencies finish and their gates are satisfied: flip blocked
 		// steps to pending and keep the reason current. No-ops once released,
 		// so this is cheap every pass.
-		return releaseStepGates(ctx, q, obj, blockedOn, gates)
+		return releaseStepGates(ctx, q, buildID, obj, blockedOn, gates)
 	}
 	return materializeSteps(ctx, q, repoRoot, c, envName, buildID, obj, teamNum, asName, blockedOn, gates)
 }
@@ -114,7 +114,7 @@ func materializeSteps(ctx context.Context, q *db.Queries, repoRoot string, c *lo
 	obj.BlockedOn = blockedJSON
 	// Let through whatever the step gates already allow (all of it, when no
 	// step waits), and name the gate the host is held at.
-	if err := releaseStepGates(ctx, q, obj, blockedOn, gates); err != nil {
+	if err := releaseStepGates(ctx, q, buildID, obj, blockedOn, gates); err != nil {
 		return err
 	}
 	// Stamp even for zero steps: it is what lets the lifecycle advancer finish

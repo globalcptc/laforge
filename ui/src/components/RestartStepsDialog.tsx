@@ -73,6 +73,9 @@ export function RestartStepsDialog({
   const contentChanged = hosts?.some((h) => picked.has(h.id) && h.content_changed) ?? false
   const dependents = hosts?.filter((h) => picked.has(h.id)).reduce((n, h) => n + h.dependents.length, 0) ?? 0
   const runningPicked = hosts?.filter((h) => picked.has(h.id) && h.running).length ?? 0
+  // Distinct wait_for targets of the picked hosts that are themselves failed:
+  // restarting these hosts alone can't finish until those targets are restarted.
+  const failedGateTargets = [...new Set((hosts ?? []).filter((h) => picked.has(h.id)).flatMap((h) => h.failed_gate_targets ?? []))]
 
   function toggle(id: string) {
     setPicked((prev) => {
@@ -181,6 +184,16 @@ export function RestartStepsDialog({
               <div className="flex items-start gap-2 rounded-token border border-warning/40 bg-warning-soft p-2 text-xs text-fg">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warning" />
                 <span>The content has changed since these hosts were built; the steps come from the current revision.</span>
+              </div>
+            )}
+
+            {failedGateTargets.length > 0 && (
+              <div className="flex items-start gap-2 rounded-token border border-danger/40 bg-danger-soft p-2 text-xs text-fg">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0 text-danger" />
+                <span>
+                  This host waits on {failedGateTargets.join(', ')}, which {failedGateTargets.length === 1 ? 'is' : 'are'} currently failed. Restarting it
+                  alone will run up to that step and fail again — restart {failedGateTargets.length === 1 ? 'that host' : 'those hosts'} too.
+                </span>
               </div>
             )}
 

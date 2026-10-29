@@ -73,6 +73,11 @@ type RestartHostResult struct {
 	Steps []RestartStep `json:"steps"`
 	// Dependents that resume (would resume) with this host.
 	Dependents []RebuildAffected `json:"dependents"`
+	// FailedGateTargets names this host's own step wait_for targets that are
+	// themselves currently failed (e.g. "vdi-kali · vdi-ssh-ready"). Restarting
+	// this host alone can't finish while they're failed -- it will run up to that
+	// gate and fail again -- so the UI warns to restart those hosts too.
+	FailedGateTargets []string `json:"failed_gate_targets,omitempty"`
 	// Restarted is true once the host's steps were re-queued; otherwise
 	// Skipped says why not.
 	Restarted bool   `json:"restarted"`
@@ -171,6 +176,15 @@ func RestartFromStep(ctx context.Context, pool *pgxpool.Pool, build db.Build, co
 			}
 			res.Dependents = deps
 		}
+		// Warn when this host's own wait_for targets are themselves failed: a
+		// restart will run up to that gate and fail again (restart the target too).
+		if res.Eligible {
+			gateTargets, err := failedWaitForTargets(ctx, q, repoRoot, content, build, o, tm, opts.FromGroup)
+			if err != nil {
+				return nil, err
+			}
+			res.FailedGateTargets = gateTargets
+		}
 		if res.Eligible && res.Skipped == "" {
 			anyEligible = true
 		}
@@ -262,6 +276,44 @@ func plannedRestartSteps(ctx context.Context, q *db.Queries, repoRoot string, c 
 	return out, nil
 }
 
+// failedWaitForTargets lists the distinct step wait_for targets of host o
+// (from fromGroup on) whose target host is itself currently failed in the team.
+// Restarting o while one of these is failed can't succeed -- o runs up to that
+// gate and re-fails -- so the preview surfaces them. Labels read like the gate
+// itself, e.g. "vdi-kali · vdi-ssh-ready".
+func failedWaitForTargets(ctx context.Context, q *db.Queries, repoRoot string, c *loader.Content, build db.Build, o db.DeployedObject, tm db.Team, fromGroup int) ([]string, error) {
+	if o.AsName == nil {
+		return nil, nil
+	}
+	_, failed, _, _, err := teamDepReadiness(ctx, q, tm.ID)
+	if err != nil {
+		return nil, err
+	}
+	secret, err := db.RenderSecretForBuild(ctx, q, build.ID)
+	if err != nil {
+		return nil, fmt.Errorf("loading the build's render secret: %w", err)
+	}
+	cmds, _, err := gateway.ExpandSteps(repoRoot, c, build.EnvironmentName, *o.AsName, int(tm.TeamNumber),
+		gateway.WithPublicAddress(o.PublicAddress), gateway.WithRenderSecret(secret))
+	if err != nil {
+		return nil, fmt.Errorf("expanding steps: %w", err)
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, cmd := range cmds {
+		if cmd.Group < fromGroup {
+			continue
+		}
+		for _, w := range cmd.WaitFor {
+			if failed[w.Host] && !seen[w.Label()] {
+				seen[w.Label()] = true
+				out = append(out, w.Label())
+			}
+		}
+	}
+	return out, nil
+}
+
 // failedDependents are the objects in o's team that depend (transitively) on
 // o's host and were failed before their steps ran -- the ones a restart
 // resumes.
@@ -322,7 +374,7 @@ func restartOne(ctx context.Context, q *db.Queries, repoRoot string, c *loader.C
 	if err != nil {
 		return err
 	}
-	if err := releaseStepGates(ctx, q, obj, nil, gates); err != nil {
+	if err := releaseStepGates(ctx, q, build.ID, obj, nil, gates); err != nil {
 		return err
 	}
 	if _, err := q.SetDeployedObjectRestarting(ctx, obj.ID); err != nil {

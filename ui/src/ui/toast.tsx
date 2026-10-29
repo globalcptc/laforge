@@ -89,7 +89,15 @@ function ToastCard({ toast, onDismiss }: { toast: ToastRecord; onDismiss: () => 
       <Icon size={16} className="mt-0.5 shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="font-medium">{toast.title}</div>
-        {toast.description && <div className="mt-0.5 text-xs opacity-80">{toast.description}</div>}
+        {/* Cap the description to a scrollable area so a long aggregate error
+            (e.g. a bulk power action reporting every host) stays a small card
+            with the title and dismiss button always in view, instead of growing
+            off-screen. break-words wraps long instance names at the card width. */}
+        {toast.description && (
+          <div className="mt-0.5 max-h-40 overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words text-xs opacity-80">
+            {toast.description}
+          </div>
+        )}
       </div>
       <button type="button" onClick={onDismiss} aria-label="Dismiss" className="shrink-0 opacity-60 hover:opacity-100">
         <X size={14} />

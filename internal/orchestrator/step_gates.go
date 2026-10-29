@@ -177,7 +177,7 @@ func (g *teamGates) evaluate(w loader.WaitFor) gateState {
 //     blocked_on names that gate's unsatisfied targets only once the host has
 //     worked up to it -- before that it is running steps, not blocked -- and is
 //     cleared when nothing is held any more.
-func releaseStepGates(ctx context.Context, q *db.Queries, obj db.DeployedObject, hostBlockedOn []string, gates *teamGates) error {
+func releaseStepGates(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, hostBlockedOn []string, gates *teamGates) error {
 	if len(hostBlockedOn) > 0 {
 		return nil
 	}
@@ -199,10 +199,24 @@ func releaseStepGates(ctx context.Context, q *db.Queries, obj db.DeployedObject,
 			}
 			switch state {
 			case gateFailed:
-				return q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{
+				msg := fmt.Sprintf("waiting on %s, which failed", w.Label())
+				if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{
 					ID:        obj.ID,
-					LastError: db.StrPtr(fmt.Sprintf("waiting on %s, which failed", w.Label())),
-				})
+					LastError: db.StrPtr(msg),
+				}); err != nil {
+					return err
+				}
+				// Record WHY on the timeline -- without this the host just flips
+				// back to build_failed with no log line, which looks like a restart
+				// that "didn't take": the gate target it waits on is itself failed,
+				// so restarting this host alone can never succeed (restart the
+				// target too). blocked_on is cleared so the UI shows the failure,
+				// not a stale "waiting on <already-fired gate>".
+				_ = setBlockedOn(ctx, q, obj, nil)
+				decide(ctx, q, buildID, obj.ID, "lifecycle.build_failed",
+					fmt.Sprintf("%s: %s; restart that host too, then this one resumes", objectLabel(obj, 0), msg),
+					map[string]any{"gate": w.Label()})
+				return nil
 			case gateWaiting:
 				waitingOn = append(waitingOn, w.Label())
 			}

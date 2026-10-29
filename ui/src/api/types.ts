@@ -178,6 +178,8 @@ export interface RestartHost {
   content_changed: boolean
   steps: RestartStep[]
   dependents: RebuildAffected[]
+  /** This host's own wait_for targets that are themselves failed (e.g. "vdi-kali · vdi-ssh-ready"); restarting this host alone can't finish until they're restarted too. */
+  failed_gate_targets?: string[]
   restarted: boolean
   skipped?: string
 }
