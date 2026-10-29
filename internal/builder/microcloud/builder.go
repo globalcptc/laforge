@@ -738,8 +738,10 @@ func (b *Builder) PowerAction(ctx context.Context, team, externalRef, action str
 	body := map[string]interface{}{"action": lxdAction, "force": force}
 	if !force && lxdAction != "start" {
 		// Give a graceful shutdown/reboot a real window to complete before
-		// Incus gives up; a hard action needs none.
-		body["timeout"] = 30
+		// Incus gives up; a hard action needs none. Windows guests on a busy
+		// cluster regularly need well over 30 seconds, and a stop that runs
+		// out of time is reported as failed while the guest is still running.
+		body["timeout"] = 120
 	}
 	_, err := b.Client.put(ctx, "/1.0/instances/"+externalRef+"/state", body)
 	if err != nil {
@@ -1024,6 +1026,24 @@ func powerStateFromLXDState(status string) string {
 type mcNetwork struct {
 	Name    string `json:"name"`
 	Managed bool   `json:"managed"`
+}
+
+// InstanceState reads one instance's power state directly (builder.InstanceStater),
+// for confirming an instance the full listing left out.
+func (b *Builder) InstanceState(ctx context.Context, externalRef string) (string, bool, error) {
+	raw, err := b.Client.get(ctx, "/1.0/instances/"+url.PathEscape(externalRef))
+	if err != nil {
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.NotFound() {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	var inst mcInstance
+	if err := json.Unmarshal(raw, &inst); err != nil {
+		return "", false, fmt.Errorf("decoding instance %s: %w", externalRef, err)
+	}
+	return powerStateFromLXDState(inst.Status), true, nil
 }
 
 func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {

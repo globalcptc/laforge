@@ -891,12 +891,16 @@ function PowerDialog({
   async function run() {
     try {
       const res = await power.mutateAsync({ target: { ids: targetIds }, action, force: hasForceChoice && force })
-      const failed = res.failed ?? 0
+      // The action runs in the background; this only says it started. Each
+      // host's result shows on its Events tab and in the Infra column.
+      const skipped = res.results.filter((r) => r.error)
       toast({
-        title: failed === 0 ? `${verb} sent` : `${verb}: ${failed} failed`,
-        description: failed === 0 ? `${res.results.length} host(s)` : res.results.filter((r) => r.error).map((r) => `${r.name}: ${r.error}`).join('; '),
-        tone: failed === 0 ? 'success' : 'danger',
-        duration: failed === 0 ? undefined : 0,
+        title: `${verb} started on ${res.started} host(s)`,
+        description:
+          (skipped.length > 0 ? `Skipped ${skipped.map((r) => `${r.name} (${r.error})`).join(', ')}. ` : '') +
+          'Each host’s result appears on its Events tab, and the Infra column updates as hosts finish.',
+        tone: skipped.length > 0 ? 'info' : 'success',
+        duration: skipped.length > 0 ? 0 : undefined,
       })
       onDone()
     } catch (e) {

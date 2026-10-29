@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"sync"
 
@@ -24,16 +25,33 @@ type PowerResult struct {
 	Err      string `json:"error,omitempty"`
 }
 
-// PowerObjects runs an infrastructure power action -- start, stop, or
-// reboot, hard or graceful -- against every deployed object the target
-// matches, at the hoster, through the build's own builder (the same
-// build -> configured_build -> builder_config resolution DetectDrift
-// uses). Unlike an ad-hoc agent task, this is a hoster operation: it acts
-// on the instance itself, so it still works when the in-guest agent is
-// dead or the OS is wedged -- exactly when you most need it. Objects run
-// concurrently (bounded) so a graceful action that waits per instance
-// doesn't serialize across a whole build.
-func PowerObjects(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, target AdHocTarget, action string, force bool) ([]PowerResult, error) {
+// PowerJob is a bulk power action that has been checked and matched but not
+// yet run: PreparePower resolves the builder and the target hosts quickly (so
+// a bad request fails at once), and Run carries it out, which on a large
+// target takes minutes. The API runs it in the background rather than inside
+// the request: Cloudflare ends any request after 100 seconds, which cancelled
+// the rest of a bulk action part-way through and reported it failed.
+type PowerJob struct {
+	pool   *pgxpool.Pool
+	bldr   builder.Builder
+	action string
+	force  bool
+	// Results holds every matched host in match order. Hosts not yet
+	// deployed already carry their error; the rest are filled in by Run.
+	Results []PowerResult
+	todo    []powerTarget
+}
+
+type powerTarget struct {
+	index    int
+	objectID pgtype.UUID
+	team     string
+	ref      string
+}
+
+// PreparePower checks a power action and matches its target hosts, without
+// touching the hoster. See PowerJob.
+func PreparePower(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, target AdHocTarget, action string, force bool) (*PowerJob, error) {
 	switch action {
 	case builder.PowerStart, builder.PowerStop, builder.PowerReboot:
 	default:
@@ -74,31 +92,71 @@ func PowerObjects(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, 
 		teamNumberByID[tm.ID.String()] = tm.TeamNumber
 	}
 
-	results := make([]PowerResult, len(objs))
-	sem := make(chan struct{}, 8)
-	var wg sync.WaitGroup
+	job := &PowerJob{pool: pool, bldr: bldr, action: action, force: force, Results: make([]PowerResult, len(objs))}
 	for i, o := range objs {
 		name := db.StrOrEmpty(o.AsName)
 		if name == "" {
 			name = o.ObjectName
 		}
-		results[i] = PowerResult{ObjectID: o.ID.String(), Name: name}
+		job.Results[i] = PowerResult{ObjectID: o.ID.String(), Name: name}
 		if o.ExternalRef == nil || *o.ExternalRef == "" {
-			results[i].Err = "not deployed at the hoster yet"
+			job.Results[i].Err = "not deployed at the hoster yet"
 			continue
 		}
-		team := strconv.FormatInt(int64(teamNumberByID[o.TeamID.String()]), 10)
-		ref := *o.ExternalRef
+		job.todo = append(job.todo, powerTarget{
+			index: i, objectID: o.ID, ref: *o.ExternalRef,
+			team: strconv.FormatInt(int64(teamNumberByID[o.TeamID.String()]), 10),
+		})
+	}
+	return job, nil
+}
+
+// Pending is how many hosts Run will act on.
+func (j *PowerJob) Pending() int { return len(j.todo) }
+
+// powerConcurrency bounds how many hosts one bulk action works on at once.
+const powerConcurrency = 8
+
+// Run carries out the action on every pending host, at most powerConcurrency
+// at a time, calling onResult as each finishes (from several goroutines;
+// onResult must be safe for that). A host that succeeds gets its power state
+// recorded straight away -- running after a start or reboot, stopped after a
+// stop -- so the UI follows along instead of waiting for the next hoster poll.
+// Returns every result, including the hosts that were never deployed.
+func (j *PowerJob) Run(ctx context.Context, onResult func(PowerResult)) []PowerResult {
+	q := db.New(j.pool)
+	settled := builder.PowerStateRunning
+	if j.action == builder.PowerStop {
+		settled = builder.PowerStateStopped
+	}
+	sem := make(chan struct{}, powerConcurrency)
+	var wg sync.WaitGroup
+	for _, t := range j.todo {
 		wg.Add(1)
-		go func(i int) {
+		go func(t powerTarget) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			if err := bldr.PowerAction(ctx, team, ref, action, force); err != nil {
-				results[i].Err = err.Error()
+			if err := j.bldr.PowerAction(ctx, t.team, t.ref, j.action, j.force); err != nil {
+				j.Results[t.index].Err = err.Error()
+			} else if err := q.SetDeployedObjectPowerState(ctx, db.SetDeployedObjectPowerStateParams{ID: t.objectID, PowerState: settled}); err != nil {
+				log.Printf("power %s: recording %s's power state: %v", j.action, j.Results[t.index].Name, err)
 			}
-		}(i)
+			if onResult != nil {
+				onResult(j.Results[t.index])
+			}
+		}(t)
 	}
 	wg.Wait()
-	return results, nil
+	return j.Results
+}
+
+// PowerObjects prepares and runs a power action in one call, waiting for every
+// host. See PreparePower and PowerJob.Run.
+func PowerObjects(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, target AdHocTarget, action string, force bool) ([]PowerResult, error) {
+	job, err := PreparePower(ctx, pool, buildID, target, action, force)
+	if err != nil {
+		return nil, err
+	}
+	return job.Run(ctx, nil), nil
 }

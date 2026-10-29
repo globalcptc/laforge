@@ -138,6 +138,8 @@ export interface DeployedObject {
   public_address: string
   id: string
   team_id: string
+  /** The human team number (1..N); sent by the flat host list (GET /builds/{id}/objects). */
+  team_number?: number
   kind: ObjectKind
   object_name: string
   as_name: string | null
@@ -485,7 +487,12 @@ export interface PowerResult {
   error?: string
 }
 
+// A bulk power action is started in the background (POST /builds/{id}/power
+// answers at once): started is how many hosts it is acting on, failed how many
+// matched hosts were skipped because they aren't deployed (listed in results
+// with their error). Each host's outcome lands on its Events tab.
 export interface PowerActionResponse {
+  started: number
   results: PowerResult[]
   failed: number
 }

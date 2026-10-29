@@ -104,6 +104,19 @@ export function BuildTerminal() {
   // is on. Prefer the as-name the agent itself uses (terminal.go does the same),
   // falling back to the object name.
   const hostName = obj ? obj.as_name || obj.object_name : undefined
+  // Host names repeat across teams, so the team is part of which box this is.
+  const teamNumber = obj?.team_number
+
+  // Each terminal opens in its own browser tab: name the tab after the box so
+  // several open shells can be told apart.
+  useEffect(() => {
+    if (!hostName) return
+    const previous = document.title
+    document.title = `${teamNumber != null ? `T${teamNumber} ` : ''}${hostName} · Terminal`
+    return () => {
+      document.title = previous
+    }
+  }, [hostName, teamNumber])
 
   useEffect(() => {
     // Only open the socket when we know the host can take a shell. While the
@@ -200,10 +213,16 @@ export function BuildTerminal() {
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-fg">
           <TerminalIcon size={15} className="shrink-0 text-fg-muted" /> Terminal
+          {teamNumber != null && (
+            <>
+              <span className="text-fg-subtle">·</span>
+              <span className="shrink-0">Team {teamNumber}</span>
+            </>
+          )}
           {hostName && (
             <>
               <span className="text-fg-subtle">·</span>
-              <span className="truncate font-mono text-fg" title={hostName}>
+              <span className="truncate font-mono text-fg" title={teamNumber != null ? `Team ${teamNumber} · ${hostName}` : hostName}>
                 {hostName}
               </span>
             </>

@@ -127,7 +127,7 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   invalid: { icon: ShieldOff, tone: 'warning', label: 'Validation Failed' },
   // Build-level aggregate failure -- terminal, still.
   failed: { icon: CircleX, tone: 'danger', label: 'Failed' },
-  tearing_down: { icon: OctagonX, anim: 'spin', tone: 'pink', label: 'Tearing down' },
+  tearing_down: { icon: OctagonX, anim: 'steady-spin', tone: 'pink', label: 'Tearing down' },
   // Destroyed is a terminal resting state -- no animation.
   torn_down: { icon: PowerOff, tone: 'neutral', label: 'Destroyed' },
   purged: { icon: Trash2, tone: 'neutral', label: 'Purged' },
@@ -325,7 +325,7 @@ export function statusFillClass(status: string): string {
 // animClassFor maps a status's animation to its Tailwind class. 'slow-spin' is a
 // ~7s rotation (vs animate-spin's 1s) for the patient, held "Dependency Blocked"
 // state -- deliberately much slower than the active spinners. 'steady-spin' is
-// a 3s rotation, for work that's under way but slow (Destroying).
+// a 3s rotation, for work that's under way but slow (Destroying, Tearing down).
 function animClassFor(anim?: Anim): string | undefined {
   return anim === 'spin'
     ? 'animate-spin'
