@@ -220,8 +220,9 @@ func runRestartSteps(args []string) error {
 		Dependents []struct {
 			AsName string `json:"as_name"`
 		} `json:"dependents"`
-		Restarted bool   `json:"restarted"`
-		Skipped   string `json:"skipped"`
+		FailedGateTargets []string `json:"failed_gate_targets"`
+		Restarted         bool     `json:"restarted"`
+		Skipped           string   `json:"skipped"`
 	}
 	type result struct {
 		Hosts     []host `json:"hosts"`
@@ -286,6 +287,26 @@ func runRestartSteps(args []string) error {
 	}
 	if deps > 0 {
 		fmt.Printf("%d host(s) that depend on these will resume once they finish\n", deps)
+	}
+	// Warn when a picked host's own wait_for target is itself failed: it will run
+	// up to that step and fail again, so the target has to be restarted too.
+	seenGate := map[string]bool{}
+	var failedGates []string
+	for _, h := range preview.Hosts {
+		for _, g := range h.FailedGateTargets {
+			if !seenGate[g] {
+				seenGate[g] = true
+				failedGates = append(failedGates, g)
+			}
+		}
+	}
+	if len(failedGates) > 0 {
+		noun, verb := "that host", "is"
+		if len(failedGates) > 1 {
+			noun, verb = "those hosts", "are"
+		}
+		fmt.Printf("WARNING: this host waits on %s, which %s currently failed -- restarting it alone will run up to that step and fail again; restart %s too.\n",
+			strings.Join(failedGates, ", "), verb, noun)
 	}
 	if *dryRun {
 		return nil
