@@ -273,73 +273,78 @@ func (b *Builder) DeployNetwork(ctx context.Context, spec builder.NetworkSpec) (
 		return name, err
 	}
 	defer release()
-	// Adopt-if-present, by an explicit existence check rather than relying on the
-	// create call's error shape. On a CLUSTERED LXD (a real MicroCloud), re-POSTing
-	// an OVN network that already exists does NOT return a clean 409 -- it returns
-	// a 500 "Network is not in pending state" from the cluster's two-phase network
-	// path, which AlreadyExists() can't recognize. Found live against the 4-node
-	// cluster: without this pre-check the second (retried) DeployNetwork of an
-	// existing network errored instead of adopting, breaking the "ensure" contract.
-	if exists, err := b.networkExists(ctx, name, bridgeAddr); err != nil {
-		return name, fmt.Errorf("checking whether network %s exists: %w", name, err)
-	} else if exists {
-		return name, nil // adopt
-	}
-	_, err = b.Client.post(ctx, "/1.0/networks", map[string]interface{}{
-		"name": name,
-		"type": "ovn",
-		"config": map[string]string{
-			"network":      b.Config.OVNUplinkNetwork,
-			"ipv4.address": bridgeAddr,
-			"ipv4.nat":     "true",
-			// IPv6 off -- LaForge is IPv4-only; see the incus builder's
-			// DeployNetwork for why leaving OVN to auto-assign IPv6 breaks a later
-			// ACL attach when the uplink carries no IPv6 range.
-			"ipv6.address": "none",
-		},
-	})
-	if err != nil {
-		var apiErr *APIError
-		if errors.As(err, &apiErr) && apiErr.AlreadyExists() {
-			if exists, readErr := b.networkExists(ctx, name, bridgeAddr); readErr != nil {
-				return name, fmt.Errorf("validating existing network %s: %w", name, readErr)
-			} else if exists {
-				return name, nil
+	// Create-or-adopt, with self-heal for an OVN network stuck "Errored". The
+	// existence check is explicit (not the create call's error shape): on a
+	// CLUSTERED LXD (a real MicroCloud), re-POSTing an OVN network that already
+	// exists returns a 500 "Network is not in pending state" from the cluster's
+	// two-phase path, which AlreadyExists() can't recognize -- so a retried deploy
+	// must read-then-decide. An "Errored" network is garbage that never recovers
+	// on its own AND keeps holding its uplink IP, which the cluster then
+	// double-assigns to the NEXT network (the 172.16.10.8 collision that stranded
+	// a whole team): delete it so a fresh create gets a clean allocation, instead
+	// of leaving it to poison a sibling. Bounded so a genuinely broken create
+	// can't loop forever.
+	const maxNetworkAttempts = 3
+	var lastErr error
+	for attempt := 1; attempt <= maxNetworkAttempts; attempt++ {
+		raw, err := b.Client.get(ctx, "/1.0/networks/"+name)
+		if err == nil {
+			var state allocatedNetwork
+			if uerr := json.Unmarshal(raw, &state); uerr != nil {
+				return name, fmt.Errorf("decoding network %s: %w", name, uerr)
 			}
+			if state.Status == "Errored" {
+				slog.WarnContext(ctx, "MicroCloud OVN network is Errored; deleting and recreating so it can't hold a stale uplink allocation", "project", b.Client.Project, "network", name, "attempt", attempt)
+				if _, derr := b.Client.delete(ctx, "/1.0/networks/"+name); derr != nil {
+					var apiErr *APIError
+					if !(errors.As(derr, &apiErr) && apiErr.NotFound()) {
+						return name, fmt.Errorf("deleting errored network %s: %w", name, derr)
+					}
+				}
+				lastErr = fmt.Errorf("network %s was in Errored state", name)
+				// fall through to re-create below
+			} else if verr := b.validateNetworkAllocation(ctx, name, bridgeAddr, state); verr != nil {
+				// Created-but-invalid (an uplink collision, or a config mismatch):
+				// this network isn't the one to recreate blindly -- surface it.
+				return name, verr
+			} else {
+				return name, nil // Created and valid -- adopt
+			}
+		} else {
+			var apiErr *APIError
+			if !(errors.As(err, &apiErr) && apiErr.HTTPStatus == 404) {
+				return name, fmt.Errorf("checking whether network %s exists: %w", name, err)
+			}
+			// 404 -> doesn't exist; create below.
 		}
-		slog.ErrorContext(ctx, "MicroCloud primary network creation failed", "project", b.Client.Project, "network", name, "error", err)
-		return name, fmt.Errorf("creating network %s (from %s): %w", name, spec.ExternalName, err)
-	}
-	if exists, err := b.networkExists(ctx, name, bridgeAddr); err != nil {
-		return name, fmt.Errorf("validating created network %s: %w", name, err)
-	} else if !exists {
-		return name, fmt.Errorf("created network %s is missing on read-back", name)
-	}
-	slog.InfoContext(ctx, "MicroCloud primary OVN network created", "project", b.Client.Project, "network", name)
-	return name, nil
-}
-
-// networkExists reports whether a managed network of this exact name is already
-// present and has a valid, unique uplink allocation (404 -> false). Both new
-// networks and adoption paths must pass the same check before a network task
-// can finish and release dependent guests. Call with the networking lock held.
-func (b *Builder) networkExists(ctx context.Context, name, gateway string) (bool, error) {
-	raw, err := b.Client.get(ctx, "/1.0/networks/"+name)
-	if err == nil {
-		var state allocatedNetwork
-		if err := json.Unmarshal(raw, &state); err != nil {
-			return false, err
+		_, err = b.Client.post(ctx, "/1.0/networks", map[string]interface{}{
+			"name": name,
+			"type": "ovn",
+			"config": map[string]string{
+				"network":      b.Config.OVNUplinkNetwork,
+				"ipv4.address": bridgeAddr,
+				"ipv4.nat":     "true",
+				// IPv6 off -- LaForge is IPv4-only; see the incus builder's
+				// DeployNetwork for why leaving OVN to auto-assign IPv6 breaks a later
+				// ACL attach when the uplink carries no IPv6 range.
+				"ipv6.address": "none",
+			},
+		})
+		if err != nil {
+			var apiErr *APIError
+			if errors.As(err, &apiErr) && apiErr.AlreadyExists() {
+				continue // raced/clustered: re-read and adopt (or heal) next pass
+			}
+			slog.ErrorContext(ctx, "MicroCloud primary network creation failed", "project", b.Client.Project, "network", name, "error", err)
+			return name, fmt.Errorf("creating network %s (from %s): %w", name, spec.ExternalName, err)
 		}
-		if err := b.validateNetworkAllocation(ctx, name, gateway, state); err != nil {
-			return false, err
-		}
-		return true, nil
+		slog.InfoContext(ctx, "MicroCloud primary OVN network created", "project", b.Client.Project, "network", name, "attempt", attempt)
+		// Loop: read it back next pass to validate (Created+valid -> adopt; Errored -> heal).
 	}
-	var apiErr *APIError
-	if errors.As(err, &apiErr) && apiErr.HTTPStatus == 404 {
-		return false, nil
+	if lastErr == nil {
+		lastErr = fmt.Errorf("network %s never reached a usable 'Created' state", name)
 	}
-	return false, err
+	return name, fmt.Errorf("network %s did not deploy cleanly after %d attempts: %w", name, maxNetworkAttempts, lastErr)
 }
 
 // bridgeAddressCIDR turns a content network's own CIDR (e.g.

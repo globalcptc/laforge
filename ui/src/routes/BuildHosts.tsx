@@ -467,6 +467,9 @@ export function BuildHosts() {
   }
 
   const selectedHosts = hosts.filter((h) => selected.has(h.id))
+  // Networks can be selected too, but only for rebuild (they have no agent or
+  // power state): rebuilding a failed network recreates it and its guests.
+  const selectedNetworks = useMemo(() => (objects ?? []).filter((o) => o.kind === 'network' && selected.has(o.id)), [objects, selected])
   const allFilteredSelected = filtered.length > 0 && filtered.every((h) => selected.has(h.id))
 
   async function runOnSelected(command: string, payload: unknown) {
@@ -594,7 +597,16 @@ export function BuildHosts() {
                         return (
                           <FragmentGroup key={key}>
                             <tr>
-                              <Td></Td>
+                              <Td>
+                                {!readOnly && net.object && (
+                                  <input
+                                    type="checkbox"
+                                    aria-label={`Select network ${net.name || 'network'} for rebuild`}
+                                    checked={selected.has(net.object.id)}
+                                    onChange={() => toggle(net.object!.id)}
+                                  />
+                                )}
+                              </Td>
                               <Td colSpan={7}>
                                 <div className="flex items-center gap-1.5 pl-4 text-xs font-medium text-fg-muted">
                                   <button onClick={() => toggleNetCollapse(key)} aria-label="Collapse network" className="flex items-center">
@@ -727,8 +739,11 @@ export function BuildHosts() {
             <Button
               variant="secondary"
               size="icon"
-              onClick={() => setRebuilding({ ids: selectedHosts.map((h) => h.id), names: selectedHosts.map((h) => h.as_name ?? h.object_name), closedTeams: closedTeamsForHosts(selectedHosts) })}
-              title="Rebuild — tear down and recreate, cascading to dependents"
+              onClick={() => {
+                const objs = [...selectedHosts, ...selectedNetworks]
+                setRebuilding({ ids: objs.map((o) => o.id), names: objs.map((o) => o.as_name ?? o.object_name), closedTeams: closedTeamsForHosts(objs) })
+              }}
+              title="Rebuild — tear down and recreate, cascading to dependents (a network also recreates its guests)"
               aria-label="Rebuild"
             >
               <Hammer size={14} />
