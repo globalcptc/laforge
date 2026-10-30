@@ -493,6 +493,11 @@ const POWER_STYLES: Record<string, { icon: LucideIcon; tone: BadgeProps['tone'];
   missing: { icon: CircleX, tone: 'danger', label: 'Missing' },
 }
 
+// powerLabel is the display name for a power state ("Running", "Stopped"…).
+export function powerLabel(state: string): string {
+  return POWER_STYLES[state]?.label ?? state
+}
+
 export function PowerBadge({ state, className }: { state: string; className?: string }) {
   // Empty (not yet polled) renders nothing -- no state to claim yet.
   const style = POWER_STYLES[state]

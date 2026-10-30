@@ -66,9 +66,26 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 	if err != nil {
 		return fmt.Errorf("listing agent sessions: %w", err)
 	}
+	// When each object's current instance came up. A rebuild keeps the
+	// object's agent_session row (one per object), so until the new agent
+	// connects, that row still holds the OLD instance's last heartbeat.
+	deployedAt := make(map[string]time.Time, len(objs))
+	for _, o := range objs {
+		if o.DeployedAt.Valid {
+			deployedAt[o.ID.String()] = o.DeployedAt.Time
+		}
+	}
 	checkedIn := make(map[string]bool, len(sessions))
 	lastHeartbeat := make(map[string]time.Time, len(sessions))
 	for _, s := range sessions {
+		// A session whose last heartbeat predates the current instance belongs
+		// to the instance a rebuild replaced: the new agent has not checked in
+		// yet. Counting it would move the host to building at once and then,
+		// with that hours-old heartbeat, fail it as a lost agent before the
+		// new instance has even booted.
+		if da, ok := deployedAt[s.DeployedObjectID.String()]; ok && s.LastHeartbeatAt.Time.Before(da) {
+			continue
+		}
 		checkedIn[s.DeployedObjectID.String()] = true
 		lastHeartbeat[s.DeployedObjectID.String()] = s.LastHeartbeatAt.Time
 	}

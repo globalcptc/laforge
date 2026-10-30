@@ -2,7 +2,7 @@ import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useRef, useState } from 'react'
 import { Box, CalendarClock, Check, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCcw, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
-import { StatusBadge, PowerBadge, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES, effectiveStatusKey, EFFECTIVE_HEALTH_STATES } from '../components/StatusBadge'
+import { StatusBadge, PowerBadge, powerLabel, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES, effectiveStatusKey, EFFECTIVE_HEALTH_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
 import { ObjectLogPanel } from '../components/ObjectLogPanel'
 import { RestartStepsDialog, canRestartSteps } from '../components/RestartStepsDialog'
@@ -165,11 +165,32 @@ function toggleSet(s: Set<string>, v: string): Set<string> {
   return next
 }
 
-// MultiFilter is one checkbox dropdown for the Hosts toolbar (Type / OS / State /
+// The Status filter's three columns, and a host's value in each, as
+// "<column>:<value>" keys -- exactly what its State / Infra / Agent cells show
+// ('' where the cell shows a dash).
+type StatusColumn = 'state' | 'infra' | 'agent'
+function statusKeys(h: DeployedObject): string[] {
+  const infra = !h.power_state || GONE_STATES.has(h.status) ? '' : h.power_state
+  return [`state:${h.status}`, `infra:${infra}`, `agent:${h.agent?.agent_status ?? ''}`]
+}
+
+// matchesStatusFilter: OR within a column, AND across the columns that have
+// a pick.
+function matchesStatusFilter(h: DeployedObject, picked: Set<string>): boolean {
+  const keys = statusKeys(h)
+  return (['state', 'infra', 'agent'] as StatusColumn[]).every((col) => {
+    const inCol = [...picked].filter((k) => k.startsWith(col + ':'))
+    return inCol.length === 0 || inCol.some((k) => keys.includes(k))
+  })
+}
+
+// MultiFilter is one checkbox dropdown for the Hosts toolbar (Type / OS / Status /
 // Tag). Each filter is multi-select: pick any number of values and a host matches
 // when its value is among those picked (OR within a filter, AND across filters).
+// An option's optional third element is a section heading (Status splits into
+// State / Infra / Agent); a heading is drawn wherever it changes.
 // The count badge and accent border show when a filter is narrowing the list.
-function MultiFilter({ label, selected, onToggle, onClear, options }: { label: string; selected: Set<string>; onToggle: (v: string) => void; onClear: () => void; options: [string, string][] }) {
+function MultiFilter({ label, selected, onToggle, onClear, options }: { label: string; selected: Set<string>; onToggle: (v: string) => void; onClear: () => void; options: [string, string, string?][] }) {
   const [open, setOpen] = useState(false)
   const anchorRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -208,13 +229,17 @@ function MultiFilter({ label, selected, onToggle, onClear, options }: { label: s
                 Clear {label.toLowerCase()}
               </button>
             )}
-            {options.map(([v, l]) => {
+            {options.map(([v, l, group], i) => {
               const on = selected.has(v)
+              const heading = group && group !== options[i - 1]?.[2] ? group : null
               return (
-                <button key={v} type="button" onClick={() => onToggle(v)} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm text-fg hover:bg-surface-hover">
+                <FragmentGroup key={v}>
+                {heading && <div className="px-2.5 pb-0.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">{heading}</div>}
+                <button type="button" onClick={() => onToggle(v)} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm text-fg hover:bg-surface-hover">
                   <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center rounded border', on ? 'border-accent bg-accent text-fg-inverted' : 'border-border')}>{on && <Check size={11} />}</span>
                   <span className="truncate">{l}</span>
                 </button>
+                </FragmentGroup>
               )
             })}
           </div>
@@ -262,7 +287,9 @@ export function BuildHosts() {
   const [filter, setFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set())
   const [osFilter, setOsFilter] = useState<Set<string>>(new Set())
-  const [stateFilter, setStateFilter] = useState<Set<string>>(new Set())
+  // The Status filter covers all three status columns. Values are
+  // "<column>:<value>" (state / infra / agent); see statusKeys.
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set())
   const [tagFilter, setTagFilter] = useState<Set<string>>(new Set())
   const [collapsedTeams, setCollapsedTeams] = useState<Set<number>>(new Set())
   const [collapsedNets, setCollapsedNets] = useState<Set<string>>(new Set())
@@ -353,10 +380,21 @@ export function BuildHosts() {
   const hostTagList = (h: DeployedObject) => Object.entries(memberByObjId.get(h.id)?.tags ?? {}).map(([k, v]) => `${k}=${v}`)
   // Distinct values present, for the Type/OS/State/Tag filter dropdowns.
   const osOptions = useMemo(() => [...new Set(hosts.map(hostOs).filter(Boolean))].sort(), [hosts, memberByObjId])
-  // The State filter folds in agent/infra health (same worst-of key the team
-  // bars use), so you can filter to e.g. "Agent Missing" or "Powered Off", not
-  // just the raw build state. Options are the effective keys that actually occur.
-  const stateOptions = useMemo(() => [...new Set(hosts.map((h) => effectiveStatusKey(h)))].sort(), [hosts])
+  // The Status filter has one section per status column -- State, Infra and
+  // Agent -- each holding the values that actually occur. Within a section a
+  // host matches any value picked; across sections it must match each section
+  // that has a pick, so "State: Build Failed + Agent: Healthy" finds failed
+  // hosts whose agent is fine.
+  const statusOptions = useMemo(() => {
+    const seen = new Set(hosts.flatMap(statusKeys))
+    const section = (col: StatusColumn, heading: string, label: (v: string) => string): [string, string, string][] =>
+      [...seen].filter((k) => k.startsWith(col + ':')).map((k) => k.slice(col.length + 1)).sort().map((v) => [`${col}:${v}`, v === '' ? 'None' : label(v), heading])
+    return [
+      ...section('state', 'State', statusLabel),
+      ...section('infra', 'Infra', powerLabel),
+      ...section('agent', 'Agent', (v) => statusLabel(v).replace(/^Agent /, '')),
+    ]
+  }, [hosts])
   const tagOptions = useMemo(() => [...new Set(hosts.flatMap(hostTagList))].sort(), [hosts, memberByObjId])
 
   // Free-text search across everything shown (name, kind, network, state,
@@ -367,7 +405,7 @@ export function BuildHosts() {
     const q = filter.trim().toLowerCase()
     return hosts.filter((h) => {
       if (typeFilter.size && !typeFilter.has(h.kind)) return false
-      if (stateFilter.size && !stateFilter.has(effectiveStatusKey(h))) return false
+      if (statusFilter.size && !matchesStatusFilter(h, statusFilter)) return false
       if (osFilter.size && !osFilter.has(hostOs(h))) return false
       if (tagFilter.size && !hostTagList(h).some((t) => tagFilter.has(t))) return false
       if (!q) return true
@@ -375,7 +413,7 @@ export function BuildHosts() {
       return [h.as_name ?? h.object_name, h.kind, h.network_name ?? '', h.status, h.agent?.agent_status ?? '', h.external_ref ?? '', hostOs(h), mem?.size ?? '', ...(mem?.depends_on ?? []), ...hostTagList(h)]
         .some((v) => v.toLowerCase().includes(q))
     })
-  }, [hosts, filter, typeFilter, stateFilter, osFilter, tagFilter, memberByObjId])
+  }, [hosts, filter, typeFilter, statusFilter, osFilter, tagFilter, memberByObjId])
 
   // Subdivide by team, then by network within each team -- the shape an
   // operator reasons about ("team 4's DMZ"), collapsible so a 10-team build
@@ -534,7 +572,7 @@ export function BuildHosts() {
           </div>
           <MultiFilter label="Type" selected={typeFilter} onToggle={(v) => setTypeFilter((p) => toggleSet(p, v))} onClear={() => setTypeFilter(new Set())} options={[['host', 'Host'], ['container', 'Container']]} />
           <MultiFilter label="OS" selected={osFilter} onToggle={(v) => setOsFilter((p) => toggleSet(p, v))} onClear={() => setOsFilter(new Set())} options={osOptions.map((o) => [o, o])} />
-          <MultiFilter label="State" selected={stateFilter} onToggle={(v) => setStateFilter((p) => toggleSet(p, v))} onClear={() => setStateFilter(new Set())} options={stateOptions.map((s) => [s, statusLabel(s)])} />
+          <MultiFilter label="Status" selected={statusFilter} onToggle={(v) => setStatusFilter((p) => toggleSet(p, v))} onClear={() => setStatusFilter(new Set())} options={statusOptions} />
           {tagOptions.length > 0 && <MultiFilter label="Tag" selected={tagFilter} onToggle={(v) => setTagFilter((p) => toggleSet(p, v))} onClear={() => setTagFilter(new Set())} options={tagOptions.map((t) => [t, t])} />}
         </div>
       </div>

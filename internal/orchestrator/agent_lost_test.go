@@ -49,12 +49,16 @@ func TestLifecycleFailsHostsWhoseAgentIsLost(t *testing.T) {
 	alive := mk("web-alive", "building", fourHours, &fiveMinutes, 3)
 	never := mk("web-never", "running", fourHours, nil, 0)
 	fresh := mk("web-fresh", "running", 10*time.Minute, nil, 0)
+	// Rebuilt 10 minutes ago: its agent_session still holds the replaced
+	// instance's heartbeat from 2 hours ago. The new agent hasn't checked in
+	// yet, so the host waits at running -- not building, and not "lost".
+	rebuilt := mk("web-rebuilt", "running", 10*time.Minute, &twoHours, 3)
 
 	if err := AdvanceObjectLifecycle(ctx, pool, build.ID); err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]string{"web-lost": "build_failed", "web-alive": "building", "web-never": "build_failed", "web-fresh": "running"}
-	for _, o := range []db.DeployedObject{lost, alive, never, fresh} {
+	want := map[string]string{"web-lost": "build_failed", "web-alive": "building", "web-never": "build_failed", "web-fresh": "running", "web-rebuilt": "running"}
+	for _, o := range []db.DeployedObject{lost, alive, never, fresh, rebuilt} {
 		got, _ := q.GetDeployedObject(ctx, o.ID)
 		if got.Status != want[*o.AsName] {
 			t.Fatalf("%s: status %s, want %s (error %v)", *o.AsName, got.Status, want[*o.AsName], got.LastError)
