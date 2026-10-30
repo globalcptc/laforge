@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5/pgtype"
 	"testing"
 	"time"
 
@@ -44,7 +45,7 @@ func TestReconcileSettlesAnUnfinishedDestroyBeforeRedeploying(t *testing.T) {
 		return out
 	}
 	deploy := func(o db.DeployedObject) {
-		if _, err := reconcileObject(ctx, q, build.ID, o, "fp", "infra", false, 0, true); err != nil {
+		if _, err := reconcileObject(ctx, q, build.ID, pgtype.UUID{}, o, "fp", "infra", false, 0, true); err != nil {
 			t.Fatal(err)
 		}
 	}

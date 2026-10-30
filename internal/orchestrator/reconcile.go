@@ -166,7 +166,7 @@ func Reconcile(ctx context.Context, pool *pgxpool.Pool, repoRoot string, buildID
 
 		for networkName := range env.Networks {
 			desired["network/"+networkName] = true
-			if err := reconcileNetwork(ctx, q, c, team.ID, buildID, networkName, deployTasks); err != nil {
+			if err := reconcileNetwork(ctx, q, c, team.ID, buildID, build.ContentRevisionID, networkName, deployTasks); err != nil {
 				return fmt.Errorf("team %d, network %q: %w", teamNum, networkName, err)
 			}
 		}
@@ -409,7 +409,7 @@ func reconcileRemovals(ctx context.Context, q *db.Queries, buildID, teamID pgtyp
 	return nil
 }
 
-func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, teamID, buildID pgtype.UUID, networkName string, deployTasks bool) error {
+func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, teamID, buildID, contentRevID pgtype.UUID, networkName string, deployTasks bool) error {
 	net := findNetwork(c, networkName)
 	if net == nil {
 		return fmt.Errorf("network %q not found in content", networkName)
@@ -428,7 +428,7 @@ func reconcileNetwork(ctx context.Context, q *db.Queries, c *loader.Content, tea
 	if obj.Status == "deploy_failed" {
 		return nil
 	}
-	_, err = reconcileObject(ctx, q, buildID, obj, fp, "", false, networkDeployPriority, deployTasks)
+	_, err = reconcileObject(ctx, q, buildID, contentRevID, obj, fp, "", false, networkDeployPriority, deployTasks)
 	return err
 }
 
@@ -527,7 +527,7 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	// handled instead by deploying roots-first (see orderedPlacements), and
 	// correctness by holding this object's STEP execution below until every
 	// dependency has actually finished.
-	created, err := reconcileObject(ctx, q, buildID, obj, fp, infraFP, holdOnStepChange, priority, deployTasks)
+	created, err := reconcileObject(ctx, q, buildID, contentRevID, obj, fp, infraFP, holdOnStepChange, priority, deployTasks)
 	if err != nil {
 		return err
 	}
@@ -578,7 +578,7 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 // step (docs/plans/restart-from-step.md §6), instead of being recreated. An
 // object deployed before infra_fingerprint existed has none recorded and is
 // recreated as before.
-func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, obj db.DeployedObject, desiredFP, desiredInfraFP string, holdOnStepChange bool, priority int, deployTasks bool) (created bool, err error) {
+func reconcileObject(ctx context.Context, q *db.Queries, buildID, contentRevID pgtype.UUID, obj db.DeployedObject, desiredFP, desiredInfraFP string, holdOnStepChange bool, priority int, deployTasks bool) (created bool, err error) {
 	// A rebuild recorded while the object was busy is carried out as soon as
 	// it isn't: destroy what's there (by its reference, or by name if it has
 	// none yet), and the runner resets it for a fresh deploy.
@@ -607,6 +607,18 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 	if infraUp(obj.Status) {
 		if obj.Fingerprint == desiredFP {
 			return false, nil // already correct
+		}
+		// Content only changes when the build moves to a new revision (new
+		// content applied). Deployed from THIS revision, a different
+		// fingerprint can't be a content change -- it's LaForge computing it
+		// differently (a bug, an upgrade's render change) -- and recreating on
+		// it is how a 7-host rebuild once destroyed a whole environment. Say so
+		// and leave the instance up; an explicit rebuild still recreates it.
+		if obj.ContentRevisionID.Valid && obj.ContentRevisionID == contentRevID {
+			decideRepeating(ctx, q, "fingerprint-drift/"+obj.ID.String(), buildID, obj.ID, "reconcile.drift",
+				fmt.Sprintf("%s: its fingerprint no longer matches what it was deployed with, but the build's content hasn't changed since; left as is (rebuild it to recreate)", objectLabel(obj, 0)),
+				map[string]any{"deployed_fingerprint": obj.Fingerprint, "desired_fingerprint": desiredFP})
+			return false, nil
 		}
 		stepsOnly := obj.InfraFingerprint != "" && obj.InfraFingerprint == desiredInfraFP
 		if holdOnStepChange && stepsOnly {
@@ -694,7 +706,7 @@ func reconcileObject(ctx context.Context, q *db.Queries, buildID pgtype.UUID, ob
 	// already leased/pending for this object, this is a no-op (and
 	// ErrNoRows, its own signal for "nothing inserted" -- ends up back
 	// here as created=false).
-	payload, err := deployTaskPayload(desiredFP, desiredInfraFP, priority)
+	payload, err := deployTaskPayload(desiredFP, desiredInfraFP, contentRevID, priority)
 	if err != nil {
 		return false, err
 	}
@@ -725,8 +737,11 @@ const networkDeployPriority = 1 << 20
 // its critical-path priority. The lease queries order by payload->'priority'
 // (internal/db/queries/runtime.sql) and the runner hands it to the builder as
 // HostSpec/ContainerSpec.Priority. Omitted when 0, as on a destroy task.
-func deployTaskPayload(fingerprint, infraFingerprint string, priority int) ([]byte, error) {
+func deployTaskPayload(fingerprint, infraFingerprint string, contentRevID pgtype.UUID, priority int) ([]byte, error) {
 	p := map[string]any{"fingerprint": fingerprint, "infra_fingerprint": infraFingerprint}
+	if contentRevID.Valid {
+		p["content_revision_id"] = contentRevID.String()
+	}
 	if priority > 0 {
 		p["priority"] = priority
 	}

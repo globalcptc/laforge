@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5/pgtype"
 	"testing"
 
 	"github.com/globalcptc/laforge/internal/db"
@@ -48,7 +49,7 @@ func TestReconcileObjectHoldsStepOnlyChange(t *testing.T) {
 	// Steps-only change, hold on: marked, not destroyed; a second pass is quiet.
 	held := mk("web-held")
 	for i := 0; i < 2; i++ {
-		if _, err := reconcileObject(ctx, q, build.ID, held, "new", "infra", true, 0, true); err != nil {
+		if _, err := reconcileObject(ctx, q, build.ID, pgtype.UUID{}, held, "new", "infra", true, 0, true); err != nil {
 			t.Fatalf("pass %d: %v", i, err)
 		}
 	}
@@ -74,7 +75,7 @@ func TestReconcileObjectHoldsStepOnlyChange(t *testing.T) {
 
 	// Steps-only change, hold off: recreated.
 	plain := mk("web-plain")
-	if _, err := reconcileObject(ctx, q, build.ID, plain, "new", "infra", false, 0, true); err != nil {
+	if _, err := reconcileObject(ctx, q, build.ID, pgtype.UUID{}, plain, "new", "infra", false, 0, true); err != nil {
 		t.Fatal(err)
 	}
 	if n := destroys(plain); n != 1 {
@@ -83,7 +84,7 @@ func TestReconcileObjectHoldsStepOnlyChange(t *testing.T) {
 
 	// Infrastructure changed too, hold on: recreated regardless.
 	infra := mk("web-infra")
-	if _, err := reconcileObject(ctx, q, build.ID, infra, "new", "other-infra", true, 0, true); err != nil {
+	if _, err := reconcileObject(ctx, q, build.ID, pgtype.UUID{}, infra, "new", "other-infra", true, 0, true); err != nil {
 		t.Fatal(err)
 	}
 	if n := destroys(infra); n != 1 {
@@ -94,7 +95,7 @@ func TestReconcileObjectHoldsStepOnlyChange(t *testing.T) {
 	legacy := mk("web-legacy")
 	pool.Exec(ctx, "UPDATE deployed_object SET infra_fingerprint = '' WHERE id = $1", legacy.ID)
 	legacy, _ = q.GetDeployedObject(ctx, legacy.ID)
-	if _, err := reconcileObject(ctx, q, build.ID, legacy, "new", "infra", true, 0, true); err != nil {
+	if _, err := reconcileObject(ctx, q, build.ID, pgtype.UUID{}, legacy, "new", "infra", true, 0, true); err != nil {
 		t.Fatal(err)
 	}
 	if n := destroys(legacy); n != 1 {

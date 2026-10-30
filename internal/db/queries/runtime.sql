@@ -266,9 +266,13 @@ UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $
 -- clears any earlier overdue flag.
 -- power_state is cleared: what the last poll saw belongs to the instance this
 -- one replaced; the next poll reports the new one.
-UPDATE deployed_object SET status = 'running', external_ref = $2, fingerprint = $3, infra_fingerprint = $4, last_error = NULL, updated_at = now(),
-    deployed_at = now(), agent_checkin_overdue_at = NULL, power_state = ''
-WHERE id = $1 RETURNING *;
+-- content_revision_id is the revision the deploy task rendered from; a task
+-- queued without one records its build's current revision.
+UPDATE deployed_object SET status = 'running', external_ref = sqlc.arg(external_ref), fingerprint = sqlc.arg(fingerprint), infra_fingerprint = sqlc.arg(infra_fingerprint), last_error = NULL, updated_at = now(),
+    deployed_at = now(), agent_checkin_overdue_at = NULL, power_state = '',
+    content_revision_id = COALESCE(sqlc.narg(content_revision_id)::uuid,
+        (SELECT b.content_revision_id FROM team t JOIN build b ON b.id = t.build_id WHERE t.id = deployed_object.team_id))
+WHERE deployed_object.id = sqlc.arg(id) RETURNING *;
 
 -- name: SetDeployedObjectAgentPlatform :exec
 -- Which agent binary the runner delivered to this host. Marks the object as one

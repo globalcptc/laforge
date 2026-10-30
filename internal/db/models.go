@@ -266,6 +266,7 @@ type DeployedObject struct {
 	RebuildRequestedAt      pgtype.Timestamptz `json:"rebuild_requested_at"`
 	FailureKind             *string            `json:"failure_kind"`
 	FailedAt                pgtype.Timestamptz `json:"failed_at"`
+	ContentRevisionID       pgtype.UUID        `json:"content_revision_id"`
 }
 
 type Environment struct {

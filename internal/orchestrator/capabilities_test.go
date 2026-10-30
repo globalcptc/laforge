@@ -105,9 +105,9 @@ func TestCheckHostDiskCapacity(t *testing.T) {
 
 func TestHumanBytes(t *testing.T) {
 	cases := map[int64]string{
-		64 << 30:        "64 GiB",
-		60_000_000_000:  "60 GB",
-		(64 << 30) + 1:  "64.0 GiB",
+		64 << 30:       "64 GiB",
+		60_000_000_000: "60 GB",
+		(64 << 30) + 1: "64.0 GiB",
 	}
 	for n, want := range cases {
 		if got := humanBytes(n); got != want {

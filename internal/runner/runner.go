@@ -680,6 +680,9 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 		Fingerprint      string `json:"fingerprint"`
 		InfraFingerprint string `json:"infra_fingerprint"`
 		Priority         int    `json:"priority"`
+		// The content revision the fingerprint was rendered from, recorded
+		// on the object so reconcile can tell a content change from drift.
+		ContentRevisionID string `json:"content_revision_id"`
 	}
 	json.Unmarshal(task.Payload, &payload)
 
@@ -889,6 +892,7 @@ func (r *Runner) executeDeploy(ctx context.Context, q *db.Queries, task db.Task,
 
 	if _, err := q.MarkDeployedObjectRunning(ctx, db.MarkDeployedObjectRunningParams{
 		ID: obj.ID, ExternalRef: db.StrPtr(externalRef), Fingerprint: payload.Fingerprint, InfraFingerprint: payload.InfraFingerprint,
+		ContentRevisionID: parseRevision(payload.ContentRevisionID),
 	}); err != nil {
 		return fmt.Errorf("recording running state: %w", err)
 	}
@@ -1468,4 +1472,15 @@ func findContainer(c *loader.Content, name string) *loader.Container {
 		}
 	}
 	return nil
+}
+
+// parseRevision reads a deploy payload's content revision id; empty or
+// malformed (a task queued before payloads carried it) is NULL, which records
+// the build's current revision.
+func parseRevision(s string) pgtype.UUID {
+	var u pgtype.UUID
+	if s == "" || u.Scan(s) != nil {
+		return pgtype.UUID{}
+	}
+	return u
 }

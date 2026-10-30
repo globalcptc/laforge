@@ -213,6 +213,17 @@ func TestReconcileRebuildsOnFingerprintChange(t *testing.T) {
 		t.Fatalf("MarkDeployedObjectRunning: %v", err)
 	}
 
+	// The content changed: the build moves to a new revision. (Under the same
+	// revision a stale fingerprint is drift, not a change, and is left alone --
+	// see TestScopedRebuildDoesNotRecreateTheEnvironment.)
+	nextRev, err := q.CreateContentRevision(ctx, db.CreateContentRevisionParams{RepositoryID: mustRepoOf(t, q, build), CommitSha: "orchestrator-test-sha-next"})
+	if err != nil {
+		t.Fatalf("CreateContentRevision: %v", err)
+	}
+	if _, err := q.ApplyContentRevisionToBuild(ctx, db.ApplyContentRevisionToBuildParams{ID: build.ID, ContentRevisionID: nextRev.ID, EnvironmentName: build.EnvironmentName}); err != nil {
+		t.Fatalf("ApplyContentRevisionToBuild: %v", err)
+	}
+
 	if err := Reconcile(ctx, pool, "../../examples/lm-test", build.ID, nil); err != nil {
 		t.Fatalf("Reconcile (after marking stale): %v", err)
 	}

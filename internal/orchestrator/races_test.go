@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5/pgtype"
 	"testing"
 	"time"
 
@@ -64,7 +65,7 @@ func TestRebuildWhileBusyIsCarriedOutLater(t *testing.T) {
 	pool.Exec(ctx, "UPDATE task SET status = 'done' WHERE deployed_object_id = $1", busy.ID)
 	pool.Exec(ctx, "UPDATE deployed_object SET status = 'running' WHERE id = $1", busy.ID)
 	got, _ = q.GetDeployedObject(ctx, busy.ID)
-	if _, err := reconcileObject(ctx, q, build.ID, got, got.Fingerprint, got.InfraFingerprint, false, 0, true); err != nil {
+	if _, err := reconcileObject(ctx, q, build.ID, pgtype.UUID{}, got, got.Fingerprint, got.InfraFingerprint, false, 0, true); err != nil {
 		t.Fatal(err)
 	}
 	if n := taskRows(t, pool, busy, "destroy_host", "pending"); n != 1 {
@@ -134,7 +135,7 @@ func TestFailedDeploysBackOffAndStop(t *testing.T) {
 	}
 	deploys := func(o db.DeployedObject) int { return taskRows(t, pool, o, "deploy_host", "pending") }
 	run := func(o db.DeployedObject) {
-		if _, err := reconcileObject(ctx, q, build.ID, o, "fp", "infra", false, 0, true); err != nil {
+		if _, err := reconcileObject(ctx, q, build.ID, pgtype.UUID{}, o, "fp", "infra", false, 0, true); err != nil {
 			t.Fatal(err)
 		}
 	}
