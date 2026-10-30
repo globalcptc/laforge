@@ -49,6 +49,10 @@ func TestRebuildDestroyUsesPayloadRef(t *testing.T) {
 	if _, err := pool.Exec(ctx, "UPDATE deployed_object SET status='running', external_ref=$2 WHERE id=$1", obj.ID, realRef); err != nil {
 		t.Fatal(err)
 	}
+	// The old instance's agent had checked in.
+	if _, err := pool.Exec(ctx, "INSERT INTO agent_session (deployed_object_id, cert_fingerprint) VALUES ($1, 'fp-old')", obj.ID); err != nil {
+		t.Fatal(err)
+	}
 
 	// Simulate what Rebuild does: enqueue the destroy carrying the real ref, then
 	// clear the row's external_ref.
@@ -79,5 +83,15 @@ func TestRebuildDestroyUsesPayloadRef(t *testing.T) {
 	}
 	if reread.Status != "pending" {
 		t.Errorf("object status = %q, want pending (reset for redeploy)", reread.Status)
+	}
+
+	// The destroyed instance's agent session is gone too, so the rebuilt host
+	// waits for its new agent instead of inheriting the old heartbeat.
+	var sessions int
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM agent_session WHERE deployed_object_id = $1", obj.ID).Scan(&sessions); err != nil {
+		t.Fatal(err)
+	}
+	if sessions != 0 {
+		t.Errorf("agent_session rows after rebuild destroy = %d, want 0", sessions)
 	}
 }

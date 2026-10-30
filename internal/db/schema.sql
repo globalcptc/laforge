@@ -320,6 +320,9 @@ CREATE TABLE public.deployed_object (
     steps_changed_at timestamp with time zone,
     steps_changed_fingerprint text DEFAULT ''::text NOT NULL,
     rebuild_requested_at timestamp with time zone,
+    failure_kind text,
+    failed_at timestamp with time zone,
+    CONSTRAINT deployed_object_failure_kind_check CHECK ((failure_kind = ANY (ARRAY['agent_lost'::text, 'agent_never_checked_in'::text, 'gate'::text, 'dependency'::text]))),
     CONSTRAINT deployed_object_kind_check CHECK ((kind = ANY (ARRAY['network'::text, 'host'::text, 'container'::text, 'dns'::text]))),
     CONSTRAINT deployed_object_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'deploying'::text, 'running'::text, 'building'::text, 'finished'::text, 'deploy_failed'::text, 'build_failed'::text, 'invalid'::text, 'destroy_queued'::text, 'destroying'::text, 'destroy_failed'::text, 'destroyed'::text])))
 );

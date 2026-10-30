@@ -408,6 +408,20 @@ func (q *Queries) DeleteAgentHeartbeatsOlderThan(ctx context.Context, createdAt 
 	return result.RowsAffected(), nil
 }
 
+const deleteAgentSessionForObject = `-- name: DeleteAgentSessionForObject :exec
+DELETE FROM agent_session WHERE deployed_object_id = $1
+`
+
+// Forget the agent of an instance a rebuild destroyed. The session row is one
+// per object, so left in place it would carry the OLD instance's heartbeat into
+// the new one: the host would read as checked in before its new agent ever
+// connected, then as "lost" once that stale heartbeat aged out. The new agent's
+// first heartbeat recreates it (UpsertAgentSession).
+func (q *Queries) DeleteAgentSessionForObject(ctx context.Context, deployedObjectID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAgentSessionForObject, deployedObjectID)
+	return err
+}
+
 const deleteAgentTasksForObject = `-- name: DeleteAgentTasksForObject :exec
 DELETE FROM agent_task WHERE deployed_object_id = $1
 `

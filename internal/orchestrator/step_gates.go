@@ -201,8 +201,9 @@ func releaseStepGates(ctx context.Context, q *db.Queries, buildID pgtype.UUID, o
 			case gateFailed:
 				msg := fmt.Sprintf("waiting on %s, which failed", w.Label())
 				if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{
-					ID:        obj.ID,
-					LastError: db.StrPtr(msg),
+					ID:          obj.ID,
+					LastError:   db.StrPtr(msg),
+					FailureKind: db.StrPtr(FailureGate),
 				}); err != nil {
 					return err
 				}

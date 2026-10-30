@@ -39,7 +39,11 @@ var (
 //     invalid, else -> finished (an object with no steps at all finishes as
 //     soon as its agent is in -- there is nothing to build).
 //
-// Terminal states (finished/build_failed/invalid/deploy_failed/destroyed…)
+// A host failed only because its agent was missing (failure_kind agent_lost /
+// agent_never_checked_in) is recovered once that agent heartbeats again, and
+// carries on as above; a settled build it belongs to re-enters building.
+//
+// Other terminal states (finished/build_failed/invalid/deploy_failed/destroyed…)
 // are left untouched; the DB setters are additionally guarded to only
 // advance from running/building, so a late poll can never bounce a settled
 // object backward.
@@ -53,7 +57,7 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 	// Cheap early out: nothing is mid-lifecycle, so skip the extra queries.
 	anyActive := false
 	for _, o := range objs {
-		if o.Status == "running" || o.Status == "building" {
+		if o.Status == "running" || o.Status == "building" || agentFailure(o) {
 			anyActive = true
 			break
 		}
@@ -142,8 +146,22 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 		return "finished"
 	}
 
+	recovered := false
 	for _, o := range objs {
 		id := o.ID.String()
+		// Failed for a missing agent, and the agent has heartbeated since: it
+		// is back, so the host carries on from where it was (below, this same
+		// pass) instead of staying failed until someone resets it.
+		if agentFailure(o) && checkedIn[id] {
+			st, err := recoverReturnedAgent(ctx, q, buildID, o, lastHeartbeat[id])
+			if err != nil {
+				return err
+			}
+			if st != "" {
+				o.Status = st
+				recovered = true
+			}
+		}
 		switch o.Status {
 		case "running":
 			if o.Kind == "network" {
@@ -161,7 +179,7 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 				// "running" for the rest of the event.
 				if AgentNeverCheckedInAfter > 0 && o.DeployedAt.Valid && time.Since(o.DeployedAt.Time) > AgentNeverCheckedInAfter {
 					msg := fmt.Sprintf("agent never checked in: the instance came up %s ago and nothing has connected (rebuild the host, or check its console)", time.Since(o.DeployedAt.Time).Round(time.Minute))
-					if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{ID: o.ID, LastError: db.StrPtr(msg)}); err != nil {
+					if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{ID: o.ID, LastError: db.StrPtr(msg), FailureKind: db.StrPtr(FailureAgentNeverCheckedIn)}); err != nil {
 						return fmt.Errorf("failing %s for a missing agent: %w", id, err)
 					}
 					decide(ctx, q, buildID, o.ID, "lifecycle.build_failed", fmt.Sprintf("%s: running -> build_failed: %s", objectLabel(o, 0), msg), map[string]any{"deployed_at": o.DeployedAt.Time})
@@ -184,7 +202,7 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 			if next == "building" && AgentLostAfter > 0 {
 				if hb, ok := lastHeartbeat[id]; ok && !hb.IsZero() && time.Since(hb) > AgentLostAfter && steps[id].open > 0 {
 					msg := fmt.Sprintf("agent stopped checking in %s ago (last heartbeat %s) with %d step(s) still to run; the host may be off, rebooted into a broken state, or the agent crashed -- restart it from a step once it's back, or rebuild it", time.Since(hb).Round(time.Minute), hb.Format(time.TimeOnly), steps[id].open)
-					if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{ID: o.ID, LastError: db.StrPtr(msg)}); err != nil {
+					if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{ID: o.ID, LastError: db.StrPtr(msg), FailureKind: db.StrPtr(FailureAgentLost)}); err != nil {
 						return fmt.Errorf("failing %s for a lost agent: %w", id, err)
 					}
 					decide(ctx, q, buildID, o.ID, "lifecycle.build_failed", fmt.Sprintf("%s: building -> build_failed: %s", objectLabel(o, 0), msg), map[string]any{"last_heartbeat": hb, "steps_open": steps[id].open})
@@ -196,6 +214,9 @@ func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 			}
 			noteObjectState(ctx, q, buildID, o, next, steps[id])
 		}
+	}
+	if recovered {
+		return reopenBuild(ctx, q, buildID)
 	}
 	return nil
 }

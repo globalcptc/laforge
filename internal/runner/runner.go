@@ -1056,6 +1056,12 @@ func (r *Runner) executeDestroy(ctx context.Context, q *db.Queries, task db.Task
 	if err := q.DeleteAgentTasksForObject(ctx, obj.ID); err != nil {
 		return false, fmt.Errorf("clearing steps for redeploy: %w", err)
 	}
+	// The destroyed instance's agent is gone with it: drop its session so the
+	// rebuilt host waits for its NEW agent instead of inheriting the old one's
+	// heartbeat (which made it look checked in, then lost).
+	if err := q.DeleteAgentSessionForObject(ctx, obj.ID); err != nil {
+		return false, fmt.Errorf("clearing agent session for redeploy: %w", err)
+	}
 	return false, nil
 }
 

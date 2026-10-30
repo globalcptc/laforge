@@ -314,14 +314,26 @@ WHERE id = $1 AND status = 'running';
 -- name: SetDeployedObjectFinished :exec
 -- Up, every step done, every validator passed -- the only success state,
 -- the only one the UI paints green. Only advances from running/building.
-UPDATE deployed_object SET status = 'finished', last_error = NULL, updated_at = now()
+UPDATE deployed_object SET status = 'finished', last_error = NULL, failure_kind = NULL, failed_at = NULL, updated_at = now()
 WHERE id = $1 AND status IN ('running', 'building');
 
 -- name: SetDeployedObjectBuildFailed :exec
--- A build step could not be completed (a failed agent_task). Only advances
--- from running/building, never from a terminal state.
-UPDATE deployed_object SET status = 'build_failed', last_error = $2, updated_at = now()
-WHERE id = $1 AND status IN ('running', 'building');
+-- A build step could not be completed (a failed agent_task), or a host the
+-- orchestrator gave up on. failure_kind is set when the cause can clear on its
+-- own (see migration 00076 and RecoverDeployedObject); NULL means only an
+-- operator can clear it. Only advances from running/building, never from a
+-- terminal state.
+UPDATE deployed_object SET status = 'build_failed', last_error = sqlc.arg(last_error),
+    failure_kind = sqlc.narg(failure_kind), failed_at = now(), updated_at = now()
+WHERE id = sqlc.arg(id) AND status IN ('running', 'building');
+
+-- name: RecoverDeployedObject :execrows
+-- Undo a recoverable build_failed (failure_kind set) once its cause is gone --
+-- the agent is heartbeating again, or the host it waited on is no longer
+-- failed. status is running (steps not yet queued) or building. Guarded on the
+-- kind it was failed for, so a later step failure (kind NULL) is never undone.
+UPDATE deployed_object SET status = sqlc.arg(status), last_error = NULL, failure_kind = NULL, failed_at = NULL, updated_at = now()
+WHERE id = sqlc.arg(id) AND status = 'build_failed' AND failure_kind = sqlc.arg(failure_kind);
 
 -- name: SetDeployedObjectInvalid :exec
 -- Every step completed but a validator failed: the host built but does not
@@ -420,7 +432,7 @@ WHERE status <> 'destroyed'
 -- deploy task with the new fingerprint. Also clears steps_materialized_at so
 -- the redeploy re-materializes this object's steps once its dependencies are
 -- finished again (its agent_task rows are deleted on the same path).
-UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', infra_fingerprint = '', last_error = NULL,
+UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', infra_fingerprint = '', last_error = NULL, failure_kind = NULL, failed_at = NULL,
     steps_materialized_at = NULL, steps_changed_at = NULL, steps_changed_fingerprint = '', power_state = '', updated_at = now()
 WHERE id = $1 RETURNING *;
 
@@ -431,7 +443,7 @@ WHERE id = $1 RETURNING *;
 -- fingerprint becomes the one it would have if recreated now: its steps are
 -- the current revision's after the restart, and its infrastructure never
 -- changed. Only from those states, so two restarts can't race.
-UPDATE deployed_object SET status = 'building', last_error = NULL,
+UPDATE deployed_object SET status = 'building', last_error = NULL, failure_kind = NULL, failed_at = NULL,
     fingerprint = CASE WHEN steps_changed_fingerprint <> '' THEN steps_changed_fingerprint ELSE fingerprint END,
     steps_changed_at = NULL, steps_changed_fingerprint = '', updated_at = now()
 WHERE id = $1 AND (status IN ('build_failed', 'invalid') OR (status = 'finished' AND steps_changed_at IS NOT NULL))
@@ -441,7 +453,7 @@ RETURNING *;
 -- A dependent that was failed before its steps ever ran ("dependency X failed
 -- to configure") goes back to running; materializeStepsIfReady queues its
 -- steps once the restarted dependency finishes, as on a first deploy.
-UPDATE deployed_object SET status = 'running', last_error = NULL, updated_at = now()
+UPDATE deployed_object SET status = 'running', last_error = NULL, failure_kind = NULL, failed_at = NULL, updated_at = now()
 WHERE id = $1 AND status = 'build_failed' AND steps_materialized_at IS NULL;
 
 -- name: MarkDeployedObjectStepsChanged :execrows

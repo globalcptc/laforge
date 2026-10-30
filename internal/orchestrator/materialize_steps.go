@@ -42,6 +42,14 @@ func materializeStepsIfReady(ctx context.Context, q *db.Queries, repoRoot string
 	if obj.Kind != "host" && obj.Kind != "container" {
 		return nil // networks have no agent and no steps
 	}
+	// Failed only because something it waits on failed: once that's no longer
+	// so (the target recovered, or was restarted or rebuilt), pick up where it
+	// left off -- waiting, or running its steps -- with no operator reset.
+	if st, err := recoverCascade(ctx, q, buildID, obj, dependsOn, placed, failedDeps, gates); err != nil {
+		return err
+	} else if st != "" {
+		obj.Status = st
+	}
 	// Only a box that actually came up can run steps. A box still being
 	// created (pending/deploying), already failed, or being torn down is not
 	// eligible -- try again on a later pass if it reaches running.
@@ -56,7 +64,7 @@ func materializeStepsIfReady(ctx context.Context, q *db.Queries, repoRoot string
 	for _, d := range dependsOn {
 		if placed[d] && failedDeps[d] {
 			msg := fmt.Sprintf("dependency %q failed to configure", d)
-			if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{ID: obj.ID, LastError: db.StrPtr(msg)}); err != nil {
+			if err := q.SetDeployedObjectBuildFailed(ctx, db.SetDeployedObjectBuildFailedParams{ID: obj.ID, LastError: db.StrPtr(msg), FailureKind: db.StrPtr(FailureDependency)}); err != nil {
 				return err
 			}
 			decide(ctx, q, buildID, obj.ID, "lifecycle.build_failed", fmt.Sprintf("%s: %s; its steps never ran (restart %s from a step, or rebuild it, and this host resumes)", asName, msg, d), map[string]any{"dependency": d})

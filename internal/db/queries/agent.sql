@@ -231,6 +231,14 @@ VALUES ($1, $2, $3, $4, $5, true, $6)
 ON CONFLICT (deployed_object_id, step_index) DO NOTHING
 RETURNING *;
 
+-- name: DeleteAgentSessionForObject :exec
+-- Forget the agent of an instance a rebuild destroyed. The session row is one
+-- per object, so left in place it would carry the OLD instance's heartbeat into
+-- the new one: the host would read as checked in before its new agent ever
+-- connected, then as "lost" once that stale heartbeat aged out. The new agent's
+-- first heartbeat recreates it (UpsertAgentSession).
+DELETE FROM agent_session WHERE deployed_object_id = $1;
+
 -- name: DeleteAgentTasksForObject :exec
 -- Clear every materialized step for an object so a redeploy re-materializes
 -- them from scratch. materializeSteps skips when ANY agent_task already exists

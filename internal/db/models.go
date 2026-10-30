@@ -263,6 +263,8 @@ type DeployedObject struct {
 	StepsChangedAt          pgtype.Timestamptz `json:"steps_changed_at"`
 	StepsChangedFingerprint string             `json:"steps_changed_fingerprint"`
 	RebuildRequestedAt      pgtype.Timestamptz `json:"rebuild_requested_at"`
+	FailureKind             *string            `json:"failure_kind"`
+	FailedAt                pgtype.Timestamptz `json:"failed_at"`
 }
 
 type Environment struct {
