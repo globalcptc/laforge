@@ -85,12 +85,12 @@ export function BuildLayout() {
     <>
       <PageHeader
         title={
-          <span className="flex min-w-0 items-center gap-3">
-            <span className="shrink-0">{build?.environment_name ?? '…'}</span>
+          <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span className="min-w-0 break-words">{build?.environment_name ?? '…'}</span>
             {build?.builder_config_name && <BuilderPill name={build.builder_config_name} color={builderColor} kind={build.builder_kind} />}
             {build && <StatusBadge status={build.status} />}
             {build?.commit_sha && (
-              <span className="flex min-w-0 items-center gap-1.5 text-sm font-normal text-fg-muted" title={build.commit_message ?? undefined}>
+              <span className="flex w-full min-w-0 items-center gap-1.5 text-sm font-normal text-fg-muted md:w-auto md:flex-1" title={build.commit_message ?? undefined}>
                 <GitCommitHorizontal size={13} className="shrink-0 text-fg-subtle" />
                 {build.commit_message ? (
                   <span className="truncate">
@@ -133,7 +133,7 @@ export function BuildLayout() {
          scroll region keeps the header and tabs put no matter how long the
          content is. Six tabs don't fit a phone width, so the bar itself
          scrolls horizontally rather than wrapping. */}
-      <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-surface px-6">
+      <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-surface px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((tab) => {
           const href = tab.to ? `${base}/${tab.to}` : base
           const active = pathname === href || (tab.to === '' && pathname === base + '/')
@@ -170,7 +170,7 @@ export function BuildLayout() {
           })()
         )}
       </nav>
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8 pt-2">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 pb-8 pt-2">
         {build?.status === 'planned' && readiness.data?.checked && (readiness.data.warnings ?? []).length > 0 && (
           <div className="mb-3 flex items-start gap-2.5 rounded-token border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-sm text-warning">
             <TriangleAlert size={16} className="mt-0.5 shrink-0" />

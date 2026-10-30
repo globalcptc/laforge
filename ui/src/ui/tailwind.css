@@ -326,6 +326,14 @@
     overflow: visible;
   }
 
+  /* Phones scroll the document, so anything a few px too wide scrolled the
+     whole page sideways. Clip instead (clip, not hidden: it makes no scroll
+     container, so sticky headers keep working). Wide content -- tables, code --
+     carries its own horizontal scroller. */
+  .layout-static .app-content {
+    overflow-x: clip;
+  }
+
   /* Open drawer: freeze the page behind it so the scrim and content don't scroll away. */
   html.nav-drawer-open,
   html.nav-drawer-open body {
@@ -533,6 +541,15 @@
 }
 
 /* CPTC auth backdrop (portal sign-in) — same motion language as registration */
+@keyframes lf-tooltip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes cptc-wash-shift {
   0%,
   100% {

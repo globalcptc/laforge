@@ -467,7 +467,7 @@ func reconcileCopy(ctx context.Context, q *db.Queries, repoRoot string, c *loade
 	// runs each pass (rctx is needed below), but it's far cheaper than the
 	// RenderScript loop Fingerprint drives. A new content revision (a rebuild)
 	// gets a fresh key, so a content change is never masked. See fingerprintCache.
-	fpKey := fmt.Sprintf("%s\x00%s\x00%s\x00%d", contentRevID.String(), kind, asName, teamNum)
+	fpKey := fingerprintCacheKey(contentRevID.String(), envName, kind, asName, teamNum)
 	fp, cached := fpCache.get(fpKey)
 	if !cached {
 		fp, err = Fingerprint(repoRoot, c, rctx, disk, ports, dependsOn)

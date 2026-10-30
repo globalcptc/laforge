@@ -270,18 +270,22 @@ export function StatusBadge({
   const Icon = style.icon
   const animClass = animClassFor(style.anim)
   const badge = (
-    <Badge tone={style.tone} className={cn('rounded-full py-0.5', className)}>
+    <Badge tone={style.tone} className={cn('shrink-0 whitespace-nowrap rounded-full py-0.5', className)}>
       <Icon size={12} className={animClass} />
       {label}
     </Badge>
   )
   if (!tooltip || !desc) return badge
   return (
-    <span className="group/sb relative inline-flex">
+    <span className="group/sb relative inline-flex shrink-0">
       {badge}
+      {/* Not rendered until hover (display, not opacity): a hidden-but-laid-out
+          tooltip still counts as overflow, and near the right edge on a phone
+          that made the whole page scroll sideways. lf-tooltip-in keeps the
+          1s dwell before it fades in. */}
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 w-max max-w-[15rem] -translate-x-1/2 translate-y-1 whitespace-normal rounded-token border border-border bg-surface-raised px-2 py-1 text-left text-xs font-normal text-fg-muted opacity-0 shadow-overlay transition delay-1000 duration-150 group-hover/sb:translate-y-0 group-hover/sb:opacity-100"
+        className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 hidden w-max max-w-[15rem] -translate-x-1/2 animate-[lf-tooltip-in_150ms_ease-out_1s_both] whitespace-normal rounded-token border border-border bg-surface-raised px-2 py-1 text-left text-xs font-normal text-fg-muted shadow-overlay group-hover/sb:block"
       >
         {desc}
       </span>

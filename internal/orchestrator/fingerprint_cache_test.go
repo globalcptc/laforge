@@ -29,3 +29,17 @@ func TestFingerprintCacheGetPut(t *testing.T) {
 		t.Fatalf("cache unusable after reset: get fresh = (%q, %v)", v, ok)
 	}
 }
+
+// TestFingerprintCacheKeySeparatesEnvironments: two environments on one content
+// revision must not share fingerprint entries -- the same host and team render
+// differently in each, and sharing them made a build recreate every host.
+func TestFingerprintCacheKeySeparatesEnvironments(t *testing.T) {
+	a := fingerprintCacheKey("rev", "cptc12-socal", "host", "bff-dc-01", 9)
+	b := fingerprintCacheKey("rev", "cptc12-central", "host", "bff-dc-01", 9)
+	if a == b {
+		t.Fatalf("same key %q for two environments", a)
+	}
+	if a != fingerprintCacheKey("rev", "cptc12-socal", "host", "bff-dc-01", 9) {
+		t.Fatal("key isn't stable for the same object")
+	}
+}

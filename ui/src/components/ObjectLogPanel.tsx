@@ -871,8 +871,8 @@ function CredentialRow({ credential: c }: { credential: HostCredential }) {
     }
   }
   return (
-    <div className="flex items-start justify-between gap-3 py-2">
-      <dt className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-fg-muted">
+    <div className="flex items-center justify-between gap-3 py-1">
+      <dt className="flex min-w-0 shrink-0 items-center gap-1.5 text-xs font-medium text-fg-muted">
         <span className="font-mono text-fg">{c.username}</span>
         {c.admin && c.source === 'step' && <Badge tone="neutral" className="py-0 text-[10px]">Admin</Badge>}
         {!c.applied && (
@@ -907,10 +907,14 @@ function InfoRow({
   mono?: boolean
   danger?: boolean
 }) {
+  // A long value (a settings dump, a long path) gets the row's full width under
+  // its label, left-aligned, instead of a narrow right-aligned column that
+  // breaks mid-word.
+  const long = !valueNode && (value?.length ?? 0) > 48
   return (
-    <div className="flex items-start justify-between gap-3 py-2">
+    <div className={cn('flex gap-3 py-2', long ? 'flex-col gap-1' : 'items-start justify-between')}>
       <dt className="shrink-0 text-xs font-medium text-fg-muted">{label}</dt>
-      <dd className={cn('min-w-0 break-words text-right', mono && 'font-mono text-xs', danger && 'text-danger')}>
+      <dd className={cn('min-w-0 break-words', long ? 'text-left' : 'text-right', mono && 'font-mono text-xs', danger && 'text-danger')}>
         {valueNode ?? value}
       </dd>
     </div>

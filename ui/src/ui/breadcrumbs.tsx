@@ -14,17 +14,17 @@ export function Breadcrumbs({ items, className }: { items: Crumb[]; className?: 
   if (items.length === 0) return null;
 
   return (
-    <nav aria-label="Breadcrumb" className={cn('mb-1 flex items-center gap-1 text-xs', className)}>
+    <nav aria-label="Breadcrumb" className={cn('mb-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs', className)}>
       {items.map((item, index) => {
         const last = index === items.length - 1;
         return (
-          <span key={`${item.label}-${index}`} className="flex items-center gap-1">
+          <span key={`${item.label}-${index}`} className="flex min-w-0 max-w-full items-center gap-1 whitespace-nowrap">
             {item.href && !last ? (
               <Link to={item.href} className="text-fg-muted hover:text-accent hover:underline">
                 {item.label}
               </Link>
             ) : (
-              <span className={last ? 'font-medium text-fg' : 'text-fg-muted'}>{item.label}</span>
+              <span className={cn('truncate', last ? 'font-medium text-fg' : 'text-fg-muted')}>{item.label}</span>
             )}
             {last ? null : <ChevronRight className="size-3 text-fg-subtle" />}
           </span>

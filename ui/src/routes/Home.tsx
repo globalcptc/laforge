@@ -167,7 +167,7 @@ const COUNT_COLS: { label: string; className: string; value: (b: HomeData['build
 
 function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builders']; buildersInUse: number }) {
   const { data: me } = useMe()
-  const rowClass = 'col-span-full grid grid-cols-subgrid items-center gap-x-5 px-4 py-2'
+  const rowClass = 'col-span-full grid grid-cols-subgrid items-center gap-x-3 px-4 py-2 @sm:gap-x-5'
   return (
     <Card>
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
@@ -197,7 +197,8 @@ function BuilderUsage({ builders, buildersInUse }: { builders: HomeData['builder
               <>
                 <div className="flex items-center gap-2 whitespace-nowrap">
                   <BuilderPill name={b.name} color={b.color} kind={b.kind} />
-                  <span className="text-xs text-fg-muted">{KIND_LABEL[b.kind as Kind] ?? b.kind}</span>
+                  {/* The kind label is the first thing to go on a phone-width card. */}
+                  <span className="hidden text-xs text-fg-muted @md:inline">{KIND_LABEL[b.kind as Kind] ?? b.kind}</span>
                 </div>
                 {topTwo.length > 0 ? (
                   <>
@@ -271,7 +272,7 @@ function BuildCard({ repoId, build }: { repoId: string; build: HomeBuild }) {
         <StatusBadge status={build.status} />
       </div>
 
-      <div className="grid grid-cols-4 gap-2 text-center">
+      <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
         <Metric icon={<Users size={12} />} label="Teams" value={build.teams ? `${build.teams_open}/${build.teams} open` : '—'} />
         <Metric icon={<Server size={12} />} label="Hosts" value={c.hosts} />
         <Metric icon={<Boxes size={12} />} label="Containers" value={c.containers} />

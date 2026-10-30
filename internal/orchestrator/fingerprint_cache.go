@@ -1,6 +1,9 @@
 package orchestrator
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // fingerprintCache memoizes Fingerprint results across reconcile passes.
 //
@@ -9,7 +12,7 @@ import "sync"
 // it every 2-second reconcile pass -- which re-reads and re-renders every one of
 // that object's step scripts (see Fingerprint / render.RenderScript) -- is pure
 // waste once a build has settled. Reconcile keys this cache by the content
-// revision plus the object's identity, so a genuine content change (a rebuild to
+// revision, the environment and the object's identity, so a genuine content change (a rebuild to
 // a new commit → a new revision id) gets fresh keys and is never masked by a
 // stale entry.
 //
@@ -23,6 +26,16 @@ type fingerprintCache struct {
 	mu  sync.Mutex
 	m   map[string]string
 	max int
+}
+
+// fingerprintCacheKey identifies one object's fingerprint. The environment is
+// part of it: two builds of DIFFERENT environments can share one content
+// revision (one commit defining both), and the same host name and team number
+// render differently in each (vars, addresses, DNS). Keyed without it, one
+// build read the other's fingerprints, saw every host as changed, and recreated
+// all of them the moment it was next deploying.
+func fingerprintCacheKey(contentRevID, envName, kind, asName string, teamNum int) string {
+	return fmt.Sprintf("%s\x00%s\x00%s\x00%s\x00%d", contentRevID, envName, kind, asName, teamNum)
 }
 
 // fpCache is the shared instance. Reconcile (and only Reconcile) uses it.

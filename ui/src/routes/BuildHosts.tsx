@@ -563,7 +563,7 @@ export function BuildHosts() {
         </div>
       )}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" size="sm" onClick={() => setBoardOpen(true)} title="Open the full-screen status matrix for this build">
             <LayoutGrid size={14} /> Matrix
           </Button>
@@ -760,7 +760,7 @@ export function BuildHosts() {
                                       />
                                     </Td>
                                     <Td>{h.agent ? <StatusBadge status={h.agent.agent_status} /> : <span className="text-fg-muted">—</span>}</Td>
-                                    <Td className="font-mono text-xs text-fg-muted">{h.external_ref ?? '—'}</Td>
+                                    <Td className="whitespace-nowrap font-mono text-xs text-fg-muted">{h.external_ref ?? '—'}</Td>
                                   </tr>
                                 )
                               })}
