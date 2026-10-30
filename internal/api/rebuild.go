@@ -52,15 +52,13 @@ func (s *Server) handleRebuild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// The depends_on graph comes from the build's own content revision; only
-	// needed when cascading to dependents.
-	var content *loader.Content
-	if req.IncludeDependents {
-		content, err = s.loadBuildContent(r, build)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
+	// The depends_on graph comes from the build's own content revision: needed to
+	// cascade to dependents, and to cascade a rebuilt network to the guests on it.
+	// Best-effort -- a deployed build's content parsed fine when it deployed, and
+	// a network rebuild's direct guests come from network_name even without it.
+	content, err := s.loadBuildContent(r, build)
+	if err != nil {
+		content = nil
 	}
 
 	affected, err := orchestrator.Rebuild(r.Context(), s.Pool, build, content, req.Target, req.IncludeDependents, req.DryRun)

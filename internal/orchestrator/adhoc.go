@@ -23,7 +23,7 @@ import (
 type AdHocTarget struct {
 	IDs     []string `json:"ids,omitempty"`
 	Team    *int32   `json:"team,omitempty"`
-	Kind    string   `json:"kind,omitempty"`    // host | container -- empty means either
+	Kind    string   `json:"kind,omitempty"` // host | container -- empty means either
 	Search  string   `json:"search,omitempty"`
 	Network string   `json:"network,omitempty"` // match objects on this network
 	// Tags: an object matches only if it carries every one of these tags. An
@@ -60,6 +60,34 @@ func MatchAdHocTargets(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 		teamNumberByID[tm.ID.String()] = tm.TeamNumber
 	}
 
+	return filterTargets(all, teamNumberByID, target, false), nil
+}
+
+// MatchRebuildTargets is MatchAdHocTargets' sibling for rebuild: identical
+// matching, except it does NOT drop networks. A failed network has no agent (so
+// ad-hoc/run can't target it), but it can still be destroyed and recreated --
+// the recovery for a network stuck in deploy_failed without rebuilding the whole
+// environment. resolveRebuildSet cascades a matched network to the hosts on it.
+func MatchRebuildTargets(ctx context.Context, q *db.Queries, buildID pgtype.UUID, target AdHocTarget) ([]db.DeployedObject, error) {
+	all, err := q.ListDeployedObjectsByBuild(ctx, buildID)
+	if err != nil {
+		return nil, err
+	}
+	teams, err := q.ListTeamsByBuild(ctx, buildID)
+	if err != nil {
+		return nil, err
+	}
+	teamNumberByID := make(map[string]int32, len(teams))
+	for _, tm := range teams {
+		teamNumberByID[tm.ID.String()] = tm.TeamNumber
+	}
+	return filterTargets(all, teamNumberByID, target, true), nil
+}
+
+// filterTargets applies the shared target filter. includeNetworks keeps network
+// objects (rebuild) or drops them (ad-hoc, which needs a live agent). IDs, when
+// set, is the entire match on its own.
+func filterTargets(all []db.DeployedObject, teamNumberByID map[string]int32, target AdHocTarget, includeNetworks bool) []db.DeployedObject {
 	var wantIDs map[string]bool
 	if len(target.IDs) > 0 {
 		wantIDs = make(map[string]bool, len(target.IDs))
@@ -67,10 +95,9 @@ func MatchAdHocTargets(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 			wantIDs[id] = true
 		}
 	}
-
 	matched := make([]db.DeployedObject, 0, len(all))
 	for _, o := range all {
-		if o.Kind == "network" {
+		if o.Kind == "network" && !includeNetworks {
 			continue // ad-hoc commands target a live agent; a network has none
 		}
 		if wantIDs != nil {
@@ -100,7 +127,7 @@ func MatchAdHocTargets(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 		}
 		matched = append(matched, o)
 	}
-	return matched, nil
+	return matched
 }
 
 // objectHasAllTags reports whether an object's persisted tags (deployed_object.tags

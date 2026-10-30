@@ -72,6 +72,8 @@ func main() {
 		err = runRun(os.Args[2:])
 	case "restart-steps":
 		err = runRestartSteps(os.Args[2:])
+	case "rebuild":
+		err = runRebuild(os.Args[2:])
 	case "shell":
 		err = runShell(os.Args[2:])
 	case "schedule":
@@ -200,6 +202,13 @@ http://localhost:8080).
       same host definition; the dry run lists every team's copy of it. Hosts
       failed for depending on it resume unless --no-dependents. Asks before
       acting unless --yes. Needs manage access on the repo.
+
+  laforge rebuild --build <id> [targets] [--no-dependents] [--dry-run] [--yes]
+      Tear down and redeploy the targeted objects. Unlike restart-steps, this
+      can target a NETWORK (--kind network, or --id of a failed network): the
+      recovery for a network stuck in deploy_failed, without rebuilding the whole
+      environment. Rebuilding a network also redeploys the guests on it. Targets
+      as for run (plus networks). Asks before acting unless --yes. Manage access.
 
   laforge shell --build <id> (--id <object-id> | --team <n> --host <as>)
       Open a fully interactive root/admin shell on one host or container through

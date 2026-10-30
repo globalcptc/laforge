@@ -337,3 +337,72 @@ func runRestartSteps(args []string) error {
 	fmt.Printf("restarted %d host(s) from step %d\n", res.Restarted, group)
 	return nil
 }
+
+// runRebuild force-rebuilds hosts/containers AND networks: it tears each target
+// down and redeploys it. Unlike the UI's host-only rebuild, a network can be a
+// target here -- the recovery for a network stuck in deploy_failed (e.g. an OVN
+// network that errored at the cluster) without rebuilding the whole environment.
+// Rebuilding a network cascades to the guests on it (they must redeploy on the
+// fresh subnet). A dry run (always shown) reports the blast radius first.
+func runRebuild(args []string) error {
+	fs := flag.NewFlagSet("rebuild", flag.ExitOnError)
+	build := fs.String("build", "", "build id (required)")
+	dryRun := fs.Bool("dry-run", false, "show what would be rebuilt and change nothing")
+	noDeps := fs.Bool("no-dependents", false, "don't cascade to dependents (networks still pull in their own guests)")
+	yes := fs.Bool("yes", false, "don't ask before rebuilding")
+	resolveTarget := targetFlags(fs)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *build == "" {
+		return fmt.Errorf("usage: laforge rebuild --build <id> [--team N | --id OBJID | --kind network|host|container | --network NAME | --search text | --tag k=v] [--no-dependents] [--dry-run] [--yes]")
+	}
+	target := resolveTarget()
+	c := newAPIClient()
+	path := "/builds/" + url.PathEscape(*build) + "/rebuild"
+
+	type affected struct {
+		ID         string `json:"id"`
+		ObjectName string `json:"object_name"`
+		AsName     string `json:"as_name"`
+		Kind       string `json:"kind"`
+		TeamNumber int    `json:"team_number"`
+	}
+	type result struct {
+		Affected []affected `json:"affected"`
+		Count    int        `json:"count"`
+	}
+
+	var preview result
+	if err := c.do("POST", path, map[string]any{"target": target, "include_dependents": !*noDeps, "dry_run": true}, &preview); err != nil {
+		return err
+	}
+	if preview.Count == 0 {
+		return fmt.Errorf("no objects match this target")
+	}
+	fmt.Printf("would rebuild %d object(s):\n", preview.Count)
+	for _, a := range preview.Affected {
+		name := a.AsName
+		if name == "" {
+			name = a.ObjectName
+		}
+		fmt.Printf("  team %d\t%s\t%s\n", a.TeamNumber, a.Kind, name)
+	}
+	if *dryRun {
+		return nil
+	}
+	if !*yes {
+		fmt.Printf("rebuild (destroy + redeploy) %d object(s)? [y/N] ", preview.Count)
+		var answer string
+		fmt.Scanln(&answer)
+		if answer != "y" && answer != "Y" && answer != "yes" {
+			return fmt.Errorf("cancelled")
+		}
+	}
+	var res result
+	if err := c.do("POST", path, map[string]any{"target": target, "include_dependents": !*noDeps, "dry_run": false}, &res); err != nil {
+		return err
+	}
+	fmt.Printf("queued rebuild of %d object(s); they destroy then redeploy\n", res.Count)
+	return nil
+}

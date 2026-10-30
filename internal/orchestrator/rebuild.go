@@ -131,11 +131,23 @@ func Rebuild(ctx context.Context, pool *pgxpool.Pool, build db.Build, content *l
 // plus -- when includeDependents -- every object in the SAME team whose content
 // object_name transitively depends on a matched object. No writes.
 func resolveRebuildSet(ctx context.Context, q *db.Queries, buildID pgtype.UUID, content *loader.Content, target AdHocTarget, includeDependents bool) ([]db.DeployedObject, error) {
-	matched, err := MatchAdHocTargets(ctx, q, buildID, target)
+	matched, err := MatchRebuildTargets(ctx, q, buildID, target)
 	if err != nil {
 		return nil, err
 	}
-	if !includeDependents || len(matched) == 0 || content == nil {
+	// A matched network ALWAYS pulls in the hosts/containers on it: recreating a
+	// network tears down its subnet/uplink, so anything attached must redeploy on
+	// the fresh one. (This is independent of includeDependents, which is the
+	// depends_on cascade.) So we still need the full object list when any network
+	// is targeted, even if dependents weren't requested.
+	hasNetwork := false
+	for _, m := range matched {
+		if m.Kind == "network" {
+			hasNetwork = true
+			break
+		}
+	}
+	if len(matched) == 0 || (!includeDependents && !hasNetwork) {
 		return matched, nil
 	}
 
@@ -148,35 +160,56 @@ func resolveRebuildSet(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 	// per-person instances (the `people:` field) share one object_name, so a name
 	// maps to SEVERAL rows -- keep them all rather than collapsing to one arbitrary
 	// sibling, which both dragged in the wrong instance and under-counted a
-	// duplicated dependent.
+	// duplicated dependent. hostsOnNet maps (team_id, network_name) -> the
+	// guests attached to that network, for the network-rebuild cascade.
 	byTeamName := make(map[string][]db.DeployedObject, len(all))
+	hostsOnNet := make(map[string][]db.DeployedObject, len(all))
 	for _, o := range all {
 		if o.Kind == "network" {
 			continue
 		}
-		key := o.TeamID.String() + "\x00" + o.ObjectName
-		byTeamName[key] = append(byTeamName[key], o)
+		byTeamName[o.TeamID.String()+"\x00"+o.ObjectName] = append(byTeamName[o.TeamID.String()+"\x00"+o.ObjectName], o)
+		if n := db.StrOrEmpty(o.NetworkName); n != "" {
+			hostsOnNet[o.TeamID.String()+"\x00"+n] = append(hostsOnNet[o.TeamID.String()+"\x00"+n], o)
+		}
 	}
 	// The selected objects' own names. content.Dependents seeds its walk with the
 	// roots themselves, so those names come back in the result; excluding them
 	// here keeps a sibling instance that merely shares the target's object_name
 	// (another person's copy of the same host) from being treated as a dependent.
-	// The targets are already included by their exact ids below.
 	matchedNames := make(map[string]bool, len(matched))
 	for _, m := range matched {
 		matchedNames[m.ObjectName] = true
 	}
-
+	// cascade adds a host/container's depends_on dependents (same team).
 	result := make(map[string]db.DeployedObject, len(matched))
-	for _, m := range matched {
-		result[m.ID.String()] = m // always rebuild the target itself
-		for _, name := range content.Dependents([]string{m.ObjectName}) {
+	cascade := func(o db.DeployedObject) {
+		if content == nil {
+			return
+		}
+		for _, name := range content.Dependents([]string{o.ObjectName}) {
 			if matchedNames[name] {
 				continue
 			}
-			for _, o := range byTeamName[m.TeamID.String()+"\x00"+name] {
-				result[o.ID.String()] = o
+			for _, d := range byTeamName[o.TeamID.String()+"\x00"+name] {
+				result[d.ID.String()] = d
 			}
+		}
+	}
+
+	for _, m := range matched {
+		result[m.ID.String()] = m // always rebuild the target itself
+		if m.Kind == "network" {
+			// Recreating the network recreates its subnet: every guest on it must
+			// redeploy too, plus whatever depends on those guests.
+			for _, h := range hostsOnNet[m.TeamID.String()+"\x00"+m.ObjectName] {
+				result[h.ID.String()] = h
+				cascade(h)
+			}
+			continue
+		}
+		if includeDependents {
+			cascade(m)
 		}
 	}
 	out := make([]db.DeployedObject, 0, len(result))

@@ -290,3 +290,49 @@ func TestRebuildDestroysThenGoesPending(t *testing.T) {
 		t.Fatalf("after the destroy and a redeploy, status = %q", got.Status)
 	}
 }
+
+// TestRebuildNetworkCascadesToGuests: a failed network can be a rebuild target
+// (unlike ad-hoc), and rebuilding it pulls in exactly the guests on that network
+// -- recreating the subnet means they must redeploy -- without dragging in a
+// guest on a different network. content is nil (no depends_on needed): the
+// direct guests come from deployed_object.network_name.
+func TestRebuildNetworkCascadesToGuests(t *testing.T) {
+	ctx := context.Background()
+	pool := testPool(t)
+	build := newTestBuildWithFakeBuilder(t, pool, "rebuild-network")
+	q := db.New(pool)
+	team, err := q.EnsureTeam(ctx, db.EnsureTeamParams{BuildID: build.ID, TeamNumber: 1})
+	if err != nil {
+		t.Fatalf("EnsureTeam: %v", err)
+	}
+
+	net, err := q.EnsureDeployedObject(ctx, db.EnsureDeployedObjectParams{TeamID: team.ID, Kind: "network", ObjectName: "corp", Fingerprint: "f"})
+	if err != nil {
+		t.Fatalf("EnsureDeployedObject corp network: %v", err)
+	}
+	onCorp, err := q.EnsureDeployedObject(ctx, db.EnsureDeployedObjectParams{TeamID: team.ID, Kind: "host", ObjectName: "dc", AsName: db.StrPtr("dc-01"), NetworkName: db.StrPtr("corp"), Fingerprint: "f"})
+	if err != nil {
+		t.Fatalf("EnsureDeployedObject dc on corp: %v", err)
+	}
+	if _, err := q.EnsureDeployedObject(ctx, db.EnsureDeployedObjectParams{TeamID: team.ID, Kind: "host", ObjectName: "web", AsName: db.StrPtr("web-01"), NetworkName: db.StrPtr("prod"), Fingerprint: "f"}); err != nil {
+		t.Fatalf("EnsureDeployedObject web on prod: %v", err)
+	}
+
+	affected, err := resolveRebuildSet(ctx, q, build.ID, nil, AdHocTarget{IDs: []string{net.ID.String()}}, false)
+	if err != nil {
+		t.Fatalf("resolveRebuildSet: %v", err)
+	}
+	got := map[string]bool{}
+	for _, o := range affected {
+		got[o.ID.String()] = true
+	}
+	if !got[net.ID.String()] {
+		t.Error("the targeted network itself must be in the rebuild set")
+	}
+	if !got[onCorp.ID.String()] {
+		t.Error("a guest on the rebuilt network must be pulled in (it redeploys on the fresh subnet)")
+	}
+	if len(affected) != 2 {
+		t.Fatalf("expected exactly the network + its one guest (2), got %d: %v", len(affected), got)
+	}
+}
