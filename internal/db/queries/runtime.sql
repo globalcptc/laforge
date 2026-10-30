@@ -910,6 +910,7 @@ FROM agent_task
 JOIN deployed_object ON deployed_object.id = agent_task.deployed_object_id
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = ANY(sqlc.arg(build_ids)::uuid[])
+  AND agent_task.validation_run_id IS NULL
 GROUP BY team.build_id, agent_task.status;
 
 -- name: SetDeployedObjectPublicAddress :exec

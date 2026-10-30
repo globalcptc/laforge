@@ -492,6 +492,9 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 	}
 	views := make([]stepView, 0, len(tasks))
 	for _, t := range tasks {
+		if t.ValidationRunID.Valid {
+			continue // a revalidation's copied checks: its report shows them, not the build's steps
+		}
 		results, err := s.Queries.ListValidatorResultsByTask(r.Context(), t.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)

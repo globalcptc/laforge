@@ -169,6 +169,7 @@ FROM (
             WHERE n.deployed_object_id = r2.deployed_object_id
               AND n.step_index > r2.step_index
               AND n.started_at IS NOT NULL
+              AND n.validation_run_id IS NULL
             ORDER BY n.step_index
             LIMIT 1) AS started_at
   FROM agent_task r2
@@ -351,7 +352,8 @@ SELECT DISTINCT agent_task.deployed_object_id
 FROM agent_task
 JOIN deployed_object ON deployed_object.id = agent_task.deployed_object_id
 JOIN team ON team.id = deployed_object.team_id
-WHERE team.build_id = $1 AND agent_task.status = 'failed';
+WHERE team.build_id = $1 AND agent_task.status = 'failed'
+  AND agent_task.validation_run_id IS NULL;
 
 -- name: SummarizeAgentTasksByObjectForBuild :many
 -- Per deployed object in this build, how many authored steps (agent_task
@@ -368,6 +370,8 @@ FROM agent_task
 JOIN deployed_object ON deployed_object.id = agent_task.deployed_object_id
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1
+  -- A revalidation's copied checks are a report, not part of the build.
+  AND agent_task.validation_run_id IS NULL
 GROUP BY deployed_object.id;
 
 -- name: ListObjectsWithFailedValidatorByBuild :many
@@ -383,7 +387,9 @@ JOIN agent_task ON agent_task.id = validator_result.agent_task_id
 JOIN deployed_object ON deployed_object.id = agent_task.deployed_object_id
 JOIN team ON team.id = deployed_object.team_id
 WHERE team.build_id = $1 AND validator_result.passed = false
-  AND agent_task.status != 'ignored';
+  AND agent_task.status != 'ignored'
+  -- A revalidation settles its own result (SettleValidationRuns).
+  AND agent_task.validation_run_id IS NULL;
 
 -- name: RecordValidatorResult :exec
 -- Not :one/RETURNING *: found live that Postgres

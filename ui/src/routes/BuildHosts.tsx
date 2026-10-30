@@ -1,11 +1,12 @@
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useRef, useState } from 'react'
-import { Box, CalendarClock, Check, ChevronDown, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCcw, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
+import { Box, CalendarClock, Check, ChevronDown, ShieldCheck, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCcw, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
 import { StatusBadge, PowerBadge, powerLabel, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES, effectiveStatusKey, EFFECTIVE_HEALTH_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
 import { ObjectLogPanel } from '../components/ObjectLogPanel'
 import { RestartStepsDialog, canRestartSteps } from '../components/RestartStepsDialog'
+import { RevalidateDialog, ValidationReportsDialog } from '../components/ValidationReport'
 import { EnvironmentBoard } from '../components/EnvironmentBoard'
 import { DependencyGraph } from '../components/DependencyGraph'
 import { TaskActionFields, buildTaskPayload, taskFormValid } from '../components/TaskActionForm'
@@ -102,12 +103,12 @@ const POWER_ACTIONS: Record<string, { action: PowerAct; icon: LucideIcon; label:
 // InfraCell shows the live power pill, and on hover (after a ~0.5s dwell, so it
 // doesn't flicker while scanning the list) reveals same-size Start/Stop/Restart
 // controls just past the pill. Each opens the confirm modal for this one host.
-function InfraCell({ obj, onAction, onRebuild, onRestartSteps }: { obj: DeployedObject; onAction: (action: PowerAct, obj: DeployedObject) => void; onRebuild?: (obj: DeployedObject) => void; onRestartSteps?: (obj: DeployedObject) => void }) {
+function InfraCell({ obj, onAction, onRebuild, onRevalidate, onRestartSteps }: { obj: DeployedObject; onAction: (action: PowerAct, obj: DeployedObject) => void; onRebuild?: (obj: DeployedObject) => void; onRevalidate?: (obj: DeployedObject) => void; onRestartSteps?: (obj: DeployedObject) => void }) {
   if (!obj.power_state || GONE_STATES.has(obj.status)) return <span className="text-fg-muted">—</span>
   const actions = POWER_ACTIONS[obj.power_state] ?? []
   const name = obj.as_name ?? obj.object_name
   const restartable = !!onRestartSteps && canRestartSteps(obj)
-  if (actions.length === 0 && !onRebuild && !restartable) return <PowerBadge state={obj.power_state} />
+  if (actions.length === 0 && !onRebuild && !onRevalidate && !restartable) return <PowerBadge state={obj.power_state} />
   return (
     <div className="group/pw relative inline-flex items-center">
       <PowerBadge state={obj.power_state} />
@@ -151,6 +152,16 @@ function InfraCell({ obj, onAction, onRebuild, onRestartSteps }: { obj: Deployed
               <Hammer size={12} />
             </button>
           </>
+        )}
+        {onRevalidate && (
+          <button
+            onClick={() => onRevalidate(obj)}
+            title={`Revalidate ${name} — re-run every validator and report, changing nothing else`}
+            aria-label={`Revalidate ${name}`}
+            className="flex h-5 w-5 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-accent-soft hover:text-accent-fg"
+          >
+            <ShieldCheck size={12} />
+          </button>
         )}
       </div>
     </div>
@@ -278,6 +289,9 @@ export function BuildHosts() {
   // A forced rebuild (tear down + recreate) of one or more hosts plus their
   // dependents; confirmed in RebuildDialog, which previews the full blast radius.
   const [rebuilding, setRebuilding] = useState<{ ids: string[]; names: string[]; closedTeams: number[] } | null>(null)
+  // Revalidate: re-run the hosts' validators only, and show the report.
+  const [revalidating, setRevalidating] = useState<{ id: string; name: string }[] | null>(null)
+  const [reportsOpen, setReportsOpen] = useState(false)
   // Restart from step: the host(s) it was started from and the authored step;
   // RestartStepsDialog widens to every team's copy and confirms.
   const [restarting, setRestarting] = useState<{ ids: string[]; fromGroup: number } | null>(null)
@@ -559,6 +573,9 @@ export function BuildHosts() {
           <Button variant="ghost" size="sm" onClick={() => setLegendOpen(true)}>
             <Info size={14} /> State Legend
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => setReportsOpen(true)} title="Past revalidations on this build and their results">
+            <ShieldCheck size={14} /> Validation Reports
+          </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
@@ -738,6 +755,7 @@ export function BuildHosts() {
                                         obj={h}
                                         onAction={(action, obj) => setPowerSingle({ action, id: obj.id, name: obj.as_name ?? obj.object_name, team: teamNumberById.get(obj.team_id) ?? null })}
                                         onRebuild={readOnly ? undefined : (obj) => setRebuilding({ ids: [obj.id], names: [obj.as_name ?? obj.object_name], closedTeams: closedTeamsForHosts([obj]) })}
+                                        onRevalidate={readOnly ? undefined : (obj) => setRevalidating([{ id: obj.id, name: obj.as_name ?? obj.object_name }])}
                                         onRestartSteps={readOnly ? undefined : (obj) => setLogPanelFor({ id: obj.id, label: obj.as_name ?? obj.object_name, kind: obj.kind, object: obj, teamNumber: teamNumberById.get(obj.team_id), initialTab: 'steps' })}
                                       />
                                     </Td>
@@ -786,6 +804,17 @@ export function BuildHosts() {
             >
               <Hammer size={14} />
             </Button>
+            {selectedHosts.length > 0 && (
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => setRevalidating(selectedHosts.map((h) => ({ id: h.id, name: h.as_name ?? h.object_name })))}
+                title="Revalidate — re-run every validator on these hosts and report; nothing else runs or changes, except Finished ↔ Invalid"
+                aria-label="Revalidate"
+              >
+                <ShieldCheck size={14} />
+              </Button>
+            )}
             {new Set(selectedHosts.map((h) => h.object_name)).size === 1 && selectedHosts.some(canRestartSteps) && (
               <Button
                 variant="secondary"
@@ -848,6 +877,18 @@ export function BuildHosts() {
           }}
         />
       )}
+
+      {revalidating && buildId && (
+        <RevalidateDialog
+          buildId={buildId}
+          targets={revalidating}
+          onClose={() => {
+            setRevalidating(null)
+            setSelected(new Set())
+          }}
+        />
+      )}
+      {reportsOpen && buildId && <ValidationReportsDialog buildId={buildId} onClose={() => setReportsOpen(false)} />}
 
       {rebuilding && buildId && (
         <RebuildDialog

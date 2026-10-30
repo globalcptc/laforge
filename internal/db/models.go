@@ -79,6 +79,7 @@ type AgentTask struct {
 	WaitFor          json.RawMessage    `json:"wait_for"`
 	ScheduledTaskID  pgtype.UUID        `json:"scheduled_task_id"`
 	StepGroup        *int32             `json:"step_group"`
+	ValidationRunID  pgtype.UUID        `json:"validation_run_id"`
 }
 
 type AttentionDismissal struct {
@@ -537,6 +538,19 @@ type Team struct {
 	AccessState         string             `json:"access_state"`
 	AccessOverrideUntil pgtype.Timestamptz `json:"access_override_until"`
 	AccessOverrideState string             `json:"access_override_state"`
+}
+
+type ValidationRun struct {
+	ID                 pgtype.UUID        `json:"id"`
+	ReportID           pgtype.UUID        `json:"report_id"`
+	BuildID            pgtype.UUID        `json:"build_id"`
+	DeployedObjectID   pgtype.UUID        `json:"deployed_object_id"`
+	CreatedByAccountID pgtype.UUID        `json:"created_by_account_id"`
+	Status             string             `json:"status"`
+	StatusBefore       string             `json:"status_before"`
+	StatusAfter        *string            `json:"status_after"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	FinishedAt         pgtype.Timestamptz `json:"finished_at"`
 }
 
 type ValidatorResult struct {

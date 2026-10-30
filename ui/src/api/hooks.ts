@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, api } from './client'
 import type {
+  RevalidateResponse,
+  ValidationReport,
+  ValidationRun,
   AdHocResult,
   CertStatus,
   ExternalAccessEntry,
@@ -991,6 +994,60 @@ export function useRebuild(buildId: string) {
       qc.invalidateQueries({ queryKey: ['objects', buildId] })
       qc.invalidateQueries({ queryKey: ['build', buildId] })
     },
+  })
+}
+
+// useRevalidate re-runs every validator on the targeted hosts (nothing else),
+// and returns the report id their results collect under.
+export function useRevalidate(buildId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (req: { target: AdHocTarget }) => api.post<RevalidateResponse>(`/builds/${buildId}/revalidate`, req),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['validation-reports', buildId] })
+    },
+  })
+}
+
+// useValidationReport is one revalidation's results across its hosts. Polls
+// while any host is still running its checks; when it settles, the host list
+// refreshes too (a status may have flipped finished <-> invalid).
+export function useValidationReport(buildId: string | undefined, reportId: string | undefined) {
+  const qc = useQueryClient()
+  const settled = useRef(false)
+  const q = useQuery<ValidationReport>({
+    queryKey: ['validation-report', buildId, reportId],
+    queryFn: () => api.get(`/builds/${buildId}/validation-reports/${reportId}`),
+    enabled: !!buildId && !!reportId,
+    refetchInterval: (query) => (query.state.data && query.state.data.running === 0 ? false : 3_000),
+  })
+  useEffect(() => {
+    if (q.data && q.data.running === 0 && !settled.current) {
+      settled.current = true
+      qc.invalidateQueries({ queryKey: ['objects', buildId] })
+      qc.invalidateQueries({ queryKey: ['build', buildId] })
+      qc.invalidateQueries({ queryKey: ['validation-reports', buildId] })
+    }
+  }, [q.data, qc, buildId])
+  return q
+}
+
+export function useValidationReports(buildId: string | undefined, enabled = true) {
+  return useQuery<ValidationReport[]>({
+    queryKey: ['validation-reports', buildId],
+    queryFn: () => api.get(`/builds/${buildId}/validation-reports`),
+    enabled: !!buildId && enabled,
+    refetchInterval: enabled ? 10_000 : false,
+  })
+}
+
+// useObjectValidationRuns is one host's recent revalidations, newest first.
+export function useObjectValidationRuns(buildId: string | undefined, objectId: string | undefined, enabled: boolean) {
+  return useQuery<ValidationRun[]>({
+    queryKey: ['object-validation-runs', buildId, objectId],
+    queryFn: () => api.get(`/builds/${buildId}/objects/${objectId}/validation-runs`),
+    enabled: !!buildId && !!objectId && enabled,
+    refetchInterval: enabled ? 5_000 : false,
   })
 }
 

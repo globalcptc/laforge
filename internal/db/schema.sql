@@ -93,6 +93,7 @@ CREATE TABLE public.agent_task (
     wait_for jsonb,
     scheduled_task_id uuid,
     step_group integer,
+    validation_run_id uuid,
     CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text, 'blocked'::text])))
 );
 --
@@ -292,6 +293,25 @@ CREATE TABLE public.content_revision (
     commit_author text,
     committed_at timestamp with time zone
 );
+--
+-- Name: validation_run; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.validation_run (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    report_id uuid NOT NULL,
+    build_id uuid NOT NULL,
+    deployed_object_id uuid NOT NULL,
+    created_by_account_id uuid,
+    status text DEFAULT 'running'::text NOT NULL,
+    status_before text NOT NULL,
+    status_after text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    finished_at timestamp with time zone,
+    CONSTRAINT validation_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'passed'::text, 'failed'::text, 'canceled'::text, 'timed_out'::text])))
+);
+
+
 --
 -- Name: deployed_object; Type: TABLE; Schema: public; Owner: -
 --

@@ -50,6 +50,17 @@ var (
 func AdvanceObjectLifecycle(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID) error {
 	q := db.New(pool)
 
+	// Close out revalidations whose checks have all reported. A host whose
+	// status that changed (finished <-> invalid) changes what its build
+	// settles as, so the build re-enters building and settles again.
+	if changed, err := SettleValidationRuns(ctx, q, buildID); err != nil {
+		return err
+	} else if changed {
+		if err := reopenBuild(ctx, q, buildID); err != nil {
+			return err
+		}
+	}
+
 	objs, err := q.ListDeployedObjectsByBuild(ctx, buildID)
 	if err != nil {
 		return fmt.Errorf("listing deployed objects: %w", err)

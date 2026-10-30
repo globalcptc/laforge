@@ -1170,3 +1170,66 @@ export interface BuildReadiness {
   checked: boolean
   warnings: string[]
 }
+
+// Revalidation (POST /builds/{id}/revalidate): re-runs every validator on the
+// chosen hosts and reports what each check says now. Changes nothing on the
+// host except its status, finished <-> invalid.
+export interface RevalidateHost {
+  object_id: string
+  name: string
+  team_number: number
+  run_id?: string
+  reason?: string // why it was skipped
+}
+
+export interface RevalidateResponse {
+  report_id?: string // empty when no host could be revalidated
+  started: RevalidateHost[]
+  skipped: RevalidateHost[]
+}
+
+export interface ValidationCheck {
+  kind: string
+  args: Record<string, unknown> | null
+  passed: boolean | null // null: not run yet
+  message?: string
+}
+
+export interface ValidationStep {
+  step_index: number
+  // pending/leased: not run yet; done; failed; ignored (failed on a step marked
+  // ignore_errors -- shown, never fails the run)
+  status: string
+  ignore_errors: boolean
+  error?: string
+  checks: ValidationCheck[]
+}
+
+export type ValidationRunStatus = 'running' | 'passed' | 'failed' | 'canceled' | 'timed_out'
+
+export interface ValidationRun {
+  id: string
+  report_id: string
+  object_id: string
+  name?: string
+  kind?: string
+  team_number?: number
+  status: ValidationRunStatus
+  status_before: string
+  status_after?: string
+  created_at: string
+  finished_at?: string
+  steps: ValidationStep[]
+}
+
+export interface ValidationReport {
+  report_id: string
+  created_at: string
+  finished_at?: string
+  hosts: number
+  running: number
+  passed: number
+  failed: number
+  incomplete: number
+  runs?: ValidationRun[]
+}
