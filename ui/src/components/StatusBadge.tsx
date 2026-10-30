@@ -146,7 +146,8 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   // distinct icon (TrashOff, not deploy_failed's ServerOff) so the two don't
   // read identically on the environment board, where color + icon carry it alone.
   destroy_failed: { icon: TrashOff, tone: 'danger', label: 'Destroy Failed' },
-  destroyed: { icon: MinusCircle, tone: 'neutral', label: 'Destroyed' },
+  // Same look as torn_down: the board legend shows one Destroyed entry for both.
+  destroyed: { icon: PowerOff, tone: 'neutral', label: 'Destroyed' },
   open: { icon: CircleCheck, tone: 'success', label: 'Open' },
   closed: { icon: MinusCircle, tone: 'warning', label: 'Closed' },
   booting: { icon: Power, anim: 'pulse', tone: 'sky', label: 'Booting' },

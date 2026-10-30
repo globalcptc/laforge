@@ -22,6 +22,7 @@ export const STATUS_COLOR: Record<string, string> = {
   destroying: '#d4537e',
   destroy_failed: '#e04a49',
   torn_down: '#5f5e5a',
+  destroyed: '#5f5e5a',
 }
 
 // Dark chrome tokens for the board surfaces.
