@@ -264,7 +264,9 @@ SELECT COALESCE(MAX(step_index), -1) + 1 FROM agent_task WHERE deployed_object_i
 --     ALWAYS eligible and take priority. They must run even when an authored
 --     step has terminally failed and stopped the deploy -- that is exactly when
 --     an operator needs to run commands on the box to debug why a step failed.
---     A failed authored step no longer blocks them.
+--     A failed authored step doesn't block them, and neither does a failed
+--     ad-hoc task: each ad-hoc command stands alone, so only pending or leased
+--     ones are candidates.
 --
 --   * Authored steps (ad_hoc = false) keep strict ordered semantics: the lowest
 --     not-done/ignored step (an ignore_errors step that failed terminally is
@@ -295,7 +297,9 @@ WHERE id = (
     WHERE t.deployed_object_id = $1
       AND t.status NOT IN ('done', 'ignored')
       AND (
-        t.ad_hoc
+        -- A failed ad-hoc task is finished: it must not stay the candidate, or
+        -- the outer lease gate never matches and every task after it waits forever.
+        (t.ad_hoc AND t.status IN ('pending', 'leased'))
         OR t.step_index = (
           SELECT MIN(t2.step_index) FROM agent_task t2
           WHERE t2.deployed_object_id = $1

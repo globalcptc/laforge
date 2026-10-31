@@ -663,3 +663,95 @@ func TestAdHocTaskRunsPastFailedStep(t *testing.T) {
 		t.Fatalf("get-task returned task %s, want the ad-hoc task %s -- ad-hoc must run past a failed step", got.ID, adhoc.ID)
 	}
 }
+
+// TestFailedAdHocTaskDoesNotBlockQueue is the regression for a failed ad-hoc
+// command freezing its host's whole task queue: the failed row stayed the
+// get-task candidate, the lease gate never matched it, and every later ad-hoc
+// command and authored step sat pending forever (four hosts wedged this way in
+// cptc12-central after DNS probes timed out).
+func TestFailedAdHocTaskDoesNotBlockQueue(t *testing.T) {
+	conn := dbTestConnString()
+	if conn == "" {
+		t.Skip("no local Postgres available (set LAFORGE_TEST_DATABASE_URL to point at one)")
+	}
+	ctx := context.Background()
+	q, pool, err := Open(ctx, conn)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { pool.Close() })
+
+	repo, err := q.CreateRepository(ctx, CreateRepositoryParams{
+		GithubOwner: "laforge-test-owner", GithubRepo: "laforge-test-repo-adhoc-failed",
+	})
+	if err != nil {
+		t.Fatalf("CreateRepository: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := pool.Exec(ctx, "DELETE FROM repository WHERE id = $1", repo.ID); err != nil {
+			t.Errorf("cleanup: delete repository: %v", err)
+		}
+	})
+	rev, err := q.CreateContentRevision(ctx, CreateContentRevisionParams{RepositoryID: repo.ID, CommitSha: "adhoc-failed-sha"})
+	if err != nil {
+		t.Fatalf("CreateContentRevision: %v", err)
+	}
+	build, err := q.CreateBuild(ctx, CreateBuildParams{ContentRevisionID: rev.ID, EnvironmentName: "adhoc-failed"})
+	if err != nil {
+		t.Fatalf("CreateBuild: %v", err)
+	}
+	team, err := q.EnsureTeam(ctx, EnsureTeamParams{BuildID: build.ID, TeamNumber: 1})
+	if err != nil {
+		t.Fatalf("EnsureTeam: %v", err)
+	}
+	obj, err := q.EnsureDeployedObject(ctx, EnsureDeployedObjectParams{
+		TeamID: team.ID, Kind: "host", ObjectName: "box", AsName: strPtr("box01"), NetworkName: strPtr("lan"),
+	})
+	if err != nil {
+		t.Fatalf("EnsureDeployedObject: %v", err)
+	}
+
+	emptyObj := []byte(`{}`)
+	lease := NextAgentTaskForHostParams{DeployedObjectID: obj.ID, Column2: Interval(time.Minute)}
+
+	// An ad-hoc command that ran and failed terminally (e.g. timed out).
+	first, err := q.CreateAdHocAgentTask(ctx, CreateAdHocAgentTaskParams{DeployedObjectID: obj.ID, StepIndex: 0, Command: "execute", Payload: emptyObj})
+	if err != nil {
+		t.Fatalf("CreateAdHocAgentTask(first): %v", err)
+	}
+	if got, err := q.NextAgentTaskForHost(ctx, lease); err != nil || got.ID != first.ID {
+		t.Fatalf("leasing the first ad-hoc task: got %v, %v", got.ID, err)
+	}
+	if _, err := q.FailAgentTask(ctx, FailAgentTaskParams{ID: first.ID, Status: "failed", LastError: strPtr("timed out")}); err != nil {
+		t.Fatalf("FailAgentTask: %v", err)
+	}
+
+	// The next ad-hoc command must still be handed out.
+	second, err := q.CreateAdHocAgentTask(ctx, CreateAdHocAgentTaskParams{DeployedObjectID: obj.ID, StepIndex: 1, Command: "execute", Payload: emptyObj})
+	if err != nil {
+		t.Fatalf("CreateAdHocAgentTask(second): %v", err)
+	}
+	got, err := q.NextAgentTaskForHost(ctx, lease)
+	if err != nil {
+		t.Fatalf("get-task after a failed ad-hoc task: %v (want the next ad-hoc task)", err)
+	}
+	if got.ID != second.ID {
+		t.Fatalf("get-task returned %s, want the second ad-hoc task %s", got.ID, second.ID)
+	}
+	if _, err := q.CompleteAgentTask(ctx, CompleteAgentTaskParams{ID: second.ID}); err != nil {
+		t.Fatalf("CompleteAgentTask: %v", err)
+	}
+
+	// And an authored step behind the failed ad-hoc one must run too.
+	step, err := q.CreateAgentTask(ctx, CreateAgentTaskParams{DeployedObjectID: obj.ID, StepIndex: 2, Command: "execute", Payload: emptyObj})
+	if err != nil {
+		t.Fatalf("CreateAgentTask(step): %v", err)
+	}
+	got, err = q.NextAgentTaskForHost(ctx, lease)
+	if err != nil {
+		t.Fatalf("get-task for an authored step after a failed ad-hoc task: %v", err)
+	}
+	if got.ID != step.ID {
+		t.Fatalf("get-task returned %s, want the authored step %s", got.ID, step.ID)
+	}
+}
