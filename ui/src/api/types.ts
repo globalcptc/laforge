@@ -151,6 +151,9 @@ export interface DeployedObject {
   updated_at: string
   power_state?: PowerState
   power_state_checked_at?: string | null
+  // Where the hoster placed it: the Incus pool server or cluster member its
+  // instance (or network) lives on. '' until the power poll reports it.
+  instance_location?: string
   agent?: AgentHealth
   // What this object's next steps are waiting on: its `depends_on` that
   // haven't finished yet, or -- once it has worked up to a step with a

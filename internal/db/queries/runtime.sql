@@ -269,7 +269,7 @@ UPDATE deployed_object SET status = 'deploying', updated_at = now() WHERE id = $
 -- content_revision_id is the revision the deploy task rendered from; a task
 -- queued without one records its build's current revision.
 UPDATE deployed_object SET status = 'running', external_ref = sqlc.arg(external_ref), fingerprint = sqlc.arg(fingerprint), infra_fingerprint = sqlc.arg(infra_fingerprint), last_error = NULL, updated_at = now(),
-    deployed_at = now(), agent_checkin_overdue_at = NULL, power_state = '',
+    deployed_at = now(), agent_checkin_overdue_at = NULL, power_state = '', instance_location = '',
     content_revision_id = COALESCE(sqlc.narg(content_revision_id)::uuid,
         (SELECT b.content_revision_id FROM team t JOIN build b ON b.id = t.build_id WHERE t.id = deployed_object.team_id))
 WHERE deployed_object.id = sqlc.arg(id) RETURNING *;
@@ -378,6 +378,12 @@ UPDATE deployed_object SET external_ref = $2 WHERE id = $1 AND (external_ref IS 
 -- modified. checked_at records when it was last confirmed.
 UPDATE deployed_object SET power_state = $2, power_state_checked_at = now() WHERE id = $1;
 
+-- name: SetDeployedObjectLocation :exec
+-- Where the hoster placed the object (an Incus pool server or cluster member),
+-- from the same Inspect as its power state. Written only when it changed, and
+-- like the power state it leaves updated_at alone.
+UPDATE deployed_object SET instance_location = $2 WHERE id = $1 AND instance_location <> $2;
+
 -- name: MarkDeployedObjectDestroyQueued :execrows
 -- A destroy for it is queued and hasn't started: shown as waiting to be
 -- destroyed, with its hoster reference kept for the destroy. The runner moves
@@ -401,7 +407,7 @@ UPDATE deployed_object SET status = 'destroying', updated_at = now() WHERE id = 
 -- Clears power_state too: the instance is gone, so the last-polled "running"
 -- (or any) power state is no longer true and must not linger as a stale
 -- "Infra: Running" next to a "Destroyed" lifecycle badge.
-UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING *;
+UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', instance_location = '', power_state_checked_at = now(), updated_at = now() WHERE id = $1 RETURNING *;
 
 -- name: MarkDeployedObjectDestroyFailed :one
 -- The destroy-side twin of MarkDeployedObjectDeployFailed: the hoster could not
@@ -425,7 +431,7 @@ RETURNING *;
 -- object not yet destroyed is recorded as destroyed WITHOUT any hoster call
 -- (same column resets as MarkDeployedObjectDestroyed). The caller is asserting
 -- the real infrastructure is already gone or will be cleaned up by hand.
-UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', power_state_checked_at = now(), last_error = NULL, updated_at = now()
+UPDATE deployed_object SET status = 'destroyed', public_address = '', power_state = '', instance_location = '', power_state_checked_at = now(), last_error = NULL, updated_at = now()
 WHERE status <> 'destroyed'
   AND team_id IN (SELECT id FROM team WHERE build_id = $1);
 
@@ -437,7 +443,7 @@ WHERE status <> 'destroyed'
 -- the redeploy re-materializes this object's steps once its dependencies are
 -- finished again (its agent_task rows are deleted on the same path).
 UPDATE deployed_object SET status = 'pending', external_ref = NULL, fingerprint = '', infra_fingerprint = '', last_error = NULL, failure_kind = NULL, failed_at = NULL,
-    steps_materialized_at = NULL, steps_changed_at = NULL, steps_changed_fingerprint = '', power_state = '', updated_at = now()
+    steps_materialized_at = NULL, steps_changed_at = NULL, steps_changed_fingerprint = '', power_state = '', instance_location = '', updated_at = now()
 WHERE id = $1 RETURNING *;
 
 -- name: SetDeployedObjectRestarting :one

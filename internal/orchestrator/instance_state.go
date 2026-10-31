@@ -83,7 +83,7 @@ func PollInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.
 		return fmt.Errorf("inspecting hoster: %w", err)
 	}
 	stater, _ := bldr.(builder.InstanceStater)
-	return applyInstanceStates(ctx, pool, buildID, inspectStateMap(resources), snapshotAt, stater)
+	return applyInstanceStates(ctx, pool, buildID, inspectStateMap(resources), inspectLocationMap(resources), snapshotAt, stater)
 }
 
 // PollInstanceStatesForBuilds refreshes power states for many builds while doing
@@ -99,10 +99,11 @@ func PollInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.
 func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildIDs []pgtype.UUID) {
 	q := db.New(pool)
 	type cached struct {
-		stateByRef map[string]string
-		ok         bool
-		snapshotAt time.Time
-		bldr       builder.Builder
+		stateByRef    map[string]string
+		locationByRef map[string]string
+		ok            bool
+		snapshotAt    time.Time
+		bldr          builder.Builder
 	}
 	// Which builder each build is on, and one representative build per
 	// builder to resolve it through.
@@ -130,7 +131,7 @@ func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildI
 			started := time.Now()
 			c := cached{snapshotAt: started}
 			r := inspectBuilder(ictx, pool, id, name)
-			c.stateByRef, c.ok, c.bldr = r.stateByRef, r.ok, r.bldr
+			c.stateByRef, c.locationByRef, c.ok, c.bldr = r.stateByRef, r.locationByRef, r.ok, r.bldr
 			if d := time.Since(started); d > 10*time.Second {
 				log.Printf("orchestrator: inspecting builder %q for power states took %s (ok=%v)", name, d.Round(time.Millisecond), c.ok)
 			}
@@ -146,7 +147,7 @@ func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildI
 			continue
 		}
 		stater, _ := c.bldr.(builder.InstanceStater)
-		if err := applyInstanceStates(ctx, pool, id, c.stateByRef, c.snapshotAt, stater); err != nil {
+		if err := applyInstanceStates(ctx, pool, id, c.stateByRef, c.locationByRef, c.snapshotAt, stater); err != nil {
 			log.Printf("recording power states for build %s: %v", id.String(), err)
 		}
 	}
@@ -156,9 +157,10 @@ func PollInstanceStatesForBuilds(ctx context.Context, pool *pgxpool.Pool, buildI
 const inspectTimeout = 60 * time.Second
 
 func inspectBuilder(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, name string) (c struct {
-	stateByRef map[string]string
-	ok         bool
-	bldr       builder.Builder
+	stateByRef    map[string]string
+	locationByRef map[string]string
+	ok            bool
+	bldr          builder.Builder
 }) {
 	bldr, err := resolveBuilderForBuild(ctx, pool, buildID)
 	if err != nil {
@@ -171,6 +173,7 @@ func inspectBuilder(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID
 		return c
 	}
 	c.stateByRef = inspectStateMap(resources)
+	c.locationByRef = inspectLocationMap(resources)
 	c.ok = true
 	c.bldr = bldr
 	return c
@@ -180,6 +183,18 @@ func inspectStateMap(resources []builder.Resource) map[string]string {
 	m := make(map[string]string, len(resources))
 	for _, r := range resources {
 		m[r.ExternalRef] = r.State
+	}
+	return m
+}
+
+// inspectLocationMap is ref -> where the hoster placed it, for the resources
+// whose builder reports placement.
+func inspectLocationMap(resources []builder.Resource) map[string]string {
+	m := make(map[string]string, len(resources))
+	for _, r := range resources {
+		if r.Location != "" {
+			m[r.ExternalRef] = r.Location
+		}
 	}
 	return m
 }
@@ -201,7 +216,11 @@ func inspectStateMap(resources []builder.Resource) map[string]string {
 // (builder.InstanceStater; nil when it can't), each left-out instance is
 // checked directly, and only a hoster that says it isn't there marks it
 // missing; a failed check leaves the state as it was.
-func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, stateByRef map[string]string, snapshotAt time.Time, stater builder.InstanceStater) error {
+//
+// locationByRef, when the builder reports placement, records where each listed
+// object (networks included) lives; an object the listing left out keeps the
+// location it had.
+func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype.UUID, stateByRef, locationByRef map[string]string, snapshotAt time.Time, stater builder.InstanceStater) error {
 	q := db.New(pool)
 	objs, err := q.ListDeployedObjectsByBuild(ctx, buildID)
 	if err != nil {
@@ -209,6 +228,13 @@ func applyInstanceStates(ctx context.Context, pool *pgxpool.Pool, buildID pgtype
 	}
 	confirmed := confirmAbsences(ctx, objs, stateByRef, snapshotAt, stater)
 	for _, o := range objs {
+		if o.ExternalRef != nil && o.Status != "destroyed" {
+			if loc := locationByRef[*o.ExternalRef]; loc != "" && loc != o.InstanceLocation {
+				if err := q.SetDeployedObjectLocation(ctx, db.SetDeployedObjectLocationParams{ID: o.ID, InstanceLocation: loc}); err != nil {
+					return fmt.Errorf("recording location for %s: %w", o.ID.String(), err)
+				}
+			}
+		}
 		if o.Kind != "host" && o.Kind != "container" {
 			continue // networks/DNS have no power state
 		}

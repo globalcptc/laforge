@@ -36,7 +36,7 @@ func TestPowerStateIgnoresHostsDeployedDuringTheListing(t *testing.T) {
 
 	// The listing began 30 seconds ago and sees only web-listed.
 	snapshotAt := time.Now().Add(-30 * time.Second)
-	if err := applyInstanceStates(ctx, pool, build.ID, map[string]string{"lf-web-listed": "running"}, snapshotAt, nil); err != nil {
+	if err := applyInstanceStates(ctx, pool, build.ID, map[string]string{"lf-web-listed": "running"}, nil, snapshotAt, nil); err != nil {
 		t.Fatal(err)
 	}
 	for _, c := range []struct {
@@ -88,7 +88,7 @@ func TestPowerStateConfirmsLeftOutInstances(t *testing.T) {
 		"lf-web-stopped": {state: "stopped", exists: true},
 		"lf-web-unsure":  {err: context.DeadlineExceeded},
 	}
-	if err := applyInstanceStates(ctx, pool, build.ID, map[string]string{}, time.Now(), stater); err != nil {
+	if err := applyInstanceStates(ctx, pool, build.ID, map[string]string{}, nil, time.Now(), stater); err != nil {
 		t.Fatal(err)
 	}
 	for _, c := range []struct {

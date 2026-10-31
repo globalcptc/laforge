@@ -79,6 +79,8 @@ type Builder struct {
 	// environments, so team "5" of two environments otherwise collide. Set per
 	// task by the runner (see builder.BuildScoper); "" is team-only.
 	buildScope string
+	// server caches this Incus server's own name for placement reporting.
+	server serverNameCache
 }
 
 // ScopeToBuild implements builder.BuildScoper: limit team operations to one
@@ -840,10 +842,12 @@ func (b *Builder) destroyInstance(ctx context.Context, name string) error {
 }
 
 type incusInstance struct {
-	Name   string            `json:"name"`
-	Type   string            `json:"type"`
-	Status string            `json:"status"` // Incus's live state: Running, Stopped, Frozen, ...
-	Config map[string]string `json:"config"`
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Status string `json:"status"` // Incus's live state: Running, Stopped, Frozen, ...
+	// Location is the cluster member it runs on; "none" on a standalone server.
+	Location string            `json:"location"`
+	Config   map[string]string `json:"config"`
 }
 
 // powerStateFromIncus maps Incus's own instance status onto the normalized
@@ -900,7 +904,7 @@ func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 		if inst.Type == "virtual-machine" {
 			kind = "host"
 		}
-		out = append(out, builder.Resource{ExternalRef: inst.Name, Kind: kind, State: powerStateFromIncus(inst.Status)})
+		out = append(out, builder.Resource{ExternalRef: inst.Name, Kind: kind, State: powerStateFromIncus(inst.Status), Location: b.instanceLocation(ctx, inst.Location)})
 	}
 
 	// Names only: with hundreds of networks, a recursive listing can outlast
@@ -913,7 +917,9 @@ func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 		if !strings.HasPrefix(n, "lf-") {
 			continue // the project's own pre-existing networks, not ours
 		}
-		out = append(out, builder.Resource{ExternalRef: n, Kind: "network"})
+		// A team's networks live on its one server (see incuspool), so the
+		// server is their location too.
+		out = append(out, builder.Resource{ExternalRef: n, Kind: "network", Location: b.serverName(ctx)})
 	}
 	return out, nil
 }

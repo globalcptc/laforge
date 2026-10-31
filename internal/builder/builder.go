@@ -293,6 +293,10 @@ type Resource struct {
 	ExternalRef string `json:"external_ref"`
 	Kind        string `json:"kind"`  // network | host | container
 	State       string `json:"state"` // live power state of an instance -- see PowerState* below; "" for a network or a builder that can't report it
+	// Location is where the hoster placed it: the server or cluster member
+	// it lives on, as the hoster names it. "" when the builder doesn't report
+	// placement (a hoster that schedules opaquely, like AWS).
+	Location string `json:"location,omitempty"`
 }
 
 // Normalized instance power states an Inspect result carries in

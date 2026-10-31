@@ -784,6 +784,7 @@ function InfoTab({
           <InfoRow label="Last check-in" value={fmtTime(object.agent.last_heartbeat_at)} />
         )}
         {object?.external_ref && <InfoRow label="Hoster ref" value={object.external_ref} mono />}
+        {object?.instance_location && !GONE_STATES.has(object.status) && <InfoRow label="Server" value={object.instance_location} mono />}
         {object?.last_error && <InfoRow label="Last error" value={object.last_error} mono danger />}
       </dl>
 

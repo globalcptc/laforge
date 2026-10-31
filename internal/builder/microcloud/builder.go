@@ -1028,10 +1028,12 @@ func ignoreNotFound(err error) error {
 }
 
 type mcInstance struct {
-	Name   string            `json:"name"`
-	Type   string            `json:"type"`
-	Status string            `json:"status"` // Incus's live state: Running, Stopped, Frozen, ...
-	Config map[string]string `json:"config"`
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Status string `json:"status"` // LXD's live state: Running, Stopped, Frozen, ...
+	// Location is the cluster member LXD placed it on.
+	Location string            `json:"location"`
+	Config   map[string]string `json:"config"`
 }
 
 // powerStateFromLXDState maps Incus's own instance status onto the normalized
@@ -1088,7 +1090,7 @@ func (b *Builder) Inspect(ctx context.Context) ([]builder.Resource, error) {
 		if inst.Type == "virtual-machine" {
 			kind = "host"
 		}
-		out = append(out, builder.Resource{ExternalRef: inst.Name, Kind: kind, State: powerStateFromLXDState(inst.Status)})
+		out = append(out, builder.Resource{ExternalRef: inst.Name, Kind: kind, State: powerStateFromLXDState(inst.Status), Location: inst.Location})
 	}
 
 	// Names only: with hundreds of networks, a recursive listing can outlast
