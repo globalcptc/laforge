@@ -570,11 +570,11 @@ export function BuildHosts() {
           <Button variant="secondary" size="sm" onClick={() => setGraphOpen(true)} title="Open the full-screen dependency graph for this build">
             <Waypoints size={14} /> Graph
           </Button>
+          <Button variant="secondary" size="sm" onClick={() => setReportsOpen(true)} title="Past revalidations on this build and their results">
+            <ShieldCheck size={14} /> Reports
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setLegendOpen(true)}>
             <Info size={14} /> State Legend
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setReportsOpen(true)} title="Past revalidations on this build and their results">
-            <ShieldCheck size={14} /> Validation Reports
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">

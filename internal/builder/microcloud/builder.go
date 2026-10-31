@@ -393,6 +393,12 @@ func (b *Builder) DestroyNetwork(ctx context.Context, team, externalRef string) 
 }
 
 func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string, error) {
+	return b.withFreshNameOnStaleStorage(ctx, spec.DisplayName, spec.ExternalName, func(ctx context.Context) (string, error) {
+		return b.deployHost(ctx, spec)
+	})
+}
+
+func (b *Builder) deployHost(ctx context.Context, spec builder.HostSpec) (string, error) {
 	img, ok := b.Config.Images[spec.OS]
 	if !ok {
 		return "", fmt.Errorf("no image configured for os %q -- this builder config doesn't support it", spec.OS)
@@ -440,6 +446,12 @@ func (b *Builder) DeployHost(ctx context.Context, spec builder.HostSpec) (string
 // steps from inside the app on MicroCloud exactly as it does on a native-OCI
 // builder -- the Docker runtime never leaks into content.
 func (b *Builder) DeployContainer(ctx context.Context, spec builder.ContainerSpec) (string, error) {
+	return b.withFreshNameOnStaleStorage(ctx, spec.DisplayName, spec.ExternalName, func(ctx context.Context) (string, error) {
+		return b.deployContainer(ctx, spec)
+	})
+}
+
+func (b *Builder) deployContainer(ctx context.Context, spec builder.ContainerSpec) (string, error) {
 	// A compose container is a Docker-capable machine the agent starts the
 	// project on -- deployed, and later destroyed, like any other instance.
 	if spec.ComposeHost {
@@ -500,7 +512,7 @@ func (b *Builder) deployInstance(ctx context.Context, externalName, displayName,
 	if err := validateInstanceNameBudget(b.Client.Project); err != nil {
 		return "", err
 	}
-	name := instanceName(displayName, externalName, b.Client.Project)
+	name := deployName(ctx, displayName, externalName, b.Client.Project)
 	slog.InfoContext(ctx, "MicroCloud deploying instance", "project", b.Client.Project, "instance", name, "external_name", externalName, "team", team, "instance_type", instanceType, "snapshot", img.IsSnapshot())
 
 	var public *publicNICPlan
