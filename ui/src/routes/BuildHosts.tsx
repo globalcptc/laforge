@@ -1,6 +1,6 @@
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { Fragment as FragmentGroup, useEffect, useMemo, useRef, useState } from 'react'
-import { Box, CalendarClock, Check, ChevronDown, ShieldCheck, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCcw, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
+import { Box, CalendarClock, Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, ShieldCheck, Container, Hammer, Info, LayoutGrid, Network, Play, RotateCcw, RotateCw, Search, Server, Square, Terminal, TriangleAlert, Users, Waypoints, type LucideIcon } from 'lucide-react'
 import { useAdHocTask, useBuild, useCreateScheduledTask, usePowerAction, useRebuild, useTopology } from '../api/hooks'
 import { StatusBadge, PowerBadge, powerLabel, StatusLegendDialog, GONE_STATES, statusLabel, statusFillClass, LIFECYCLE_STATES, effectiveStatusKey, EFFECTIVE_HEALTH_STATES } from '../components/StatusBadge'
 import { EmptyState } from '../components/EmptyState'
@@ -510,6 +510,20 @@ export function BuildHosts() {
     })
   }
 
+  // Collapse All folds every shown team (its networks stay as they were inside
+  // it); Expand All opens every team and every network.
+  const allCollapsed = grouped.length > 0 && grouped.every((t) => collapsedTeams.has(t.teamNumber))
+  const allExpanded = collapsedTeams.size === 0 && collapsedNets.size === 0
+
+  function collapseAll() {
+    setCollapsedTeams(new Set(grouped.map((t) => t.teamNumber)))
+  }
+
+  function expandAll() {
+    setCollapsedTeams(new Set())
+    setCollapsedNets(new Set())
+  }
+
   function toggleNetCollapse(key: string) {
     setCollapsedNets((prev) => {
       const next = new Set(prev)
@@ -575,6 +589,12 @@ export function BuildHosts() {
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setLegendOpen(true)}>
             <Info size={14} /> State Legend
+          </Button>
+          <Button variant="ghost" size="sm" onClick={expandAll} disabled={allExpanded} title="Open every team and network">
+            <ChevronsUpDown size={14} /> Expand All
+          </Button>
+          <Button variant="ghost" size="sm" onClick={collapseAll} disabled={allCollapsed} title="Fold every team down to its header">
+            <ChevronsDownUp size={14} /> Collapse All
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
