@@ -75,9 +75,15 @@ func (b *Builder) withFreshNameOnStaleStorage(ctx context.Context, displayName, 
 		}
 	}
 	if err != nil && isStaleStorageCollision(err) {
-		err = fmt.Errorf("%w (the storage pool holds a stale image under %s that LXD no longer tracks -- remove it in Ceph with `rbd rm` after checking `rbd status` for watchers)", err, name)
+		if name != "" && b.instanceKnown(ctx, name) {
+			// LXD still has an instance under this name holding the volume: a
+			// rename wouldn't free its address, so the record has to go first.
+			err = fmt.Errorf("%w (LXD still has an instance record %s using this volume; destroy it first -- if its delete reports \"Instance storage pool not found\", the record is broken and needs removing on the cluster)", err, name)
+		} else {
+			err = fmt.Errorf("%w (the storage pool holds a stale image under %s that LXD no longer tracks -- remove it in Ceph with `rbd rm` after checking `rbd status` for watchers)", err, name)
+		}
 	}
-	return name, err
+	return name, b.explainLeakedOVNPort(ctx, err)
 }
 
 // instanceKnown reports whether LXD has an instance by this name; an

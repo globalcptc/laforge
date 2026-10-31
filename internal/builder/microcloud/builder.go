@@ -885,6 +885,13 @@ func (b *Builder) destroyInstance(ctx context.Context, name string, options ...d
 		_, err = b.Client.delete(ctx, "/1.0/instances/"+name)
 		if err != nil {
 			var apiErr *APIError
+			if instancePoolMissing(err) {
+				// Matches NotFound's "not found" text, but the record is still
+				// there: LXD just can't delete it. Saying "already gone" here
+				// would leave it holding its address and config drive.
+				slog.ErrorContext(ctx, "MicroCloud destroy: LXD can't delete a broken instance record", "instance", name, "error", err)
+				return b.brokenInstanceRecordError(name, err)
+			}
 			if errors.As(err, &apiErr) && apiErr.NotFound() {
 				slog.InfoContext(ctx, "MicroCloud destroy: instance was already gone", "instance", name)
 			} else {
