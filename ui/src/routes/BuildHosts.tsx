@@ -510,18 +510,18 @@ export function BuildHosts() {
     })
   }
 
-  // One toggle: Collapse All folds every shown team (its networks stay as they
-  // were inside it); once every team is folded it becomes Expand All, which
-  // opens every team and every network.
+  // One toggle: Collapse All folds every shown team AND every network inside
+  // it; once every team is folded it becomes Expand All, which opens the teams
+  // only -- their networks stay folded, one header each, to open as needed.
   const allCollapsed = grouped.length > 0 && grouped.every((t) => collapsedTeams.has(t.teamNumber))
 
   function collapseAll() {
     setCollapsedTeams(new Set(grouped.map((t) => t.teamNumber)))
+    setCollapsedNets(new Set(grouped.flatMap((t) => t.networks.map((n) => `${t.teamNumber}:${n.name}`))))
   }
 
   function expandAll() {
     setCollapsedTeams(new Set())
-    setCollapsedNets(new Set())
   }
 
   function toggleNetCollapse(key: string) {

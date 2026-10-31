@@ -43,8 +43,38 @@ export function BuildAccess() {
       setAccess.mutate({ team: team.team_number, action })
     }
   }
-  const [extendFor, setExtendFor] = useState<number | null>(null)
-  const [reduceFor, setReduceFor] = useState<number | null>(null)
+  // Which picker is open: a team number, 'all' for the All Teams row, or none.
+  const [extendFor, setExtendFor] = useState<number | 'all' | null>(null)
+  const [reduceFor, setReduceFor] = useState<number | 'all' | null>(null)
+  // Extend All / Reduce All move every open team's OWN end by the same number
+  // of minutes -- the server computes each team's current end (its override or
+  // its scheduled window close), so teams already on different end times keep
+  // their offsets. Closed teams are skipped: they have no end to move, and
+  // extending one would reopen it. One summary toast for the batch.
+  const adjustAll = async (action: 'extend' | 'reduce', mins: number) => {
+    if (!build) return
+    const open = build.teams.filter((t) => t.access_state === 'open')
+    const skipped = build.teams.filter((t) => t.access_state !== 'open').map((t) => t.team_number)
+    if (open.length === 0) {
+      toast({ title: `No open teams to ${action}`, description: 'Every team is closed.', tone: 'info' })
+      return
+    }
+    const verb = action === 'extend' ? 'Extending' : 'Reducing'
+    toast({ title: `${verb} ${open.length} team${open.length === 1 ? '' : 's'} by ${mins}m…`, tone: 'info' })
+    const results = await Promise.allSettled(
+      open.map((t) =>
+        setAccess.mutateAsync(action === 'extend' ? { team: t.team_number, action, extendMinutes: mins } : { team: t.team_number, action, reduceMinutes: mins }),
+      ),
+    )
+    const failed = results.flatMap((r, i) => (r.status === 'rejected' ? [`team ${open[i].team_number} (${r.reason instanceof Error ? r.reason.message : 'error'})`] : []))
+    const done = open.length - failed.length
+    const notes = [skipped.length > 0 && `Skipped closed team${skipped.length === 1 ? '' : 's'} ${skipped.join(', ')}.`, failed.length > 0 && `Failed: ${failed.join('; ')}.`].filter(Boolean).join(' ')
+    toast({
+      title: `${action === 'extend' ? 'Extended' : 'Reduced'} ${done} team${done === 1 ? '' : 's'} by ${mins}m`,
+      description: notes || "Each team's own end time moved.",
+      tone: failed.length > 0 ? 'danger' : 'success',
+    })
+  }
   // The expanded +Nm / -Nm choices collapse back to the button after 30s of no
   // choice, so a half-open control doesn't linger.
   useEffect(() => {
@@ -90,6 +120,29 @@ export function BuildAccess() {
             <Button variant="danger" size="sm" className="bg-orange hover:brightness-95" onClick={() => toggleAll('close')} disabled={setAccess.isPending}>
               <Lock size={14} /> Close All
             </Button>
+            <MinutesPicker
+              label="Extend All"
+              prompt="Extend all by"
+              sign="+"
+              open={extendFor === 'all'}
+              onOpen={() => setExtendFor('all')}
+              onPick={(mins) => {
+                setExtendFor(null)
+                void adjustAll('extend', mins)
+              }}
+            />
+            <MinutesPicker
+              label="Reduce All"
+              prompt="Reduce all by"
+              sign="−"
+              choiceVariant="secondary"
+              open={reduceFor === 'all'}
+              onOpen={() => setReduceFor('all')}
+              onPick={(mins) => {
+                setReduceFor(null)
+                void adjustAll('reduce', mins)
+              }}
+            />
           </div>
         </div>
       )}
@@ -124,66 +177,77 @@ export function BuildAccess() {
                     <Unlock size={14} /> Open
                   </Button>
                 )}
-                {/* Extend collapses to its +Nm choices and back, animated both
-                    ways: each side transitions its own max-width + opacity so
-                    one slides open as the other slides shut. */}
-                <div className="flex items-center gap-1">
-                  <div className={cn('overflow-hidden transition-all duration-500 ease-in-out', extending ? 'max-w-0 opacity-0' : 'max-w-[7rem] opacity-100')}>
-                    <Button variant="ghost" size="sm" className="shrink-0" tabIndex={extending ? -1 : undefined} onClick={() => setExtendFor(team.team_number)}>
-                      <Clock size={14} /> Extend
-                    </Button>
-                  </div>
-                  <div className={cn('flex items-center gap-1 overflow-hidden transition-all duration-500 ease-in-out', extending ? 'max-w-md opacity-100' : 'pointer-events-none max-w-0 opacity-0')}>
-                    <span className="shrink-0 whitespace-nowrap pl-0.5 text-xs text-fg-muted">Extend by</span>
-                    {[1, 5, 15, 30, 60].map((mins) => (
-                      <Button
-                        key={mins}
-                        size="sm"
-                        className="shrink-0"
-                        tabIndex={extending ? undefined : -1}
-                        onClick={() => {
-                          setAccess.mutate({ team: team.team_number, action: 'extend', extendMinutes: mins })
-                          setExtendFor(null)
-                        }}
-                      >
-                        +{mins}m
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+                <MinutesPicker
+                  label="Extend"
+                  prompt="Extend by"
+                  sign="+"
+                  open={extending}
+                  onOpen={() => setExtendFor(team.team_number)}
+                  onPick={(mins) => {
+                    setAccess.mutate({ team: team.team_number, action: 'extend', extendMinutes: mins })
+                    setExtendFor(null)
+                  }}
+                />
                 {/* Reduce is a penalty (close the team for N more minutes),
                     always available -- a team may be penalized whether or not
                     it's currently extended. Mirrors Extend. */}
-                <div className="flex items-center gap-1">
-                  <div className={cn('overflow-hidden transition-all duration-500 ease-in-out', reducing ? 'max-w-0 opacity-0' : 'max-w-[7rem] opacity-100')}>
-                    <Button variant="ghost" size="sm" className="shrink-0" tabIndex={reducing ? -1 : undefined} onClick={() => setReduceFor(team.team_number)}>
-                      <Clock size={14} /> Reduce
-                    </Button>
-                  </div>
-                  <div className={cn('flex items-center gap-1 overflow-hidden transition-all duration-500 ease-in-out', reducing ? 'max-w-md opacity-100' : 'pointer-events-none max-w-0 opacity-0')}>
-                    <span className="shrink-0 whitespace-nowrap pl-0.5 text-xs text-fg-muted">Reduce by</span>
-                    {[1, 5, 15, 30, 60].map((mins) => (
-                      <Button
-                        key={mins}
-                        variant="secondary"
-                        size="sm"
-                        className="shrink-0"
-                        tabIndex={reducing ? undefined : -1}
-                        onClick={() => {
-                          setAccess.mutate({ team: team.team_number, action: 'reduce', reduceMinutes: mins })
-                          setReduceFor(null)
-                        }}
-                      >
-                        −{mins}m
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+                <MinutesPicker
+                  label="Reduce"
+                  prompt="Reduce by"
+                  sign="−"
+                  choiceVariant="secondary"
+                  open={reducing}
+                  onOpen={() => setReduceFor(team.team_number)}
+                  onPick={(mins) => {
+                    setAccess.mutate({ team: team.team_number, action: 'reduce', reduceMinutes: mins })
+                    setReduceFor(null)
+                  }}
+                />
               </div>
             )}
           </Card>
         )
       })}
+    </div>
+  )
+}
+
+// MinutesPicker is the Extend / Reduce control: a button that slides open into
+// its +Nm / −Nm choices and back, animated both ways -- each side transitions
+// its own max-width + opacity so one slides open as the other slides shut.
+function MinutesPicker({
+  label,
+  prompt,
+  sign,
+  open,
+  onOpen,
+  onPick,
+  choiceVariant,
+}: {
+  label: string
+  prompt: string
+  sign: string
+  open: boolean
+  onOpen: () => void
+  onPick: (mins: number) => void
+  choiceVariant?: 'secondary'
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <div className={cn('overflow-hidden transition-all duration-500 ease-in-out', open ? 'max-w-0 opacity-0' : 'max-w-[9rem] opacity-100')}>
+        <Button variant="ghost" size="sm" className="shrink-0" tabIndex={open ? -1 : undefined} onClick={onOpen}>
+          <Clock size={14} /> {label}
+        </Button>
+      </div>
+      <div className={cn('flex items-center gap-1 overflow-hidden transition-all duration-500 ease-in-out', open ? 'max-w-md opacity-100' : 'pointer-events-none max-w-0 opacity-0')}>
+        <span className="shrink-0 whitespace-nowrap pl-0.5 text-xs text-fg-muted">{prompt}</span>
+        {[1, 5, 15, 30, 60].map((mins) => (
+          <Button key={mins} variant={choiceVariant} size="sm" className="shrink-0" tabIndex={open ? undefined : -1} onClick={() => onPick(mins)}>
+            {sign}
+            {mins}m
+          </Button>
+        ))}
+      </div>
     </div>
   )
 }
