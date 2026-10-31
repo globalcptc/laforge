@@ -510,10 +510,10 @@ export function BuildHosts() {
     })
   }
 
-  // Collapse All folds every shown team (its networks stay as they were inside
-  // it); Expand All opens every team and every network.
+  // One toggle: Collapse All folds every shown team (its networks stay as they
+  // were inside it); once every team is folded it becomes Expand All, which
+  // opens every team and every network.
   const allCollapsed = grouped.length > 0 && grouped.every((t) => collapsedTeams.has(t.teamNumber))
-  const allExpanded = collapsedTeams.size === 0 && collapsedNets.size === 0
 
   function collapseAll() {
     setCollapsedTeams(new Set(grouped.map((t) => t.teamNumber)))
@@ -590,12 +590,6 @@ export function BuildHosts() {
           <Button variant="ghost" size="sm" onClick={() => setLegendOpen(true)}>
             <Info size={14} /> State Legend
           </Button>
-          <Button variant="ghost" size="sm" onClick={expandAll} disabled={allExpanded} title="Open every team and network">
-            <ChevronsUpDown size={14} /> Expand All
-          </Button>
-          <Button variant="ghost" size="sm" onClick={collapseAll} disabled={allCollapsed} title="Fold every team down to its header">
-            <ChevronsDownUp size={14} /> Collapse All
-          </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
@@ -611,6 +605,15 @@ export function BuildHosts() {
           <MultiFilter label="OS" selected={osFilter} onToggle={(v) => setOsFilter((p) => toggleSet(p, v))} onClear={() => setOsFilter(new Set())} options={osOptions.map((o) => [o, o])} />
           <MultiFilter label="Status" selected={statusFilter} onToggle={(v) => setStatusFilter((p) => toggleSet(p, v))} onClear={() => setStatusFilter(new Set())} options={statusOptions} />
           {tagOptions.length > 0 && <MultiFilter label="Tag" selected={tagFilter} onToggle={(v) => setTagFilter((p) => toggleSet(p, v))} onClear={() => setTagFilter(new Set())} options={tagOptions.map((t) => [t, t])} />}
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={allCollapsed ? expandAll : collapseAll}
+            title={allCollapsed ? 'Expand All' : 'Collapse All'}
+            aria-label={allCollapsed ? 'Expand All' : 'Collapse All'}
+          >
+            {allCollapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
+          </Button>
         </div>
       </div>
 
