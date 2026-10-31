@@ -82,6 +82,8 @@ func main() {
 		err = runAccess(os.Args[2:])
 	case "passwords":
 		err = runPasswords(os.Args[2:])
+	case "mcp":
+		err = runMCP(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -233,6 +235,13 @@ http://localhost:8080).
       List every account LaForge set a password for on the build's hosts (the
       admin account and every set_password / create_user, generated or
       written), with whether its step has run on the box yet.
+
+  laforge mcp
+      Serve these operations to an AI assistant as an MCP server over stdio:
+      list repos, builds and hosts (status, power state, agent health), read a
+      host's events, and start/stop/reboot hosts at the hoster (with a preview
+      of the matched set). Uses the same login and LAFORGE_API_URL. Register it
+      with: claude mcp add laforge -e LAFORGE_API_URL=<url> -- laforge mcp
 
   laforge version
       Print the build version.

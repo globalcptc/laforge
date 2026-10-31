@@ -356,6 +356,31 @@ Docker Compose project has its project loaded too: a missing compose file, a ser
 no `image:`, or a bind mount outside the project's directory is an error here, not at
 deploy time.
 
+### Using LaForge from an AI assistant (`laforge mcp`)
+
+`laforge mcp` serves the CLI's build operations as an [MCP](https://modelcontextprotocol.io)
+server over stdio, so an assistant such as Claude Code can check on and power-manage
+deployed hosts. Sign in once with `laforge login`; the server uses that login (refreshing
+it as needed) and `LAFORGE_API_URL`, like every other server-backed command. Register it
+with Claude Code:
+
+```bash
+claude mcp add laforge -e LAFORGE_API_URL=https://api.laforge.example.com -- laforge mcp
+```
+
+| Tool | What it does | Access |
+|---|---|---|
+| `list_repos` | Registered repositories, as owner/repo | read |
+| `list_builds` | A repository's builds, newest first, with their ids | read |
+| `list_hosts` | Every host/container in a build: team, status, power state, agent health, last error. Filter by team, name, or `problems_only` | read |
+| `host_events` | A host's newest events, including each power action's result | read |
+| `power` | `start`, `stop` or `reboot` at the hoster; `force` for a hard power operation; `preview` lists the matched hosts and changes nothing | manage |
+
+`power` takes the same target selector as `laforge run` (ids, team, search, network,
+kind, tags) and refuses an empty one unless `all_hosts` is set. The action runs in the
+background on the server, so a call returns once it has started; each host's outcome
+shows in `host_events` and its `power_state`.
+
 ---
 
 ## Builders
