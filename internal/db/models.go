@@ -82,6 +82,20 @@ type AgentTask struct {
 	ValidationRunID  pgtype.UUID        `json:"validation_run_id"`
 }
 
+type ApiKey struct {
+	ID            pgtype.UUID        `json:"id"`
+	AccountID     pgtype.UUID        `json:"account_id"`
+	Name          string             `json:"name"`
+	Prefix        string             `json:"prefix"`
+	TokenHash     string             `json:"token_hash"`
+	Scope         string             `json:"scope"`
+	RepositoryIds []pgtype.UUID      `json:"repository_ids"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
+	LastUsedAt    pgtype.Timestamptz `json:"last_used_at"`
+	RevokedAt     pgtype.Timestamptz `json:"revoked_at"`
+}
+
 type AttentionDismissal struct {
 	AccountID pgtype.UUID        `json:"account_id"`
 	BuildID   pgtype.UUID        `json:"build_id"`
@@ -381,6 +395,22 @@ type InstallationRepository struct {
 type InstanceAdmin struct {
 	GithubLogin string             `json:"github_login"`
 	AddedBy     *string            `json:"added_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type McpAudit struct {
+	ID          pgtype.UUID        `json:"id"`
+	ApiKeyID    pgtype.UUID        `json:"api_key_id"`
+	AccountID   pgtype.UUID        `json:"account_id"`
+	Tool        string             `json:"tool"`
+	Args        json.RawMessage    `json:"args"`
+	BuildID     pgtype.UUID        `json:"build_id"`
+	Status      string             `json:"status"`
+	Error       string             `json:"error"`
+	DurationMs  int32              `json:"duration_ms"`
+	ResultBytes int32              `json:"result_bytes"`
+	RemoteAddr  string             `json:"remote_addr"`
+	UserAgent   string             `json:"user_agent"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 

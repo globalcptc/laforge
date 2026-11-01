@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -208,6 +209,28 @@ func (c *Client) ListCollaborators(ctx context.Context, token, owner, repo strin
 			return all, nil
 		}
 	}
+}
+
+// GetCollaboratorPermission is one person's permission on a repository, as
+// GitHub resolves it (direct, team, or organization base permission):
+// "admin", "maintain", "write", "triage", "read" or "none". It answers for a
+// login rather than for the token's own user, so it works when LaForge has to
+// ask about someone who isn't the caller (a personal API key's owner). The
+// token needs push access to the repository -- an installation token does.
+// A login GitHub doesn't know as a collaborator comes back as "none".
+func (c *Client) GetCollaboratorPermission(ctx context.Context, token, owner, repo, login string) (string, error) {
+	u := fmt.Sprintf("%s/repos/%s/%s/collaborators/%s/permission", c.APIBaseURL, url.PathEscape(owner), url.PathEscape(repo), url.PathEscape(login))
+	var out struct {
+		Permission string `json:"permission"`
+	}
+	if err := c.doJSON(ctx, http.MethodGet, u, token, nil, &out); err != nil {
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound {
+			return "none", nil
+		}
+		return "", err
+	}
+	return out.Permission, nil
 }
 
 // --- GitHub App installation repositories ---

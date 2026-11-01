@@ -80,6 +80,9 @@ func (s *Server) handleListBuilds(w http.ResponseWriter, r *http.Request) {
 type teamSummary struct {
 	db.Team
 	Objects []objectView `json:"objects"`
+	// AccessChange is the team's queued, running or last-failed open/close
+	// (access_change.go); absent when nothing is in flight.
+	AccessChange *accessChange `json:"access_change,omitempty"`
 }
 
 type buildDetail struct {
@@ -165,12 +168,17 @@ func (s *Server) handleGetBuild(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		// Best-effort: without it the page just shows the settled state.
+		var changes map[int32]*accessChange
+		if rows, err := s.Queries.ListRecentTeamAccessTasks(r.Context(), build.ID); err == nil {
+			changes = teamAccessChanges(rows, teams)
+		}
 		for _, tm := range teams {
 			objs := byTeam[tm.ID.String()]
 			if objs == nil {
 				objs = []objectView{}
 			}
-			detail.Teams = append(detail.Teams, teamSummary{Team: tm, Objects: objs})
+			detail.Teams = append(detail.Teams, teamSummary{Team: tm, Objects: objs, AccessChange: changes[tm.TeamNumber]})
 		}
 		writeJSON(w, http.StatusOK, detail)
 	})

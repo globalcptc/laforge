@@ -22,6 +22,11 @@ func bearerToken(r *http.Request) (string, error) {
 	if !ok || tok == "" {
 		return "", errUnauthenticated
 	}
+	// A LaForge API key is only for the MCP server: refused here, before it
+	// could be sent to GitHub as if it were a GitHub token.
+	if strings.HasPrefix(tok, apiKeyPrefix) {
+		return "", errAPIKeyNotForREST
+	}
 	return tok, nil
 }
 
@@ -129,7 +134,7 @@ func (s *Server) authSessionForRequest(ctx context.Context, r *http.Request) (au
 
 func writeAuthError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, errUnauthenticated):
+	case errors.Is(err, errUnauthenticated), errors.Is(err, errAPIKeyNotForREST):
 		writeError(w, http.StatusUnauthorized, err)
 	case errors.Is(err, errForbidden):
 		writeError(w, http.StatusForbidden, err)

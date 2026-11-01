@@ -2652,6 +2652,59 @@ func (q *Queries) ListLatestDestroyTasksByBuild(ctx context.Context, buildID pgt
 	return items, nil
 }
 
+const listRecentTeamAccessTasks = `-- name: ListRecentTeamAccessTasks :many
+SELECT (payload->>'team')::text AS team, kind, status, created_at, updated_at, attempts, last_error
+FROM task
+WHERE build_id = $1
+  AND kind IN ('open_access', 'close_access')
+  AND coalesce(last_error, '') <> 'superseded by a newer team access change'
+ORDER BY created_at DESC
+LIMIT 500
+`
+
+type ListRecentTeamAccessTasksRow struct {
+	Team      string             `json:"team"`
+	Kind      string             `json:"kind"`
+	Status    string             `json:"status"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	Attempts  int32              `json:"attempts"`
+	LastError *string            `json:"last_error"`
+}
+
+// The newest open/close access tasks for a build, newest first: what the Access
+// page needs to show a team as Opening / Closing while its change is queued or
+// running, or that its last change failed. Superseded tasks (collapsed by a newer
+// click) are left out -- they were never going to run. Bounded: a build makes a
+// handful per schedule boundary, so the latest 500 covers every team.
+func (q *Queries) ListRecentTeamAccessTasks(ctx context.Context, buildID pgtype.UUID) ([]ListRecentTeamAccessTasksRow, error) {
+	rows, err := q.db.Query(ctx, listRecentTeamAccessTasks, buildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListRecentTeamAccessTasksRow
+	for rows.Next() {
+		var i ListRecentTeamAccessTasksRow
+		if err := rows.Scan(
+			&i.Team,
+			&i.Kind,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Attempts,
+			&i.LastError,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listTasksByBuild = `-- name: ListTasksByBuild :many
 SELECT id, build_id, deployed_object_id, kind, payload, status, attempts, lease_owner, lease_expires_at, last_error, created_at, updated_at, permanent FROM task WHERE build_id = $1 ORDER BY created_at
 `

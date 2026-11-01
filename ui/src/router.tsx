@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter, Navigate } from '@tanstack/react-router'
 import { Shell } from './components/Shell'
+import { DocumentTitle } from './components/DocumentTitle'
 import { SignIn } from './routes/SignIn'
 import { Home } from './routes/Home'
 import { Repositories } from './routes/Repositories'
@@ -22,6 +23,8 @@ import { BuilderConfigs } from './routes/BuilderConfigs'
 import { BuilderInfo } from './routes/BuilderInfo'
 import { InstanceAdmins } from './routes/InstanceAdmins'
 import { BuilderWizard } from './routes/BuilderWizard'
+import { ApiKeys } from './routes/ApiKeys'
+import { AdminApiKeys } from './routes/AdminApiKeys'
 import { useMe } from './api/hooks'
 import { Spinner } from './ui'
 import type { ReactNode } from 'react'
@@ -44,7 +47,14 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
-const rootRoute = createRootRoute({ component: Shell })
+const rootRoute = createRootRoute({
+  component: () => (
+    <>
+      <DocumentTitle />
+      <Shell />
+    </>
+  ),
+})
 
 const signInRoute = createRoute({ getParentRoute: () => rootRoute, path: '/sign-in', component: SignIn })
 
@@ -197,6 +207,26 @@ const editBuilderRoute = createRoute({
   ),
 })
 
+const apiKeysRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/api-keys',
+  component: () => (
+    <RequireAuth>
+      <ApiKeys />
+    </RequireAuth>
+  ),
+})
+
+const adminApiKeysRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/api-keys',
+  component: () => (
+    <RequireAuth>
+      <AdminApiKeys />
+    </RequireAuth>
+  ),
+})
+
 const repoAccessRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/repos/$repoId/access',
@@ -210,6 +240,8 @@ const repoAccessRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   signInRoute,
+  apiKeysRoute,
+  adminApiKeysRoute,
   reposRoute,
   repoRoute,
   repoPeopleRoute,

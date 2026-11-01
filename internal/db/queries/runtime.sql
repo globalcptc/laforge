@@ -1116,3 +1116,17 @@ UPDATE task SET status = 'pending', lease_owner = NULL, lease_expires_at = NULL,
     attempts = GREATEST(attempts - 1, 0), last_error = $3, updated_at = now()
 WHERE id = $1 AND lease_owner = $2
 RETURNING *;
+
+-- name: ListRecentTeamAccessTasks :many
+-- The newest open/close access tasks for a build, newest first: what the Access
+-- page needs to show a team as Opening / Closing while its change is queued or
+-- running, or that its last change failed. Superseded tasks (collapsed by a newer
+-- click) are left out -- they were never going to run. Bounded: a build makes a
+-- handful per schedule boundary, so the latest 500 covers every team.
+SELECT (payload->>'team')::text AS team, kind, status, created_at, updated_at, attempts, last_error
+FROM task
+WHERE build_id = $1
+  AND kind IN ('open_access', 'close_access')
+  AND coalesce(last_error, '') <> 'superseded by a newer team access change'
+ORDER BY created_at DESC
+LIMIT 500;

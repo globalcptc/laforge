@@ -97,6 +97,23 @@ CREATE TABLE public.agent_task (
     CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'leased'::text, 'done'::text, 'failed'::text, 'ignored'::text, 'blocked'::text])))
 );
 --
+-- Name: api_key; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.api_key (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    account_id uuid NOT NULL,
+    name text NOT NULL,
+    prefix text NOT NULL,
+    token_hash text NOT NULL,
+    scope text DEFAULT 'read'::text NOT NULL,
+    repository_ids uuid[],
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    last_used_at timestamp with time zone,
+    revoked_at timestamp with time zone,
+    CONSTRAINT api_key_scope_check CHECK ((scope = 'read'::text))
+);
+--
 -- Name: attention_dismissal; Type: TABLE; Schema: public; Owner: -
 --
 CREATE TABLE public.attention_dismissal (
@@ -493,6 +510,25 @@ CREATE TABLE public.instance_admin (
     github_login text NOT NULL,
     added_by text,
     created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+--
+-- Name: mcp_audit; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.mcp_audit (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    api_key_id uuid NOT NULL,
+    account_id uuid NOT NULL,
+    tool text NOT NULL,
+    args jsonb DEFAULT '{}'::jsonb NOT NULL,
+    build_id uuid,
+    status text NOT NULL,
+    error text DEFAULT ''::text NOT NULL,
+    duration_ms integer DEFAULT 0 NOT NULL,
+    result_bytes integer DEFAULT 0 NOT NULL,
+    remote_addr text DEFAULT ''::text NOT NULL,
+    user_agent text DEFAULT ''::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT mcp_audit_status_check CHECK ((status = ANY (ARRAY['ok'::text, 'denied'::text, 'error'::text, 'rate_limited'::text])))
 );
 --
 -- Name: microcloud_public_address; Type: TABLE; Schema: public; Owner: -

@@ -34,6 +34,7 @@ import (
 	"github.com/globalcptc/laforge/internal/db"
 	"github.com/globalcptc/laforge/internal/envfile"
 	"github.com/globalcptc/laforge/internal/ghclient"
+	"github.com/globalcptc/laforge/internal/mcp"
 )
 
 func main() {
@@ -174,6 +175,21 @@ func main() {
 			BaseDir: envOr("CHECKOUT_CACHE_DIR", filepath.Join(os.TempDir(), "laforge-checkouts")),
 			Q:       q, GH: gh, AppID: appID, AppPrivateKey: appPrivateKey, ServiceToken: serviceToken,
 		}
+	}
+	// The read-only MCP server (/mcp, internal/mcp) runs only when
+	// MCP_DATABASE_URL is set. It must connect as the laforge_mcp role
+	// (migrations/00081) -- OpenPool refuses anything else -- because that
+	// role's grants are what make it read-only.
+	if mcpURL := os.Getenv("MCP_DATABASE_URL"); mcpURL != "" {
+		mq, mpool, err := mcp.OpenPool(ctx, mcpURL)
+		if err != nil {
+			log.Fatalf("connecting the MCP server to the database: %v", err)
+		}
+		defer mpool.Close()
+		mcpServer := mcp.New(mcp.Config{Queries: mq, Access: server.MCPAccess()})
+		server.MCP = mcpServer.Handler()
+		server.MCPKeysChanged = mcpServer.ForgetKeys
+		log.Printf("laforge-api: read-only MCP server enabled at /mcp")
 	}
 	// Header and idle timeouts only: SSE and WebSocket handlers hold a
 	// response open for as long as the client stays, so no WriteTimeout.

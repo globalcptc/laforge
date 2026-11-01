@@ -407,6 +407,16 @@ func main() {
 		if n > 0 {
 			log.Printf("cleaned up %d agent_heartbeat row(s) older than %s", n, *heartbeatRetention)
 		}
+		// The MCP server's call audit (mcp_audit) rides along on the same
+		// pass, with its own fixed 30-day window.
+		n, err = q.DeleteMcpAuditOlderThan(ctx, pgtype.Timestamptz{Time: time.Now().Add(-mcpAuditRetention), Valid: true})
+		if err != nil {
+			log.Printf("cleaning up mcp_audit: %v", err)
+			return
+		}
+		if n > 0 {
+			log.Printf("cleaned up %d mcp_audit row(s) older than %s", n, mcpAuditRetention)
+		}
 	}
 
 	// Repeating-event retention: the orchestrator's "still waiting" journal
@@ -740,3 +750,7 @@ func (j *tickJobs) run(ctx context.Context, name string, timeout time.Duration, 
 		fn(jctx)
 	}()
 }
+
+// mcpAuditRetention is how long the read-only MCP server's per-call audit
+// rows (mcp_audit) are kept.
+const mcpAuditRetention = 30 * 24 * time.Hour

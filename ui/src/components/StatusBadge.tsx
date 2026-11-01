@@ -22,6 +22,9 @@ import {
   TrashOff,
   Wrench,
   ShieldOff,
+  ShieldAlert,
+  Lock,
+  LockOpen,
   type LucideIcon,
 } from 'lucide-react'
 import { Badge, cn, Modal, type BadgeProps } from '../ui'
@@ -73,6 +76,10 @@ type Kind =
   | 'destroyed'
   | 'open'
   | 'closed'
+  | 'opening'
+  | 'closing'
+  | 'open_failed'
+  | 'close_failed'
   | 'booting'
   | 'healthy'
   | 'late'
@@ -150,6 +157,12 @@ const STYLES: Record<Kind, { icon: LucideIcon; anim?: Anim; tone: BadgeProps['to
   destroyed: { icon: PowerOff, tone: 'neutral', label: 'Destroyed' },
   open: { icon: CircleCheck, tone: 'success', label: 'Open' },
   closed: { icon: MinusCircle, tone: 'warning', label: 'Closed' },
+  // A team's access change on its way: queued or running on the builder. Moving,
+  // so animated; tinted toward where it's heading.
+  opening: { icon: LockOpen, anim: 'pulse', tone: 'sky', label: 'Opening' },
+  closing: { icon: Lock, anim: 'pulse', tone: 'warning', label: 'Closing' },
+  open_failed: { icon: ShieldAlert, tone: 'danger', label: 'Open Failed' },
+  close_failed: { icon: ShieldAlert, tone: 'danger', label: 'Close Failed' },
   booting: { icon: Power, anim: 'pulse', tone: 'sky', label: 'Booting' },
   // Resting-good agent state: still. Late/missing need attention: animated.
   healthy: { icon: CircleCheck, tone: 'success', label: 'Agent Healthy' },
@@ -214,6 +227,10 @@ const STATUS_DESC: Partial<Record<Kind, string>> = {
   destroyed: 'Removed from the hoster.',
   open: 'External ingress is allowed.',
   closed: 'Ingress is blocked; connections dropped.',
+  opening: 'Opening is queued or running on the builder; the team flips to Open when it finishes.',
+  closing: 'Closing is queued or running on the builder; the team flips to Closed when it finishes.',
+  open_failed: 'The last attempt to open this team failed; it is still closed.',
+  close_failed: 'The last attempt to close this team failed; it is still open.',
   booting: 'Instance is up; no agent heartbeat yet.',
   healthy: 'Agent checked in within the window.',
   late: 'Agent is overdue for a check-in.',
@@ -479,7 +496,7 @@ export function StatusLegendDialog({ open, onClose }: { open: boolean; onClose: 
       <div className="flex flex-col gap-4">
         <LegendRows title="Lifecycle" states={LIFECYCLE_STATES} />
         <LegendRows title="Agent Check-In" states={AGENT_STATES} />
-        <LegendRows title="Team Access" states={['open', 'closed']} />
+        <LegendRows title="Team Access" states={['open', 'opening', 'closed', 'closing', 'open_failed', 'close_failed']} />
       </div>
     </Modal>
   )

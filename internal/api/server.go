@@ -19,6 +19,7 @@ package api
 
 import (
 	"crypto/rsa"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -126,7 +127,20 @@ type Server struct {
 	CACertPath     string
 	ServerCertPath string
 
+	// MCP is the read-only MCP endpoint (internal/mcp), served at /mcp ahead
+	// of the REST routes: none of the REST middleware, CORS, logging or cache
+	// busting below applies to it, and no REST handler can be reached through
+	// it. Nil when the MCP server isn't configured (no MCP_DATABASE_URL).
+	MCP http.Handler
+	// MCPKeysChanged is called after an API key is revoked, so the MCP
+	// server drops its cached copy at once rather than within seconds.
+	MCPKeysChanged func()
+
 	mux *http.ServeMux
+	// readMux holds only the read routes the MCP server may reach, actionMux
+	// its one action, power (mcp_bridge.go).
+	readMux   *http.ServeMux
+	actionMux *http.ServeMux
 }
 
 func New(q *db.Queries, pool *pgxpool.Pool, gh *ghclient.Client, webhookSecret, serviceToken string) *Server {
@@ -146,6 +160,14 @@ func New(q *db.Queries, pool *pgxpool.Pool, gh *ghclient.Client, webhookSecret, 
 // allowed origin has to be echoed back exactly, checked against
 // s.UIBaseURL.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/mcp" {
+		if s.MCP == nil {
+			writeError(w, http.StatusNotFound, errors.New("the MCP server isn't enabled on this LaForge"))
+			return
+		}
+		s.MCP.ServeHTTP(w, r)
+		return
+	}
 	if origin := r.Header.Get("Origin"); origin != "" && s.UIBaseURL != "" && origin == s.UIBaseURL {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -215,6 +237,9 @@ func (w *statusRecorder) Unwrap() http.ResponseWriter { return w.ResponseWriter 
 // actorFor names who made a request, for the log: the session's or token's
 // GitHub login, the agent or site for machine callers, or "anonymous".
 func (s *Server) actorFor(r *http.Request) string {
+	if id, ok := mcpIdentityFrom(r.Context()); ok {
+		return id.login + " (via MCP)"
+	}
 	if sess, err := s.sessionFromRequest(r); err == nil && sess.GithubLogin != "" {
 		return sess.GithubLogin
 	}
@@ -304,6 +329,13 @@ func (s *Server) routes() {
 	mux.HandleFunc("POST /auth/logout", s.handleLogout)
 	mux.HandleFunc("GET /auth/me", s.handleMe)
 	mux.HandleFunc("POST /auth/me/timezone", s.handleSetTimezone)
+	mux.HandleFunc("GET /auth/api-keys", s.handleListAPIKeys)
+	mux.HandleFunc("POST /auth/api-keys", s.handleCreateAPIKey)
+	mux.HandleFunc("GET /auth/api-keys/activity", s.handleListAPIKeyActivity)
+	mux.HandleFunc("DELETE /auth/api-keys/{id}", s.handleRevokeAPIKey)
+	mux.HandleFunc("GET /admin/api-keys", s.handleAdminListAPIKeys)
+	mux.HandleFunc("GET /admin/api-keys/activity", s.handleAdminListAPIKeyActivity)
+	mux.HandleFunc("DELETE /admin/api-keys/{id}", s.handleAdminRevokeAPIKey)
 
 	mux.HandleFunc("GET /repos/{id}/builds", s.handleListBuilds)
 	mux.HandleFunc("GET /repos/{id}/access", s.handleListRepositoryAccess)
@@ -365,4 +397,6 @@ func (s *Server) routes() {
 	mux.HandleFunc("POST /builds/{id}/apply-upcoming", s.handleApplyUpcoming)
 
 	s.mux = mux
+	s.readMux = s.readRoutes()
+	s.actionMux = s.actionRoutes()
 }

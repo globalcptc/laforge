@@ -24,6 +24,9 @@ import type {
   ImageBuildLogResponse,
   RegistryCredential,
   InstanceAdmin,
+  ApiKey,
+  CreatedApiKey,
+  McpActivity,
   TokenCheck,
   BuilderConnection,
   BuilderSummary,
@@ -1191,5 +1194,60 @@ export function useBuildReadiness(buildId: string | undefined, enabled = true) {
     queryKey: ['build-readiness', buildId],
     queryFn: () => api.get(`/builds/${buildId}/readiness`),
     enabled: !!buildId && enabled,
+  })
+}
+
+// Personal API keys (the user menu's API Keys page), and every key on the
+// instance for admins.
+export function useApiKeys() {
+  return useQuery<ApiKey[]>({ queryKey: ['api-keys'], queryFn: () => api.get('/auth/api-keys') })
+}
+
+export function useCreateApiKey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { name: string; expires_in_days: number; repository_ids: string[] }) => api.post<CreatedApiKey>('/auth/api-keys', body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['api-keys'] }),
+  })
+}
+
+export function useRevokeApiKey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<ApiKey>(`/auth/api-keys/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['api-keys'] })
+      qc.invalidateQueries({ queryKey: ['admin-api-keys'] })
+    },
+  })
+}
+
+export function useAdminApiKeys() {
+  return useQuery<ApiKey[]>({ queryKey: ['admin-api-keys'], queryFn: () => api.get('/admin/api-keys'), retry: false })
+}
+
+export function useAdminRevokeApiKey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<ApiKey>(`/admin/api-keys/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-api-keys'] })
+      qc.invalidateQueries({ queryKey: ['api-keys'] })
+    },
+  })
+}
+
+// Recent MCP calls made with your own keys, and everyone's for admins.
+// Refreshed every 30 seconds while the page is open.
+export function useApiKeyActivity() {
+  return useQuery<McpActivity[]>({ queryKey: ['api-key-activity'], queryFn: () => api.get('/auth/api-keys/activity'), refetchInterval: 30_000 })
+}
+
+export function useAdminApiKeyActivity() {
+  return useQuery<McpActivity[]>({
+    queryKey: ['admin-api-key-activity'],
+    queryFn: () => api.get('/admin/api-keys/activity'),
+    refetchInterval: 30_000,
+    retry: false,
   })
 }

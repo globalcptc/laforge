@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, ChevronDown, LogOut, Monitor, Moon, Sun } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Check, ChevronDown, KeyRound, LogOut, Monitor, Moon, Sun } from 'lucide-react'
 import { AnchoredPopover, Badge, Select, cn, type ThemePreference } from '../ui'
 import { DARK_QUERY, THEME_STORAGE_KEY } from '../ui/theme-script'
 import { useSetTimezone } from '../api/hooks'
@@ -45,7 +46,7 @@ function Avatar({ url, size }: { url?: string; size: string }) {
 }
 
 // The signed-in person's menu in the navbar: who they are, the theme, and
-// signing out -- one control instead of a row of separate buttons.
+// API keys, and signing out -- one control instead of a row of separate buttons.
 export function UserMenu({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
   const [open, setOpen] = useState(false)
   const [theme, setTheme] = useState<ThemePreference>(readTheme)
@@ -107,7 +108,7 @@ export function UserMenu({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
         <ChevronDown size={14} className="text-fg-subtle" />
       </button>
       {open && (
-        <AnchoredPopover anchorRef={anchorRef} panelRef={panelRef} minWidth={240} maxHeight={360} role="menu">
+        <AnchoredPopover anchorRef={anchorRef} panelRef={panelRef} minWidth={240} maxHeight={400} role="menu">
           <div className="flex items-center gap-3 border-b border-border px-3 py-3">
             <Avatar url={me.avatar_url} size="size-9" />
             <div className="min-w-0">
@@ -161,6 +162,15 @@ export function UserMenu({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
             </div>
           </div>
           <div className="p-1">
+            <Link
+              to="/settings/api-keys"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex w-full items-center gap-2 rounded-token-sm px-2.5 py-1.5 text-left text-sm text-fg hover:bg-surface-hover"
+            >
+              <KeyRound className="size-3.5" aria-hidden />
+              API Keys
+            </Link>
             <button
               type="button"
               role="menuitem"

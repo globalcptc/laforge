@@ -104,6 +104,25 @@ func (f *fakeGitHub) handler() http.HandlerFunc {
 				CloneURL:      f.cloneURL,
 				Permissions:   ghclient.RepoPermissions{Admin: admin, Push: push, Pull: pull},
 			})
+		case strings.HasSuffix(r.URL.Path, "/permission") && strings.Contains(r.URL.Path, "/collaborators/"):
+			// GetCollaboratorPermission: /repos/{owner}/{repo}/collaborators/{login}/permission,
+			// answered from the same collaborators list; not on it is a 404.
+			rest := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/repos/"), "/permission")
+			full, login, _ := strings.Cut(rest, "/collaborators/")
+			for _, c := range f.collaborators[full] {
+				if strings.EqualFold(c.Login, login) {
+					perm := "read"
+					switch {
+					case c.Permissions.Admin:
+						perm = "admin"
+					case c.Permissions.Push:
+						perm = "write"
+					}
+					json.NewEncoder(w).Encode(map[string]string{"permission": perm})
+					return
+				}
+			}
+			w.WriteHeader(http.StatusNotFound)
 		case strings.HasSuffix(r.URL.Path, "/collaborators") && strings.HasPrefix(r.URL.Path, "/repos/"):
 			full := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/repos/"), "/collaborators")
 			collabs, ok := f.collaborators[full]

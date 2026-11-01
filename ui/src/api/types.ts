@@ -107,6 +107,19 @@ export interface Team {
   // environment's access: windows; 'open'/'closed' = hold that state until
   // access_override_until (then the schedule resumes).
   access_override_state: '' | 'open' | 'closed'
+  // The team's queued, running or last-failed open/close (internal/api/
+  // access_change.go). access_state only flips once the builder call finishes,
+  // which can take minutes; this is what shows it's on its way. Absent when
+  // nothing is in flight.
+  access_change?: AccessChange
+}
+
+export interface AccessChange {
+  direction: 'opening' | 'closing'
+  state: 'queued' | 'running' | 'failed'
+  since: string
+  attempts?: number
+  error?: string
 }
 
 export type ObjectKind = 'network' | 'host' | 'container'
@@ -268,6 +281,51 @@ export interface Me {
 }
 
 export type AccessLevel = 'read' | 'build' | 'manage' | 'admin'
+
+/** A personal API key, for an AI agent reading builds through the MCP server. The key itself is never returned after creation. */
+export interface ApiKey {
+  id: string
+  name: string
+  /** The key's first characters, e.g. "lfk_ab12cd34". */
+  prefix: string
+  scope: 'read'
+  /** Empty means every repository the owner can read. */
+  repository_ids: string[]
+  created_at: string
+  expires_at: string
+  last_used_at: string | null
+  revoked_at: string | null
+  status: 'active' | 'expired' | 'revoked'
+  /** Set on the admin listing only. */
+  owner_login?: string
+  owner_avatar_url?: string
+}
+
+/** One MCP tool call made with an API key (the mcp_audit table). */
+export interface McpActivity {
+  id: string
+  tool: string
+  args: Record<string, unknown> | null
+  build_id: string | null
+  status: 'ok' | 'denied' | 'error' | 'rate_limited'
+  error: string
+  duration_ms: number
+  result_bytes: number
+  remote_addr: string
+  user_agent: string
+  created_at: string
+  key_id: string
+  key_name: string
+  key_prefix: string
+  /** Set on the admin listing only. */
+  owner_login?: string
+}
+
+export interface CreatedApiKey {
+  key: ApiKey
+  /** The full key, shown once. */
+  token: string
+}
 
 export interface AdHocTarget {
   ids?: string[]

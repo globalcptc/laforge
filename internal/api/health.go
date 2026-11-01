@@ -13,33 +13,16 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/globalcptc/laforge/internal/agenthealth"
 	"github.com/globalcptc/laforge/internal/db"
 )
 
-// healthyWindow/lateWindow are fixed defaults, not read from the actual
-// gateway's configured BasePollMS/JitterMS for whichever build this is
-// (internal/gateway.Server's poll interval is a deploy-time setting, not
-// stored per build) -- a real gap, not pretended otherwise: these are
-// reasonable thresholds for the "a few tens of seconds" heartbeat this
-// project's own tests and examples use, not a value derived from what a
-// specific live deployment actually configured.
-const (
-	healthyWindow = 90 * time.Second
-	lateWindow    = 5 * time.Minute
-)
+// infraUp is agenthealth.InfraUp, kept under its local name for this
+// package's other callers.
+func infraUp(status string) bool { return agenthealth.InfraUp(status) }
 
-// infraUp reports whether an object's status means its instance is actually
-// up at the hoster -- the point past which asking "is the agent checked in"
-// becomes meaningful. Mirrors internal/orchestrator.infraUp; kept as its own
-// small copy rather than exported across the package boundary since the two
-// are the same short list for the same reason but serve different layers.
-func infraUp(status string) bool {
-	switch status {
-	case "running", "building", "finished", "build_failed", "invalid":
-		return true
-	}
-	return false
-}
+// lateWindow is how long an agent can go quiet before it counts as missing.
+const lateWindow = agenthealth.Late
 
 type agentHealth struct {
 	LastHeartbeatAt *time.Time `json:"last_heartbeat_at,omitempty"`
@@ -77,39 +60,22 @@ func attachAgentHealth(ctx context.Context, q *db.Queries, buildID pgtype.UUID, 
 	out := make([]objectView, len(objs))
 	for i, o := range objs {
 		out[i] = objectView{DeployedObject: o}
-		if o.Kind == "network" {
-			continue // networks run no agent; they never carry agent health
+		in := agenthealth.Object{Kind: o.Kind, Status: o.Status, CheckinOverdue: o.AgentCheckinOverdueAt.Valid}
+		if o.DeployedAt.Valid {
+			in.DeployedAt = o.DeployedAt.Time
 		}
-		if !infraUp(o.Status) {
-			continue // agent health only makes sense once the instance is up
+		if sess, ok := byObject[o.ID.String()]; ok && sess.LastHeartbeatAt.Valid {
+			in.LastHeartbeat = sess.LastHeartbeatAt.Time
 		}
-		sess, ok := byObject[o.ID.String()]
-		// A rebuilt host keeps its old session row; a heartbeat from before the
-		// redeploy says nothing about the new instance's agent.
-		if ok && o.DeployedAt.Valid && sess.LastHeartbeatAt.Time.Before(o.DeployedAt.Time) {
-			ok = false
-		}
+		status, last, ok := agenthealth.Classify(in, now)
 		if !ok {
-			// Still booting -- until the orchestrator's check-in watchdog
-			// flags the agent as overdue, at which point it's missing (and
-			// lands in the build's needs-attention list).
-			status := "booting"
-			if o.AgentCheckinOverdueAt.Valid {
-				status = "missing"
-			}
-			out[i].Agent = &agentHealth{Status: status}
-			continue
+			continue // networks, and objects whose instance isn't up, carry no agent health
 		}
-		last := sess.LastHeartbeatAt.Time
-		age := now.Sub(last)
-		status := "missing"
-		switch {
-		case age <= healthyWindow:
-			status = "healthy"
-		case age <= lateWindow:
-			status = "late"
+		h := &agentHealth{Status: status}
+		if !last.IsZero() {
+			h.LastHeartbeatAt = &last
 		}
-		out[i].Agent = &agentHealth{LastHeartbeatAt: &last, Status: status}
+		out[i].Agent = h
 	}
 	return out, nil
 }

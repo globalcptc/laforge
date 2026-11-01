@@ -361,6 +361,11 @@ type authSession struct {
 // or it's expired/unknown -- callers use writeAuthError exactly like the
 // bearer-token path already does, one error vocabulary either way.
 func (s *Server) sessionFromRequest(r *http.Request) (authSession, error) {
+	// A read bridged from the MCP server runs as the API key's owner
+	// (mcp_bridge.go); nothing an HTTP client sends can set this.
+	if id, ok := mcpIdentityFrom(r.Context()); ok {
+		return mcpSession(id), nil
+	}
 	c, err := r.Cookie(sessionCookieName)
 	if err != nil || c.Value == "" {
 		return authSession{}, errUnauthenticated
@@ -494,6 +499,12 @@ func (s *Server) requireLevel(ctx context.Context, r *http.Request, repo db.Repo
 	if err != nil {
 		return authSession{}, err
 	}
+	// A read bridged from the MCP server is capped at read level, whatever
+	// its owner could do in the UI; only the action bridge (power) runs at
+	// the owner's real level (mcp_bridge.go).
+	if id, ok := mcpIdentityFrom(r.Context()); ok && !id.action && min > levelRead {
+		return authSession{}, errForbidden
+	}
 	effective, err := s.effectiveLevel(ctx, sess, repo)
 	if err != nil {
 		return authSession{}, err
@@ -517,6 +528,11 @@ func (s *Server) effectiveLevel(ctx context.Context, sess authSession, repo db.R
 	// let an admin see configured builds but not the builds list).
 	if s.isInstanceAdmin(sess) {
 		return levelAdmin, nil
+	}
+	// A read bridged from the MCP server runs as an API key's owner, who has
+	// no GitHub token here: ask GitHub about their login instead (mcp_access.go).
+	if _, ok := mcpIdentityFrom(ctx); ok {
+		return s.MCPAccess().level(ctx, sess.AccountID, sess.GithubLogin, repo)
 	}
 	if l, ok := s.auth.level(sess.AccountID, repo.ID); ok {
 		return l, nil
