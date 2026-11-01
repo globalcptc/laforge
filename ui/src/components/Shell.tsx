@@ -42,7 +42,8 @@ export function Shell() {
     qc.invalidateQueries()
   }
 
-  if (pathname === '/sign-in' || !me) {
+  // The OAuth consent page opens in a popup from ChatGPT or Claude: no nav.
+  if (pathname === '/sign-in' || pathname === '/oauth/consent' || !me) {
     return <Outlet />
   }
 

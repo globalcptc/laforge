@@ -34,6 +34,23 @@ type call struct {
 	readable map[pgtype.UUID]bool
 	// buildID is recorded on the audit row when the tool resolved one.
 	buildID pgtype.UUID
+
+	// What the activity log shows when the row is opened.
+	trace  *trace
+	timing callTiming
+	// result is the encoded result, kept for the audit's preview.
+	result []byte
+	// phase is where a failed call stopped.
+	phase string
+}
+
+// callTiming is how long each phase of a call took, in milliseconds.
+type callTiming struct {
+	QueueMs  float64 `json:"queue_ms"`
+	AccessMs float64 `json:"access_ms"`
+	RunMs    float64 `json:"run_ms"`
+	EncodeMs float64 `json:"encode_ms"`
+	TotalMs  float64 `json:"total_ms"`
 }
 
 func (c *call) q() *db.Queries { return c.s.cfg.Queries }
@@ -116,8 +133,10 @@ func addToolWith[In, Out any](s *Server, tool *sdk.Tool, h func(context.Context,
 			// key means it was mounted without it.
 			return nil, zero, errors.New("unauthenticated")
 		}
-		c := &call{s: s, key: key}
+		c := &call{s: s, key: key, trace: &trace{start: started}}
+		ctx = withTrace(ctx, c.trace)
 		out, size, status, err := runCall(ctx, s, c, func(ctx context.Context) (Out, error) { return h(ctx, c, in) })
+		c.timing.TotalMs = ms(time.Since(started))
 		s.audit(req, c, name, in, status, err, time.Since(started), size)
 		if err != nil {
 			return nil, zero, err
@@ -131,26 +150,46 @@ func addToolWith[In, Out any](s *Server, tool *sdk.Tool, h func(context.Context,
 func runCall[Out any](ctx context.Context, s *Server, c *call, body func(context.Context) (Out, error)) (Out, int, string, error) {
 	var zero Out
 	if ok, wait := s.lim.allow(c.key.AccountID, time.Now()); !ok {
+		c.phase = "rate limit"
 		return zero, 0, "rate_limited", fmt.Errorf("rate limited: too many calls from this account; retry in %s", wait.Round(100*time.Millisecond)+100*time.Millisecond)
 	}
+	queued := time.Now()
 	queue, cancel := context.WithTimeout(ctx, s.cfg.QueueWait)
 	defer cancel()
 	select {
 	case s.sem <- struct{}{}:
 		defer func() { <-s.sem }()
 	case <-queue.Done():
+		c.timing.QueueMs = ms(time.Since(queued))
+		c.phase = "queue"
 		return zero, 0, "rate_limited", errors.New("LaForge is busy serving other agents; retry in a few seconds")
 	}
+	c.timing.QueueMs = ms(time.Since(queued))
 	ctx, cancelCall := context.WithTimeout(ctx, s.cfg.CallTimeout)
 	defer cancelCall()
 
+	checked := time.Now()
 	readable, err := s.readableRepos(ctx, c.key)
+	c.timing.AccessMs = ms(time.Since(checked))
+	step := traceStep{Kind: "access", Name: "repositories this key can read"}
 	if err != nil {
+		step.Error = err.Error()
+	} else {
+		step.Detail = fmt.Sprintf("%d repositories", len(readable))
+	}
+	c.trace.add(step, checked)
+	if err != nil {
+		c.phase = "access check"
 		return zero, 0, "error", fmt.Errorf("checking access: %w", err)
 	}
 	c.readable = readable
 
+	ran := time.Now()
 	out, err := body(ctx)
+	c.timing.RunMs = ms(time.Since(ran))
+	if err != nil {
+		c.phase = "tool"
+	}
 	if errors.Is(err, errDenied) {
 		return zero, 0, "denied", err
 	}
@@ -160,11 +199,16 @@ func runCall[Out any](ctx context.Context, s *Server, c *call, body func(context
 	if err != nil {
 		return zero, 0, "error", err
 	}
+	encoded := time.Now()
 	b, err := json.Marshal(out)
+	c.timing.EncodeMs = ms(time.Since(encoded))
 	if err != nil {
+		c.phase = "encoding the result"
 		return zero, 0, "error", err
 	}
+	c.result = b
 	if len(b) > maxResultBytes {
+		c.phase = "result size"
 		return zero, len(b), "error", fmt.Errorf("the result is %d KB, over the %d KB limit; narrow it with the tool's filters or a smaller limit", len(b)>>10, maxResultBytes>>10)
 	}
 	return out, len(b), "ok", nil
@@ -173,7 +217,8 @@ func runCall[Out any](ctx context.Context, s *Server, c *call, body func(context
 // audit records the call. Best effort: a failed insert is logged, never
 // returned to the caller.
 func (s *Server) audit(req *sdk.CallToolRequest, c *call, tool string, in any, status string, callErr error, took time.Duration, size int) {
-	args, _ := json.Marshal(in)
+	fullArgs, _ := json.Marshal(in)
+	args := fullArgs
 	if len(args) > 2048 {
 		args, _ = json.Marshal(map[string]string{"truncated": string(args[:2000])})
 	}
@@ -181,17 +226,22 @@ func (s *Server) audit(req *sdk.CallToolRequest, c *call, tool string, in any, s
 	if callErr != nil {
 		errText = callErr.Error()
 	}
-	var remote, ua string
-	if req.Extra != nil && req.Extra.Header != nil {
-		remote = clientIP(req.Extra.Header)
-		ua = req.Extra.Header.Get("User-Agent")
+	var h http.Header
+	if req.Extra != nil {
+		h = req.Extra.Header
+	}
+	remote, ua := clientIP(h), h.Get("User-Agent")
+	detail, err := json.Marshal(buildDetail(c, tool, fullArgs, h, status, errText, size))
+	if err != nil {
+		log.Printf("mcp: encoding audit detail: %v", err)
+		detail = nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	if err := s.cfg.Queries.McpInsertAudit(ctx, db.McpInsertAuditParams{
 		ApiKeyID: c.key.ID, AccountID: c.key.AccountID, Tool: tool, Args: args, BuildID: c.buildID,
 		Status: status, Error: errText, DurationMs: int32(took.Milliseconds()), ResultBytes: int32(size),
-		RemoteAddr: remote, UserAgent: ua,
+		RemoteAddr: remote, UserAgent: ua, Detail: detail,
 	}); err != nil {
 		log.Printf("mcp: writing audit row: %v", err)
 	}
@@ -207,6 +257,9 @@ func (s *Server) audit(req *sdk.CallToolRequest, c *call, tool string, in any, s
 
 // clientIP is the caller's address as Cloudflare/Caddy report it.
 func clientIP(h http.Header) string {
+	if h == nil {
+		return ""
+	}
 	if v := h.Get("CF-Connecting-IP"); v != "" {
 		return v
 	}

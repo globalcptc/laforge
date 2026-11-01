@@ -112,7 +112,14 @@ func toolPower(ctx context.Context, c *call, in powerIn) (powerOut, error) {
 	}
 
 	body, _ := json.Marshal(map[string]any{"target": target, "action": in.Action, "force": in.Force})
-	status, resp, err := c.s.cfg.Access.Act(ctx, c.key.AccountID, c.key.Login, "/builds/"+id.String()+"/power", body)
+	path := "/builds/" + id.String() + "/power"
+	began := time.Now()
+	status, resp, err := c.s.cfg.Access.Act(ctx, c.key.AccountID, c.key.Login, path, body)
+	step := traceStep{Kind: "power", Name: "POST " + path, Detail: string(body), Status: status, Bytes: len(resp), Response: truncUTF8(string(resp), 16<<10)}
+	if err != nil {
+		step.Error = err.Error()
+	}
+	c.trace.add(step, began)
 	if err != nil {
 		return powerOut{}, err
 	}

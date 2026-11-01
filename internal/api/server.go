@@ -135,6 +135,12 @@ type Server struct {
 	// MCPKeysChanged is called after an API key is revoked, so the MCP
 	// server drops its cached copy at once rather than within seconds.
 	MCPKeysChanged func()
+	// OAuthRedirectHosts are the hosts an OAuth client's redirect URI may
+	// point at (oauth_server.go), lowercase. Nil means the default: the
+	// hosted apps that need OAuth (claude.ai, claude.com, chatgpt.com).
+	OAuthRedirectHosts []string
+	// oauth holds pending OAuth sign-ins and their codes (oauth_server.go).
+	oauth oauthState
 
 	mux *http.ServeMux
 	// readMux holds only the read routes the MCP server may reach, actionMux
@@ -166,6 +172,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.MCP.ServeHTTP(w, r)
+		return
+	}
+	// OAuth discovery, registration, authorize and token: for MCP clients,
+	// outside the cookie CORS below.
+	if s.serveOAuth(w, r) {
 		return
 	}
 	if origin := r.Header.Get("Origin"); origin != "" && s.UIBaseURL != "" && origin == s.UIBaseURL {
@@ -332,10 +343,14 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /auth/api-keys", s.handleListAPIKeys)
 	mux.HandleFunc("POST /auth/api-keys", s.handleCreateAPIKey)
 	mux.HandleFunc("GET /auth/api-keys/activity", s.handleListAPIKeyActivity)
+	mux.HandleFunc("GET /auth/api-keys/activity/{id}", s.handleGetAPIKeyActivity)
 	mux.HandleFunc("DELETE /auth/api-keys/{id}", s.handleRevokeAPIKey)
 	mux.HandleFunc("GET /admin/api-keys", s.handleAdminListAPIKeys)
 	mux.HandleFunc("GET /admin/api-keys/activity", s.handleAdminListAPIKeyActivity)
+	mux.HandleFunc("GET /admin/api-keys/activity/{id}", s.handleAdminGetAPIKeyActivity)
 	mux.HandleFunc("DELETE /admin/api-keys/{id}", s.handleAdminRevokeAPIKey)
+	mux.HandleFunc("GET /oauth/requests/{id}", s.handleGetOAuthRequest)
+	mux.HandleFunc("POST /oauth/requests/{id}", s.handleDecideOAuthRequest)
 
 	mux.HandleFunc("GET /repos/{id}/builds", s.handleListBuilds)
 	mux.HandleFunc("GET /repos/{id}/access", s.handleListRepositoryAccess)

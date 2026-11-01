@@ -459,8 +459,8 @@ func (q *Queries) McpHeartbeatGaps(ctx context.Context, arg McpHeartbeatGapsPara
 }
 
 const mcpInsertAudit = `-- name: McpInsertAudit :exec
-INSERT INTO mcp_audit (api_key_id, account_id, tool, args, build_id, status, error, duration_ms, result_bytes, remote_addr, user_agent)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO mcp_audit (api_key_id, account_id, tool, args, build_id, status, error, duration_ms, result_bytes, remote_addr, user_agent, detail)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 `
 
 type McpInsertAuditParams struct {
@@ -475,6 +475,7 @@ type McpInsertAuditParams struct {
 	ResultBytes int32           `json:"result_bytes"`
 	RemoteAddr  string          `json:"remote_addr"`
 	UserAgent   string          `json:"user_agent"`
+	Detail      json.RawMessage `json:"detail"`
 }
 
 func (q *Queries) McpInsertAudit(ctx context.Context, arg McpInsertAuditParams) error {
@@ -490,6 +491,7 @@ func (q *Queries) McpInsertAudit(ctx context.Context, arg McpInsertAuditParams) 
 		arg.ResultBytes,
 		arg.RemoteAddr,
 		arg.UserAgent,
+		arg.Detail,
 	)
 	return err
 }

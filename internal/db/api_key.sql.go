@@ -14,11 +14,46 @@ import (
 
 const countActiveAPIKeysByAccount = `-- name: CountActiveAPIKeysByAccount :one
 SELECT count(*) FROM api_key
-WHERE account_id = $1 AND revoked_at IS NULL AND expires_at > now()
+WHERE account_id = $1 AND oauth_client_id IS NULL AND revoked_at IS NULL AND expires_at > now()
 `
 
+// Pasted keys only; connected apps have their own cap.
 func (q *Queries) CountActiveAPIKeysByAccount(ctx context.Context, accountID pgtype.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countActiveAPIKeysByAccount, accountID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countActiveOAuthKeysByAccount = `-- name: CountActiveOAuthKeysByAccount :one
+SELECT count(*) FROM api_key
+WHERE account_id = $1 AND oauth_client_id IS NOT NULL AND revoked_at IS NULL AND expires_at > now()
+`
+
+func (q *Queries) CountActiveOAuthKeysByAccount(ctx context.Context, accountID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveOAuthKeysByAccount, accountID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countMcpActivity = `-- name: CountMcpActivity :one
+SELECT count(*) FROM mcp_audit
+`
+
+func (q *Queries) CountMcpActivity(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countMcpActivity)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countMcpActivityByAccount = `-- name: CountMcpActivityByAccount :one
+SELECT count(*) FROM mcp_audit WHERE account_id = $1
+`
+
+func (q *Queries) CountMcpActivityByAccount(ctx context.Context, accountID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countMcpActivityByAccount, accountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -79,6 +114,37 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (Cre
 	return i, err
 }
 
+const createOAuthAPIKey = `-- name: CreateOAuthAPIKey :one
+INSERT INTO api_key (account_id, name, prefix, token_hash, expires_at, oauth_client_id)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id
+`
+
+type CreateOAuthAPIKeyParams struct {
+	AccountID     pgtype.UUID        `json:"account_id"`
+	Name          string             `json:"name"`
+	Prefix        string             `json:"prefix"`
+	TokenHash     string             `json:"token_hash"`
+	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
+	OauthClientID pgtype.UUID        `json:"oauth_client_id"`
+}
+
+// The key an OAuth sign-in hands to a connected app: an ordinary read key,
+// tied to the client that asked for it.
+func (q *Queries) CreateOAuthAPIKey(ctx context.Context, arg CreateOAuthAPIKeyParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createOAuthAPIKey,
+		arg.AccountID,
+		arg.Name,
+		arg.Prefix,
+		arg.TokenHash,
+		arg.ExpiresAt,
+		arg.OauthClientID,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const deleteMcpAuditOlderThan = `-- name: DeleteMcpAuditOlderThan :execrows
 DELETE FROM mcp_audit WHERE created_at < $1
 `
@@ -92,28 +158,89 @@ func (q *Queries) DeleteMcpAuditOlderThan(ctx context.Context, createdAt pgtype.
 	return result.RowsAffected(), nil
 }
 
+const getMcpActivity = `-- name: GetMcpActivity :one
+SELECT m.id, m.account_id, m.tool, m.args, m.build_id, m.status, m.error, m.duration_ms, m.result_bytes,
+       m.remote_addr, m.user_agent, m.created_at, m.detail, k.id AS key_id, k.name AS key_name, k.prefix AS key_prefix,
+       a.github_login AS owner_login
+FROM mcp_audit m
+JOIN api_key k ON k.id = m.api_key_id
+JOIN account a ON a.id = m.account_id
+WHERE m.id = $1
+`
+
+type GetMcpActivityRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	AccountID   pgtype.UUID        `json:"account_id"`
+	Tool        string             `json:"tool"`
+	Args        json.RawMessage    `json:"args"`
+	BuildID     pgtype.UUID        `json:"build_id"`
+	Status      string             `json:"status"`
+	Error       string             `json:"error"`
+	DurationMs  int32              `json:"duration_ms"`
+	ResultBytes int32              `json:"result_bytes"`
+	RemoteAddr  string             `json:"remote_addr"`
+	UserAgent   string             `json:"user_agent"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Detail      json.RawMessage    `json:"detail"`
+	KeyID       pgtype.UUID        `json:"key_id"`
+	KeyName     string             `json:"key_name"`
+	KeyPrefix   string             `json:"key_prefix"`
+	OwnerLogin  string             `json:"owner_login"`
+}
+
+// One MCP call with its full detail, for an opened activity row.
+func (q *Queries) GetMcpActivity(ctx context.Context, id pgtype.UUID) (GetMcpActivityRow, error) {
+	row := q.db.QueryRow(ctx, getMcpActivity, id)
+	var i GetMcpActivityRow
+	err := row.Scan(
+		&i.ID,
+		&i.AccountID,
+		&i.Tool,
+		&i.Args,
+		&i.BuildID,
+		&i.Status,
+		&i.Error,
+		&i.DurationMs,
+		&i.ResultBytes,
+		&i.RemoteAddr,
+		&i.UserAgent,
+		&i.CreatedAt,
+		&i.Detail,
+		&i.KeyID,
+		&i.KeyName,
+		&i.KeyPrefix,
+		&i.OwnerLogin,
+	)
+	return i, err
+}
+
 const listAPIKeysByAccount = `-- name: ListAPIKeysByAccount :many
-SELECT id, account_id, name, prefix, scope, repository_ids, created_at, expires_at, last_used_at, revoked_at
-FROM api_key
-WHERE account_id = $1
-ORDER BY created_at DESC
+SELECT k.id, k.account_id, k.name, k.prefix, k.scope, k.repository_ids, k.created_at, k.expires_at,
+       k.last_used_at, k.revoked_at, k.oauth_client_id, c.redirect_uris AS oauth_redirect_uris
+FROM api_key k
+LEFT JOIN oauth_client c ON c.id = k.oauth_client_id
+WHERE k.account_id = $1
+ORDER BY k.created_at DESC
 `
 
 type ListAPIKeysByAccountRow struct {
-	ID            pgtype.UUID        `json:"id"`
-	AccountID     pgtype.UUID        `json:"account_id"`
-	Name          string             `json:"name"`
-	Prefix        string             `json:"prefix"`
-	Scope         string             `json:"scope"`
-	RepositoryIds []pgtype.UUID      `json:"repository_ids"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
-	LastUsedAt    pgtype.Timestamptz `json:"last_used_at"`
-	RevokedAt     pgtype.Timestamptz `json:"revoked_at"`
+	ID                pgtype.UUID        `json:"id"`
+	AccountID         pgtype.UUID        `json:"account_id"`
+	Name              string             `json:"name"`
+	Prefix            string             `json:"prefix"`
+	Scope             string             `json:"scope"`
+	RepositoryIds     []pgtype.UUID      `json:"repository_ids"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	LastUsedAt        pgtype.Timestamptz `json:"last_used_at"`
+	RevokedAt         pgtype.Timestamptz `json:"revoked_at"`
+	OauthClientID     pgtype.UUID        `json:"oauth_client_id"`
+	OauthRedirectUris []string           `json:"oauth_redirect_uris"`
 }
 
 // A person's own keys, newest first, active and inactive alike (the page hides
-// inactive ones behind a toggle).
+// inactive ones behind a toggle). Keys with an OAuth client are connected apps
+// (migrations/00083); the client's redirect URIs name where it lives.
 func (q *Queries) ListAPIKeysByAccount(ctx context.Context, accountID pgtype.UUID) ([]ListAPIKeysByAccountRow, error) {
 	rows, err := q.db.Query(ctx, listAPIKeysByAccount, accountID)
 	if err != nil {
@@ -134,6 +261,8 @@ func (q *Queries) ListAPIKeysByAccount(ctx context.Context, accountID pgtype.UUI
 			&i.ExpiresAt,
 			&i.LastUsedAt,
 			&i.RevokedAt,
+			&i.OauthClientID,
+			&i.OauthRedirectUris,
 		); err != nil {
 			return nil, err
 		}
@@ -147,25 +276,29 @@ func (q *Queries) ListAPIKeysByAccount(ctx context.Context, accountID pgtype.UUI
 
 const listAPIKeysWithOwner = `-- name: ListAPIKeysWithOwner :many
 SELECT k.id, k.account_id, k.name, k.prefix, k.scope, k.repository_ids, k.created_at, k.expires_at,
-       k.last_used_at, k.revoked_at, a.github_login AS owner_login, a.avatar_url AS owner_avatar_url
+       k.last_used_at, k.revoked_at, k.oauth_client_id, c.redirect_uris AS oauth_redirect_uris,
+       a.github_login AS owner_login, a.avatar_url AS owner_avatar_url
 FROM api_key k
 JOIN account a ON a.id = k.account_id
+LEFT JOIN oauth_client c ON c.id = k.oauth_client_id
 ORDER BY k.created_at DESC
 `
 
 type ListAPIKeysWithOwnerRow struct {
-	ID             pgtype.UUID        `json:"id"`
-	AccountID      pgtype.UUID        `json:"account_id"`
-	Name           string             `json:"name"`
-	Prefix         string             `json:"prefix"`
-	Scope          string             `json:"scope"`
-	RepositoryIds  []pgtype.UUID      `json:"repository_ids"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	ExpiresAt      pgtype.Timestamptz `json:"expires_at"`
-	LastUsedAt     pgtype.Timestamptz `json:"last_used_at"`
-	RevokedAt      pgtype.Timestamptz `json:"revoked_at"`
-	OwnerLogin     string             `json:"owner_login"`
-	OwnerAvatarUrl *string            `json:"owner_avatar_url"`
+	ID                pgtype.UUID        `json:"id"`
+	AccountID         pgtype.UUID        `json:"account_id"`
+	Name              string             `json:"name"`
+	Prefix            string             `json:"prefix"`
+	Scope             string             `json:"scope"`
+	RepositoryIds     []pgtype.UUID      `json:"repository_ids"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	LastUsedAt        pgtype.Timestamptz `json:"last_used_at"`
+	RevokedAt         pgtype.Timestamptz `json:"revoked_at"`
+	OauthClientID     pgtype.UUID        `json:"oauth_client_id"`
+	OauthRedirectUris []string           `json:"oauth_redirect_uris"`
+	OwnerLogin        string             `json:"owner_login"`
+	OwnerAvatarUrl    *string            `json:"owner_avatar_url"`
 }
 
 // Every key on the instance with its owner, for the admin page.
@@ -189,6 +322,8 @@ func (q *Queries) ListAPIKeysWithOwner(ctx context.Context) ([]ListAPIKeysWithOw
 			&i.ExpiresAt,
 			&i.LastUsedAt,
 			&i.RevokedAt,
+			&i.OauthClientID,
+			&i.OauthRedirectUris,
 			&i.OwnerLogin,
 			&i.OwnerAvatarUrl,
 		); err != nil {
@@ -209,9 +344,16 @@ SELECT m.id, m.tool, m.args, m.build_id, m.status, m.error, m.duration_ms, m.res
 FROM mcp_audit m
 JOIN api_key k ON k.id = m.api_key_id
 JOIN account a ON a.id = m.account_id
-ORDER BY m.created_at DESC
-LIMIT $1
+WHERE ($1::timestamptz IS NULL OR (m.created_at, m.id) < ($1::timestamptz, $2::uuid))
+ORDER BY m.created_at DESC, m.id DESC
+LIMIT $3
 `
+
+type ListMcpActivityParams struct {
+	BeforeAt pgtype.Timestamptz `json:"before_at"`
+	BeforeID pgtype.UUID        `json:"before_id"`
+	PageSize int32              `json:"page_size"`
+}
 
 type ListMcpActivityRow struct {
 	ID          pgtype.UUID        `json:"id"`
@@ -231,9 +373,9 @@ type ListMcpActivityRow struct {
 	OwnerLogin  string             `json:"owner_login"`
 }
 
-// Everyone's recent MCP calls, newest first, for the admin API Keys page.
-func (q *Queries) ListMcpActivity(ctx context.Context, limit int32) ([]ListMcpActivityRow, error) {
-	rows, err := q.db.Query(ctx, listMcpActivity, limit)
+// Everyone's MCP calls, newest first, a page at a time, for admins.
+func (q *Queries) ListMcpActivity(ctx context.Context, arg ListMcpActivityParams) ([]ListMcpActivityRow, error) {
+	rows, err := q.db.Query(ctx, listMcpActivity, arg.BeforeAt, arg.BeforeID, arg.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -274,13 +416,16 @@ SELECT m.id, m.tool, m.args, m.build_id, m.status, m.error, m.duration_ms, m.res
 FROM mcp_audit m
 JOIN api_key k ON k.id = m.api_key_id
 WHERE m.account_id = $1
-ORDER BY m.created_at DESC
-LIMIT $2
+  AND ($2::timestamptz IS NULL OR (m.created_at, m.id) < ($2::timestamptz, $3::uuid))
+ORDER BY m.created_at DESC, m.id DESC
+LIMIT $4
 `
 
 type ListMcpActivityByAccountParams struct {
-	AccountID pgtype.UUID `json:"account_id"`
-	Limit     int32       `json:"limit"`
+	AccountID pgtype.UUID        `json:"account_id"`
+	BeforeAt  pgtype.Timestamptz `json:"before_at"`
+	BeforeID  pgtype.UUID        `json:"before_id"`
+	PageSize  int32              `json:"page_size"`
 }
 
 type ListMcpActivityByAccountRow struct {
@@ -300,9 +445,15 @@ type ListMcpActivityByAccountRow struct {
 	KeyPrefix   string             `json:"key_prefix"`
 }
 
-// A person's own recent MCP calls, newest first, for the API Keys page.
+// A person's own MCP calls, newest first, a page at a time: pass the last
+// row's created_at and id as before_at/before_id for the next page.
 func (q *Queries) ListMcpActivityByAccount(ctx context.Context, arg ListMcpActivityByAccountParams) ([]ListMcpActivityByAccountRow, error) {
-	rows, err := q.db.Query(ctx, listMcpActivityByAccount, arg.AccountID, arg.Limit)
+	rows, err := q.db.Query(ctx, listMcpActivityByAccount,
+		arg.AccountID,
+		arg.BeforeAt,
+		arg.BeforeID,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -372,6 +523,25 @@ func (q *Queries) RevokeAnyAPIKey(ctx context.Context, id pgtype.UUID) (RevokeAn
 		&i.RevokedAt,
 	)
 	return i, err
+}
+
+const revokeOAuthKeysForClient = `-- name: RevokeOAuthKeysForClient :execrows
+UPDATE api_key SET revoked_at = now()
+WHERE account_id = $1 AND oauth_client_id = $2 AND revoked_at IS NULL
+`
+
+type RevokeOAuthKeysForClientParams struct {
+	AccountID     pgtype.UUID `json:"account_id"`
+	OauthClientID pgtype.UUID `json:"oauth_client_id"`
+}
+
+// Connecting the same app again replaces its earlier key.
+func (q *Queries) RevokeOAuthKeysForClient(ctx context.Context, arg RevokeOAuthKeysForClientParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeOAuthKeysForClient, arg.AccountID, arg.OauthClientID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const revokeOwnAPIKey = `-- name: RevokeOwnAPIKey :one

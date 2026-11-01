@@ -57,7 +57,10 @@ export function ApiKeysTable({
         <tbody>
           {keys.map((k) => (
             <tr key={k.id}>
-              <Td className="whitespace-nowrap text-fg">{k.name}</Td>
+              <Td className="whitespace-nowrap text-fg">
+                {k.name}
+                {k.kind === 'app' && <div className="text-xs text-fg-muted">Connected app{k.client_host ? ` · ${k.client_host}` : ''}</div>}
+              </Td>
               {showOwner && (
                 <Td className="whitespace-nowrap text-fg">
                   <span className="inline-flex items-center gap-2">

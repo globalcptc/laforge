@@ -296,9 +296,20 @@ export interface ApiKey {
   last_used_at: string | null
   revoked_at: string | null
   status: 'active' | 'expired' | 'revoked'
+  /** "key" for a pasted key; "app" for a connected app, a key an app got by OAuth sign-in. */
+  kind: 'key' | 'app'
+  /** Where a connected app lives (its redirect host), e.g. "chatgpt.com". */
+  client_host?: string
   /** Set on the admin listing only. */
   owner_login?: string
   owner_avatar_url?: string
+}
+
+/** A pending OAuth sign-in, as the consent page shows it. */
+export interface OAuthRequest {
+  client_name: string
+  redirect_host: string
+  expires_in_days: number
 }
 
 /** One MCP tool call made with an API key (the mcp_audit table). */
@@ -319,6 +330,46 @@ export interface McpActivity {
   key_prefix: string
   /** Set on the admin listing only. */
   owner_login?: string
+}
+
+/** One page of MCP calls, newest first; `next` is the cursor for older calls. */
+export interface McpActivityPage {
+  items: McpActivity[]
+  total: number
+  next?: string
+}
+
+/** One step of what an MCP call did: a query, a page read, a power request. */
+export interface McpTraceStep {
+  at_ms: number
+  ms: number
+  kind: 'sql' | 'api' | 'power' | 'access'
+  name: string
+  detail?: string
+  rows?: number
+  status?: number
+  bytes?: number
+  response?: string
+  error?: string
+}
+
+/** The full record of one MCP call (mcp_audit.detail). */
+export interface McpCallDetail {
+  request: { tool: string; arguments?: unknown; arguments_bytes: number; arguments_truncated?: boolean; build_id?: string }
+  key: { id: string; name: string; prefix: string; owner: string; expires_at: string; limited_to?: string[]; readable_repositories: number }
+  client: { ip?: string; user_agent?: string; protocol_version?: string; session_id?: string; headers?: Record<string, string> }
+  timing: { queue_ms: number; access_ms: number; run_ms: number; encode_ms: number; total_ms: number }
+  trace: McpTraceStep[]
+  trace_dropped?: number
+  result: { bytes: number; lists?: Record<string, number>; clipped_fields?: number; preview?: string; preview_truncated?: boolean }
+  outcome: { status: McpActivity['status']; error?: string; phase?: string }
+  server: { host?: string }
+}
+
+/** One MCP call with its detail; calls recorded before details were kept have none. */
+export interface McpActivityWithDetail extends McpActivity {
+  owner_login: string
+  detail: McpCallDetail | null
 }
 
 export interface CreatedApiKey {

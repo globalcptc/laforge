@@ -82,6 +82,11 @@ type apiKeyView struct {
 	RevokedAt     pgtype.Timestamptz `json:"revoked_at"`
 	// Status is "active", "expired" or "revoked".
 	Status string `json:"status"`
+	// Kind is "key" for a pasted key, or "app" for a connected app: a key an
+	// app got by OAuth sign-in (oauth_server.go). ClientHost is where that
+	// app lives (its redirect host).
+	Kind       string `json:"kind"`
+	ClientHost string `json:"client_host,omitempty"`
 	// Owner fields are set only on the admin listing.
 	OwnerLogin     string `json:"owner_login,omitempty"`
 	OwnerAvatarURL string `json:"owner_avatar_url,omitempty"`
@@ -100,8 +105,16 @@ func newAPIKeyView(id pgtype.UUID, name, prefix, scope string, repos []pgtype.UU
 	}
 	return apiKeyView{
 		ID: id, Name: name, Prefix: prefix, Scope: scope, RepositoryIDs: repos,
-		CreatedAt: created, ExpiresAt: expires, LastUsedAt: lastUsed, RevokedAt: revoked, Status: status,
+		CreatedAt: created, ExpiresAt: expires, LastUsedAt: lastUsed, RevokedAt: revoked, Status: status, Kind: "key",
 	}
+}
+
+// withClient marks a key as a connected app when it came from OAuth sign-in.
+func (v apiKeyView) withClient(clientID pgtype.UUID, redirectURIs []string) apiKeyView {
+	if clientID.Valid {
+		v.Kind, v.ClientHost = "app", redirectHost(redirectURIs)
+	}
+	return v
 }
 
 func (s *Server) handleListAPIKeys(w http.ResponseWriter, r *http.Request) {
@@ -117,7 +130,8 @@ func (s *Server) handleListAPIKeys(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]apiKeyView, 0, len(rows))
 	for _, k := range rows {
-		out = append(out, newAPIKeyView(k.ID, k.Name, k.Prefix, k.Scope, k.RepositoryIds, k.CreatedAt, k.ExpiresAt, k.LastUsedAt, k.RevokedAt))
+		out = append(out, newAPIKeyView(k.ID, k.Name, k.Prefix, k.Scope, k.RepositoryIds, k.CreatedAt, k.ExpiresAt, k.LastUsedAt, k.RevokedAt).
+			withClient(k.OauthClientID, k.OauthRedirectUris))
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -265,7 +279,8 @@ func (s *Server) handleAdminListAPIKeys(w http.ResponseWriter, r *http.Request) 
 	}
 	out := make([]apiKeyView, 0, len(rows))
 	for _, k := range rows {
-		v := newAPIKeyView(k.ID, k.Name, k.Prefix, k.Scope, k.RepositoryIds, k.CreatedAt, k.ExpiresAt, k.LastUsedAt, k.RevokedAt)
+		v := newAPIKeyView(k.ID, k.Name, k.Prefix, k.Scope, k.RepositoryIds, k.CreatedAt, k.ExpiresAt, k.LastUsedAt, k.RevokedAt).
+			withClient(k.OauthClientID, k.OauthRedirectUris)
 		v.OwnerLogin, v.OwnerAvatarURL = k.OwnerLogin, db.StrOrEmpty(k.OwnerAvatarUrl)
 		out = append(out, v)
 	}
@@ -310,38 +325,144 @@ func activityLimit(r *http.Request) int32 {
 	return int32(n)
 }
 
-// handleListAPIKeyActivity is the API Keys page's Recent Activity: the MCP
-// calls made with the signed-in person's own keys (mcp_audit), newest first.
+// activityPage is one page of MCP calls, newest first. Next is the cursor
+// for the following (older) page, absent on the last page.
+type activityPage[Row any] struct {
+	Items []Row   `json:"items"`
+	Total int64   `json:"total"`
+	Next  *string `json:"next,omitempty"`
+}
+
+// activityCursor reads ?before=, the "<created_at>_<id>" of the last row of
+// the page before. Empty means the first page.
+func activityCursor(r *http.Request) (pgtype.Timestamptz, pgtype.UUID, error) {
+	raw := r.URL.Query().Get("before")
+	if raw == "" {
+		return pgtype.Timestamptz{}, pgtype.UUID{}, nil
+	}
+	at, id, ok := strings.Cut(raw, "_")
+	t, err := time.Parse(time.RFC3339Nano, at)
+	if !ok || err != nil {
+		return pgtype.Timestamptz{}, pgtype.UUID{}, errors.New("invalid before cursor")
+	}
+	uid, err := parseUUID(id)
+	if err != nil {
+		return pgtype.Timestamptz{}, pgtype.UUID{}, errors.New("invalid before cursor")
+	}
+	return pgtype.Timestamptz{Time: t, Valid: true}, uid, nil
+}
+
+func nextCursor(n int, limit int32, at pgtype.Timestamptz, id pgtype.UUID) *string {
+	if n < int(limit) {
+		return nil
+	}
+	c := at.Time.UTC().Format(time.RFC3339Nano) + "_" + id.String()
+	return &c
+}
+
+// handleListAPIKeyActivity is the API Keys page's activity log: the MCP calls
+// made with the signed-in person's own keys (mcp_audit), newest first, a page
+// at a time.
 func (s *Server) handleListAPIKeyActivity(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.sessionFromRequest(r)
 	if err != nil {
 		writeAuthError(w, err)
 		return
 	}
-	rows, err := s.Queries.ListMcpActivityByAccount(r.Context(), db.ListMcpActivityByAccountParams{AccountID: sess.AccountID, Limit: activityLimit(r)})
+	beforeAt, beforeID, err := activityCursor(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	limit := activityLimit(r)
+	rows, err := s.Queries.ListMcpActivityByAccount(r.Context(), db.ListMcpActivityByAccountParams{AccountID: sess.AccountID, BeforeAt: beforeAt, BeforeID: beforeID, PageSize: limit})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	if rows == nil {
-		rows = []db.ListMcpActivityByAccountRow{}
+	total, err := s.Queries.CountMcpActivityByAccount(r.Context(), sess.AccountID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
 	}
-	writeJSON(w, http.StatusOK, rows)
+	page := activityPage[db.ListMcpActivityByAccountRow]{Items: rows, Total: total}
+	if page.Items == nil {
+		page.Items = []db.ListMcpActivityByAccountRow{}
+	} else {
+		last := rows[len(rows)-1]
+		page.Next = nextCursor(len(rows), limit, last.CreatedAt, last.ID)
+	}
+	writeJSON(w, http.StatusOK, page)
 }
 
-// handleAdminListAPIKeyActivity is everyone's recent MCP calls, for admins.
+// handleAdminListAPIKeyActivity is everyone's MCP calls, for admins, a page
+// at a time.
 func (s *Server) handleAdminListAPIKeyActivity(w http.ResponseWriter, r *http.Request) {
 	if _, err := s.requireInstanceAdmin(r.Context(), r); err != nil {
 		writeAuthError(w, err)
 		return
 	}
-	rows, err := s.Queries.ListMcpActivity(r.Context(), activityLimit(r))
+	beforeAt, beforeID, err := activityCursor(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	limit := activityLimit(r)
+	rows, err := s.Queries.ListMcpActivity(r.Context(), db.ListMcpActivityParams{BeforeAt: beforeAt, BeforeID: beforeID, PageSize: limit})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	if rows == nil {
-		rows = []db.ListMcpActivityRow{}
+	total, err := s.Queries.CountMcpActivity(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
 	}
-	writeJSON(w, http.StatusOK, rows)
+	page := activityPage[db.ListMcpActivityRow]{Items: rows, Total: total}
+	if page.Items == nil {
+		page.Items = []db.ListMcpActivityRow{}
+	} else {
+		last := rows[len(rows)-1]
+		page.Next = nextCursor(len(rows), limit, last.CreatedAt, last.ID)
+	}
+	writeJSON(w, http.StatusOK, page)
+}
+
+// handleGetAPIKeyActivity is one of the signed-in person's own MCP calls with
+// its full detail: what the activity log shows when a row is opened.
+func (s *Server) handleGetAPIKeyActivity(w http.ResponseWriter, r *http.Request) {
+	sess, err := s.sessionFromRequest(r)
+	if err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	s.writeActivity(w, r, &sess.AccountID)
+}
+
+// handleAdminGetAPIKeyActivity is any MCP call with its full detail, for admins.
+func (s *Server) handleAdminGetAPIKeyActivity(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.requireInstanceAdmin(r.Context(), r); err != nil {
+		writeAuthError(w, err)
+		return
+	}
+	s.writeActivity(w, r, nil)
+}
+
+// writeActivity writes one mcp_audit row; owner, when set, must own it.
+func (s *Server) writeActivity(w http.ResponseWriter, r *http.Request, owner *pgtype.UUID) {
+	id, err := parseUUID(r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, errors.New("invalid activity id"))
+		return
+	}
+	row, err := s.Queries.GetMcpActivity(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && owner != nil && row.AccountID != *owner) {
+		writeError(w, http.StatusNotFound, errors.New("no such call"))
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, row)
 }

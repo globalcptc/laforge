@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
@@ -36,7 +37,19 @@ func (f fieldChars) limit() int { return clamp(f.MaxFieldChars, defaultFieldChar
 
 // get fetches one API read page and returns its JSON, long strings clipped.
 func (c *call) get(ctx context.Context, path string, q url.Values, maxField int) (any, error) {
+	began := time.Now()
 	status, body, err := c.s.cfg.Access.Get(ctx, c.key.AccountID, c.key.Login, path, q)
+	name := "GET " + path
+	if len(q) > 0 {
+		name += "?" + q.Encode()
+	}
+	step := traceStep{Kind: "api", Name: name, Status: status, Bytes: len(body)}
+	if err != nil {
+		step.Error = err.Error()
+	} else if status != http.StatusOK {
+		step.Error = truncUTF8(strings.TrimSpace(string(body)), 2000)
+	}
+	c.trace.add(step, began)
 	if err != nil {
 		return nil, err
 	}

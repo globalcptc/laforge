@@ -186,8 +186,25 @@ func main() {
 			log.Fatalf("connecting the MCP server to the database: %v", err)
 		}
 		defer mpool.Close()
-		mcpServer := mcp.New(mcp.Config{Queries: mq, Access: server.MCPAccess()})
+		// The MCP handler has to exist before the metadata URL is known
+		// (OAuth is on only with MCP and a public URL), so the metadata URL
+		// comes from the base URL directly.
+		var resourceMeta string
+		if publicBaseURL != "" {
+			resourceMeta = strings.TrimRight(publicBaseURL, "/") + "/.well-known/oauth-protected-resource/mcp"
+		}
+		mcpServer := mcp.New(mcp.Config{Queries: mq, Access: server.MCPAccess(), ResourceMetadataURL: resourceMeta})
 		server.MCP = mcpServer.Handler()
+		// OAUTH_ALLOWED_REDIRECT_HOSTS (comma-separated) replaces the hosts
+		// an OAuth client may redirect to; unset keeps claude.ai, claude.com
+		// and chatgpt.com.
+		if v := os.Getenv("OAUTH_ALLOWED_REDIRECT_HOSTS"); v != "" {
+			for _, h := range strings.Split(v, ",") {
+				if h = strings.ToLower(strings.TrimSpace(h)); h != "" {
+					server.OAuthRedirectHosts = append(server.OAuthRedirectHosts, h)
+				}
+			}
+		}
 		server.MCPKeysChanged = mcpServer.ForgetKeys
 		log.Printf("laforge-api: read-only MCP server enabled at /mcp")
 	}

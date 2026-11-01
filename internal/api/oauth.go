@@ -22,6 +22,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -34,6 +36,7 @@ import (
 const (
 	sessionCookieName = "laforge_session"
 	stateCookieName   = "laforge_oauth_state"
+	returnCookieName  = "laforge_return_to"
 	sessionTTL        = 7 * 24 * time.Hour
 	oauthScopes       = "repo read:user"
 )
@@ -103,6 +106,14 @@ func (s *Server) handleLoginStart(w http.ResponseWriter, r *http.Request) {
 		Name: stateCookieName, Value: state, Path: "/", HttpOnly: true,
 		SameSite: s.cookieSameSite(), Secure: s.cookieSecure(r), MaxAge: 600,
 	})
+	// return_to is where in the UI to land after sign-in (the MCP OAuth
+	// consent page uses it). Only a UI path, so it can't redirect elsewhere.
+	if rt := r.URL.Query().Get("return_to"); safeReturnPath(rt) {
+		http.SetCookie(w, &http.Cookie{
+			Name: returnCookieName, Value: url.QueryEscape(rt), Path: "/", HttpOnly: true,
+			SameSite: s.cookieSameSite(), Secure: s.cookieSecure(r), MaxAge: 600,
+		})
+	}
 	redirectURI := s.PublicBaseURL + "/auth/github/callback"
 	http.Redirect(w, r, s.GH.AuthorizeURL(s.GitHubClientID, redirectURI, state, []string{"repo", "read:user"}), http.StatusFound)
 }
@@ -186,7 +197,24 @@ func (s *Server) handleCallback(w http.ResponseWriter, r *http.Request) {
 		Name: sessionCookieName, Value: token, Path: "/", HttpOnly: true,
 		SameSite: s.cookieSameSite(), Secure: s.cookieSecure(r), Expires: expiresAt,
 	})
-	http.Redirect(w, r, s.UIBaseURL+"/", http.StatusFound)
+	landing := "/"
+	if c, err := r.Cookie(returnCookieName); err == nil {
+		if rt, err := url.QueryUnescape(c.Value); err == nil && safeReturnPath(rt) {
+			landing = rt
+		}
+		http.SetCookie(w, &http.Cookie{
+			Name: returnCookieName, Value: "", Path: "/", MaxAge: -1,
+			SameSite: s.cookieSameSite(), Secure: s.cookieSecure(r),
+		})
+	}
+	http.Redirect(w, r, s.UIBaseURL+landing, http.StatusFound)
+}
+
+// safeReturnPath is a path within the UI: it starts with one slash, so it
+// can't name another host ("//evil.example" or "/\evil.example").
+func safeReturnPath(p string) bool {
+	return strings.HasPrefix(p, "/") && !strings.HasPrefix(p, "//") && !strings.Contains(p, "\\") &&
+		!strings.ContainsAny(p, "\r\n") && len(p) <= 512
 }
 
 // handleGithubRefresh lets the CLI keep its device-flow token alive. The CLI

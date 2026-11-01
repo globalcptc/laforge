@@ -24,6 +24,7 @@ import { BuilderInfo } from './routes/BuilderInfo'
 import { InstanceAdmins } from './routes/InstanceAdmins'
 import { BuilderWizard } from './routes/BuilderWizard'
 import { ApiKeys } from './routes/ApiKeys'
+import { OAuthConsent } from './routes/OAuthConsent'
 import { AdminApiKeys } from './routes/AdminApiKeys'
 import { useMe } from './api/hooks'
 import { Spinner } from './ui'
@@ -57,6 +58,8 @@ const rootRoute = createRootRoute({
 })
 
 const signInRoute = createRoute({ getParentRoute: () => rootRoute, path: '/sign-in', component: SignIn })
+// Signs in on its own (it has to come back here afterwards), so no RequireAuth.
+const oauthConsentRoute = createRoute({ getParentRoute: () => rootRoute, path: '/oauth/consent', component: OAuthConsent })
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -240,6 +243,7 @@ const repoAccessRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   signInRoute,
+  oauthConsentRoute,
   apiKeysRoute,
   adminApiKeysRoute,
   reposRoute,

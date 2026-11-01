@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -287,40 +288,82 @@ func TestAPIKeyActivity(t *testing.T) {
 		doJSON(t, client, http.MethodPost, env.httpURL+"/auth/api-keys", map[string]any{"name": "agent", "expires_in_days": 7}, &created)
 		return created.Key.ID
 	}
-	for _, c := range []struct {
-		client *http.Client
-		tool   string
-	}{{owner, "power"}, {other, "list_steps"}} {
-		id := keyFor(c.client)
-		if _, err := env.server.Pool.Exec(ctx, `INSERT INTO mcp_audit (api_key_id, account_id, tool, args, status, duration_ms)
-			SELECT id, account_id, $2, '{"action":"reboot"}', 'ok', 12 FROM api_key WHERE id = $1`, id, c.tool); err != nil {
+	// The owner has three calls, a second apart; other has one.
+	ownerKey := keyFor(owner)
+	for i, tool := range []string{"whoami", "get_build", "power"} {
+		if _, err := env.server.Pool.Exec(ctx, `INSERT INTO mcp_audit (api_key_id, account_id, tool, args, status, duration_ms, detail, created_at)
+			SELECT id, account_id, $2, '{"action":"reboot"}', 'ok', 12, '{"trace":[{"kind":"sql","name":"McpGetBuild"}]}', now() - make_interval(secs => $3)
+			FROM api_key WHERE id = $1`, ownerKey, tool, 10-i); err != nil {
 			t.Fatal(err)
 		}
 	}
+	otherKey := keyFor(other)
+	if _, err := env.server.Pool.Exec(ctx, `INSERT INTO mcp_audit (api_key_id, account_id, tool, args, status)
+		SELECT id, account_id, 'list_steps', '{}', 'ok' FROM api_key WHERE id = $1`, otherKey); err != nil {
+		t.Fatal(err)
+	}
 
-	var mine []map[string]any
-	if status := doJSON(t, owner, http.MethodGet, env.httpURL+"/auth/api-keys/activity", nil, &mine); status != http.StatusOK {
+	type page struct {
+		Items []map[string]any `json:"items"`
+		Total int              `json:"total"`
+		Next  *string          `json:"next"`
+	}
+	var first page
+	if status := doJSON(t, owner, http.MethodGet, env.httpURL+"/auth/api-keys/activity?limit=2", nil, &first); status != http.StatusOK {
 		t.Fatalf("own activity: %d", status)
 	}
-	if len(mine) != 1 || mine[0]["tool"] != "power" || mine[0]["key_name"] != "agent" || mine[0]["args"].(map[string]any)["action"] != "reboot" {
-		t.Fatalf("own activity = %v, want just the owner's power call", mine)
+	if first.Total != 3 || len(first.Items) != 2 || first.Items[0]["tool"] != "power" || first.Items[1]["tool"] != "get_build" || first.Next == nil {
+		t.Fatalf("first page = %+v, want power then get_build, 3 in all, and a next cursor", first)
+	}
+	if first.Items[0]["key_name"] != "agent" || first.Items[0]["args"].(map[string]any)["action"] != "reboot" {
+		t.Fatalf("row = %v", first.Items[0])
+	}
+	if _, ok := first.Items[0]["detail"]; ok {
+		t.Fatal("the list carries detail; it should only come with one call")
+	}
+	var second page
+	doJSON(t, owner, http.MethodGet, env.httpURL+"/auth/api-keys/activity?limit=2&before="+url.QueryEscape(*first.Next), nil, &second)
+	if len(second.Items) != 1 || second.Items[0]["tool"] != "whoami" || second.Next != nil {
+		t.Fatalf("second page = %+v, want just whoami and no next cursor", second)
+	}
+	if status := doJSON(t, owner, http.MethodGet, env.httpURL+"/auth/api-keys/activity?before=nonsense", nil, nil); status != http.StatusBadRequest {
+		t.Fatalf("bad cursor: %d, want 400", status)
+	}
+
+	// Opening a row returns its detail -- for its owner only.
+	callID := first.Items[0]["id"].(string)
+	var one map[string]any
+	if status := doJSON(t, owner, http.MethodGet, env.httpURL+"/auth/api-keys/activity/"+callID, nil, &one); status != http.StatusOK {
+		t.Fatalf("own call detail: %d", status)
+	}
+	if one["detail"].(map[string]any)["trace"].([]any)[0].(map[string]any)["name"] != "McpGetBuild" {
+		t.Fatalf("detail = %v", one["detail"])
+	}
+	if status := doJSON(t, other, http.MethodGet, env.httpURL+"/auth/api-keys/activity/"+callID, nil, nil); status != http.StatusNotFound {
+		t.Fatalf("someone else's call: %d, want 404", status)
 	}
 	if status := doJSON(t, owner, http.MethodGet, env.httpURL+"/admin/api-keys/activity", nil, nil); status != http.StatusForbidden {
 		t.Fatalf("non-admin admin activity: %d, want 403", status)
 	}
+	if status := doJSON(t, owner, http.MethodGet, env.httpURL+"/admin/api-keys/activity/"+callID, nil, nil); status != http.StatusForbidden {
+		t.Fatalf("non-admin admin call detail: %d, want 403", status)
+	}
 
 	env.server.AdminLogins = []string{adminLogin}
-	var all []map[string]any
+	var all page
 	if status := doJSON(t, admin, http.MethodGet, env.httpURL+"/admin/api-keys/activity?limit=200", nil, &all); status != http.StatusOK {
 		t.Fatalf("admin activity: %d", status)
 	}
 	tools := map[string]bool{}
-	for _, row := range all {
+	for _, row := range all.Items {
 		if strings.HasPrefix(row["owner_login"].(string), "exchanged-activity-") {
 			tools[row["tool"].(string)] = true
 		}
 	}
-	if !tools["power"] || !tools["list_steps"] {
-		t.Fatalf("admin activity is missing someone's calls: %v", tools)
+	if !tools["power"] || !tools["list_steps"] || all.Total < 4 {
+		t.Fatalf("admin activity is missing someone's calls: %v (total %d)", tools, all.Total)
+	}
+	if status := doJSON(t, admin, http.MethodGet, env.httpURL+"/admin/api-keys/activity/"+callID, nil, nil); status != http.StatusOK {
+		t.Fatalf("admin call detail: %d", status)
 	}
 }

@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Activity, KeyRound } from 'lucide-react'
+import { KeyRound } from 'lucide-react'
 import { useAdminApiKeyActivity, useAdminApiKeys, useAdminRevokeApiKey } from '../api/hooks'
 import { ApiError } from '../api/client'
 import { EmptyState } from '../components/EmptyState'
-import { ApiKeyActivityTable } from '../components/ApiKeyActivityTable'
+import { ApiKeyActivityLog } from '../components/ApiKeyActivityLog'
 import { ApiKeysTable } from '../components/ApiKeysTable'
 import { Card, CardHeader, PageHeader, Spinner } from '../ui'
 
@@ -58,19 +58,22 @@ export function AdminApiKeys() {
 }
 
 function RecentActivity() {
-  const { data: rows, isLoading, error } = useAdminApiKeyActivity()
+  // Cursors of the pages before this one, so Newer can step back.
+  const [cursors, setCursors] = useState<string[]>([])
+  const before = cursors[cursors.length - 1]
+  const { data, isLoading, error } = useAdminApiKeyActivity(before)
   return (
     <Card className="mt-4">
-      <CardHeader title="Recent Activity" description="The last 50 MCP calls made with anyone's keys. Power actions are marked." />
+      <CardHeader title="Activity Log" description="Every MCP call made with anyone's keys, newest first. Open a call to see everything it did." />
       <div className="p-4 pt-2">
-        {isLoading && (
-          <div className="flex items-center gap-2 text-sm text-fg-muted">
-            <Spinner /> Loading…
-          </div>
-        )}
-        {error && <div className="text-sm text-danger">{error instanceof ApiError ? error.message : 'Failed to load activity.'}</div>}
-        {!isLoading && !error && (rows ?? []).length === 0 && <EmptyState icon={Activity} title="No Activity Yet" hint="Calls made with API keys show up here." />}
-        {rows && rows.length > 0 && <ApiKeyActivityTable rows={rows} showOwner />}
+        <ApiKeyActivityLog
+          page={data}
+          isLoading={isLoading}
+          error={error} admin
+          pageIndex={cursors.length}
+          onNewer={() => setCursors((c) => c.slice(0, -1))}
+          onOlder={() => data?.next && setCursors((c) => [...c, data.next!])}
+        />
       </div>
     </Card>
   )

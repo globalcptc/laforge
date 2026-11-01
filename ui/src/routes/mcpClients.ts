@@ -10,6 +10,9 @@ export interface McpSnippet {
 export interface McpClient {
   id: string
   name: string
+  // 'key' clients send a pasted API key; 'oauth' clients sign in with the
+  // person's LaForge account and get their own key (a connected app).
+  auth: 'key' | 'oauth'
   // A caveat shown above the steps (a workaround, or why it can't connect).
   note?: string
   steps: string[]
@@ -18,12 +21,15 @@ export interface McpClient {
 
 const json = (v: unknown) => JSON.stringify(v, null, 2)
 
-export function mcpClients(url: string, token: string): McpClient[] {
+// The token is only needed for 'key' clients; without one their snippets
+// show a placeholder.
+export function mcpClients(url: string, token = 'lfk_…'): McpClient[] {
   const bearer = `Bearer ${token}`
   return [
     {
       id: 'claude-code',
       name: 'Claude Code',
+      auth: 'key',
       steps: [
         'Run the command in a terminal. Add `--scope user` to use LaForge in every project, not just this folder.',
         'Or, to share the server setup with a project, put the config in `.mcp.json` at its root (keep the key out of git).',
@@ -37,7 +43,8 @@ export function mcpClients(url: string, token: string): McpClient[] {
     {
       id: 'claude-desktop',
       name: 'Claude Desktop',
-      note: "Claude Desktop's Connectors only accept servers with OAuth sign-in, so this goes through the mcp-remote bridge, which needs Node.js installed.",
+      auth: 'key',
+      note: 'Easier: add LaForge as a connector on claude.ai (pick Claude.ai under Connect An App). It shows up in Claude Desktop too, with no key and no Node.js. To use this key instead, Claude Desktop needs the mcp-remote bridge, which needs Node.js installed.',
       steps: [
         'Open Settings → Developer → Edit Config. That opens `claude_desktop_config.json`.',
         'Add `laforge` under `mcpServers` (merge it in if the file already has servers).',
@@ -61,6 +68,7 @@ export function mcpClients(url: string, token: string): McpClient[] {
     {
       id: 'cursor',
       name: 'Cursor',
+      auth: 'key',
       steps: [
         'Open `~/.cursor/mcp.json` for every project, or `.cursor/mcp.json` in one project.',
         'Add `laforge` under `mcpServers`.',
@@ -71,6 +79,7 @@ export function mcpClients(url: string, token: string): McpClient[] {
     {
       id: 'vscode',
       name: 'VS Code (Copilot)',
+      auth: 'key',
       steps: [
         'Run `MCP: Open User Configuration` from the Command Palette, or create `.vscode/mcp.json` in a project.',
         'Add `laforge` under `servers`.',
@@ -81,6 +90,7 @@ export function mcpClients(url: string, token: string): McpClient[] {
     {
       id: 'windsurf',
       name: 'Windsurf',
+      auth: 'key',
       note: 'On Teams and Enterprise plans an admin has to allow remote MCP servers first.',
       steps: [
         'Open `~/.codeium/windsurf/mcp_config.json` (Cascade → MCP → Manage → View raw config).',
@@ -92,6 +102,7 @@ export function mcpClients(url: string, token: string): McpClient[] {
     {
       id: 'gemini',
       name: 'Gemini CLI',
+      auth: 'key',
       steps: [
         'Open `~/.gemini/settings.json` for every project, or `.gemini/settings.json` in one project.',
         'Add `laforge` under `mcpServers`.',
@@ -102,6 +113,7 @@ export function mcpClients(url: string, token: string): McpClient[] {
     {
       id: 'codex',
       name: 'OpenAI Codex',
+      auth: 'key',
       note: 'Codex reads the key from an environment variable rather than its config file. The variable has to be set before Codex starts.',
       steps: [
         'Add the export to your shell profile (`~/.zshrc`, `~/.bashrc`) and open a new terminal.',
@@ -116,6 +128,7 @@ export function mcpClients(url: string, token: string): McpClient[] {
     {
       id: 'openai-api',
       name: 'OpenAI API',
+      auth: 'key',
       note: "OpenAI's servers call LaForge directly, so the key is sent to OpenAI with every request. Prefer a short-lived key limited to the repositories you need.",
       steps: [
         'Add the tool to the `tools` list of a Responses API request.',
@@ -132,23 +145,31 @@ export function mcpClients(url: string, token: string): McpClient[] {
     {
       id: 'chatgpt',
       name: 'ChatGPT',
-      note: "Not yet. ChatGPT supports custom MCP servers, but only with OAuth sign-in or no sign-in at all: it can't send an API key. LaForge's MCP server will work here once it supports OAuth. Until then, use another client.",
+      auth: 'oauth',
+      note: 'ChatGPT signs in with your LaForge account, so it needs no key. It shows up under Connected Apps, where you can revoke it.',
       steps: [
-        'Once OAuth is supported: go to chatgpt.com/plugins, select +, then Add custom MCP server.',
-        'Enter the server URL, choose OAuth, and sign in with your LaForge account.',
+        'In ChatGPT, go to chatgpt.com/plugins, select +, then Add custom MCP server.',
+        'Paste the server URL and choose OAuth.',
+        'Sign in with GitHub when LaForge asks, then select Approve.',
       ],
       snippets: [{ label: 'Server URL', text: url }],
     },
     {
       id: 'claude-ai',
       name: 'Claude.ai',
-      note: "Not yet. Claude.ai's custom connectors also sign in with OAuth and can't send an API key. Claude Desktop works today through the bridge (pick Claude Desktop above).",
-      steps: [],
-      snippets: [],
+      auth: 'oauth',
+      note: 'Claude signs in with your LaForge account, so it needs no key. It shows up under Connected Apps, where you can revoke it. Connectors added on claude.ai also appear in Claude Desktop and the Claude mobile apps.',
+      steps: [
+        'In Claude, open Settings → Connectors, then select Add custom connector.',
+        'Name it `LaForge` and paste the server URL. Leave Advanced settings empty.',
+        'Select Connect, sign in with GitHub when LaForge asks, then select Approve.',
+      ],
+      snippets: [{ label: 'Server URL', text: url }],
     },
     {
       id: 'other',
       name: 'Other',
+      auth: 'key',
       steps: [
         'Any MCP client that supports the Streamable HTTP transport and custom headers works.',
         'Point it at the URL and send the key as a bearer token in the `Authorization` header.',

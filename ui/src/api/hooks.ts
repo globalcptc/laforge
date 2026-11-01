@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, api } from './client'
 import type {
   RevalidateResponse,
@@ -26,7 +26,9 @@ import type {
   InstanceAdmin,
   ApiKey,
   CreatedApiKey,
-  McpActivity,
+  OAuthRequest,
+  McpActivityPage,
+  McpActivityWithDetail,
   TokenCheck,
   BuilderConnection,
   BuilderSummary,
@@ -1222,6 +1224,26 @@ export function useRevokeApiKey() {
   })
 }
 
+// The OAuth consent page's pending sign-in, and its Approve / Deny.
+export function useOAuthRequest(id: string, enabled: boolean) {
+  return useQuery<OAuthRequest>({
+    queryKey: ['oauth-request', id],
+    queryFn: () => api.get(`/oauth/requests/${encodeURIComponent(id)}`),
+    enabled: enabled && id !== '',
+    retry: false,
+    staleTime: Infinity,
+  })
+}
+
+export function useDecideOAuthRequest() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
+      api.post<{ redirect_to: string }>(`/oauth/requests/${encodeURIComponent(id)}`, { approve }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['api-keys'] }),
+  })
+}
+
 export function useAdminApiKeys() {
   return useQuery<ApiKey[]>({ queryKey: ['admin-api-keys'], queryFn: () => api.get('/admin/api-keys'), retry: false })
 }
@@ -1237,17 +1259,33 @@ export function useAdminRevokeApiKey() {
   })
 }
 
-// Recent MCP calls made with your own keys, and everyone's for admins.
-// Refreshed every 30 seconds while the page is open.
-export function useApiKeyActivity() {
-  return useQuery<McpActivity[]>({ queryKey: ['api-key-activity'], queryFn: () => api.get('/auth/api-keys/activity'), refetchInterval: 30_000 })
+// MCP calls made with your own keys, and everyone's for admins, a page at a
+// time (`before` is the cursor from the page before). The first page refreshes
+// every 30 seconds while the page is open.
+export function useApiKeyActivity(before?: string) {
+  return useQuery<McpActivityPage>({
+    queryKey: ['api-key-activity', before ?? ''],
+    queryFn: () => api.get(`/auth/api-keys/activity${before ? `?before=${encodeURIComponent(before)}` : ''}`),
+    refetchInterval: before ? false : 30_000,
+    placeholderData: keepPreviousData,
+  })
 }
 
-export function useAdminApiKeyActivity() {
-  return useQuery<McpActivity[]>({
-    queryKey: ['admin-api-key-activity'],
-    queryFn: () => api.get('/admin/api-keys/activity'),
-    refetchInterval: 30_000,
+export function useAdminApiKeyActivity(before?: string) {
+  return useQuery<McpActivityPage>({
+    queryKey: ['admin-api-key-activity', before ?? ''],
+    queryFn: () => api.get(`/admin/api-keys/activity${before ? `?before=${encodeURIComponent(before)}` : ''}`),
+    refetchInterval: before ? false : 30_000,
+    placeholderData: keepPreviousData,
     retry: false,
+  })
+}
+
+// One MCP call with its full detail, fetched when its row is opened.
+export function useApiKeyActivityDetail(id: string, admin: boolean) {
+  return useQuery<McpActivityWithDetail>({
+    queryKey: ['api-key-activity-detail', id],
+    queryFn: () => api.get(`${admin ? '/admin' : '/auth'}/api-keys/activity/${id}`),
+    staleTime: Infinity,
   })
 }

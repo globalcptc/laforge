@@ -70,6 +70,12 @@ type Config struct {
 	QueueWait     time.Duration
 	// CallTimeout bounds one tool call.
 	CallTimeout time.Duration
+	// ResourceMetadataURL is where /mcp's OAuth protected resource metadata
+	// lives (PublicBaseURL + /.well-known/oauth-protected-resource/mcp,
+	// served by the API's oauth_server.go). It goes in every 401's
+	// WWW-Authenticate header, which is how ChatGPT and Claude.ai find the
+	// sign-in. Empty leaves it out: pasted keys only.
+	ResourceMetadataURL string
 }
 
 const (
@@ -179,13 +185,16 @@ func (s *Server) Handler() http.Handler {
 		PropagateRequestCancellation: true,
 		MaxRequestBodyBytes:          64 << 10,
 	})
-	return auth.RequireBearerToken(s.verify, &auth.RequireBearerTokenOptions{Scopes: []string{"read"}})(h)
+	return auth.RequireBearerToken(s.verify, &auth.RequireBearerTokenOptions{
+		Scopes:              []string{"read"},
+		ResourceMetadataURL: s.cfg.ResourceMetadataURL,
+	})(h)
 }
 
 // verify turns a bearer key into the key it names, or refuses it.
 func (s *Server) verify(ctx context.Context, token string, r *http.Request) (*auth.TokenInfo, error) {
 	if !strings.HasPrefix(token, keyPrefix) {
-		return nil, fmt.Errorf("%w: only LaForge API keys (lfk_...) work here; create one on the API Keys page", auth.ErrInvalidToken)
+		return nil, fmt.Errorf("%w: only LaForge API keys (lfk_...) work here; create one on the API Keys page, or sign in with OAuth", auth.ErrInvalidToken)
 	}
 	sum := sha256.Sum256([]byte(token))
 	hash := hex.EncodeToString(sum[:])

@@ -94,6 +94,7 @@ type ApiKey struct {
 	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
 	LastUsedAt    pgtype.Timestamptz `json:"last_used_at"`
 	RevokedAt     pgtype.Timestamptz `json:"revoked_at"`
+	OauthClientID pgtype.UUID        `json:"oauth_client_id"`
 }
 
 type AttentionDismissal struct {
@@ -412,6 +413,7 @@ type McpAudit struct {
 	RemoteAddr  string             `json:"remote_addr"`
 	UserAgent   string             `json:"user_agent"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Detail      json.RawMessage    `json:"detail"`
 }
 
 type MicrocloudPublicAddress struct {
@@ -436,6 +438,15 @@ type Network struct {
 	Findings          json.RawMessage `json:"findings"`
 	Extends           *string         `json:"extends"`
 	VisibleFrom       json.RawMessage `json:"visible_from"`
+}
+
+type OauthClient struct {
+	ID               pgtype.UUID        `json:"id"`
+	ClientID         string             `json:"client_id"`
+	ClientName       string             `json:"client_name"`
+	RedirectUris     []string           `json:"redirect_uris"`
+	ClientSecretHash *string            `json:"client_secret_hash"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 }
 
 type PeopleSource struct {

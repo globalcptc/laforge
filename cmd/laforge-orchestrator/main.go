@@ -417,6 +417,16 @@ func main() {
 		if n > 0 {
 			log.Printf("cleaned up %d mcp_audit row(s) older than %s", n, mcpAuditRetention)
 		}
+		// OAuth clients that registered for the MCP server but never got a
+		// key (an abandoned or bogus sign-in) are dropped after a day.
+		n, err = q.DeleteUnusedOAuthClients(ctx, pgtype.Timestamptz{Time: time.Now().Add(-24 * time.Hour), Valid: true})
+		if err != nil {
+			log.Printf("cleaning up oauth_client: %v", err)
+			return
+		}
+		if n > 0 {
+			log.Printf("cleaned up %d unused oauth client(s)", n)
+		}
 	}
 
 	// Repeating-event retention: the orchestrator's "still waiting" journal

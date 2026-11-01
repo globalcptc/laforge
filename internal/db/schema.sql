@@ -111,6 +111,7 @@ CREATE TABLE public.api_key (
     expires_at timestamp with time zone NOT NULL,
     last_used_at timestamp with time zone,
     revoked_at timestamp with time zone,
+    oauth_client_id uuid,
     CONSTRAINT api_key_scope_check CHECK ((scope = 'read'::text))
 );
 --
@@ -528,6 +529,7 @@ CREATE TABLE public.mcp_audit (
     remote_addr text DEFAULT ''::text NOT NULL,
     user_agent text DEFAULT ''::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    detail jsonb,
     CONSTRAINT mcp_audit_status_check CHECK ((status = ANY (ARRAY['ok'::text, 'denied'::text, 'error'::text, 'rate_limited'::text])))
 );
 --
@@ -558,6 +560,17 @@ CREATE TABLE public.network (
     findings jsonb DEFAULT '[]'::jsonb NOT NULL,
     extends text,
     visible_from jsonb DEFAULT '[]'::jsonb NOT NULL
+);
+--
+-- Name: oauth_client; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.oauth_client (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    client_id text NOT NULL,
+    client_name text NOT NULL,
+    redirect_uris text[] NOT NULL,
+    client_secret_hash text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 --
 -- Name: people_source; Type: TABLE; Schema: public; Owner: -
@@ -972,6 +985,16 @@ ALTER TABLE ONLY public.network
 --
 ALTER TABLE ONLY public.network
     ADD CONSTRAINT network_pkey PRIMARY KEY (id);
+--
+-- Name: oauth_client oauth_client_client_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.oauth_client
+    ADD CONSTRAINT oauth_client_client_id_key UNIQUE (client_id);
+--
+-- Name: oauth_client oauth_client_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.oauth_client
+    ADD CONSTRAINT oauth_client_pkey PRIMARY KEY (id);
 --
 -- Name: people_source people_source_content_revision_id_path_key; Type: CONSTRAINT; Schema: public; Owner: -
 --

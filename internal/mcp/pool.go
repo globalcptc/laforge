@@ -20,7 +20,8 @@ const maxConns = 3
 // connected as laforge_mcp. A pool on the main, read-write role would quietly
 // throw away the read-only guarantee, so it's a startup error, not a warning.
 func OpenPool(ctx context.Context, connString string) (*db.Queries, *pgxpool.Pool, error) {
-	q, pool, err := db.OpenWithMaxConns(ctx, connString, maxConns)
+	// Every query a tool call runs lands in that call's trace (trace.go).
+	q, pool, err := db.OpenWithMaxConns(ctx, connString, maxConns, func(c *pgxpool.Config) { c.ConnConfig.Tracer = QueryTracer{} })
 	if err != nil {
 		return nil, nil, err
 	}

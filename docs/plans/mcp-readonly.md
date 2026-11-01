@@ -1,6 +1,6 @@
 # Plan: Read-Only MCP Server for LaForge
 
-**Status:** design approved 2026-10-31. Phases 1–3 plus the power action (§5.6) implemented, uncommitted: API keys + page (migration `00080`), `internal/mcp` at `/mcp` with the `laforge_mcp` role and `mcp_audit` (migration `00081`), and the full tool set (53 tools, §7) through direct queries and the read bridge (§5.5). Recent Activity on both API Keys pages is built (`GET /auth/api-keys/activity`, `GET /admin/api-keys/activity`). Not started: prod rollout (phase 4), OAuth. **Written:** 2026-10-31, against `main` at `4b7cc9f8`.
+**Status:** design approved 2026-10-31. Phases 1–3 plus the power action (§5.6) implemented, uncommitted: API keys + page (migration `00080`), `internal/mcp` at `/mcp` with the `laforge_mcp` role and `mcp_audit` (migration `00081`), and the full tool set (53 tools, §7) through direct queries and the read bridge (§5.5). Recent Activity on both API Keys pages is built (`GET /auth/api-keys/activity`, `GET /admin/api-keys/activity`). Not started: prod rollout (phase 4). OAuth for ChatGPT and Claude.ai is planned in §14 (proposed, not approved). **Written:** 2026-10-31, against `main` at `4b7cc9f8`.
 
 Volunteers debugging a live competition (for example build `9531b5b4`, cptc12-central) today get build
 state through the CLI, the API and `psql` on the prod box: agent heartbeats, gaps grouped by cluster
@@ -27,6 +27,7 @@ can mint, see and revoke their own keys there.
 11. [Phases](#11-phases)
 12. [Existing Issues Found While Surveying](#12-existing-issues-found-while-surveying)
 13. [Open Decisions](#13-open-decisions)
+14. [OAuth for Hosted Clients (Plan)](#14-oauth-for-hosted-clients-plan)
 
 ## 1. Summary of Decisions
 
@@ -161,7 +162,7 @@ Claude.ai custom connectors and some hosted clients expect MCP's OAuth 2.1 flow,
 registration, instead of a pasted header. The SDK's protected-resource metadata handler makes it
 possible to add later: LaForge acts as the authorization server, the GitHub sign-in is the login step,
 and the result is an `api_key` row. Out of scope for v1. Claude Code, Claude Desktop (through
-`mcp-remote`) and Cursor all accept a bearer header today.
+`mcp-remote`) and Cursor all accept a bearer header today. **Planned in §14.**
 
 ## 4. API Keys Page (UI)
 
@@ -473,7 +474,7 @@ the `migrate` service creates the role on `up`. Its password is exposed exactly 
    redactor, `list_adhoc_tasks`, validation, external access, builder stats and usage.
 4. **Prod.** Cloudflare skip rule, `.env` role password, a volunteer trial on a live build, and tuning of
    limits from `mcp_audit` timings.
-5. **Later, if wanted.** OAuth for hosted connectors, a `debug_build` prompt, findings, image build logs.
+5. **Later, if wanted.** OAuth for hosted connectors (planned in §14), a `debug_build` prompt, findings, image build logs.
 
 ## 12. Existing Issues Found While Surveying
 
@@ -505,3 +506,213 @@ These are not part of this plan, but MCP design surfaced them. Each is worth its
 5. **Secrets.** Decided: everything a read-level user sees (§6).
 6. **Instance-admin keys.** Should an admin's key read everything (as their session does), or should
    admin keys require a repository allow-list? Recommend: allowed, but the page nudges admins to scope them.
+
+## 14. OAuth for Hosted Clients (Plan)
+
+**Status:** built 2026-11-01, uncommitted, not yet tried against the real ChatGPT or Claude.ai. Server in `internal/api/oauth_server.go` (tests in `oauth_server_test.go`, plus `oauth_sdk_test.go`, which runs the go-sdk's own OAuth client end to end), migration `00083_mcp_oauth.sql`, consent page `ui/src/routes/OAuthConsent.tsx`, Connected Apps on the API Keys page.
+
+ChatGPT (chatgpt.com/plugins → Add custom MCP server) and Claude.ai custom connectors (which Claude
+Desktop's Connectors share) can't send a pasted `Authorization` header. They need the
+[MCP authorization spec](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization):
+OAuth 2.1 authorization code + PKCE (S256), found through protected resource metadata.
+
+This is the smallest version that satisfies the spec for those two clients. **The token an app gets is an
+ordinary `lfk_` API key** that it obtained by signing in instead of by pasting. Everything in §3, §5 and §9
+(identity, read-only bridge, power only with manage, rate limits, audit, revoke) applies unchanged.
+
+### 14.1 What It Is
+
+- `laforge-api` is the authorization server. Issuer: `PublicBaseURL` (`https://api.laforge.cp.tc`).
+  Resource: `https://api.laforge.cp.tc/mcp`. GitHub sign-in is the login step.
+- Registration is **DCR only** (RFC 7591). ChatGPT and Claude.ai both support it. Client ID Metadata
+  Documents are left out: they would mean fetching URLs from the server (an SSRF guard and a cache) for no
+  client we need.
+- **No refresh tokens.** `/oauth/token` returns a new `lfk_` key with a 30-day lifetime. It never expires
+  sooner, so the client never needs to refresh; when it lapses, the client asks the person to connect
+  again. The risk is the same as a key the person pasted somewhere.
+- One scope, `read`, as for keys. No OIDC scopes are advertised (ChatGPT requests every advertised one).
+- Hand-written in `internal/api/oauth_server.go`. The go-sdk provides the resource-server half
+  (`auth.ProtectedResourceMetadataHandler`, `oauthex.ProtectedResourceMetadata`,
+  `RequireBearerTokenOptions.ResourceMetadataURL`) but no authorization server, and the rest is three small
+  handlers.
+
+### 14.2 Endpoints
+
+The machine-facing ones are routed in `ServeHTTP` ahead of the cookie CORS block, like `/mcp`, and are never
+reachable through the read or action bridges.
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/.well-known/oauth-protected-resource/mcp` and `/.well-known/oauth-protected-resource` | none | RFC 9728 metadata |
+| GET | `/.well-known/oauth-authorization-server` | none | RFC 8414 metadata |
+| POST | `/oauth/register` | none | DCR |
+| GET | `/oauth/authorize` | browser | Validate, then send the browser to the consent page |
+| POST | `/oauth/token` | client | `authorization_code` grant only |
+| GET | `/oauth/requests/{id}` | session cookie | Consent page's view of a pending request |
+| POST | `/oauth/requests/{id}` | session cookie | `{"approve": true\|false}`; returns the URL to send the browser to |
+
+Protected resource metadata:
+
+```json
+{
+  "resource": "https://api.laforge.cp.tc/mcp",
+  "authorization_servers": ["https://api.laforge.cp.tc"],
+  "scopes_supported": ["read"],
+  "bearer_methods_supported": ["header"]
+}
+```
+
+`Handler()` sets `ResourceMetadataURL`, so every 401 from `/mcp` carries
+`WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource/mcp", scope="read"`.
+
+Authorization server metadata:
+
+```json
+{
+  "issuer": "https://api.laforge.cp.tc",
+  "authorization_endpoint": "https://api.laforge.cp.tc/oauth/authorize",
+  "token_endpoint": "https://api.laforge.cp.tc/oauth/token",
+  "registration_endpoint": "https://api.laforge.cp.tc/oauth/register",
+  "response_types_supported": ["code"],
+  "grant_types_supported": ["authorization_code"],
+  "code_challenge_methods_supported": ["S256"],
+  "token_endpoint_auth_methods_supported": ["none", "client_secret_post", "client_secret_basic"],
+  "scopes_supported": ["read"],
+  "authorization_response_iss_parameter_supported": true
+}
+```
+
+Sending `iss` on the redirect back (RFC 9207) is one query parameter, and it lets ChatGPT use its fixed
+redirect URI.
+
+### 14.3 The Flow
+
+1. **Register.** The client POSTs its name and redirect URIs to `/oauth/register`. Every redirect URI must
+   be `https` on an allowed host (§14.4), or registration fails with `invalid_redirect_uri`. LaForge stores
+   an `oauth_client` row and returns a random `client_id`, plus a `client_secret` if the client asked for
+   `client_secret_post` or `client_secret_basic` (only its hash is stored). Registrations are capped at 10 a
+   minute per IP (`CF-Connecting-IP`).
+2. **Authorize.** `/oauth/authorize` checks, before showing anything: the client exists; `redirect_uri` is
+   one of its URIs (exact match); `response_type=code`; `code_challenge_method=S256` with a challenge; and
+   `resource`, if sent, is the MCP URL. Problems are shown as a plain error page, never a redirect. A valid
+   request is kept **in memory** for 10 minutes under a random id, and the browser goes to
+   `UIBaseURL/oauth/consent?request=<id>`.
+3. **Sign in.** With no session, the consent page sends the browser to
+   `/auth/github/login?return_to=/oauth/consent?request=<id>`. `handleLoginStart` keeps `return_to` in the
+   state cookie; `handleCallback` redirects there instead of `/`. Only relative paths starting with a single
+   `/` are accepted.
+4. **Consent** (§14.5). Approve creates the key (§14.6) and an in-memory one-time code (60 seconds) that
+   points at it, and returns `redirect_uri?code=…&state=…&iss=…`. Deny returns `error=access_denied`
+   instead.
+5. **Token.** `POST /oauth/token` with `grant_type=authorization_code`: the code exists and is unused, the
+   `client_id` and `redirect_uri` match, `base64url(sha256(code_verifier))` equals the challenge, and the
+   client secret checks out if the client has one. The code is deleted on first use. The response is
+   `{"access_token": "lfk_…", "token_type": "Bearer", "expires_in": <seconds left>, "scope": "read"}` with
+   `Cache-Control: no-store`. This is the only time the plaintext exists.
+6. **Use.** The client calls `/mcp` with the key. `verify` doesn't change.
+
+Pending requests and codes are in memory because there is one `laforge-api` process. A restart during a
+sign-in means clicking Connect again.
+
+### 14.4 Allowed Redirect Hosts
+
+Because DCR is open, anyone could register a client named "Claude" with their own redirect URI and send a
+volunteer the link. Redirect URIs are therefore restricted to `https` on `claude.ai`, `claude.com` and
+`chatgpt.com` (a constant, overridable with `OAUTH_ALLOWED_REDIRECT_HOSTS`).
+
+| Client | Redirect URI |
+|---|---|
+| ChatGPT | `https://chatgpt.com/connector_platform_oauth_redirect` (with `iss`), else `https://chatgpt.com/connector/oauth/{callback_id}` |
+| Claude.ai / Claude Desktop Connectors | `https://claude.ai/api/mcp/auth_callback` ([claude.com/docs/connectors/building/authentication](https://claude.com/docs/connectors/building/authentication.md)). Claude uses DCR here, because LaForge doesn't advertise `client_id_metadata_document_supported` |
+
+### 14.5 Consent Page
+
+UI route `/oauth/consent` (`ui/src/routes/OAuthConsent.tsx`), full page without the nav (it opens in a
+popup from ChatGPT or Claude):
+
+- Title **Connect {client_name} To LaForge**, with the redirect host in monospace (`chatgpt.com`) so the
+  person can see where they're sending access.
+- One paragraph, in the same words as the API Keys page: it reads everything you can read, including host
+  passwords and rendered scripts; it can power hosts where you have manage access; it can't rebuild,
+  deploy, tear down or run commands. It expires in 30 days. Signed in as `@login`.
+- **Approve** (primary, accent blue) and **Deny** (danger red).
+
+The POST needs the session cookie and `Origin == UIBaseURL`, so another site can't approve on someone's
+behalf.
+
+### 14.6 Storage and Migration
+
+One migration, `00083_mcp_oauth.sql` (`00082` is the audit-detail migration):
+
+```sql
+CREATE TABLE oauth_client (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id text NOT NULL UNIQUE,
+  client_name text NOT NULL,
+  redirect_uris text[] NOT NULL,
+  client_secret_hash text,       -- only for clients that asked for a secret
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE api_key
+  ADD COLUMN oauth_client_id uuid REFERENCES oauth_client(id) ON DELETE SET NULL;
+```
+
+A key with `oauth_client_id` set is a **connected app**. Approving creates it with `name = client_name`,
+`scope = 'read'`, no repository limit, and `expires_at = now() + 30 days`. Approving the same client again
+with the same account revokes the earlier key, so reconnecting doesn't pile up rows. `laforge_mcp` needs no
+new grants: the verifier reads `api_key` as it does today.
+
+Clients that never got a key are deleted after 24 hours by the orchestrator's cleanup loop, next to the
+`mcp_audit` retention.
+
+### 14.7 API Keys Page
+
+- A **Connected Apps** card lists keys with `oauth_client_id` set: App (name and redirect host),
+  Connected, Expires, Last Used and **Revoke** (danger red, with a confirm). Revoke is the existing
+  `DELETE /auth/api-keys/{id}`, so the app is cut off on its next request.
+- **Your Keys** lists only keys without a client.
+- `GET /auth/api-keys` and `/admin/api-keys` return `client_name` and `client_host` (empty for pasted
+  keys). The admin table shows them, so admins can revoke anyone's app.
+- Recent Activity needs no change: calls show under the key's name, which is the app's name.
+
+### 14.8 Changes to `ui/src/routes/mcpClients.ts`
+
+- `McpClient` gains `auth: 'key' | 'oauth'`, and `mcpClients(url, token?)` makes the token optional.
+- **ChatGPT** → `auth: 'oauth'`. The "Not yet" note is replaced by "Signs in with your LaForge account; no
+  key needed." Steps: go to chatgpt.com/plugins, select +, then Add custom MCP server; enter the server
+  URL and choose OAuth; sign in with GitHub and Approve. Snippet: Server URL.
+- **Claude.ai** → `auth: 'oauth'`. Steps: Settings → Connectors → Add custom connector; name it LaForge and
+  paste the server URL; select Connect, sign in with GitHub and Approve. Connectors added on claude.ai also
+  appear in Claude Desktop. Snippet: Server URL.
+- **Claude Desktop** keeps the `mcp-remote` config, with a note recommending the Claude.ai connector
+  instead (no Node.js, no key).
+- The Connected Apps card gets a **Connect An App** button (primary, accent blue) that opens the picker
+  with only the OAuth entries and the server URL, without creating a key. In the new-key dialog, ChatGPT
+  and Claude.ai stay listed with one line: "Doesn't use a key. Use Connect An App on the API Keys page."
+
+### 14.9 Tests and Rollout
+
+- **End to end** with the go-sdk's own OAuth client (`auth.AuthorizationCodeHandler`): discovery →
+  register → authorize (test session, auto-approve) → token → `tools/call whoami` → revoke → 401.
+- **Refusals:** a redirect URI not registered or on a host that isn't allowed, missing or `plain` PKCE, a
+  wrong verifier, a reused or expired code, a foreign `resource`, an approve POST from another origin.
+- **Prod:** ChatGPT and Claude call `/mcp`, `/.well-known/*`, `/oauth/register` and `/oauth/token` from
+  their servers, so Cloudflare's Bot Fight Mode stays off and the phase-4 skip rule (§11) covers those
+  paths. Caddy needs nothing. `PublicBaseURL` must be exactly `https://api.laforge.cp.tc`. Then connect
+  ChatGPT and Claude.ai for real, confirm their redirect URIs against §14.4, and confirm Revoke cuts each
+  one off.
+
+### 14.10 Left Out on Purpose
+
+Each can be added later without changing what's above:
+
+- **Refresh tokens and short-lived access tokens.** Add them if a 30-day token held by a hosted client
+  becomes a concern.
+- **Client ID Metadata Documents.** Add them if a client we need stops offering DCR.
+- **Token revocation endpoint, loopback redirects for desktop tools, and repository or expiry choices on
+  the consent page.** Desktop tools already use pasted keys.
+
+The 2026-07-28 MCP authorization revision marks DCR deprecated in favour of Client ID Metadata Documents,
+and adds RFC 9207 `iss` rules (which LaForge already follows). ChatGPT and Claude.ai both still register by
+DCR, so it stays for now. Add CIMD if either one stops offering DCR.

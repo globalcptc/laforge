@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Activity, Check, Copy, KeyRound, Plus, TriangleAlert } from 'lucide-react'
+import { AppWindow, Check, Copy, KeyRound, Link2, Plus, TriangleAlert } from 'lucide-react'
 import { useApiKeyActivity, useApiKeys, useCreateApiKey, useRepositories, useRevokeApiKey } from '../api/hooks'
 import { API_BASE, ApiError } from '../api/client'
 import { EmptyState } from '../components/EmptyState'
-import { ApiKeyActivityTable } from '../components/ApiKeyActivityTable'
+import { ApiKeyActivityLog } from '../components/ApiKeyActivityLog'
 import { ApiKeysTable } from '../components/ApiKeysTable'
-import type { CreatedApiKey } from '../api/types'
-import { mcpClients } from './mcpClients'
+import type { ApiKey, CreatedApiKey } from '../api/types'
+import { mcpClients, type McpClient } from './mcpClients'
 import { Button, Card, CardHeader, Input, Label, Modal, PageHeader, Select, Spinner } from '../ui'
 
 const LIFETIMES = [7, 30, 90]
@@ -21,10 +21,14 @@ export function ApiKeys() {
   const [createOpen, setCreateOpen] = useState(false)
   const [created, setCreated] = useState<CreatedApiKey | null>(null)
   const [showInactive, setShowInactive] = useState(false)
+  const [connectOpen, setConnectOpen] = useState(false)
 
-  const active = (keys ?? []).filter((k) => k.status === 'active')
-  const inactiveCount = (keys ?? []).length - active.length
-  const shown = showInactive ? (keys ?? []) : active
+  // Pasted keys, and connected apps (keys an app got by OAuth sign-in).
+  const pasted = (keys ?? []).filter((k) => k.kind !== 'app')
+  const apps = (keys ?? []).filter((k) => k.kind === 'app')
+  const active = pasted.filter((k) => k.status === 'active')
+  const inactiveCount = pasted.length - active.length
+  const shown = showInactive ? pasted : active
 
   return (
     <>
@@ -62,8 +66,10 @@ export function ApiKeys() {
             )}
           </div>
         </Card>
+        <ConnectedApps apps={apps} loading={isLoading} revoke={revoke.mutateAsync} revoking={revoke.isPending} onConnect={() => setConnectOpen(true)} />
         <RecentActivity />
       </div>
+      {connectOpen && <ConnectAppModal onClose={() => setConnectOpen(false)} />}
       <CreateKeyModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -264,39 +270,137 @@ function NewKeyModal({ created, onClose }: { created: CreatedApiKey; onClose: ()
             ))}
           </Select>
         </div>
-        {client.note && <div className="rounded-token border border-border bg-surface-sunken p-2 text-xs text-fg-muted">{client.note}</div>}
-        {client.steps.length > 0 && (
-          <ol className="list-decimal space-y-1 pl-5 text-xs text-fg">
-            {client.steps.map((step) => (
-              <li key={step}>
-                <StepText text={step} />
-              </li>
-            ))}
-          </ol>
+        {client.auth === 'oauth' ? (
+          <div className="rounded-token border border-border bg-surface-sunken p-2 text-xs text-fg-muted">
+            {client.name} doesn't use a key: it signs in with your LaForge account. Use Connect An App on the API Keys page instead.
+          </div>
+        ) : (
+          <ClientInstructions client={client} />
         )}
-        {client.snippets.map((sn) => (
-          <CopyBlock key={`${client.id}-${sn.label}`} label={sn.label} text={sn.text} />
-        ))}
       </div>
     </Modal>
   )
 }
 
 function RecentActivity() {
-  const { data: rows, isLoading, error } = useApiKeyActivity()
+  // Cursors of the pages before this one, so Newer can step back.
+  const [cursors, setCursors] = useState<string[]>([])
+  const before = cursors[cursors.length - 1]
+  const { data, isLoading, error } = useApiKeyActivity(before)
   return (
     <Card className="mt-4">
-      <CardHeader title="Recent Activity" description="The last 50 MCP calls made with your keys. Power actions are marked." />
+      <CardHeader title="Activity Log" description="Every MCP call made with your keys, newest first. Open a call to see everything it did." />
       <div className="p-4 pt-2">
-        {isLoading && (
-          <div className="flex items-center gap-2 text-sm text-fg-muted">
-            <Spinner /> Loading…
-          </div>
-        )}
-        {error && <div className="text-sm text-danger">{error instanceof ApiError ? error.message : 'Failed to load activity.'}</div>}
-        {!isLoading && !error && (rows ?? []).length === 0 && <EmptyState icon={Activity} title="No Activity Yet" hint="Calls made with API keys show up here." />}
-        {rows && rows.length > 0 && <ApiKeyActivityTable rows={rows} />}
+        <ApiKeyActivityLog
+          page={data}
+          isLoading={isLoading}
+          error={error}
+          pageIndex={cursors.length}
+          onNewer={() => setCursors((c) => c.slice(0, -1))}
+          onOlder={() => data?.next && setCursors((c) => [...c, data.next!])}
+        />
       </div>
     </Card>
+  )
+}
+
+// A client's note, steps and copyable snippets.
+function ClientInstructions({ client }: { client: McpClient }) {
+  return (
+    <>
+      {client.note && <div className="rounded-token border border-border bg-surface-sunken p-2 text-xs text-fg-muted">{client.note}</div>}
+      {client.steps.length > 0 && (
+        <ol className="list-decimal space-y-1 pl-5 text-xs text-fg">
+          {client.steps.map((step) => (
+            <li key={step}>
+              <StepText text={step} />
+            </li>
+          ))}
+        </ol>
+      )}
+      {client.snippets.map((sn) => (
+        <CopyBlock key={`${client.id}-${sn.label}`} label={sn.label} text={sn.text} />
+      ))}
+    </>
+  )
+}
+
+// Apps that signed in with the person's account (ChatGPT, Claude.ai) instead
+// of a pasted key. Each one is a key underneath, so Revoke works the same.
+function ConnectedApps({
+  apps,
+  loading,
+  revoke,
+  revoking,
+  onConnect,
+}: {
+  apps: ApiKey[]
+  loading: boolean
+  revoke: (id: string) => Promise<unknown>
+  revoking: boolean
+  onConnect: () => void
+}) {
+  const [showInactive, setShowInactive] = useState(false)
+  const active = apps.filter((k) => k.status === 'active')
+  const shown = showInactive ? apps : active
+  return (
+    <Card className="mt-4">
+      <CardHeader
+        title="Connected Apps"
+        description="Apps that signed in with your LaForge account instead of a key. They see what a key sees, and each one's access lasts 30 days."
+        actions={
+          <Button variant="primary" size="sm" onClick={onConnect}>
+            <Link2 size={14} /> Connect An App
+          </Button>
+        }
+      />
+      <div className="p-4 pt-2">
+        {!loading && shown.length === 0 && (
+          <EmptyState icon={AppWindow} title="No Connected Apps" hint="Connect ChatGPT or Claude.ai to use LaForge from them without a key." />
+        )}
+        {shown.length > 0 && <ApiKeysTable keys={shown} revoke={revoke} revoking={revoking} />}
+        {apps.length > active.length && (
+          <label className="mt-3 flex items-center gap-2 text-xs text-fg-muted">
+            <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
+            Show Inactive ({apps.length - active.length} expired or revoked)
+          </label>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+// How to connect an app that signs in with OAuth. No key is made here: the
+// app gets its own when the person approves it.
+function ConnectAppModal({ onClose }: { onClose: () => void }) {
+  const clients = mcpClients(`${API_BASE}/mcp`).filter((c) => c.auth === 'oauth')
+  const [clientId, setClientId] = useState(clients[0].id)
+  const client = clients.find((c) => c.id === clientId) ?? clients[0]
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Connect An App"
+      description="These apps sign in with your LaForge account. Add LaForge in the app, then approve it when LaForge asks."
+      footer={
+        <Button variant="primary" onClick={onClose}>
+          Done
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div>
+          <Label>App</Label>
+          <Select className="mt-1 w-full" value={client.id} onChange={(e) => setClientId(e.target.value)}>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <ClientInstructions client={client} />
+      </div>
+    </Modal>
   )
 }

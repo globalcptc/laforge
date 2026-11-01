@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -667,5 +668,82 @@ func TestPowerToolDenied(t *testing.T) {
 	_, res := callTool[powerOut](t, cs, "power", map[string]any{"build_id": f.build.String(), "action": "stop", "all": true})
 	if !res.IsError || !strings.Contains(errText(res), "needs manage access") {
 		t.Fatalf("power without manage: %v", res.Content)
+	}
+}
+
+// Every call stores its full record: arguments, client, timing, each query
+// and page read it made, and a preview of the result.
+func TestAuditDetail(t *testing.T) {
+	f := newFixture(t)
+	_, url := newTestServer(t, f, Config{PerAccountBurst: 100})
+	cs, err := connect(t, url, f.token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cs.Close()
+	ctx := context.Background()
+
+	detailOf := func(tool string) (auditDetail, string) {
+		t.Helper()
+		var raw []byte
+		if err := f.admin.QueryRow(ctx, `SELECT detail FROM mcp_audit WHERE account_id = $1 AND tool = $2 ORDER BY created_at DESC LIMIT 1`, f.account, tool).Scan(&raw); err != nil {
+			t.Fatalf("%s audit row: %v", tool, err)
+		}
+		var d auditDetail
+		if err := json.Unmarshal(raw, &d); err != nil {
+			t.Fatal(err)
+		}
+		return d, string(raw)
+	}
+
+	callTool[map[string]any](t, cs, "get_build", map[string]any{"build_id": f.build.String()[:8]})
+	d, raw := detailOf("get_build")
+	if strings.Contains(raw, f.token) || strings.Contains(strings.ToLower(raw), "authorization") {
+		t.Fatal("the audit detail kept the key or the Authorization header")
+	}
+	var sqlNames []string
+	for _, s := range d.Trace {
+		if s.Kind == "sql" {
+			sqlNames = append(sqlNames, s.Name)
+			if s.Rows == nil {
+				t.Errorf("sql step %s has no row count", s.Name)
+			}
+		}
+	}
+	if !slices.Contains(sqlNames, "McpFindBuildsByIDPrefix") || !slices.Contains(sqlNames, "McpGetBuild") {
+		t.Fatalf("get_build's trace = %v, want its queries by name", sqlNames)
+	}
+	if d.Trace[0].Kind != "access" {
+		t.Fatalf("first step = %+v, want the access check", d.Trace[0])
+	}
+	if d.Outcome.Status != "ok" || d.Outcome.Phase != "" || d.Timing.TotalMs <= 0 || d.Result.Bytes == 0 || d.Result.Preview == "" {
+		t.Fatalf("detail = %+v", d)
+	}
+	if d.Key.Owner != f.login || d.Request.BuildID != f.build.String() || !strings.Contains(string(d.Request.Arguments), f.build.String()[:8]) {
+		t.Fatalf("key/request = %+v %+v", d.Key, d.Request)
+	}
+	if d.Client.UserAgent == "" {
+		t.Fatal("no user agent recorded")
+	}
+
+	callTool[map[string]any](t, cs, "list_steps", map[string]any{"build_id": f.build.String(), "object": "dc01", "team": 2})
+	d, _ = detailOf("list_steps")
+	var api *traceStep
+	for i := range d.Trace {
+		if d.Trace[i].Kind == "api" {
+			api = &d.Trace[i]
+		}
+	}
+	if api == nil || !strings.HasPrefix(api.Name, "GET /builds/"+f.build.String()+"/objects/") || api.Status != 200 || api.Bytes == 0 {
+		t.Fatalf("list_steps' page read = %+v", api)
+	}
+	if d.Result.Lists["items"] != 1 || d.Result.Clipped != 1 {
+		t.Fatalf("result = %+v, want one item with one clipped field", d.Result)
+	}
+
+	callTool[map[string]any](t, cs, "get_build", map[string]any{"build_id": f.otherBuild.String()})
+	d, _ = detailOf("get_build")
+	if d.Outcome.Status != "denied" || d.Outcome.Phase != "tool" || d.Outcome.Error == "" {
+		t.Fatalf("denied outcome = %+v", d.Outcome)
 	}
 }

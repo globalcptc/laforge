@@ -16,8 +16,8 @@ UPDATE api_key SET last_used_at = now()
 WHERE id = $1 AND (last_used_at IS NULL OR last_used_at < now() - interval '1 minute');
 
 -- name: McpInsertAudit :exec
-INSERT INTO mcp_audit (api_key_id, account_id, tool, args, build_id, status, error, duration_ms, result_bytes, remote_addr, user_agent)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+INSERT INTO mcp_audit (api_key_id, account_id, tool, args, build_id, status, error, duration_ms, result_bytes, remote_addr, user_agent, detail)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
 
 -- name: McpListRepositories :many
 SELECT id, github_owner, github_repo, created_at
