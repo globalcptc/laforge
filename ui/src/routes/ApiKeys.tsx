@@ -6,6 +6,7 @@ import { EmptyState } from '../components/EmptyState'
 import { ApiKeyActivityTable } from '../components/ApiKeyActivityTable'
 import { ApiKeysTable } from '../components/ApiKeysTable'
 import type { CreatedApiKey } from '../api/types'
+import { mcpClients } from './mcpClients'
 import { Button, Card, CardHeader, Input, Label, Modal, PageHeader, Select, Spinner } from '../ui'
 
 const LIFETIMES = [7, 30, 90]
@@ -193,15 +194,48 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
   )
 }
 
+const CLIENT_KEY = 'laforge.apiKeys.client'
+
+function savedClient(): string {
+  try {
+    return localStorage.getItem(CLIENT_KEY) ?? 'claude-code'
+  } catch {
+    return 'claude-code'
+  }
+}
+
+// Inline `code` in a step's text.
+function StepText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split('`').map((part, i) =>
+        i % 2 === 1 ? (
+          <code key={i} className="rounded bg-surface-sunken px-1 font-mono text-[11px]">
+            {part}
+          </code>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  )
+}
+
 // Shown once, right after creation: the only time the key itself is visible.
 function NewKeyModal({ created, onClose }: { created: CreatedApiKey; onClose: () => void }) {
-  const mcpURL = `${API_BASE}/mcp`
-  const claudeCode = `claude mcp add --transport http laforge ${mcpURL} --header "Authorization: Bearer ${created.token}"`
-  const mcpJSON = JSON.stringify(
-    { mcpServers: { laforge: { type: 'http', url: mcpURL, headers: { Authorization: `Bearer ${created.token}` } } } },
-    null,
-    2,
-  )
+  const clients = mcpClients(`${API_BASE}/mcp`, created.token)
+  const [clientId, setClientId] = useState(savedClient)
+  const client = clients.find((c) => c.id === clientId) ?? clients[0]
+
+  function pick(id: string) {
+    setClientId(id)
+    try {
+      localStorage.setItem(CLIENT_KEY, id)
+    } catch {
+      // Not remembered; the default is fine.
+    }
+  }
+
   return (
     <Modal
       open
@@ -220,8 +254,29 @@ function NewKeyModal({ created, onClose }: { created: CreatedApiKey; onClose: ()
           Treat this like a password. Anyone with it can read your builds until it expires or you revoke it.
         </div>
         <CopyBlock label="API Key" text={created.token} />
-        <CopyBlock label="Claude Code" text={claudeCode} />
-        <CopyBlock label="MCP Config (.mcp.json, Cursor)" text={mcpJSON} />
+        <div>
+          <Label>Connect From</Label>
+          <Select className="mt-1 w-full" value={client.id} onChange={(e) => pick(e.target.value)}>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        {client.note && <div className="rounded-token border border-border bg-surface-sunken p-2 text-xs text-fg-muted">{client.note}</div>}
+        {client.steps.length > 0 && (
+          <ol className="list-decimal space-y-1 pl-5 text-xs text-fg">
+            {client.steps.map((step) => (
+              <li key={step}>
+                <StepText text={step} />
+              </li>
+            ))}
+          </ol>
+        )}
+        {client.snippets.map((sn) => (
+          <CopyBlock key={`${client.id}-${sn.label}`} label={sn.label} text={sn.text} />
+        ))}
       </div>
     </Modal>
   )
