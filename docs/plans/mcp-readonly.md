@@ -455,8 +455,9 @@ Grants (column lists abbreviated; the migration spells out every column):
 | `mcp_audit` | INSERT |
 | Everything else | **Nothing**: `session`, `builder_credential`, `registry_credential`, `build_render_secret`, `agent_artifact`, `person`, `people_source`, `task`, `shell_session`, `github_installation`, … |
 
-**Deploy note:** in prod, the role's password goes in `/opt/laforge/.env` as `MCP_DATABASE_URL`, like the
-gateway's. Rebuild the `migrate` image first.
+**Deploy note:** nothing manual. Compose sets `MCP_DATABASE_URL` inline, like the gateway's connection, and
+the `migrate` service creates the role on `up`. Its password is exposed exactly as much as `laforge`'s and
+`laforge_gateway`'s are.
 
 ## 11. Phases
 

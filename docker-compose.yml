@@ -57,9 +57,9 @@ services:
         required: false
     environment:
       DATABASE_URL: host=db port=5432 user=laforge password=laforge dbname=laforge_dev sslmode=disable
-      # The read-only MCP server (/mcp) connects as its own role, whose grants
-      # make it read-only (migrations/00081). Unset disables /mcp.
-      MCP_DATABASE_URL: "${MCP_DATABASE_URL:-host=db port=5432 user=laforge_mcp password=laforge_mcp_dev_only_do_not_use_in_prod dbname=laforge_dev sslmode=disable}"
+      # The MCP server (/mcp) connects as its own role, created by migration
+      # 00081, whose column grants limit what it can read (like the gateway's).
+      MCP_DATABASE_URL: "host=db port=5432 user=laforge_mcp password=laforge_mcp_dev_only_do_not_use_in_prod dbname=laforge_dev sslmode=disable"
       LISTEN_ADDR: ":8080"
       API_MAX_CONNS: "${API_MAX_CONNS:-20}"
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
