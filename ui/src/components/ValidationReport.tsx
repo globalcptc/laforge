@@ -65,13 +65,28 @@ function CheckRow({ check, tolerated }: { check: ValidationCheck; tolerated: boo
 }
 
 // ValidationRunCard is one host's revalidation: every check it ran, with its
-// result, and whether its status changed. Failing runs open by default.
-export function ValidationRunCard({ run, showHost = true }: { run: ValidationRun; showHost?: boolean }) {
+// result, and whether its status changed. Failing runs open by default; pass
+// open/onOpenChange to control it (the report's Collapse All does).
+export function ValidationRunCard({
+  run,
+  showHost = true,
+  open,
+  onOpenChange,
+}: {
+  run: ValidationRun
+  showHost?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
   const changed = run.status_after && run.status_after !== run.status_before
   const failedChecks = run.steps.reduce((n, s) => n + s.checks.filter((c) => c.passed === false && !s.ignore_errors).length, 0)
   const totalChecks = run.steps.reduce((n, s) => n + s.checks.length, 0)
   return (
-    <details open={run.status === 'failed' || run.status === 'running'} className="group rounded-token border border-border bg-surface-raised">
+    <details
+      open={open ?? (run.status === 'failed' || run.status === 'running')}
+      onToggle={onOpenChange && ((e) => onOpenChange(e.currentTarget.open))}
+      className="group rounded-token border border-border bg-surface-raised"
+    >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm">
         {showHost ? (
           <span className="min-w-0 flex-1 truncate font-medium text-fg">
@@ -223,6 +238,9 @@ export function ValidationReportBody({ buildId, reportId }: { buildId: string; r
   // Networks the user has opened or closed by hand; the rest follow the default
   // (open only when something in them failed).
   const [netOverride, setNetOverride] = useState<Map<string, boolean>>(new Map())
+  // Host cards the user opened or closed, or Collapse All closed; the rest open
+  // when they failed or are still running.
+  const [cardOverride, setCardOverride] = useState<Map<string, boolean>>(new Map())
 
   if (isLoading) {
     return (
@@ -246,11 +264,16 @@ export function ValidationReportBody({ buildId, reportId }: { buildId: string; r
   function toggleNet(n: NetGroup) {
     setNetOverride((prev) => new Map(prev).set(n.key, !netOpen(n)))
   }
-  // Same as the hosts page: Collapse All closes teams and their networks;
-  // Expand All opens the teams and leaves the networks closed, for the overview.
+  // Same as the hosts page: Collapse All closes teams, their networks and every
+  // host's checks; Expand All opens the teams and leaves the rest closed, for
+  // the overview.
   function collapseAll() {
     setCollapsedTeams(new Set(groups.map((t) => t.key)))
     setNetOverride(new Map(groups.flatMap((t) => t.networks.map((n) => [n.key, false] as const))))
+    setCardOverride(new Map(groups.flatMap((t) => t.runs.map((r) => [r.id, false] as const))))
+  }
+  function setCardOpen(id: string, next: boolean) {
+    setCardOverride((prev) => (prev.get(id) === next ? prev : new Map(prev).set(id, next)))
   }
   function expandAll() {
     setCollapsedTeams(new Set())
@@ -308,7 +331,12 @@ export function ValidationReportBody({ buildId, reportId }: { buildId: string; r
                         {open && (
                           <div className="flex flex-col gap-1.5 py-1.5 pl-6">
                             {net.runs.map((r) => (
-                              <ValidationRunCard key={r.id} run={r} />
+                              <ValidationRunCard
+                                key={r.id}
+                                run={r}
+                                open={cardOverride.get(r.id) ?? (r.status === 'failed' || r.status === 'running')}
+                                onOpenChange={(o) => setCardOpen(r.id, o)}
+                              />
                             ))}
                           </div>
                         )}
