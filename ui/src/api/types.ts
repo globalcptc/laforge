@@ -517,6 +517,8 @@ export interface StepValidator {
   kind: string
   passed: boolean
   message?: string
+  /** false for a check marked `revalidate: false`: it ran with the build, but revalidations skip it. Absent means true. */
+  revalidate?: boolean
 }
 
 export interface StepStatus {

@@ -123,6 +123,10 @@ type ValidateCheck struct {
 	// settle. 0/omitted means run immediately. The agent sleeps on its task
 	// worker thread, so this never blocks heartbeats.
 	DelayMs int64 `json:"delay_ms,omitempty"`
+	// NoRevalidate leaves this check out of later revalidations, from a
+	// validator's `revalidate: false` -- a check that only holds at build time,
+	// like an installer a later step deletes. The agent ignores it.
+	NoRevalidate bool `json:"no_revalidate,omitempty"`
 }
 
 type ValidatePayload struct {

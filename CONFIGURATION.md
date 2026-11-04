@@ -816,6 +816,31 @@ a `delay` run immediately. Because the agent runs tasks on a background worker, 
 never stops the host from checking in or from accepting an interactive shell while it
 waits.
 
+### Leaving a check out of revalidations
+
+**Revalidate** (on the Hosts page) re-runs a host's validators later, on the box as it is
+then. Some checks only hold at build time, like an installer a later step deletes. Mark
+those **`revalidate: false`**. The check still runs after its step during the build, but
+revalidations skip it. It's a sibling of the check key, like `delay`, and defaults to
+`true`:
+
+```yaml
+steps:
+  - download:
+      from: https://example.com/setup.exe
+      to: C:\Windows\Temp\setup.exe
+    validate:
+      - file_exists: C:\Windows\Temp\setup.exe
+        revalidate: false     # checked now; gone after the cleanup step
+  - script: install-app
+    validate:
+      - service_running: app  # re-checked by every revalidation
+```
+
+If every check on a host is marked `revalidate: false`, the host is skipped with that reason
+when you revalidate it. In a host's **Steps** tab, those checks' results carry a **Not
+Revalidated** tag.
+
 ---
 
 ## Schedules

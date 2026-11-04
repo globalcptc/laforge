@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -111,7 +112,7 @@ func TestExpandStepsOnRealWebserverHost(t *testing.T) {
 	// ExpandSteps prepends from the environment's root_password; the authored
 	// steps follow. TestExpandStepsAdminPasswordBackstop covers the step itself.
 	wantCommands := []string{
-		agentproto.CmdSetPassword, // admin-password backstop (root)
+		agentproto.CmdSetPassword,                                            // admin-password backstop (root)
 		agentproto.CmdWriteFile, agentproto.CmdExecute, agentproto.CmdDelete, // script: base
 		agentproto.CmdDownload,
 		agentproto.CmdExtract,
@@ -464,5 +465,38 @@ func TestExpandStepsCarriesStepGates(t *testing.T) {
 	}
 	if w := cmds[first].WaitFor; len(w) != 1 || w[0].Host != "database" || w[0].Milestone != "ready" {
 		t.Errorf("gated step's first command wait_for = %+v", w)
+	}
+}
+
+// TestRenderValidateChecksRevalidate covers the optional `revalidate:` sub-item:
+// false marks the check no_revalidate, true or absent leaves it unmarked (and
+// out of the payload, so existing payloads don't change), and a non-boolean or
+// a revalidate with no check is rejected.
+func TestRenderValidateChecksRevalidate(t *testing.T) {
+	raw := []interface{}{
+		map[string]interface{}{"file_exists": `C:\Windows\Temp\setup.exe`, "revalidate": false},
+		map[string]interface{}{"service_running": "nginx", "revalidate": true, "delay": "5s"},
+		map[string]interface{}{"user_exists": "dbadmin"},
+	}
+	checks, err := renderValidateChecks(raw)
+	if err != nil {
+		t.Fatalf("renderValidateChecks: %v", err)
+	}
+	want := map[string]bool{"file_exists": true, "service_running": false, "user_exists": false}
+	for _, c := range checks {
+		if c.NoRevalidate != want[c.Kind] {
+			t.Errorf("%s: NoRevalidate = %v, want %v", c.Kind, c.NoRevalidate, want[c.Kind])
+		}
+	}
+	if b, _ := json.Marshal(checks[2]); strings.Contains(string(b), "no_revalidate") {
+		t.Errorf("an unmarked check carries no_revalidate in its payload: %s", b)
+	}
+	for _, bad := range []map[string]interface{}{
+		{"file_exists": "/tmp/x", "revalidate": "no"},
+		{"revalidate": false},
+	} {
+		if _, err := renderValidateChecks([]interface{}{bad}); err == nil {
+			t.Errorf("%v: expected an error, got none", bad)
+		}
 	}
 }

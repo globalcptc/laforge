@@ -52,9 +52,9 @@
     },
 
     "validatorItem": {
-      "$comment": "Exactly one check key, enforced by the oneOf-on-required below (one branch per check key; delay is in no branch, so it is optional and never satisfies 'exactly one check'). additionalProperties:false rejects anything else, and each key's own shape is checked when present.",
+      "$comment": "Exactly one check key, enforced by the oneOf-on-required below (one branch per check key; delay and revalidate are in no branch, so they are optional and never satisfy 'exactly one check'). additionalProperties:false rejects anything else, and each key's own shape is checked when present.",
       "type": "object",
-      "description": "One read-only check, run after the step (or every step of the script) it's attached to. A failed check fails its step, unless the step sets `ignore_errors`. An optional `delay` waits before the check runs, to let the thing it checks settle.",
+      "description": "One read-only check, run after the step (or every step of the script) it's attached to. A failed check fails its step, unless the step sets `ignore_errors`. An optional `delay` waits before the check runs, to let the thing it checks settle; `revalidate: false` leaves the check out of later revalidations.",
       "additionalProperties": false,
       "oneOf": [
         { "required": ["file_exists"] },
@@ -71,6 +71,7 @@
       ],
       "properties": {
         "delay": { "type": "string", "description": "Optional wait before this check runs, so a service/port has time to settle after the step. A duration string: \"5s\", \"10s\", \"500ms\", \"1m\". Applies only to this check.", "example": "delay: \"10s\"" },
+        "revalidate": { "type": "boolean", "description": "Whether a later revalidation re-runs this check (default true). Set false for a check that's only true at build time -- an installer that a later step deletes, say -- so it's checked when the step runs but left out of revalidations.", "example": "- file_exists: C:\\Windows\\Temp\\setup.exe\n  revalidate: false" },
         "file_exists": { "type": "string", "minLength": 1, "description": "A path that must exist on the host after the step runs." },
         "file_absent": { "type": "string", "minLength": 1, "description": "A path that must NOT exist on the host after the step runs." },
         "file_hash": {

@@ -644,10 +644,12 @@ func renderValidateChecks(raw []interface{}) ([]agentproto.ValidateCheck, error)
 			b, _ := json.Marshal(r)
 			return nil, fmt.Errorf("malformed validate entry: %s", b)
 		}
-		// An optional `delay:` sibling waits before the check runs. Pull it out
+		// Optional `delay:` (wait before the check runs) and `revalidate:` (false
+		// leaves it out of later revalidations) siblings. Pull them out
 		// (without mutating the shared loaded map -- ExpandSteps runs on it more
 		// than once), then require exactly one remaining key: the check itself.
 		var delayMs int64
+		noRevalidate := false
 		var kind string
 		var args interface{}
 		checks := 0
@@ -660,12 +662,20 @@ func renderValidateChecks(raw []interface{}) ([]agentproto.ValidateCheck, error)
 				delayMs = ms
 				continue
 			}
+			if k == "revalidate" {
+				b, ok := v.(bool)
+				if !ok {
+					return nil, fmt.Errorf("validate entry revalidate must be true or false, got %v", v)
+				}
+				noRevalidate = !b
+				continue
+			}
 			kind, args = k, v
 			checks++
 		}
 		if checks != 1 {
 			b, _ := json.Marshal(r)
-			return nil, fmt.Errorf("validate entry must have exactly one check (plus an optional delay): %s", b)
+			return nil, fmt.Errorf("validate entry must have exactly one check (plus an optional delay and revalidate): %s", b)
 		}
 		argMap := asMap(args)
 		if argMap == nil {
@@ -673,7 +683,7 @@ func renderValidateChecks(raw []interface{}) ([]agentproto.ValidateCheck, error)
 			// {"value": "dbadmin"} so the agent always sees a map.
 			argMap = map[string]interface{}{"value": args}
 		}
-		out = append(out, agentproto.ValidateCheck{Kind: kind, Args: argMap, DelayMs: delayMs})
+		out = append(out, agentproto.ValidateCheck{Kind: kind, Args: argMap, DelayMs: delayMs, NoRevalidate: noRevalidate})
 	}
 	return out, nil
 }

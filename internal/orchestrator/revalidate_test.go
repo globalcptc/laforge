@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -248,5 +249,60 @@ func TestRevalidationFlipReopensSettledBuild(t *testing.T) {
 	}
 	if b, _ = f.q.GetBuild(ctx, f.build.ID); b.Status != "failed" {
 		t.Fatalf("build re-settled as %s, want failed (a host is invalid)", b.Status)
+	}
+}
+
+// TestStartValidationRunSkipsOptedOutChecks: checks marked `revalidate: false`
+// (no_revalidate in the payload) are left out of the copies, a validate step
+// left with nothing isn't copied at all, and a host whose every check opted out
+// is refused with ErrAllChecksOptedOut instead of an empty run.
+func TestStartValidationRunSkipsOptedOutChecks(t *testing.T) {
+	f := newRecoverFixture(t, "revalidate-optout", "finished")
+	ctx := context.Background()
+	setPayloads := func(o db.DeployedObject, payloads ...string) {
+		for i, p := range payloads {
+			if _, err := f.pool.Exec(ctx, "UPDATE agent_task SET payload = $3 WHERE deployed_object_id = $1 AND step_index = $2", o.ID, i+1, p); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	o := f.validateHost("ws", "finished", 2)
+	setPayloads(o,
+		`{"checks":[{"kind":"file_exists","args":{"value":"C:\\setup.exe"},"no_revalidate":true},{"kind":"service_running","args":{"value":"sshd"}}]}`,
+		`{"checks":[{"kind":"file_exists","args":{"value":"C:\\other.msi"},"no_revalidate":true}]}`,
+	)
+	run := f.start(o)
+	tasks, err := f.q.ListValidationRunTasks(ctx, run.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("copied %d validate steps, want 1 (the all-opted-out one dropped)", len(tasks))
+	}
+	var payload string
+	if err := f.pool.QueryRow(ctx, "SELECT payload::text FROM agent_task WHERE id = $1", tasks[0].ID).Scan(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(payload, "setup.exe") || !strings.Contains(payload, "sshd") {
+		t.Fatalf("copied payload %s, want only the sshd check", payload)
+	}
+
+	all := f.validateHost("dc", "finished", 1)
+	setPayloads(all, `{"checks":[{"kind":"file_exists","args":{"value":"/tmp/installer"},"no_revalidate":true}]}`)
+	if _, err := StartValidationRun(ctx, f.pool, newReportID(), f.build.ID, all, pgtype.UUID{}); !errors.Is(err, ErrAllChecksOptedOut) {
+		t.Fatalf("all opted out: %v, want ErrAllChecksOptedOut", err)
+	}
+}
+
+func TestRevalidatePayload(t *testing.T) {
+	in := []byte(`{"checks":[{"kind":"a","args":{}},{"kind":"b","args":{},"no_revalidate":true}],"extra":1}`)
+	out, dropped, err := revalidatePayload(in)
+	if err != nil || dropped != 1 || strings.Contains(string(out), `"b"`) || !strings.Contains(string(out), `"extra":1`) {
+		t.Fatalf("got %s dropped=%d err=%v; want only check a, extra kept", out, dropped, err)
+	}
+	same := []byte(`{"checks":[{"kind":"a","args":{}}]}`)
+	if out, dropped, _ := revalidatePayload(same); dropped != 0 || string(out) != string(same) {
+		t.Fatalf("an untouched payload changed: %s (dropped %d)", out, dropped)
 	}
 }

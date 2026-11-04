@@ -462,6 +462,9 @@ type validatorView struct {
 	Kind    string `json:"kind"`
 	Passed  bool   `json:"passed"`
 	Message string `json:"message,omitempty"`
+	// Revalidate is false for a check marked `revalidate: false`: it ran with
+	// the build but later revalidations skip it. Omitted (true) otherwise.
+	Revalidate *bool `json:"revalidate,omitempty"`
 }
 
 func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
@@ -508,9 +511,14 @@ func (s *Server) handleListObjectSteps(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+		skipped := markNoRevalidate(results, noRevalidateChecks(t.Payload))
 		vs := make([]validatorView, 0, len(results))
-		for _, vr := range results {
-			vs = append(vs, validatorView{Kind: vr.Kind, Passed: vr.Passed, Message: db.StrOrEmpty(vr.Message)})
+		for i, vr := range results {
+			v := validatorView{Kind: vr.Kind, Passed: vr.Passed, Message: db.StrOrEmpty(vr.Message)}
+			if skipped[i] {
+				v.Revalidate = new(bool)
+			}
+			vs = append(vs, v)
 		}
 		v := stepView{
 			StepIndex: t.StepIndex, Command: t.Command, Status: t.Status, Attempts: t.Attempts,

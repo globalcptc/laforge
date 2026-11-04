@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -26,6 +27,9 @@ var ValidationRunTimeout = 15 * time.Minute
 
 // ErrNoValidators: the host has no validate checks to re-run.
 var ErrNoValidators = errors.New("the host has no validators")
+
+// ErrAllChecksOptedOut: every check the host has is marked `revalidate: false`.
+var ErrAllChecksOptedOut = errors.New("every validator on the host is marked revalidate: false")
 
 // ErrValidationRunning: a revalidation is already running on the host.
 var ErrValidationRunning = errors.New("a revalidation is already running on this host")
@@ -54,6 +58,27 @@ func StartValidationRun(ctx context.Context, pool *pgxpool.Pool, reportID pgtype
 		if len(checks) == 0 {
 			return ErrNoValidators
 		}
+		// Drop the checks marked `revalidate: false`, and any validate step that
+		// leaves empty.
+		type copyTask struct {
+			payload      []byte
+			ignoreErrors bool
+		}
+		var copies []copyTask
+		optedOut := 0
+		for _, c := range checks {
+			payload, dropped, err := revalidatePayload(c.Payload)
+			if err != nil {
+				return fmt.Errorf("reading validate step %d: %w", c.StepIndex, err)
+			}
+			optedOut += dropped
+			if payload != nil {
+				copies = append(copies, copyTask{payload: payload, ignoreErrors: c.IgnoreErrors})
+			}
+		}
+		if len(copies) == 0 {
+			return ErrAllChecksOptedOut
+		}
 		run, err = q.CreateValidationRun(ctx, db.CreateValidationRunParams{
 			ReportID: reportID, BuildID: buildID, DeployedObjectID: obj.ID, CreatedByAccountID: accountID, StatusBefore: obj.Status,
 		})
@@ -64,15 +89,19 @@ func StartValidationRun(ctx context.Context, pool *pgxpool.Pool, reportID pgtype
 		if err != nil {
 			return err
 		}
-		for i, c := range checks {
+		for i, c := range copies {
 			if _, err := q.CreateValidationRunTask(ctx, db.CreateValidationRunTaskParams{
-				DeployedObjectID: obj.ID, StepIndex: next + int32(i), Payload: c.Payload, IgnoreErrors: c.IgnoreErrors, ValidationRunID: run.ID,
+				DeployedObjectID: obj.ID, StepIndex: next + int32(i), Payload: c.payload, IgnoreErrors: c.ignoreErrors, ValidationRunID: run.ID,
 			}); err != nil {
 				return err
 			}
 		}
-		decide(ctx, q, buildID, obj.ID, "validation.started", fmt.Sprintf("%s: revalidating -- re-running %d validator step(s)", objectLabel(obj, 0), len(checks)),
-			map[string]any{"validation_run_id": run.ID, "report_id": reportID, "checks": len(checks)})
+		msg := fmt.Sprintf("%s: revalidating -- re-running %d validator step(s)", objectLabel(obj, 0), len(copies))
+		if optedOut > 0 {
+			msg += fmt.Sprintf("; %d check(s) marked revalidate: false left out", optedOut)
+		}
+		decide(ctx, q, buildID, obj.ID, "validation.started", msg,
+			map[string]any{"validation_run_id": run.ID, "report_id": reportID, "checks": len(copies), "opted_out": optedOut})
 		return nil
 	})
 	return run, err
@@ -159,4 +188,44 @@ func SettleValidationRuns(ctx context.Context, q *db.Queries, buildID pgtype.UUI
 		}
 	}
 	return changed, nil
+}
+
+// revalidatePayload is a validate task's payload with its `revalidate: false`
+// checks (no_revalidate in the rendered payload) removed, and how many it
+// removed. nil when no check is left. Every other field is kept as it is.
+func revalidatePayload(payload []byte) ([]byte, int, error) {
+	var p map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return nil, 0, err
+	}
+	var checks []map[string]json.RawMessage
+	if raw, ok := p["checks"]; ok {
+		if err := json.Unmarshal(raw, &checks); err != nil {
+			return nil, 0, err
+		}
+	}
+	kept := checks[:0]
+	for _, c := range checks {
+		var skip bool
+		if raw, ok := c["no_revalidate"]; ok {
+			_ = json.Unmarshal(raw, &skip)
+		}
+		if !skip {
+			kept = append(kept, c)
+		}
+	}
+	dropped := len(checks) - len(kept)
+	if len(kept) == 0 {
+		return nil, dropped, nil
+	}
+	if dropped == 0 {
+		return payload, 0, nil
+	}
+	raw, err := json.Marshal(kept)
+	if err != nil {
+		return nil, 0, err
+	}
+	p["checks"] = raw
+	out, err := json.Marshal(p)
+	return out, dropped, err
 }

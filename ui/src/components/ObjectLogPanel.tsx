@@ -711,6 +711,15 @@ function StepRow({ step: s, expanded, onToggle }: { step: StepStatus; expanded: 
                   {v.passed ? <ShieldCheck size={12} className="mt-0.5 shrink-0" /> : <ShieldOff size={12} className="mt-0.5 shrink-0" />}
                   <span className="font-medium">{v.kind}</span>
                   {v.message && <span className="text-fg-muted">— {v.message}</span>}
+                  {v.revalidate === false && (
+                    <Badge
+                      tone="neutral"
+                      className="ml-auto shrink-0 py-0 text-[10px]"
+                      title="Marked revalidate: false. It ran with the build, but revalidations skip it."
+                    >
+                      Not Revalidated
+                    </Badge>
+                  )}
                 </div>
               ))}
             </div>

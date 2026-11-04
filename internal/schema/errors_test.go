@@ -195,3 +195,34 @@ func TestRegistryValidatorRequiresAllThreeFields(t *testing.T) {
 		t.Fatal("expected an error: registry validator is missing 'expected'")
 	}
 }
+
+// A validator may carry `revalidate: false` beside its one check (and beside
+// delay); it doesn't count as a second check, and it must be a boolean.
+func TestValidatorRevalidateFlag(t *testing.T) {
+	ok := validateHost(t, `host:
+  name: ws01
+  os: windows-server-2022
+  size: small
+  disk: 40
+  steps:
+    - script: base
+      validate:
+        - file_exists: C:\Windows\Temp\setup.exe
+          revalidate: false
+        - service_running: sshd
+          delay: "5s"
+          revalidate: true
+`)
+	if len(ok) != 0 {
+		t.Fatalf("revalidate beside a check: got %+v, want no errors", ok)
+	}
+	for _, bad := range []string{
+		"        - file_exists: /tmp/x\n          revalidate: \"no\"\n",
+		"        - revalidate: false\n",
+	} {
+		errs := validateHost(t, "host:\n  name: ws01\n  os: ubuntu22\n  size: small\n  disk: 40\n  steps:\n    - script: base\n      validate:\n"+bad)
+		if len(errs) == 0 {
+			t.Errorf("%q: expected a schema error, got none", bad)
+		}
+	}
+}

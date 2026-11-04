@@ -106,7 +106,7 @@ func (s *Server) handleRevalidate(w http.ResponseWriter, r *http.Request) {
 		}
 		run, err := orchestrator.StartValidationRun(r.Context(), s.Pool, reportID, build.ID, o, sess.AccountID)
 		switch {
-		case errors.Is(err, orchestrator.ErrNoValidators), errors.Is(err, orchestrator.ErrValidationRunning):
+		case errors.Is(err, orchestrator.ErrNoValidators), errors.Is(err, orchestrator.ErrAllChecksOptedOut), errors.Is(err, orchestrator.ErrValidationRunning):
 			h.Reason = err.Error()
 			res.Skipped = append(res.Skipped, h)
 			continue
