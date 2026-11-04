@@ -1,6 +1,20 @@
-import { useState } from 'react'
-import { ArrowLeft, ArrowRight, CircleCheck, CircleDashed, CircleX, Loader, ShieldCheck, TriangleAlert } from 'lucide-react'
-import { useRevalidate, useValidationReport, useValidationReports } from '../api/hooks'
+import { useMemo, useState } from 'react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  CircleCheck,
+  CircleDashed,
+  CircleX,
+  Loader,
+  Network,
+  ShieldCheck,
+  TriangleAlert,
+  Users,
+} from 'lucide-react'
+import { useDeployedObjects, useRevalidate, useValidationReport, useValidationReports } from '../api/hooks'
 import { ApiError } from '../api/client'
 import type { RevalidateResponse, ValidationCheck, ValidationReport, ValidationRun, ValidationRunStatus } from '../api/types'
 import { Badge, Button, Modal, Spinner, cn, useToast } from '../ui'
@@ -103,9 +117,47 @@ export function ValidationRunCard({ run, showHost = true }: { run: ValidationRun
 
 const RUN_ORDER: Record<string, number> = { failed: 0, running: 1, timed_out: 2, canceled: 3, passed: 4 }
 
-function ReportSummary({ report }: { report: ValidationReport }) {
+// Bar colours per run status, matching RunStatusBadge's tones, in the order the
+// segments are drawn: done-and-good first, then problems, then still running.
+const BAR_ORDER: ValidationRunStatus[] = ['passed', 'failed', 'timed_out', 'canceled', 'running']
+const BAR_FILL: Record<ValidationRunStatus, string> = {
+  passed: 'bg-success',
+  failed: 'bg-danger',
+  timed_out: 'bg-warning',
+  canceled: 'bg-border-strong',
+  running: 'bg-info animate-pulse',
+}
+
+// RunProgress is a group's runs as one stacked bar -- how many have finished
+// and how they came out -- with a "done of total" count, like the hosts page's
+// per-network bars.
+function RunProgress({ runs, className }: { runs: ValidationRun[]; className?: string }) {
+  const counts = new Map<ValidationRunStatus, number>()
+  for (const r of runs) counts.set(r.status, (counts.get(r.status) ?? 0) + 1)
+  const total = runs.length
+  const done = total - (counts.get('running') ?? 0)
+  const failed = counts.get('failed') ?? 0
+  const legend = BAR_ORDER.filter((st) => counts.has(st))
+    .map((st) => `${RUN_STYLE[st].label}: ${counts.get(st)}`)
+    .join(' · ')
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
+    <div className={cn('flex shrink-0 items-center gap-2', className)} title={legend}>
+      {failed > 0 && <span className="text-[11px] font-medium text-danger">{failed} failed</span>}
+      <div className="flex h-2 w-32 overflow-hidden rounded-full bg-surface-sunken">
+        {BAR_ORDER.filter((st) => counts.has(st)).map((st) => (
+          <div key={st} className={BAR_FILL[st]} style={{ width: `${((counts.get(st) ?? 0) / total) * 100}%` }} />
+        ))}
+      </div>
+      <span className="w-12 text-right text-[11px] tabular-nums text-fg-subtle">
+        {done}/{total}
+      </span>
+    </div>
+  )
+}
+
+function ReportSummary({ report, runs }: { report: ValidationReport; runs: ValidationRun[] }) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
       <span>
         {report.hosts} host{report.hosts === 1 ? '' : 's'}
       </span>
@@ -117,15 +169,61 @@ function ReportSummary({ report }: { report: ValidationReport }) {
         </span>
       )}
       {report.incomplete > 0 && <span className="text-warning">{report.incomplete} incomplete</span>}
-      <span className="ml-auto text-fg-subtle">{new Date(report.created_at).toLocaleString()}</span>
+      <span className="text-fg-subtle">{new Date(report.created_at).toLocaleString()}</span>
+      {runs.length > 0 && <RunProgress runs={runs} className="ml-auto" />}
     </div>
   )
 }
 
-// ValidationReportBody is a whole revalidation: a summary, then every host's
-// run, failures first. Live while any host is still running.
+type NetGroup = { key: string; name: string; runs: ValidationRun[] }
+type TeamGroup = { key: string; label: string; runs: ValidationRun[]; networks: NetGroup[] }
+
+const byRunOrder = (a: ValidationRun, b: ValidationRun) =>
+  (RUN_ORDER[a.status] ?? 9) - (RUN_ORDER[b.status] ?? 9) || (a.name ?? '').localeCompare(b.name ?? '')
+
+// groupRuns arranges a report's runs as team -> network -> host, teams in
+// number order, networks by name, hosts failures first. A host's network comes
+// from the build's objects (a run doesn't carry it).
+function groupRuns(runs: ValidationRun[], networkOf: Map<string, string>): TeamGroup[] {
+  const teams = new Map<string, TeamGroup>()
+  for (const r of runs) {
+    const tKey = r.team_number === undefined ? 'none' : String(r.team_number)
+    let team = teams.get(tKey)
+    if (!team) {
+      team = { key: tKey, label: r.team_number === undefined ? 'No Team' : `Team ${r.team_number}`, runs: [], networks: [] }
+      teams.set(tKey, team)
+    }
+    team.runs.push(r)
+    const netName = networkOf.get(r.object_id) ?? ''
+    let net = team.networks.find((n) => n.name === netName)
+    if (!net) {
+      net = { key: `${tKey}:${netName}`, name: netName, runs: [] }
+      team.networks.push(net)
+    }
+    net.runs.push(r)
+  }
+  const out = [...teams.values()].sort((a, b) => (a.key === 'none' ? 1 : b.key === 'none' ? -1 : Number(a.key) - Number(b.key)))
+  for (const t of out) {
+    t.networks.sort((a, b) => a.name.localeCompare(b.name))
+    for (const n of t.networks) n.runs.sort(byRunOrder)
+  }
+  return out
+}
+
+// ValidationReportBody is a whole revalidation: a summary, then its runs grouped
+// by team and network, each group with a progress bar so the report reads at a
+// glance without opening every host. Networks start collapsed unless one of
+// their hosts failed. Live while any host is still running.
 export function ValidationReportBody({ buildId, reportId }: { buildId: string; reportId: string }) {
   const { data: report, isLoading, error } = useValidationReport(buildId, reportId)
+  const { data: objects } = useDeployedObjects(buildId)
+  const networkOf = useMemo(() => new Map((objects ?? []).map((o) => [o.id, o.network_name ?? ''])), [objects])
+  const groups = useMemo(() => groupRuns(report?.runs ?? [], networkOf), [report?.runs, networkOf])
+  const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set())
+  // Networks the user has opened or closed by hand; the rest follow the default
+  // (open only when something in them failed).
+  const [netOverride, setNetOverride] = useState<Map<string, boolean>>(new Map())
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-xs text-fg-muted">
@@ -134,14 +232,94 @@ export function ValidationReportBody({ buildId, reportId }: { buildId: string; r
     )
   }
   if (error || !report) return <div className="rounded-token border border-danger bg-danger-soft p-2 text-xs text-danger">Couldn't load this report.</div>
-  const runs = [...(report.runs ?? [])].sort((a, b) => (RUN_ORDER[a.status] ?? 9) - (RUN_ORDER[b.status] ?? 9))
+
+  const netOpen = (n: NetGroup) => netOverride.get(n.key) ?? n.runs.some((r) => r.status === 'failed')
+  const allCollapsed = groups.length > 0 && groups.every((t) => collapsedTeams.has(t.key))
+  function toggleTeam(key: string) {
+    setCollapsedTeams((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+  function toggleNet(n: NetGroup) {
+    setNetOverride((prev) => new Map(prev).set(n.key, !netOpen(n)))
+  }
+  // Same as the hosts page: Collapse All closes teams and their networks;
+  // Expand All opens the teams and leaves the networks closed, for the overview.
+  function collapseAll() {
+    setCollapsedTeams(new Set(groups.map((t) => t.key)))
+    setNetOverride(new Map(groups.flatMap((t) => t.networks.map((n) => [n.key, false] as const))))
+  }
+  function expandAll() {
+    setCollapsedTeams(new Set())
+  }
+
   return (
     <div>
-      <ReportSummary report={report} />
-      <div className="flex max-h-[60vh] flex-col gap-2 overflow-auto">
-        {runs.map((r) => (
-          <ValidationRunCard key={r.id} run={r} />
-        ))}
+      <div className="sticky -top-3 z-10 -mx-4 -mt-3 mb-3 flex items-center gap-3 border-b border-border bg-surface-raised px-4 py-2">
+        <ReportSummary report={report} runs={report.runs ?? []} />
+        {groups.length > 0 && (
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={allCollapsed ? expandAll : collapseAll}
+            title={allCollapsed ? 'Expand All' : 'Collapse All'}
+            aria-label={allCollapsed ? 'Expand All' : 'Collapse All'}
+          >
+            {allCollapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
+          </Button>
+        )}
+      </div>
+      <div className="flex flex-col gap-2">
+        {groups.map((team) => {
+          const teamOpen = !collapsedTeams.has(team.key)
+          return (
+            <div key={team.key} className="rounded-token border border-border">
+              <button
+                type="button"
+                onClick={() => toggleTeam(team.key)}
+                className="flex w-full items-center gap-2 rounded-token bg-surface-sunken/60 px-3 py-2 text-left hover:bg-surface-hover"
+              >
+                <ChevronDown size={14} className={cn('shrink-0 text-fg-subtle transition-transform', !teamOpen && '-rotate-90')} />
+                <Users size={14} className="shrink-0 text-fg-subtle" />
+                <span className="text-sm font-semibold text-fg">{team.label}</span>
+                <span className="text-xs text-fg-subtle">({team.runs.length})</span>
+                <RunProgress runs={team.runs} className="ml-auto" />
+              </button>
+              {teamOpen && (
+                <div className="flex flex-col gap-1 border-t border-border p-2">
+                  {team.networks.map((net) => {
+                    const open = netOpen(net)
+                    return (
+                      <div key={net.key}>
+                        <button
+                          type="button"
+                          onClick={() => toggleNet(net)}
+                          className="flex w-full items-center gap-2 rounded-token px-2 py-1 text-left hover:bg-surface-hover"
+                        >
+                          <ChevronDown size={12} className={cn('shrink-0 text-fg-subtle transition-transform', !open && '-rotate-90')} />
+                          <Network size={13} className="shrink-0 text-fg-subtle" />
+                          <span className="text-xs font-medium text-fg-muted">{net.name || 'No Network'}</span>
+                          <span className="text-xs text-fg-subtle">({net.runs.length})</span>
+                          <RunProgress runs={net.runs} className="ml-auto" />
+                        </button>
+                        {open && (
+                          <div className="flex flex-col gap-1.5 py-1.5 pl-6">
+                            {net.runs.map((r) => (
+                              <ValidationRunCard key={r.id} run={r} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -186,7 +364,7 @@ export function RevalidateDialog({ buildId, targets, onClose }: { buildId: strin
       <Modal
         open
         onClose={onClose}
-        className="max-w-2xl"
+        className="w-[min(96vw,72rem)]"
         title="Validation Report"
         description="Every validator re-run on the host as it is. A failing check moves a Finished host to Invalid; all passing moves an Invalid host back to Finished."
         footer={<Button onClick={onClose}>Close</Button>}
@@ -247,7 +425,7 @@ export function ValidationReportsDialog({ buildId, onClose }: { buildId: string;
     <Modal
       open
       onClose={onClose}
-      className="max-w-2xl"
+      className={open ? 'w-[min(96vw,72rem)]' : 'w-[min(92vw,42rem)]'}
       title={open ? 'Validation Report' : 'Validation Reports'}
       description={open ? undefined : 'Every revalidation run on this build, newest first.'}
       footer={
