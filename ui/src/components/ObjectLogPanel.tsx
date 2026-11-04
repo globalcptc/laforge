@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldOff, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert, RotateCcw } from 'lucide-react'
-import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig, useObjectValidationRuns } from '../api/hooks'
+import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
 import type { RenderedStep, CloudInitView, StepStatus, ObjectKind, DeployedObject, HostCredential, AgentHeartbeat } from '../api/types'
 import { EmptyState } from './EmptyState'
 import { Badge, Button, buttonClass, cn, InspectorPanel, Spinner } from '../ui'
 import { StatusBadge, PowerBadge, GONE_STATES } from './StatusBadge'
-import { ValidationRunCard } from './ValidationReport'
 
-type Tab = 'info' | 'events' | 'steps' | 'validation' | 'heartbeats' | 'render'
+type Tab = 'info' | 'events' | 'steps' | 'heartbeats' | 'render'
 
 // A percentage metric (0-100), rounded, or a dash when the agent didn't send it.
 function pct(v: number | null): string {
@@ -90,7 +89,6 @@ export function ObjectLogPanel({
   const { data: events, isLoading: eventsLoading } = useObjectEvents(buildId, objectId)
   const { data: heartbeats, isLoading: heartbeatsLoading } = useObjectHeartbeats(buildId, objectId)
   const { data: buildSteps, isLoading: stepsLoading } = useObjectSteps(buildId, objectId, !isNetwork && tab === 'steps')
-  const { data: validationRuns, isLoading: validationLoading } = useObjectValidationRuns(buildId, objectId, !isNetwork && tab === 'validation')
   const {
     data: renderedSteps,
     isLoading: renderLoading,
@@ -137,11 +135,12 @@ export function ObjectLogPanel({
         </div>
       }
     >
-      <div className="-mx-4 -mt-3 mb-3 flex flex-nowrap gap-1 overflow-x-auto border-b border-border px-4 pb-2">
+      {/* Equal-width tabs that always fit: one grid column per tab. Revalidation
+          results live in the build's Reports, not here. */}
+      <div className="-mx-4 -mt-3 mb-3 grid auto-cols-fr grid-flow-col gap-1 border-b border-border px-4 pb-2">
         <TabButton active={tab === 'info'} onClick={() => setTab('info')} icon={Info} label="Info" />
         <TabButton active={tab === 'events'} onClick={() => setTab('events')} icon={ScrollText} label="Events" />
         {!isNetwork && <TabButton active={tab === 'steps'} onClick={() => setTab('steps')} icon={ListChecks} label="Steps" />}
-        {!isNetwork && <TabButton active={tab === 'validation'} onClick={() => setTab('validation')} icon={ShieldCheck} label="Validation" />}
         {!isNetwork && <TabButton active={tab === 'heartbeats'} onClick={() => setTab('heartbeats')} icon={Radio} label="Heartbeats" />}
         {!isNetwork && <TabButton active={tab === 'render'} onClick={() => setTab('render')} icon={FileCode} label="Render" />}
       </div>
@@ -257,18 +256,6 @@ export function ObjectLogPanel({
           )}
         </>
       )}
-      {tab === 'validation' &&
-        (validationLoading ? (
-          <LoadingRow />
-        ) : !validationRuns?.length ? (
-          <EmptyState icon={ShieldCheck} title="No Revalidations Yet" hint="Revalidate this host from the Hosts page to re-run its validators and see what each check says now." />
-        ) : (
-          <div className="flex flex-col gap-2">
-            {validationRuns.map((r) => (
-              <ValidationRunCard key={r.id} run={r} showHost={false} />
-            ))}
-          </div>
-        ))}
 
       {tab === 'render' && (
         <>
@@ -924,8 +911,8 @@ function InfoRow({
 
 function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: typeof ScrollText; label: string }) {
   return (
-    <Button variant="ghost" size="sm" onClick={onClick} className={cn('shrink-0', active && 'bg-surface-hover text-fg')}>
-      <Icon size={12} /> {label}
+    <Button variant="ghost" size="sm" onClick={onClick} title={label} className={cn('min-w-0 w-full', active && 'bg-surface-hover text-fg')}>
+      <Icon size={12} className="shrink-0" /> <span className="truncate">{label}</span>
     </Button>
   )
 }
