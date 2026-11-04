@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Radio, ScrollText, FileCode, Maximize2, Minimize2, ListChecks, CircleCheck, CircleX, CircleDashed, Loader, ShieldCheck, ShieldOff, ChevronDown, Info, ServerCog, Eye, EyeOff, Copy, Check, Terminal, Hourglass, Flag, KeyRound, TriangleAlert, RotateCcw } from 'lucide-react'
-import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig } from '../api/hooks'
+import { useObjectEvents, useObjectHeartbeats, useObjectRender, useObjectCloudInit, useObjectSteps, useObjectInfra, useObjectConfig, useObjectValidationRuns } from '../api/hooks'
 import { useTimeFormat } from '../lib/time'
 import { ApiError } from '../api/client'
-import type { RenderedStep, CloudInitView, StepStatus, ObjectKind, DeployedObject, HostCredential, AgentHeartbeat } from '../api/types'
+import type { RenderedStep, CloudInitView, StepStatus, ObjectKind, DeployedObject, HostCredential, AgentHeartbeat, ValidationRun } from '../api/types'
 import { EmptyState } from './EmptyState'
 import { Badge, Button, buttonClass, cn, InspectorPanel, Spinner } from '../ui'
 import { StatusBadge, PowerBadge, GONE_STATES } from './StatusBadge'
+import { ValidationRunCard } from './ValidationReport'
 
 type Tab = 'info' | 'events' | 'steps' | 'heartbeats' | 'render'
 
@@ -89,6 +90,9 @@ export function ObjectLogPanel({
   const { data: events, isLoading: eventsLoading } = useObjectEvents(buildId, objectId)
   const { data: heartbeats, isLoading: heartbeatsLoading } = useObjectHeartbeats(buildId, objectId)
   const { data: buildSteps, isLoading: stepsLoading } = useObjectSteps(buildId, objectId, !isNetwork && tab === 'steps')
+  // Revalidations re-run this host's validators outside its build steps, so the
+  // steps list leaves them out; the Steps tab shows them in their own section.
+  const { data: validationRuns } = useObjectValidationRuns(buildId, objectId, !isNetwork && tab === 'steps')
   const {
     data: renderedSteps,
     isLoading: renderLoading,
@@ -235,6 +239,7 @@ export function ObjectLogPanel({
       )}
       {tab === 'steps' && (
         <>
+          {validationRuns && validationRuns.length > 0 && <RevalidationsSection runs={validationRuns} />}
           {stepsLoading && <LoadingRow />}
           {!stepsLoading && (!buildSteps || buildSteps.length === 0) && (
             <EmptyState
@@ -914,6 +919,34 @@ function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; on
     <Button variant="ghost" size="sm" onClick={onClick} title={label} className={cn('min-w-0 w-full', active && 'bg-surface-hover text-fg')}>
       <Icon size={12} className="shrink-0" /> <span className="truncate">{label}</span>
     </Button>
+  )
+}
+
+// RevalidationsSection is this host's revalidations, newest first, at the top
+// of the Steps tab: the latest always shown, failed or running ones open, older
+// ones behind a toggle so they don't push the steps down.
+function RevalidationsSection({ runs }: { runs: ValidationRun[] }) {
+  const [showAll, setShowAll] = useState(false)
+  const sorted = [...runs].sort((a, b) => b.created_at.localeCompare(a.created_at))
+  const shown = showAll ? sorted : sorted.slice(0, 1)
+  return (
+    <section className="mb-4">
+      <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-fg">
+        <ShieldCheck size={13} className="text-fg-subtle" />
+        Revalidations
+        <span className="font-normal text-fg-subtle">({runs.length})</span>
+        {sorted.length > 1 && (
+          <button type="button" onClick={() => setShowAll((v) => !v)} className="ml-auto text-xs font-normal text-accent hover:underline">
+            {showAll ? 'Latest Only' : `Show All ${sorted.length}`}
+          </button>
+        )}
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {shown.map((r) => (
+          <ValidationRunCard key={r.id} run={r} showHost={false} />
+        ))}
+      </div>
+    </section>
   )
 }
 
