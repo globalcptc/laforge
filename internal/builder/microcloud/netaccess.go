@@ -38,15 +38,12 @@ func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, netwo
 		cidr[na.ExternalName] = na.CIDR
 	}
 
-	for _, a := range networks {
-		for _, bnet := range networks {
-			if a.ExternalName == bnet.ExternalName {
-				continue
-			}
-			if err := b.ensurePeer(ctx, incusName[a.ExternalName], incusName[bnet.ExternalName]); err != nil {
-				return fmt.Errorf("peering %s -> %s for team %s: %w", incusName[a.ExternalName], incusName[bnet.ExternalName], team, err)
-			}
-		}
+	mesh := make([]string, 0, len(networks))
+	for _, na := range networks {
+		mesh = append(mesh, incusName[na.ExternalName])
+	}
+	if err := b.ensurePeerMesh(ctx, mesh); err != nil {
+		return fmt.Errorf("peering team %s networks: %w", team, err)
 	}
 
 	for _, na := range networks {
@@ -81,6 +78,9 @@ func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, netwo
 // it can be deleted (a peered OVN network can't be). The per-host NIC ACLs are
 // removed with their instances in destroyInstance. Best-effort. Mirrors incus.
 func (b *Builder) teardownNetworkAccess(ctx context.Context, netIncusName string) {
+	// The siblings' halves pointing here first: left behind, they'd block the
+	// pair from relinking when this network is recreated under the same name.
+	b.deleteReversePeers(ctx, netIncusName)
 	if raw, err := b.Client.get(ctx, "/1.0/networks/"+netIncusName+"/peers"); err == nil {
 		var urls []string
 		if json.Unmarshal(raw, &urls) == nil {

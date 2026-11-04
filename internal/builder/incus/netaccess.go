@@ -26,15 +26,12 @@ func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, netwo
 	// 1. Full-mesh peering: every ordered pair, so both half-peers exist and the
 	//    peering completes (OVN needs a peer object on each side).
 	if b.Config.NetworkMode() == "ovn" {
-		for _, a := range networks {
-			for _, bnet := range networks {
-				if a.ExternalName == bnet.ExternalName {
-					continue
-				}
-				if err := b.ensurePeer(ctx, incusName[a.ExternalName], incusName[bnet.ExternalName]); err != nil {
-					return fmt.Errorf("peering %s -> %s for team %s: %w", incusName[a.ExternalName], incusName[bnet.ExternalName], team, err)
-				}
-			}
+		mesh := make([]string, 0, len(networks))
+		for _, na := range networks {
+			mesh = append(mesh, incusName[na.ExternalName])
+		}
+		if err := b.ensurePeerMesh(ctx, mesh); err != nil {
+			return fmt.Errorf("peering team %s networks: %w", team, err)
 		}
 	}
 
@@ -87,6 +84,9 @@ func (b *Builder) ConfigureNetworkAccess(ctx context.Context, team string, netwo
 func (b *Builder) teardownNetworkAccess(ctx context.Context, netIncusName string) {
 	// Native bridges route on the host and have no peer objects.
 	if b.Config.NetworkMode() == "ovn" {
+		// The siblings' halves pointing here first: left behind, they'd block the
+		// pair from relinking when this network is recreated under the same name.
+		b.deleteReversePeers(ctx, netIncusName)
 		if raw, err := b.Client.get(ctx, "/1.0/networks/"+netIncusName+"/peers"); err == nil {
 			var urls []string
 			if json.Unmarshal(raw, &urls) == nil {

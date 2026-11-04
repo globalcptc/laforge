@@ -1391,9 +1391,9 @@ type HasConfigureNetworkAccessTaskParams struct {
 
 // Dedup for the network-access reconciler: one live configure_network_access task
 // per (team, desired-config fingerprint). The fingerprint hashes the team's
-// networks' names/CIDRs/visible_from PLUS its ready guests' instance references,
-// so a content change OR an instance replacement (a rebuilt guest gets a new ref)
-// yields a new fingerprint and a fresh task, while an unchanged config never
+// networks' names/CIDRs/visible_from PLUS each network's and ready guest's
+// reference and deploy time, so a content change OR any redeploy (even one that
+// reuses the same reference) yields a new fingerprint and a fresh task, while an unchanged config never
 // re-runs (the builder call is idempotent). A previously FAILED task does NOT
 // count, so an exhausted attempt is re-queued and converges rather than leaving
 // the policy permanently half-applied.

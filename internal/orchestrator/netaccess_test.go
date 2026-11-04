@@ -140,4 +140,28 @@ func TestReconcileNetworkAccessGating(t *testing.T) {
 	if n := len(netAccessTasks(t, q, build)); n != 3 {
 		t.Fatalf("after failing the tasks, reconcile task count = %d, want 3 (a fresh retry)", n)
 	}
+
+	// 6) Same-ref redeploys still re-enqueue. Builders name instances
+	// deterministically, so a rebuild recreates the same reference; only the
+	// deploy time changes. A rebuilt network must get its peering back, and a
+	// rebuilt guest its NIC ACL.
+	count := len(netAccessTasks(t, q, build))
+	if _, err := pool.Exec(ctx, "UPDATE deployed_object SET deployed_at = now() + interval '1 minute' WHERE id=$1", netObj.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := ReconcileNetworkAccess(ctx, pool, build.ID); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(netAccessTasks(t, q, build)); n != count+1 {
+		t.Fatalf("after the network was redeployed under the same ref, task count = %d, want %d", n, count+1)
+	}
+	if _, err := pool.Exec(ctx, "UPDATE deployed_object SET deployed_at = now() + interval '2 minutes' WHERE id=$1", host.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := ReconcileNetworkAccess(ctx, pool, build.ID); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(netAccessTasks(t, q, build)); n != count+2 {
+		t.Fatalf("after the guest was redeployed under the same ref, task count = %d, want %d", n, count+2)
+	}
 }

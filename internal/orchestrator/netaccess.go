@@ -70,7 +70,7 @@ func ReconcileNetworkAccess(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 					// terminal: no instance to ACL -- excluded, doesn't block
 				default: // running/building/finished/deployed/build_failed/invalid
 					if ref := db.StrOrEmpty(o.ExternalRef); ref != "" {
-						guestRefs = append(guestRefs, ref)
+						guestRefs = append(guestRefs, deployIdentity(ref, o.DeployedAt))
 					} else {
 						allSettled = false // deployed but still settling (no ref yet)
 					}
@@ -111,12 +111,16 @@ func ReconcileNetworkAccess(ctx context.Context, pool *pgxpool.Pool, buildID pgt
 }
 
 // networkAccessFingerprint hashes the team's desired inter-network policy -- each
-// network's name, CIDR, and sorted visible_from -- plus the sorted set of ready
-// guest instance references. Including the refs makes the reconciler re-run both
-// when the policy changes AND when the guest set changes (a rebuild replaces a
-// guest's reference), so a replaced instance's NIC gets its ACL re-applied; an
-// unchanged policy over an unchanged guest set never re-runs (the builder call is
-// idempotent).
+// network's name, CIDR, and sorted visible_from -- plus the deploy identity of
+// every network and ready guest. The reconciler re-runs when the policy changes
+// AND whenever a network or guest is redeployed, so a recreated network gets its
+// peers back and a replaced instance's NIC gets its ACL re-applied; an unchanged
+// policy over unchanged instances never re-runs (the builder call is idempotent).
+//
+// The identity is the instance reference plus when it was deployed, not the
+// reference alone: builders name instances deterministically, so a rebuild
+// recreates the same reference. With refs alone a rebuilt network looked
+// unchanged and its peering was never restored (cptc12-se team 2, 2026-11-04).
 func networkAccessFingerprint(ctx context.Context, q *db.Queries, revID pgtype.UUID, netObjs []db.DeployedObject, guestRefs []string) (string, error) {
 	lines := make([]string, 0, len(netObjs))
 	for _, o := range netObjs {
@@ -129,7 +133,8 @@ func networkAccessFingerprint(ctx context.Context, q *db.Queries, revID pgtype.U
 		var visibleFrom []string
 		json.Unmarshal(net.VisibleFrom, &visibleFrom)
 		sort.Strings(visibleFrom)
-		lines = append(lines, fmt.Sprintf("%s|%s|%s", net.Name, net.Cidr, strings.Join(visibleFrom, ",")))
+		lines = append(lines, fmt.Sprintf("%s|%s|%s|%s", net.Name, net.Cidr, strings.Join(visibleFrom, ","),
+			deployIdentity(db.StrOrEmpty(o.ExternalRef), o.DeployedAt)))
 	}
 	sort.Strings(lines)
 	refs := append([]string(nil), guestRefs...)
@@ -137,4 +142,13 @@ func networkAccessFingerprint(ctx context.Context, q *db.Queries, revID pgtype.U
 	payload := strings.Join(lines, "\n") + "\x00guests\x00" + strings.Join(refs, ",")
 	sum := sha256.Sum256([]byte(payload))
 	return hex.EncodeToString(sum[:]), nil
+}
+
+// deployIdentity names one deployment of an instance: its reference and when it
+// was deployed. A redeploy under the same reference yields a new identity.
+func deployIdentity(ref string, deployedAt pgtype.Timestamptz) string {
+	if !deployedAt.Valid {
+		return ref
+	}
+	return fmt.Sprintf("%s@%d", ref, deployedAt.Time.UnixNano())
 }
