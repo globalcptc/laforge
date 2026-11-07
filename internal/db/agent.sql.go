@@ -12,6 +12,107 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const agentHeartbeatBucketsByBuild = `-- name: AgentHeartbeatBucketsByBuild :many
+SELECT LEAST(floor(date_part('epoch', agent_heartbeat.created_at - $1::timestamptz) * 1000000 / $2::bigint), $3::int - 1)::int AS bucket,
+       count(DISTINCT agent_heartbeat.deployed_object_id)::int AS active,
+       coalesce(avg(agent_heartbeat.cpu_pct), 0)::float8 AS cpu,
+       coalesce(avg(agent_heartbeat.mem_pct), 0)::float8 AS mem,
+       coalesce(avg(agent_heartbeat.disk_pct), 0)::float8 AS disk,
+       coalesce(avg(agent_heartbeat.net_rx_bps), 0)::float8 AS net_rx,
+       coalesce(avg(agent_heartbeat.net_tx_bps), 0)::float8 AS net_tx
+FROM agent_heartbeat
+JOIN deployed_object ON deployed_object.id = agent_heartbeat.deployed_object_id
+JOIN team ON team.id = deployed_object.team_id
+WHERE team.build_id = $4 AND agent_heartbeat.created_at >= $1::timestamptz
+GROUP BY 1
+ORDER BY 1
+`
+
+type AgentHeartbeatBucketsByBuildParams struct {
+	FirstAt pgtype.Timestamptz `json:"first_at"`
+	WidthUs int64              `json:"width_us"`
+	Buckets int32              `json:"buckets"`
+	BuildID pgtype.UUID        `json:"build_id"`
+}
+
+type AgentHeartbeatBucketsByBuildRow struct {
+	Bucket int32   `json:"bucket"`
+	Active int32   `json:"active"`
+	Cpu    float64 `json:"cpu"`
+	Mem    float64 `json:"mem"`
+	Disk   float64 `json:"disk"`
+	NetRx  float64 `json:"net_rx"`
+	NetTx  float64 `json:"net_tx"`
+}
+
+// The dashboard's agent-activity and resource charts, summarized in the
+// database: each heartbeat falls in bucket floor((created_at - first_at) /
+// width), the last bucket also taking anything past it, and each bucket
+// reports how many distinct objects checked in and the average of each
+// metric (a NULL metric is left out of its average; a bucket with none of
+// one averages 0). Only buckets with heartbeats are returned. Summarizing
+// here keeps the API from loading the build's whole heartbeat log (millions
+// of rows by the end of an event) to draw 40 points.
+func (q *Queries) AgentHeartbeatBucketsByBuild(ctx context.Context, arg AgentHeartbeatBucketsByBuildParams) ([]AgentHeartbeatBucketsByBuildRow, error) {
+	rows, err := q.db.Query(ctx, agentHeartbeatBucketsByBuild,
+		arg.FirstAt,
+		arg.WidthUs,
+		arg.Buckets,
+		arg.BuildID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AgentHeartbeatBucketsByBuildRow
+	for rows.Next() {
+		var i AgentHeartbeatBucketsByBuildRow
+		if err := rows.Scan(
+			&i.Bucket,
+			&i.Active,
+			&i.Cpu,
+			&i.Mem,
+			&i.Disk,
+			&i.NetRx,
+			&i.NetTx,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const agentHeartbeatSpanByBuild = `-- name: AgentHeartbeatSpanByBuild :one
+SELECT min(s.first_at)::timestamptz AS first_at, max(s.last_at)::timestamptz AS last_at
+FROM (
+    SELECT (SELECT h.created_at FROM agent_heartbeat h WHERE h.deployed_object_id = deployed_object.id ORDER BY h.created_at LIMIT 1) AS first_at,
+           (SELECT h.created_at FROM agent_heartbeat h WHERE h.deployed_object_id = deployed_object.id ORDER BY h.created_at DESC LIMIT 1) AS last_at
+    FROM deployed_object
+    JOIN team ON team.id = deployed_object.team_id
+    WHERE team.build_id = $1
+) s
+`
+
+type AgentHeartbeatSpanByBuildRow struct {
+	FirstAt pgtype.Timestamptz `json:"first_at"`
+	LastAt  pgtype.Timestamptz `json:"last_at"`
+}
+
+// The first and last heartbeat of a build, from which the dashboard lays out
+// its chart buckets. Both NULL (not Valid) for a build with no heartbeats.
+// Each object's first and last come off agent_heartbeat_object_time_idx (two
+// index probes per object), not a scan of the build's whole log.
+func (q *Queries) AgentHeartbeatSpanByBuild(ctx context.Context, buildID pgtype.UUID) (AgentHeartbeatSpanByBuildRow, error) {
+	row := q.db.QueryRow(ctx, agentHeartbeatSpanByBuild, buildID)
+	var i AgentHeartbeatSpanByBuildRow
+	err := row.Scan(&i.FirstAt, &i.LastAt)
+	return i, err
+}
+
 const completeAgentTask = `-- name: CompleteAgentTask :one
 UPDATE agent_task SET status = 'done', output = $2, last_error = NULL, updated_at = now(),
     finished_at = now()

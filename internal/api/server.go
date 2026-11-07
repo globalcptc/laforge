@@ -41,6 +41,7 @@ type Server struct {
 	// shared lets every viewer of a build share one computation of the
 	// build-wide reads open pages poll (sharedread.go).
 	shared sharedReads
+	charts chartCache
 	// auth caches the answers access checks need (authcache.go).
 	auth authCache
 	// Pool is used only where a transaction spans more than one query --

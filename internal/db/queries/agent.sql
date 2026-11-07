@@ -70,6 +70,43 @@ DELETE FROM agent_heartbeat WHERE created_at < $1;
 -- has no retention policy yet and could in principle be very large.
 SELECT * FROM agent_heartbeat WHERE deployed_object_id = $1 ORDER BY created_at DESC LIMIT $2;
 
+-- name: AgentHeartbeatSpanByBuild :one
+-- The first and last heartbeat of a build, from which the dashboard lays out
+-- its chart buckets. Both NULL (not Valid) for a build with no heartbeats.
+-- Each object's first and last come off agent_heartbeat_object_time_idx (two
+-- index probes per object), not a scan of the build's whole log.
+SELECT min(s.first_at)::timestamptz AS first_at, max(s.last_at)::timestamptz AS last_at
+FROM (
+    SELECT (SELECT h.created_at FROM agent_heartbeat h WHERE h.deployed_object_id = deployed_object.id ORDER BY h.created_at LIMIT 1) AS first_at,
+           (SELECT h.created_at FROM agent_heartbeat h WHERE h.deployed_object_id = deployed_object.id ORDER BY h.created_at DESC LIMIT 1) AS last_at
+    FROM deployed_object
+    JOIN team ON team.id = deployed_object.team_id
+    WHERE team.build_id = sqlc.arg(build_id)
+) s;
+
+-- name: AgentHeartbeatBucketsByBuild :many
+-- The dashboard's agent-activity and resource charts, summarized in the
+-- database: each heartbeat falls in bucket floor((created_at - first_at) /
+-- width), the last bucket also taking anything past it, and each bucket
+-- reports how many distinct objects checked in and the average of each
+-- metric (a NULL metric is left out of its average; a bucket with none of
+-- one averages 0). Only buckets with heartbeats are returned. Summarizing
+-- here keeps the API from loading the build's whole heartbeat log (millions
+-- of rows by the end of an event) to draw 40 points.
+SELECT LEAST(floor(date_part('epoch', agent_heartbeat.created_at - sqlc.arg(first_at)::timestamptz) * 1000000 / sqlc.arg(width_us)::bigint), sqlc.arg(buckets)::int - 1)::int AS bucket,
+       count(DISTINCT agent_heartbeat.deployed_object_id)::int AS active,
+       coalesce(avg(agent_heartbeat.cpu_pct), 0)::float8 AS cpu,
+       coalesce(avg(agent_heartbeat.mem_pct), 0)::float8 AS mem,
+       coalesce(avg(agent_heartbeat.disk_pct), 0)::float8 AS disk,
+       coalesce(avg(agent_heartbeat.net_rx_bps), 0)::float8 AS net_rx,
+       coalesce(avg(agent_heartbeat.net_tx_bps), 0)::float8 AS net_tx
+FROM agent_heartbeat
+JOIN deployed_object ON deployed_object.id = agent_heartbeat.deployed_object_id
+JOIN team ON team.id = deployed_object.team_id
+WHERE team.build_id = sqlc.arg(build_id) AND agent_heartbeat.created_at >= sqlc.arg(first_at)::timestamptz
+GROUP BY 1
+ORDER BY 1;
+
 -- name: ListAgentHeartbeatsByBuild :many
 -- The build-wide time series behind the dashboard's real "agent
 -- check-ins over time" chart -- joins through deployed_object -> team,

@@ -21,6 +21,10 @@ name: laforge
 services:
   db:
     image: postgres:16-alpine
+    # Long-running services come back on their own after a crash or an
+    # out-of-memory kill (only `docker compose stop`/`down` keeps them down).
+    # migrate is a one-shot job and has no restart policy on purpose.
+    restart: unless-stopped
     # Raise the connection ceiling well above Postgres's default 100 so a
     # high-concurrency runner pool (RUNNER_CONCURRENCY) plus the api/orchestrator/
     # gateway pools all fit. Bump this further to push runner concurrency higher.
@@ -49,6 +53,7 @@ services:
         condition: service_healthy
 
   api:
+    restart: unless-stopped
     build:
       context: .
       target: api
@@ -85,6 +90,7 @@ services:
         condition: service_completed_successfully
 
   orchestrator:
+    restart: unless-stopped
     build:
       context: .
       target: orchestrator
@@ -113,6 +119,7 @@ services:
         condition: service_completed_successfully
 
   runner:
+    restart: unless-stopped
     # Time to hand back in-flight tasks on a redeploy (they're released, not
     # counted as failed attempts) before Docker kills the process.
     stop_grace_period: 30s
@@ -167,6 +174,7 @@ services:
         condition: service_completed_successfully
 
   gateway:
+    restart: unless-stopped
     build:
       context: .
       target: gateway

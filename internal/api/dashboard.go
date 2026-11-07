@@ -10,10 +10,14 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"sort"
+	"sync"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/globalcptc/laforge/internal/db"
 )
@@ -154,129 +158,134 @@ type dashboardData struct {
 	ResourceUsage        []resourceBucket  `json:"resource_usage"`
 }
 
-// bucketHeartbeats turns a build's raw heartbeat log into a fixed number
-// of time buckets, each counting DISTINCT objects seen at least once --
-// not total heartbeats, which would just track agent count x poll rate
-// rather than "how many agents are actually alive right now." Server-
-// side, per "aggregates rather than counted in the browser"
-// -- and because raw per-heartbeat rows could be very
-// large at real scale (no retention policy exists yet on agent_heartbeat,
-// see migrations/00007's own note).
-// bucketBounds derives the even time buckets the heartbeat series is summarized
-// into: the earliest timestamp, the width of each bucket, and how many there
-// are (capped). Shared by the activity and resource-usage summaries so both
-// charts line up on the same x-axis.
-func bucketBounds(heartbeats []db.AgentHeartbeat) (minT time.Time, width time.Duration, count int) {
-	minT, maxT := heartbeats[0].CreatedAt.Time, heartbeats[0].CreatedAt.Time
-	for _, h := range heartbeats {
-		t := h.CreatedAt.Time
-		if t.Before(minT) {
-			minT = t
-		}
-		if t.After(maxT) {
-			maxT = t
-		}
-	}
-	const maxBuckets = 40
-	span := maxT.Sub(minT)
+// maxChartBuckets is how many time buckets the dashboard's agent-activity and
+// resource charts are summarized into.
+const maxChartBuckets = 40
+
+// bucketLayout spreads a build's heartbeat history, first to last, over even
+// time buckets: each bucket's width and how many there are (capped). The
+// width is whole microseconds, the database's timestamp resolution, so the
+// buckets the database fills (AgentHeartbeatBucketsByBuild) line up exactly
+// with the labels written here. Shared by both charts so they share an x-axis.
+func bucketLayout(first, last time.Time) (width time.Duration, count int) {
+	span := last.Sub(first)
 	if span <= 0 {
 		span = time.Second
 	}
-	width = span / maxBuckets
+	width = (span / maxChartBuckets).Truncate(time.Microsecond)
 	if width <= 0 {
-		width = time.Second
+		width = time.Microsecond
 	}
 	count = int(span/width) + 1
-	if count > maxBuckets {
-		count = maxBuckets
+	if count > maxChartBuckets {
+		count = maxChartBuckets
 	}
-	return minT, width, count
+	return width, count
 }
 
-// bucketResourceUsage averages CPU/memory/disk/network across every heartbeat
-// in each time bucket, for the resource graphs. A nil metric (older agent, or
-// one that couldn't sample it) is skipped so it doesn't drag the average to 0.
-func bucketResourceUsage(heartbeats []db.AgentHeartbeat) []resourceBucket {
-	if len(heartbeats) == 0 {
-		return []resourceBucket{}
+// chartBuckets turns the database's per-bucket summaries into the two chart
+// series, one point per bucket. A bucket with no heartbeats reads as 0 active
+// and 0 for every metric.
+//
+// agent activity counts DISTINCT objects seen in each bucket, not heartbeats,
+// so a batch of agents going quiet shows up as a drop rather than tracking
+// agent count x poll rate. Resource usage is the average of each metric over
+// the bucket's heartbeats, a missing metric left out of its own average.
+func chartBuckets(first time.Time, width time.Duration, count int, rows []db.AgentHeartbeatBucketsByBuildRow) ([]activityBucket, []resourceBucket) {
+	activity := make([]activityBucket, count)
+	resources := make([]resourceBucket, count)
+	for i := 0; i < count; i++ {
+		at := first.Add(time.Duration(i) * width).Format(time.RFC3339)
+		activity[i] = activityBucket{At: at}
+		resources[i] = resourceBucket{At: at}
 	}
-	minT, width, count := bucketBounds(heartbeats)
-	type acc struct {
-		cpuS, memS, diskS, rxS, txS float64
-		cpuN, memN, diskN, rxN, txN int
+	for _, r := range rows {
+		i := int(r.Bucket)
+		if i < 0 || i >= count {
+			continue
+		}
+		activity[i].Active = int(r.Active)
+		resources[i].Cpu, resources[i].Mem, resources[i].Disk = r.Cpu, r.Mem, r.Disk
+		resources[i].NetRx, resources[i].NetTx = r.NetRx, r.NetTx
 	}
-	accs := make([]acc, count)
-	for _, h := range heartbeats {
-		idx := int(h.CreatedAt.Time.Sub(minT) / width)
-		if idx >= count {
-			idx = count - 1
-		}
-		a := &accs[idx]
-		if h.CpuPct != nil {
-			a.cpuS += *h.CpuPct
-			a.cpuN++
-		}
-		if h.MemPct != nil {
-			a.memS += *h.MemPct
-			a.memN++
-		}
-		if h.DiskPct != nil {
-			a.diskS += *h.DiskPct
-			a.diskN++
-		}
-		if h.NetRxBps != nil {
-			a.rxS += *h.NetRxBps
-			a.rxN++
-		}
-		if h.NetTxBps != nil {
-			a.txS += *h.NetTxBps
-			a.txN++
-		}
-	}
-	avg := func(sum float64, n int) float64 {
-		if n == 0 {
-			return 0
-		}
-		return sum / float64(n)
-	}
-	out := make([]resourceBucket, count)
-	for i := range out {
-		a := accs[i]
-		out[i] = resourceBucket{
-			At:    minT.Add(time.Duration(i) * width).Format(time.RFC3339),
-			Cpu:   avg(a.cpuS, a.cpuN),
-			Mem:   avg(a.memS, a.memN),
-			Disk:  avg(a.diskS, a.diskN),
-			NetRx: avg(a.rxS, a.rxN),
-			NetTx: avg(a.txS, a.txN),
-		}
-	}
-	return out
+	return activity, resources
 }
 
-func bucketHeartbeats(heartbeats []db.AgentHeartbeat) []activityBucket {
-	if len(heartbeats) == 0 {
-		return []activityBucket{}
+// heartbeatCharts is the dashboard's agent-activity and resource-usage series
+// for a build. The database summarizes the heartbeat log into at most
+// maxChartBuckets rows; loading the raw log instead held millions of rows (3
+// GB and more) in the API per build by the end of an event. Summarizing still
+// reads every row (seconds, by then), so a build's series is reused for
+// chartCacheTTL: each bucket spans the history / maxChartBuckets (hours, mid-
+// event), so a minute-old series looks the same as a fresh one. The rest of
+// the dashboard (statuses, failures) is computed fresh as before.
+func (s *Server) heartbeatCharts(ctx context.Context, buildID pgtype.UUID) ([]activityBucket, []resourceBucket, error) {
+	if a, r, ok := s.charts.get(buildID); ok {
+		return a, r, nil
 	}
-	minT, width, bucketCount := bucketBounds(heartbeats)
+	a, r, err := s.computeHeartbeatCharts(ctx, buildID)
+	if err == nil && len(a) > 0 { // nothing to chart yet costs one quick query; don't hold it
+		s.charts.put(buildID, a, r)
+	}
+	return a, r, err
+}
 
-	seenPerBucket := make([]map[string]bool, bucketCount)
-	for i := range seenPerBucket {
-		seenPerBucket[i] = map[string]bool{}
+func (s *Server) computeHeartbeatCharts(ctx context.Context, buildID pgtype.UUID) ([]activityBucket, []resourceBucket, error) {
+	span, err := s.Queries.AgentHeartbeatSpanByBuild(ctx, buildID)
+	if err != nil {
+		return nil, nil, err
 	}
-	for _, h := range heartbeats {
-		idx := int(h.CreatedAt.Time.Sub(minT) / width)
-		if idx >= bucketCount {
-			idx = bucketCount - 1
+	if !span.FirstAt.Valid || !span.LastAt.Valid {
+		return []activityBucket{}, []resourceBucket{}, nil
+	}
+	width, count := bucketLayout(span.FirstAt.Time, span.LastAt.Time)
+	rows, err := s.Queries.AgentHeartbeatBucketsByBuild(ctx, db.AgentHeartbeatBucketsByBuildParams{
+		FirstAt: span.FirstAt, WidthUs: width.Microseconds(), Buckets: int32(count), BuildID: buildID,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	activity, resources := chartBuckets(span.FirstAt.Time, width, count, rows)
+	return activity, resources, nil
+}
+
+// chartCacheTTL is how long a build's heartbeat chart series is reused.
+const chartCacheTTL = time.Minute
+
+// chartCache keeps each build's most recent heartbeat chart series.
+type chartCache struct {
+	mu      sync.Mutex
+	entries map[pgtype.UUID]chartEntry
+}
+
+type chartEntry struct {
+	at        time.Time
+	activity  []activityBucket
+	resources []resourceBucket
+}
+
+func (c *chartCache) get(buildID pgtype.UUID) ([]activityBucket, []resourceBucket, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	e, ok := c.entries[buildID]
+	if !ok || time.Since(e.at) >= chartCacheTTL {
+		return nil, nil, false
+	}
+	return e.activity, e.resources, true
+}
+
+func (c *chartCache) put(buildID pgtype.UUID, activity []activityBucket, resources []resourceBucket) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.entries == nil {
+		c.entries = map[pgtype.UUID]chartEntry{}
+	}
+	for id, e := range c.entries { // drop builds nobody has looked at lately
+		if time.Since(e.at) >= 10*chartCacheTTL {
+			delete(c.entries, id)
 		}
-		seenPerBucket[idx][h.DeployedObjectID.String()] = true
 	}
-
-	out := make([]activityBucket, bucketCount)
-	for i := range out {
-		out[i] = activityBucket{At: minT.Add(time.Duration(i) * width).Format(time.RFC3339), Active: len(seenPerBucket[i])}
-	}
-	return out
+	c.entries[buildID] = chartEntry{at: time.Now(), activity: activity, resources: resources}
 }
 
 func (s *Server) handleGetDashboard(w http.ResponseWriter, r *http.Request) {
@@ -387,13 +396,11 @@ func (s *Server) handleGetDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 		sort.Slice(data.FailuresByCause, func(i, j int) bool { return data.FailuresByCause[i].Count > data.FailuresByCause[j].Count })
 
-		heartbeats, err := s.Queries.ListAgentHeartbeatsByBuild(r.Context(), build.ID)
+		data.AgentActivity, data.ResourceUsage, err = s.heartbeatCharts(r.Context(), build.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
-		data.AgentActivity = bucketHeartbeats(heartbeats)
-		data.ResourceUsage = bucketResourceUsage(heartbeats)
 
 		writeJSON(w, http.StatusOK, data)
 	})

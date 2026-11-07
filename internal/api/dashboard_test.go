@@ -187,31 +187,93 @@ func TestDashboardRequiresAtLeastRead(t *testing.T) {
 	}
 }
 
-// TestBucketResourceUsageAveragesAndSkipsNil pins the resource-graph math: a
-// metric present on some heartbeats is averaged over just those, and a nil
-// metric is skipped (not counted as 0).
-func TestBucketResourceUsageAveragesAndSkipsNil(t *testing.T) {
-	ts := func(s int) pgtype.Timestamptz { return pgtype.Timestamptz{Time: time.Unix(int64(s), 0), Valid: true} }
-	f := func(v float64) *float64 { return &v }
-	hbs := []db.AgentHeartbeat{
-		{CreatedAt: ts(0), CpuPct: f(10), MemPct: f(50), NetRxBps: f(100), NetTxBps: f(200)},
-		{CreatedAt: ts(0), CpuPct: f(30), MemPct: nil, NetRxBps: f(300), NetTxBps: f(400)},
+// TestHeartbeatChartsAveragesAndSkipsNil pins the resource-graph math, as the
+// database does it: a metric present on some heartbeats is averaged over just
+// those (a NULL is skipped, not counted as 0), activity counts distinct
+// objects rather than heartbeats, and a build with no heartbeats has empty
+// (non-nil) series.
+func TestHeartbeatChartsAveragesAndSkipsNil(t *testing.T) {
+	env := setupAPITest(t)
+	build := realBuildFixture(t, env)
+	ctx := context.Background()
+
+	empty, emptyRes, err := env.server.heartbeatCharts(ctx, build.ID)
+	if err != nil {
+		t.Fatal(err)
 	}
-	out := bucketResourceUsage(hbs)
-	if len(out) == 0 {
-		t.Fatal("no buckets produced")
+	if empty == nil || emptyRes == nil || len(empty) != 0 || len(emptyRes) != 0 {
+		t.Fatalf("no heartbeats: got %v / %v, want empty non-nil slices", empty, emptyRes)
 	}
-	b := out[0] // both heartbeats share the first bucket (same instant)
+
+	objs, err := env.q.ListDeployedObjectsByBuild(ctx, build.ID)
+	if err != nil || len(objs) < 2 {
+		t.Fatalf("fixture objects: %d, %v", len(objs), err)
+	}
+	at := time.Now().Add(-time.Minute).Truncate(time.Second)
+	insert := func(obj pgtype.UUID, at time.Time, cpu, mem any, rx, tx float64) {
+		if _, err := env.server.Pool.Exec(ctx,
+			`INSERT INTO agent_heartbeat (deployed_object_id, cert_fingerprint, created_at, cpu_pct, mem_pct, net_rx_bps, net_tx_bps) VALUES ($1,'fp',$2,$3,$4,$5,$6)`,
+			obj, at, cpu, mem, rx, tx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Same instant: one bucket. Two heartbeats from one object, one from another.
+	insert(objs[0].ID, at, 10.0, 50.0, 100, 200)
+	insert(objs[0].ID, at, 30.0, nil, 300, 400)
+	insert(objs[1].ID, at, 20.0, nil, 200, 300)
+
+	activity, res, err := env.server.heartbeatCharts(ctx, build.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A second read inside the TTL comes from the cache, unchanged, even after
+	// new heartbeats arrive.
+	insert(objs[1].ID, at.Add(time.Second), 90.0, nil, 0, 0)
+	again, _, err := env.server.heartbeatCharts(ctx, build.ID)
+	if err != nil || len(again) != len(activity) || again[0] != activity[0] {
+		t.Fatalf("cached read: %v / %v, want the first result again", again, err)
+	}
+	if len(res) == 0 || len(activity) != len(res) {
+		t.Fatalf("got %d activity / %d resource buckets, want the same non-zero count", len(activity), len(res))
+	}
+	b := res[0]
 	if b.Cpu != 20 {
 		t.Errorf("cpu avg = %v, want 20", b.Cpu)
 	}
 	if b.Mem != 50 {
-		t.Errorf("mem avg = %v, want 50 (the one nil is skipped, not averaged as 0)", b.Mem)
+		t.Errorf("mem avg = %v, want 50 (the NULLs are skipped, not averaged as 0)", b.Mem)
 	}
 	if b.NetRx != 200 || b.NetTx != 300 {
 		t.Errorf("net avg = rx %v tx %v, want 200 / 300", b.NetRx, b.NetTx)
 	}
-	if got := bucketResourceUsage(nil); got == nil || len(got) != 0 {
-		t.Errorf("empty input = %v, want an empty (non-nil) slice", got)
+	if activity[0].Active != 2 {
+		t.Errorf("active = %d, want 2 (distinct objects, not 3 heartbeats)", activity[0].Active)
+	}
+}
+
+// TestChartBucketsLayout: the history spreads over at most maxChartBuckets even
+// buckets, every bucket gets a labelled point (empty ones read 0), and a row
+// past the last bucket is ignored rather than indexing out of range.
+func TestChartBucketsLayout(t *testing.T) {
+	first := time.Date(2026, 11, 7, 12, 0, 0, 0, time.UTC)
+	width, count := bucketLayout(first, first.Add(80*time.Minute))
+	if count != maxChartBuckets || width != 2*time.Minute {
+		t.Fatalf("80 minutes: width %v count %d, want 2m and %d", width, count, maxChartBuckets)
+	}
+	// A single instant is stretched to one second, as before: still a full set
+	// of buckets with a positive width, everything landing in the first.
+	if w, c := bucketLayout(first, first); c != maxChartBuckets || w <= 0 {
+		t.Fatalf("one instant: width %v count %d, want %d buckets of positive width", w, c, maxChartBuckets)
+	}
+	rows := []db.AgentHeartbeatBucketsByBuildRow{{Bucket: 3, Active: 7, Cpu: 42}, {Bucket: 99, Active: 1}}
+	activity, res := chartBuckets(first, width, count, rows)
+	if len(activity) != count || len(res) != count {
+		t.Fatalf("got %d/%d points, want %d each", len(activity), len(res), count)
+	}
+	if activity[3].Active != 7 || res[3].Cpu != 42 || activity[0].Active != 0 {
+		t.Fatalf("bucket 3 = %+v / %+v, bucket 0 = %+v", activity[3], res[3], activity[0])
+	}
+	if want := first.Add(3 * width).Format(time.RFC3339); activity[3].At != want {
+		t.Fatalf("bucket 3 labelled %s, want %s", activity[3].At, want)
 	}
 }
